@@ -5,6 +5,8 @@ use DTA::CAB;
 use DTA::CAB::Automaton::Gfsm;
 use DTA::CAB::Automaton::Gfsm::XL;
 
+use Benchmark qw(cmpthese timethese);
+
 ##==============================================================================
 ## test: mootm
 
