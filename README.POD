@@ -1,0 +1,55 @@
+=pod
+
+README for DTA::CAB
+
+=head1 ABSTRACT
+
+DTA::CAB - "Cascaded Analysis Broker" for error-tolerant morphological analysis
+
+=head1 REQUIREMENTS
+
+=over 4
+
+=item Gfsm
+
+=item Encode
+
+=item Storable
+
+=item Tie::Cache
+
+=item Getopt::Long
+
+=item Pod::Usage
+
+=item Time::HiRes
+
+=item (a bunch of Gfsm transducers)
+
+=back
+
+
+=head1 DESCRIPTION
+
+The DTA::CAB package provides an object-oriented compiler/interpreter for
+error-tolerant heuristic morphological analysis of tokenized text.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item Gfsm(3perl)
+
+URL: http://www.ling.uni-potsdam.de/~moocow/projects/gfsm
+
+=item Gfsm::XL(3perl)
+
+URL: http://www.ling.uni-potsdam.de/~moocow/projects/gfsm#gfsmxl
+
+=back
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+
+=cut

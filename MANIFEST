@@ -1,0 +1,11 @@
+Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+
+README.txt
+README.POD
+
+CAB.pm
+
+t/00_basic.t
+t/common.plt
