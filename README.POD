@@ -12,6 +12,14 @@ DTA::CAB - "Cascaded Analysis Broker" for error-tolerant morphological analysis
 
 =item Gfsm
 
+Both C library and perl wrappers required.
+See http://www.ling.uni-potsdam.de/~moocow/projects/gfsm
+
+=item Gfsm::XL
+
+Both C library and perl wrappers required.
+See http://www.ling.uni-potsdam.de/~moocow/projects/gfsm#gfsmxl
+
 =item Encode
 
 =item Storable
@@ -33,6 +41,17 @@ DTA::CAB - "Cascaded Analysis Broker" for error-tolerant morphological analysis
 
 The DTA::CAB package provides an object-oriented compiler/interpreter for
 error-tolerant heuristic morphological analysis of tokenized text.
+
+
+=head1 INSTALLATION
+
+Issue the following commands to the shell:
+
+ bash$ cd DTA-CAB-0.01   # (or wherever you unpacked this distribution)
+ bash$ perl Makefile.PL  # check requirements, etc.
+ bash$ make              # build the module
+ bash$ make test         # (optional): test module before installing
+ bash$ make install      # install the module on your system
 
 =head1 SEE ALSO
 

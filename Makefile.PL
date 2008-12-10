@@ -5,13 +5,15 @@ use ExtUtils::MakeMaker;
 ##----------------------------------------------------------------------
 WriteMakefile
   (
-   NAME		=> 'Lingua::LTS',
+   NAME		=> 'DTA::CAB',
    AUTHOR       => 'Bryan Jurish <moocow@bbaw.de>',
-   ABSTRACT	=> 'Festival-style letter-to-sound ruleset utilities',
-   VERSION_FROM	=> 'LTS.pm',
+   ABSTRACT	=> '"Cascaded Analysis Broker" for robust morphological analysis',
+   VERSION_FROM	=> 'CAB.pm',
 
    PREREQ_PM    => {
-		    'Gfsm'=>0.0207,
+		    'Gfsm'    =>0.0216,
+		    'Gfsm::XL'=>0.02,
+		    ##--
 		    'Encode'=>undef,
 		    'Tie::Cache'=>undef,
 		    'File::Basename'=>undef,
@@ -21,9 +23,7 @@ WriteMakefile
 		    'Time::HiRes'=>undef,
 		   },
 
-   EXE_FILES    => [qw(lts2fst.perl lts2sym.perl),
-		    qw(lts-apply.perl lts-info.perl),
-		   ],
+   #EXE_FILES   => [qw(dta-cab.perl),],
   );
 
 
