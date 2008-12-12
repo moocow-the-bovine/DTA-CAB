@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Transliterator.pm
+## File: DTA::CAB::Analyzer::Transliterator.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: latin-1 approximator
 
-package DTA::CAB::Transliterator;
+package DTA::CAB::Analyzer::Transliterator;
 
 use DTA::CAB::Analyzer;
 

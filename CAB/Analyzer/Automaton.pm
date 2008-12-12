@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Automaton.pm
+## File: DTA::CAB::Analyzer::Automaton.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: generic analysis automaton API
 
-package DTA::CAB::Automaton;
+package DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer;
 use Gfsm;
 use Encode qw(encode decode);

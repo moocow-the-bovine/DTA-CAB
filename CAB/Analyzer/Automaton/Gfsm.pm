@@ -1,11 +1,11 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Automaton::Gfsm.pm
+## File: DTA::CAB::Analyzer::Automaton::Gfsm.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: generic analysis automaton API: Gfsm automata
 
-package DTA::CAB::Automaton::Gfsm;
-use DTA::CAB::Automaton;
+package DTA::CAB::Analyzer::Automaton::Gfsm;
+use DTA::CAB::Analyzer::Automaton;
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -17,14 +17,14 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Automaton);
+our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Automaton
+##  + object structure: see DTA::CAB::Analyzer::Automaton
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(

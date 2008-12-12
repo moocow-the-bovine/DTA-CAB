@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
-## File: DTA::CAB::Automaton::Gfsm::XL.pm
+## File: DTA::CAB::Analyzer::Automaton::Gfsm::XL.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: Gfsm::XL::Cascade -based transductions
 
-package DTA::CAB::Automaton::Gfsm::XL;
-use DTA::CAB::Automaton;
+package DTA::CAB::Analyzer::Automaton::Gfsm::XL;
+use DTA::CAB::Analyzer::Automaton;
 use Gfsm;
 use Gfsm::XL;
 use Encode qw(encode decode);
@@ -17,14 +17,14 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Automaton);
+our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Automaton
+##  + object structure: see DTA::CAB::Analyzer::Automaton
 ##  + new data / changes
 ##    (
 ##     ##-- Analysis objects

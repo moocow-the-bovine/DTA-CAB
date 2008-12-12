@@ -4,6 +4,13 @@
 ## Descript: robust morphological analysis: top-level
 
 package DTA::CAB;
+
+use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Automaton;
+use DTA::CAB::Analyzer::Automaton::Gfsm;
+use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
+use DTA::CAB::Analyzer::Transliterator;
+
 use IO::File;
 use Carp;
 
