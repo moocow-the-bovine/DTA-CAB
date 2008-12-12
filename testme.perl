@@ -2,9 +2,9 @@
 
 use lib qw(.);
 use DTA::CAB;
-use DTA::CAB::Automaton::Gfsm;
-use DTA::CAB::Automaton::Gfsm::XL;
-use DTA::CAB::Transliterator;
+#use DTA::CAB::Analyzer::Automaton::Gfsm;
+#use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
+#use DTA::CAB::Analyzer::Transliterator;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
@@ -13,7 +13,7 @@ use Benchmark qw(cmpthese timethese);
 ## test: mootm
 
 sub test_mootm {
-  our $morph = DTA::CAB::Automaton::Gfsm->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict');
+  our $morph = DTA::CAB::Analyzer::Automaton::Gfsm->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict');
   $morph->ensureLoaded();
   our $sub = $morph->analyzeSub();
   our $w = 'einen';
@@ -31,7 +31,7 @@ sub dumpAnalyses {
 ## test: rw
 
 sub test_rw {
-  our $rw = DTA::CAB::Automaton::Gfsm::XL->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab');
+  our $rw = DTA::CAB::Analyzer::Automaton::Gfsm::XL->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab');
   $rw->ensureLoaded();
   our $sub = $rw->analyzeSub();
   our $w = 'seyne';
@@ -44,7 +44,7 @@ sub test_rw {
 ## test: transliterator
 
 sub test_xlit {
-  our $xlit = DTA::CAB::Transliterator->new();
+  our $xlit = DTA::CAB::Analyzer::Transliterator->new();
 
   our $w0 = decode('latin1', 'foo');   ##-- $w0: all ascii
   our $w1 = decode('latin1', 'bär');   ##-- $w1: latin1
