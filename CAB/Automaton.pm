@@ -5,6 +5,7 @@
 ## Description: generic analysis automaton API
 
 package DTA::CAB::Automaton;
+use DTA::CAB::Analyzer;
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -16,6 +17,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
+our @ISA = qw(DTA::CAB::Analyzer);
 
 ##==============================================================================
 ## Constructors etc.
@@ -53,55 +55,51 @@ use strict;
 ##     ndict  = > $ndict,    ##-- #/known tokens (dict-analyzed)
 ##     nknown  => $nknown,   ##-- #/known tokens (dict- or fst-analyzed)
 ##
-##     ##-- errors etc
+##     ##-- errors etc (inherited from ::Analyzer)
 ##     errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
 ##    )
 sub new {
   my $that = shift;
-  my $aut = bless({
-		   ##-- filenames
-		   fstFile => undef,
-		   labFile => undef,
-		   dictFile => undef,
+  my $aut = $that->SUPER::new(
+			      ##-- filenames
+			      fstFile => undef,
+			      labFile => undef,
+			      dictFile => undef,
 
-		   ##-- analysis objects
-		   fst=>undef,
-		   lab=>undef,
-		   result=>undef,
-		   labh=>{},
-		   laba=>[],
-		   labc=>[],
-		   dict=>{},
+			      ##-- analysis objects
+			      fst=>undef,
+			      lab=>undef,
+			      result=>undef,
+			      labh=>{},
+			      laba=>[],
+			      labc=>[],
+			      dict=>{},
 
-		   ##-- options
-		   eow            =>'',
-		   check_symbols  => 1,
-		   labenc         => 'latin1',
-		   auto_connect   => 0,
-		   tolower        => 0,
- 		   tolowerNI      => 0,
-		   toupperI       => 0,
+			      ##-- options
+			      eow            =>'',
+			      check_symbols  => 1,
+			      labenc         => 'latin1',
+			      auto_connect   => 0,
+			      tolower        => 0,
+			      tolowerNI      => 0,
+			      toupperI       => 0,
 
-		   ##-- profiling
-		   profile => 0,
+			      ##-- profiling
+			      profile => 0,
 
-		   ntoks   => 0,
-		   ndict   => 0,
-		   nknown  => 0,
-		   #ncache  => 0,
+			      ntoks   => 0,
+			      ndict   => 0,
+			      nknown  => 0,
+			      #ncache  => 0,
 
-		   ntoksa  => 0,
-		   ndicta  => 0,
-		   nknowna => 0,
-		   #ncachea  => 0,
+			      ntoksa  => 0,
+			      ndicta  => 0,
+			      nknowna => 0,
+			      #ncachea  => 0,
 
-		   ##-- errors
-		   errfh   => \*STDERR,
-
-		   ##-- user args
-		   @_
-		  }, ref($that)||$that);
-  #$aut->resetCache();
+			      ##-- user args
+			      @_
+			     );
   return $aut;
 }
 
@@ -297,22 +295,17 @@ sub loadDict {
 ##  + each \@analysisI is an array:
 ##    [ $analysisUpperString, $analysisWeight ]
 ##  + really just a convenience wrapper for analysis_sub()
-sub analyze {
-  my $aut = shift;
-  return $aut->analyzeSub()->(@_);
-}
+##  + inherited from DTA::CAB::Analyzer
 
-## $coderef = $aut->analyzeSub()
+## $coderef = $anl->analyzeSub()
+##  + inherited from DTA::CAB::Analyzer
+
+## $coderef = $aut->getAnalyzeSub()
 ##  + returned sub is callable as:
 ##     $coderef->($native_perl_encoded_string,\%analyzeOptions)
-##  + caches sub in $aut->{_analyze}
-##  + implicitly loads automaton and labels
-sub analyzeSub {
+##  + implicitly loads analysis data (automaton and labels)
+sub getAnalyzeSub {
   my $aut = shift;
-  return $aut->{_analyze} if (defined($aut->{_analyze}));
-
-  ##-- load automaton
-  $aut->ensureLoaded() or die(ref($aut)."::analysis_sub(): could not load automaton: $!");
 
   ##-- setup common variables
   my $dict   = $aut->{dict};
@@ -327,7 +320,7 @@ sub analyzeSub {
   my $doprofile = $aut->{profile};
 
   my ($word,$opts,$uword,@wlabs, $isdict, $analyses);
-  return $aut->{_analyze} = sub {
+  return sub {
     ($word,$opts) = @_;
 
     ##-- set default options
