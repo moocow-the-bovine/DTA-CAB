@@ -9,6 +9,12 @@ use DTA::CAB;
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
 
+BEGIN {
+  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
+  binmode(STDOUT,':utf8');
+  binmode(STDERR,':utf8');
+}
+
 ##==============================================================================
 ## test: mootm
 
@@ -19,8 +25,11 @@ sub test_mootm {
   our $w = 'einen';
   our $a = $morph->analyze($w);
   print map { "\t$w : $_->[0] <$_->[1]>\n" } @$a;
+  print "[textString] : $w\n", $a->textString, "\n";
+  print "[verboseString] : $w\n", $a->verboseString("\t[mootm] $w : ");
+  print "[xmlString] : $w\n", $a->xmlString(), "\n";
 }
-#test_mootm;
+test_mootm;
 
 sub dumpAnalyses {
   my ($w,$analyses) = @_;
@@ -37,8 +46,11 @@ sub test_rw {
   our $w = 'seyne';
   our $a = $rw->analyze($w);
   print map { "\t$w: $_->[0] <$_->[1]>\n" } @$a;
+  print "[textString] $w:\n", $a->textString, "\n";
+  print "[verboseString] : $w\n", $a->verboseString("\t[rw] $w : ");
+  print "[xmlString] : $w\n", $a->xmlString(), "\n";
 }
-#test_rw;
+test_rw;
 
 ##==============================================================================
 ## test: transliterator
@@ -46,20 +58,30 @@ sub test_rw {
 sub test_xlit {
   our $xlit = DTA::CAB::Analyzer::Transliterator->new();
 
-  our $w0 = decode('latin1', 'foo');   ##-- $w0: all ascii
-  our $w1 = decode('latin1', 'bär');   ##-- $w1: latin1
-  our $w2 = "\x{0153}";                ##-- $w2: oe ligature: non-latin-1, latin extended
-  our $w3 = "\x{03c0}\x{03b5}";        ##-- $w2: \pi \varepsilon (~"pe") : non-latin, non-extended
-
+  our $w0 = decode('latin1', 'foo');   ##-- $w0: ascii:  +latin1,+latinx,+native
   our $a0 = $xlit->analyze($w0);
-  our $a1 = $xlit->analyze($w1);
-  our $a2 = $xlit->analyze($w2);
-  our $a3 = $xlit->analyze($w3);
-
   print "$w0 : ", $xlit->analysisHuman($a0), "\n";
-  print "$w1 : ", $xlit->analysisHuman($a1), "\n";
-  print "$w2 : ", $xlit->analysisHuman($a2), "\n";
-  print "$w3 : ", $xlit->analysisHuman($a3), "\n";
+  print "[textString] $w\n", $a0->textString, "\n";
+  print "[verboseString] $w\n", $a0->verboseString("[xlit] $w0 : ");
+  print "[xmlString] $w\n", $a0->xmlString, "\n";
+
+  our $w1 = decode('latin1', 'bär');   ##-- $w1: latin1: +latin1,+latinx,+native
+  our $a1 = $xlit->analyze($w1);
+  print "$w1 : ", $a1->textString, "\n";
+
+  our $w2 = "\x{0153}";                ##-- $w2: oe ligature: -latin1,+latinx,-native
+  our $a2 = $xlit->analyze($w2);
+  print "$w2 : ", $a2->textString, "\n";
+
+  our $w3 = "\x{03c0}\x{03b5}";        ##-- $w2: \pi \varepsilon (~"pe") : -latin1,-latinx,-native
+  our $a3 = $xlit->analyze($w3);
+  print "$w3 : ", $a3->textString, "\n";
+
+  our $w4 = "\x{00e6}";        ##-- $w2: ae ligature: (~"ae") : +latin1,+latinx,-native (no: this *is* native...)
+  our $a4 = $xlit->analyze($w4);
+  print "$w4 : ", $a4->textString, "\n";
+
+  print "done: test_xlit()\n";
 }
 test_xlit();
 

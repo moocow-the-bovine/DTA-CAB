@@ -7,6 +7,7 @@
 package DTA::CAB::Analyzer::Transliterator;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Transliterator::Analysis ':const';
 
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
 use Unicode::UCD;       ##-- unicode character names, info, etc.
@@ -24,15 +25,6 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(DTA::CAB::Analyzer);
-
-##-- analysis indices
-our $STRING    = 0;
-our $IS_LATIN1 = 1;
-our $IS_LATINX = 2;
-our $IS_NATIVE = 3;
-
-##-- analysis field names
-our @NAMES = qw(latin1String isLatin1 isLatinExt isNative);
 
 ##==============================================================================
 ## Constructors etc.
@@ -119,10 +111,10 @@ sub getAnalyzeSub {
     }
 
     ##-- check for any editing
-    $isNative = $l eq $w ? 1 : 0;
+    #$isNative = $l eq $w ? 1 : 0;
 
-    ##-- return analysis
-    return [$l, $isLatin1,$isLatinExt,$isNative];
+    ##-- return analysis: [ $latin1_string, $isLatin1, $isLatinExt ] #, $isNative
+    return bless [$l, $isLatin1,$isLatinExt], 'DTA::CAB::Analyzer::Transliterator::Analysis';
   };
 }
 
@@ -134,9 +126,9 @@ sub getAnalyzeSub {
 ## $humanReadableString = $xlit->analysisHuman($analysis)
 BEGIN { *analysisHuman = \&analysisString; }
 sub analysisString {
-  my $al = defined($_[1]) ? $_[1] : $_[0];
-  return "[latin1=$al->[$IS_LATIN1], latinx=$al->[$IS_LATINX], native=$al->[$IS_NATIVE]] : str=$al->[$STRING]";
+  return (defined($_[1]) ? $_[1] : $_[0])->textString();
 }
+
 
 1; ##-- be happy
 

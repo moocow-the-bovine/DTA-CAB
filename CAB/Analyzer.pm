@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Analyzer.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: generic analysis API
+## Description: generic analyzer API
 
 package DTA::CAB::Analyzer;
 use Carp;
@@ -57,8 +57,8 @@ sub ensureLoaded { return 1; }
 ##==============================================================================
 
 ## $ANALYSIS = $anl->analyze($native_perl_encoded_string,\%analyzeOptions)
-##  + returns a scalar analysis object (class-dependent)
-##  + really just a convenience wrapper for analysis_sub()
+##  + returns a scalar analysis object (type is class-dependent, but should obey DTA::CAB::Analyzer::Analysis API)
+##  + really just a convenience wrapper for $anl->analyzeSub()->($perl_string,%options)
 sub analyze { return $_[0]->analyzeSub()->(@_[1..$#_]); }
 
 ## $coderef = $anl->analyzeSub()
@@ -81,7 +81,6 @@ sub getAnalyzeSub {
   my $anl = shift;
   croak(ref($anl)."::getAnalyzeSub(): not implemented");
 }
-
 
 
 1; ##-- be happy

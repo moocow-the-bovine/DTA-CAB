@@ -5,7 +5,10 @@
 ## Description: generic analysis automaton API
 
 package DTA::CAB::Analyzer::Automaton;
+
 use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Automaton::Analysis;
+
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -96,6 +99,9 @@ sub new {
 			      ndicta  => 0,
 			      nknowna => 0,
 			      #ncachea  => 0,
+
+			      ##-- output
+			      analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 
 			      ##-- user args
 			      @_
@@ -382,7 +388,7 @@ sub getAnalyzeSub {
     }
 
     ##-- return
-    return $analyses;
+    return bless $analyses, $aut->{analysisClass}||'DTA::CAB::Analysis::Automaton';
   };
 }
 
