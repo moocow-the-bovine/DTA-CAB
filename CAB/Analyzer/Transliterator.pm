@@ -32,7 +32,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
-##    (none yet)
+##    analysisKey => $key,   ##-- token analysis key (default='xlit')
 ##  + object structure, inherited from DTA::CAB::Analyzer:
 ##     ##-- errors etc
 ##     errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
@@ -40,7 +40,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   #(none)
+			   analysisKey => 'xlit',
 
 			   ##-- user args
 			   @_
@@ -59,62 +59,66 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $analysis = $aut->analyze($native_perl_encoded_string,\%analyzeOptions)
+## $token = $anl->analyze($token_or_text,\%analyzeOptions)
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->analyzeSub()
 ##  + inherited from DTA::CAB::Analyzer
 
-## $coderef = $aut->getAnalyzeSub()
+## $coderef = $anl->getAnalyzeSub()
 ##  + returned sub is callable as:
-##     $coderef->($native_perl_encoded_string,\%analyzeOptions)
+##     $token = $coderef->($token_or_text,\%analyzeOptions)
+##  + sets $token->{$anl->{analysisKey}} : a DTA::CAB::Token with:
+##     isLatin1   => $bool,    ##-- true iff $token->{text} is losslessly encodable as latin1
+##     isLatinExt => $bool,    ##-- true iff $token->{text} is losslessly encodable as latin-extended
+##     text       => $l1text,  ##-- best latin-1 approximation of $token->{text}
 sub getAnalyzeSub {
   my $xlit = shift;
+  my $akey = $xlit->{analysisKey};
 
-  my ($w,$uc,$l0,$l, $isLatin1,$isLatinExt,$isNative);
+  my ($tok,$uc,$l0,$l);
   return sub {
-    $w  = shift;
-    $uc = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
+    $tok = DTA::CAB::Token->toToken(shift);
+    $uc  = Unicode::Normalize::NFKC($tok->{text}); ##-- compatibility(?) decomposition + canonical composition
 
     ##-- construct latin-1 approximation
-    if ($uc =~ m/[^\p{inBasicLatin}\p{inLatin1Supplement}]/) {
-      $l0 = $uc;
+    if (
+	$uc =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+       )
+      {
+	$l0 = $uc;
 
-      ##-- special handling for some character sequences
-      $l0 =~ s/\x{0363}/a/g; ##-- COMBINING LATIN SMALL LETTER A
-      $l0 =~ s/\x{0364}/e/g; ##-- COMBINING LATIN SMALL LETTER E
-      $l0 =~ s/\x{0365}/i/g; ##-- COMBINING LATIN SMALL LETTER I
-      $l0 =~ s/\x{0366}/o/g; ##-- COMBINING LATIN SMALL LETTER O
+	##-- special handling for some character sequences
+	$l0 =~ s/\x{0363}/a/g;	##-- COMBINING LATIN SMALL LETTER A
+	$l0 =~ s/\x{0364}/e/g;	##-- COMBINING LATIN SMALL LETTER E
+	$l0 =~ s/\x{0365}/i/g;	##-- COMBINING LATIN SMALL LETTER I
+	$l0 =~ s/\x{0366}/o/g;	##-- COMBINING LATIN SMALL LETTER O
 
-      ##-- default: copy plain latin-1 characters, transliterate rest with Text::Unidecode::unidecode()
-      $l  = join('',
-		 map {
-		   ($_ =~ /\p{inBasicLatin}|\p{InLatin1Supplement}/
-		    ? $_                             ##-- Latin-1 character: just copy
-		    : Text::Unidecode::unidecode($_) ##-- Non-Latin-1: transliterate
-		   )
-		 } split(//,$l0)
-		);
-      $l = decode('latin1',$l);
+	##-- default: copy plain latin-1 characters, transliterate rest with Text::Unidecode::unidecode()
+	$l  = join('',
+		   map {
+		     ($_ =~ m(\p{inBasicLatin}|\p{InLatin1Supplement}) #)
+		      ? $_	##-- Latin-1 character: just copy
+		      : Text::Unidecode::unidecode($_) ##-- Non-Latin-1: transliterate
+		     )
+		   } split(//,$l0)
+		  );
+	$l = decode('latin1',$l);
 
-      if ($l =~ m/[^\p{inBasicLatin}\p{inLatin1Supplement}]/) {
-	##-- sanity check
-	carp(ref($xlit)."::analyze(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
+	if (
+	    $l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	   ) {
+	  ##-- sanity check
+	  carp(ref($xlit)."::analyze(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$tok->{text}'");
+	}
+
+	##-- properties
+	$tok->{$akey} = bless({text=>$l, isLatin1=>0, isLatinExt=>($uc =~ m([^\p{Latin}]) ? 0 : 1) }, 'DTA::CAB::Token');
+      } else {
+	$tok->{$akey} = bless({text=>$uc, isLatin1=>1, isLatinExt=>1 }, 'DTA::CAB::Token');
       }
-
-      ##-- properties
-      $isLatin1   = 0;
-      $isLatinExt = $w =~ m/[^\p{Latin}]/ ? 0 : 1;
-    } else {
-      $l=$uc;
-      $isLatin1 = $isLatinExt = 1;
-    }
-
-    ##-- check for any editing
-    #$isNative = $l eq $w ? 1 : 0;
-
-    ##-- return analysis: [ $latin1_string, $isLatin1, $isLatinExt ] #, $isNative
-    return bless [$l, $isLatin1,$isLatinExt], 'DTA::CAB::Analyzer::Transliterator::Analysis';
+    ##-- return
+    return $tok;
   };
 }
 
@@ -124,10 +128,10 @@ sub getAnalyzeSub {
 ##==============================================================================
 
 ## $humanReadableString = $xlit->analysisHuman($analysis)
-BEGIN { *analysisHuman = \&analysisString; }
-sub analysisString {
-  return (defined($_[1]) ? $_[1] : $_[0])->textString();
-}
+#BEGIN { *analysisHuman = \&analysisString; }
+#sub analysisString {
+#  return (defined($_[1]) ? $_[1] : $_[0])->textString();
+#}
 
 
 1; ##-- be happy

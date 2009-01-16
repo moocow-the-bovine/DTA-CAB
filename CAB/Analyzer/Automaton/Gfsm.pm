@@ -71,13 +71,22 @@ sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $coderef = $aut->analysis_sub()
-##  + returned sub is callable as:
-##     $coderef->($native_perl_encoded_string,\%analyzeOptions)
-##  + caches sub in $aut->{_analyze}
-##  + implicitly loads automaton and labels
-##(inherited)
+## $key = $anl->analysisKey()
+##   + get token output key for analysis sub
+##   + default is $anl->{analysisKey} or 'gfsm'
+sub analysisKey {
+  return $_[0]{analysisKey} if (defined($_[0]{analysisKey}));
+  return $_[0]{analysisKey} = 'gfsm';
+}
 
+## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+##  + inherited from DTA::CAB::Analyzer
+
+## $coderef = $anl->analyzeSub()
+##  + inherited from DTA::CAB::Analyzer
+
+## $coderef = $anl->getAnalyzeSub()
+##  + inherited from DTA::CAB::Analyzer::Automaton
 
 
 1; ##-- be happy

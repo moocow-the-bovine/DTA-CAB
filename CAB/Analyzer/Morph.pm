@@ -1,0 +1,42 @@
+## -*- Mode: CPerl -*-
+##
+## File: DTA::CAB::Analyzer::Morph.pm
+## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Description: morphological analysis via Gfsm automata
+
+##==============================================================================
+## Package: Analyzer::Morph
+##==============================================================================
+package DTA::CAB::Analyzer::Morph;
+use DTA::CAB::Analyzer::Automaton::Gfsm;
+use Carp;
+use strict;
+our @ISA = qw(DTA::CAB::Analyzer::Automaton::Gfsm);
+
+## $obj = CLASS_OR_OBJ->new(%args)
+##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
+sub new {
+  my $that = shift;
+  my $aut = $that->SUPER::new(
+			      ##-- defaults
+			      analysisKey   => 'morph',
+			      analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
+
+			      ##-- user args
+			      @_
+			     );
+  return $aut;
+}
+
+##==============================================================================
+## Package: Analyzer::Morph::Analysis
+##==============================================================================
+package DTA::CAB::Analyzer::Morph::Analysis;
+use DTA::CAB::Analyzer::Automaton::Analysis;
+our @ISA = qw(DTA::CAB::Analyzer::Automaton::Analysis);
+sub xmlElementName { return 'morph'; }
+sub xmlChildName { return 'a'; }
+
+1; ##-- be happy
+
+__END__

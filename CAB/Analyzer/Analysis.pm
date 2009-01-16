@@ -63,25 +63,17 @@ sub xmlElementName {
 }
 
 ## $nod = $a->xmlNode()
-## $nod = $a->xmlNode($nod)
-##  + add analysis information to XML node $nod, creating an element if it doesn't exit
+## $nod = $a->xmlNode($key)
+##  + create & return an XML node with key $key for analysis information
 ##  + default implementation assumes $a is a flat HASH-ref
 sub xmlNode {
-  my ($a,$nod) = @_;
-  $nod = XML::LibXML::Element->new($a->xmlElementName) if (!defined($nod));
+  my ($a,$key) = @_;
+  my $nod = XML::LibXML::Element->new($key || $a->xmlElementName);
   my ($k,$v);
   while (($k,$v)=each(%$a)) {
     $nod->setAttribute($k,$v);
   }
   return $nod;
-}
-
-## $str = $a->xmlString()
-## $str = $a->xmlString($format)
-##  + returns an XML string representing the analysis object
-##  + just a wrapper for xmlNode() and XML::LibXML::Node::toString()
-sub xmlString {
-  return $_[0]->xmlNode(@_[1..$#_])->toString(defined($_[1]) ? $_[1] : 1);
 }
 
 

@@ -24,9 +24,9 @@ our @ISA = qw(DTA::CAB::Analyzer::Analysis);
 ## $a = CLASS_OR_OBJ->new(@analyses)
 ##  + object structure:
 ##    [
-##     [$analysis_string1, $analysis_weight1],
+##     [$analysis_string1, $analysis_weight1, \@subanalyses1_or_undef],
 ##     ...,
-##     [$analysis_stringN, $analysis_weightN],
+##     [$analysis_stringN, $analysis_weightN, \@subanalysesN_or_undef],
 ##    ]
 sub new { return bless [ @_ ], ref($_[0])||$_[0]; }
 
@@ -66,21 +66,38 @@ sub xmlElementName { return 'analyses'; }
 sub xmlChildName { return 'analysis'; }
 
 ## $nod = $a->xmlNode()
-## $nod = $a->xmlNode($nod)
-##  + add analysis information to XML node $nod, creating an element if it doesn't exit
+## $nod = $a->xmlNode($key)
+##  + create & return an XML node with key $key for analysis information
+##  + default implementation assumes $a is a flat HASH-ref
 sub xmlNode {
-  my ($a,$nod) = @_;
-  $nod = XML::LibXML::Element->new($a->xmlElementName) if (!defined($nod));
-  my $subname = $a->xmlChildName;
+  my ($a,$key) = @_;
+  my $nod      = XML::LibXML::Element->new($key || $a->xmlElementName);
+  my $subname  = $a->xmlChildName;
   my ($subnod);
   foreach (@$a) {
     $subnod = $nod->addNewChild(undef,$subname);
     $subnod->setAttribute('string',$_->[0]);
     $subnod->setAttribute('weight',$_->[1]);
+    $subnod->addChild($_->[2]->xmlNode) if (UNIVERSAL::can($_->[2],'xmlNode'));
   }
   return $nod;
 }
 
+##==============================================================================
+## Package: Analysis::Morph
+##==============================================================================
+package DTA::CAB::Analyzer::Automaton::Analysis::Morph;
+our @ISA = qw(DTA::CAB::Analyzer::Automaton::Analysis);
+sub xmlElementName { return 'morph'; }
+sub xmlChildName { return 'a'; }
+
+##==============================================================================
+## Package: Analysis::Rewrite
+##==============================================================================
+package DTA::CAB::Analyzer::Automaton::Analysis::Rewrite;
+our @ISA = qw(DTA::CAB::Analyzer::Automaton::Analysis);
+sub xmlElementName { return 'rewrite'; }
+sub xmlChildName { return 'a'; }
 
 1; ##-- be happy
 

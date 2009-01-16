@@ -12,6 +12,7 @@ use DTA::CAB::Analyzer::Automaton::Analysis;
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
+#use File::Basename qw();
 use Carp;
 
 use strict;
@@ -101,7 +102,8 @@ sub new {
 			      #ncachea  => 0,
 
 			      ##-- output
-			      analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
+			      #analysisKey   => 'fst',
+			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 
 			      ##-- user args
 			      @_
@@ -295,25 +297,44 @@ sub loadDict {
 ## Methods: Analysis
 ##==============================================================================
 
-## \@analyses = $aut->analyze($native_perl_encoded_string,\%analyzeOptions)
-##  + returns array-of-arrays:
-##    \@analyses = [ \@analysis1, \@analysis2, ..., \@analysisN ]
-##  + each \@analysisI is an array:
-##    [ $analysisUpperString, $analysisWeight ]
-##  + really just a convenience wrapper for analysis_sub()
+## $key = $anl->analysisKey()
+##   + get token output key for analysis sub
+##   + default is $anl->{analysisKey} or 'fst'
+sub analysisKey {
+  return $_[0]{analysisKey} if (defined($_[0]{analysisKey}));
+  return $_[0]{analysisKey} = 'fst';
+}
+
+## $class = $anl->analysisClass()
+##   + get token output class for analysis sub
+##   + default is $anl->{analysisClass} or 'DTA::CAB::Analyzer::Automaton::Analysis'
+sub analysisClass {
+  return $_[0]{analysisClass} if (defined($_[0]{analysisClass}));
+  return $_[0]{analysisClass} = 'DTA::CAB::Analyzer::Automaton::Analysis';
+}
+
+## $token = $anl->analyze($token_or_text,\%analyzeOptions)
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->analyzeSub()
 ##  + inherited from DTA::CAB::Analyzer
 
-## $coderef = $aut->getAnalyzeSub()
-##  + returned sub is callable as:
-##     $coderef->($native_perl_encoded_string,\%analyzeOptions)
+## $coderef = $anl->getAnalyzeSub()
+##  + sets $tok->{ $anl->analysisKey() } = \@analyses
+##  + analyses:
+##    \@analyses  = [ \@analysis1, \@analysis2, ..., \@analysisN ]
+##  + each \@analysisI is an array:
+##    \@analysisI = [ $analysisUpperString, $analysisWeight ]
+##  + really just a convenience wrapper for analysis_sub()
 ##  + implicitly loads analysis data (automaton and labels)
+##  + returned sub is callable as:
+##     $token = $coderef->($token_or_text,\%analyzeOptions)
 sub getAnalyzeSub {
   my $aut = shift;
 
   ##-- setup common variables
+  my $akey   = $aut->analysisKey();
+  my $aclass = $aut->analysisClass();
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $result = $aut->{result};
@@ -325,16 +346,17 @@ sub getAnalyzeSub {
   my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI max_paths max_weight max_ops);
   my $doprofile = $aut->{profile};
 
-  my ($word,$opts,$uword,@wlabs, $isdict, $analyses);
+  my ($tok,$opts,$uword,@wlabs, $isdict, $analyses);
   return sub {
-    ($word,$opts) = @_;
+    ($tok,$opts) = @_;
+    $tok  = DTA::CAB::Token->toToken($tok);
 
     ##-- set default options
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
 
     ##-- normalize word
-    $uword = $word;
+    $uword = $tok->{text};
     if    ($opts->{tolower})   { $uword = lc($uword); }
     elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
@@ -352,7 +374,7 @@ sub getAnalyzeSub {
 	##-- verbosely
 	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
 	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	  $aut->{errfh}->print(ref($aut),": Warning: ignoring unknown character '", substr($uword,$_,1), "' in word '$word' (normalized to '$uword').\n");
+	  $aut->{errfh}->print(ref($aut),": Warning: ignoring unknown character '", substr($uword,$_,1), "' in word '$tok->{text}' (normalized to '$uword').\n");
 	}
 	@wlabs = grep {defined($_)} @wlabs;
       } else {
@@ -388,7 +410,10 @@ sub getAnalyzeSub {
     }
 
     ##-- return
-    return bless $analyses, $aut->{analysisClass}||'DTA::CAB::Analysis::Automaton';
+    #return bless($analyses, $aut->{analysisClass}||'DTA::CAB::Analysis::Automaton');
+    $tok->{$akey} = bless($analyses, $aclass);
+
+    return $tok;
   };
 }
 

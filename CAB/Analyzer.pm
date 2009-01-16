@@ -5,6 +5,7 @@
 ## Description: generic analyzer API
 
 package DTA::CAB::Analyzer;
+use DTA::CAB::Token;
 use Carp;
 use strict;
 
@@ -56,14 +57,14 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $ANALYSIS = $anl->analyze($native_perl_encoded_string,\%analyzeOptions)
-##  + returns a scalar analysis object (type is class-dependent, but should obey DTA::CAB::Analyzer::Analysis API)
-##  + really just a convenience wrapper for $anl->analyzeSub()->($perl_string,%options)
+## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+##  + returns a DTA::CAB::Token for analyzed $token_or_text
+##  + really just a convenience wrapper for $anl->analyzeSub()->($token_or_text,%options)
 sub analyze { return $_[0]->analyzeSub()->(@_[1..$#_]); }
 
 ## $coderef = $anl->analyzeSub()
 ##  + returned sub should be callable as:
-##     $coderef->($native_perl_encoded_string,\%analyzeOptions)
+##     $token = $coderef->($token_or_text,\%analyzeOptions)
 ##  + caches sub in $anl->{_analyze}
 ##  + implicitly loads analysis data with $anl->ensureLoaded()
 ##  + otherwise, calls $anl->getAnalyzeSub()

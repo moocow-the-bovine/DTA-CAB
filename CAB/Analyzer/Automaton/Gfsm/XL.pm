@@ -160,9 +160,22 @@ sub loadCascade {
 ## Methods: Analysis
 ##==============================================================================
 
-## @analyses         = analyze($native_perl_word)
-## $analysis_or_word = analyze($native_perl_word)
-##  + inherited
+## $key = $anl->analysisKey()
+##   + get token output key for analysis sub
+##   + default is $anl->{analysisKey} or 'gfsmxl'
+sub analysisKey {
+  return $_[0]{analysisKey} if (defined($_[0]{analysisKey}));
+  return $_[0]{analysisKey} = 'gfsmxl';
+}
+
+## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+##  + inherited from DTA::CAB::Analyzer
+
+## $coderef = $anl->analyzeSub()
+##  + inherited from DTA::CAB::Analyzer
+
+## $coderef = $anl->getAnalyzeSub()
+##  + inherited from DTA::CAB::Analyzer::Automaton
 
 
 1; ##-- be happy
