@@ -19,8 +19,12 @@ sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- defaults
-			      analysisKey   => 'morph',
-			      analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
+			      #analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
+
+			      ##-- Formatting: XML
+			      xmlAnalysesElt => 'morph',
+			      xmlAnalysisElt => 'a',
+			      #xmlSubanalysisFormatter => $fmt,
 
 			      ##-- user args
 			      @_
@@ -29,13 +33,9 @@ sub new {
 }
 
 ##==============================================================================
-## Package: Analyzer::Morph::Analysis
+## Analysis Formatting
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph::Analysis;
-use DTA::CAB::Analyzer::Automaton::Analysis;
-our @ISA = qw(DTA::CAB::Analyzer::Automaton::Analysis);
-sub xmlElementName { return 'morph'; }
-sub xmlChildName { return 'a'; }
+
 
 1; ##-- be happy
 

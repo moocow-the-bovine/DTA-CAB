@@ -7,7 +7,6 @@
 package DTA::CAB::Analyzer::Transliterator;
 
 use DTA::CAB::Analyzer;
-use DTA::CAB::Analyzer::Transliterator::Analysis ':const';
 
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
 use Unicode::UCD;       ##-- unicode character names, info, etc.
@@ -42,6 +41,9 @@ sub new {
 			   ##-- options
 			   analysisKey => 'xlit',
 
+			   ##-- formatting: XML
+			   xmlAnalysisElt => 'xlit',
+
 			   ##-- user args
 			   @_
 			  );
@@ -59,7 +61,7 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+## $out = $anl->analyze($token_or_text,\%analyzeOptions)
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->analyzeSub()
@@ -67,19 +69,21 @@ sub ensureLoaded { return 1; }
 
 ## $coderef = $anl->getAnalyzeSub()
 ##  + returned sub is callable as:
-##     $token = $coderef->($token_or_text,\%analyzeOptions)
-##  + sets $token->{$anl->{analysisKey}} : a DTA::CAB::Token with:
-##     isLatin1   => $bool,    ##-- true iff $token->{text} is losslessly encodable as latin1
-##     isLatinExt => $bool,    ##-- true iff $token->{text} is losslessly encodable as latin-extended
-##     text       => $l1text,  ##-- best latin-1 approximation of $token->{text}
+##    $out = $coderef->($token_or_text,\%analyzeOptions)
+##  + $out = [
+##     $latin1Text_str,   ##-- best latin-1 approximation of $token->{text}
+##     $isLatin1_bool,    ##-- true iff $token->{text} is losslessly encodable as latin1
+##     $isLatinExt_bool,  ##-- true iff $token->{text} is losslessly encodable as latin-extended
+##    ]
 sub getAnalyzeSub {
   my $xlit = shift;
   my $akey = $xlit->{analysisKey};
 
-  my ($tok,$uc,$l0,$l);
+  my ($w,$uc,$l0,$l, $isLatin1,$isLatinExt);
   return sub {
-    $tok = DTA::CAB::Token->toToken(shift);
-    $uc  = Unicode::Normalize::NFKC($tok->{text}); ##-- compatibility(?) decomposition + canonical composition
+    $w   = shift;
+    $w   = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
+    $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 
     ##-- construct latin-1 approximation
     if (
@@ -109,19 +113,75 @@ sub getAnalyzeSub {
 	    $l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
 	   ) {
 	  ##-- sanity check
-	  carp(ref($xlit)."::analyze(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$tok->{text}'");
+	  carp(ref($xlit)."::analyze(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
 	}
 
-	##-- properties
-	$tok->{$akey} = bless({text=>$l, isLatin1=>0, isLatinExt=>($uc =~ m([^\p{Latin}]) ? 0 : 1) }, 'DTA::CAB::Token');
+	##-- set properties
+	$isLatin1 = 0;
+	$isLatinExt = ($uc =~ m([^\p{Latin}]) ? 0 : 1);
       } else {
-	$tok->{$akey} = bless({text=>$uc, isLatin1=>1, isLatinExt=>1 }, 'DTA::CAB::Token');
+	$l = $uc;
+	$isLatin1 = $isLatinExt = 1;
       }
     ##-- return
-    return $tok;
+    return [ $l, $isLatin1, $isLatinExt ];
   };
 }
 
+##==============================================================================
+## Methods: Output Formatting
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Formatting: Perl
+
+## $str = $anl->analysisPerl($out,\%opts)
+##  + inherited from DTA::CAB::Analyzer
+
+##--------------------------------------------------------------
+## Methods: Formatting: Text
+
+## $str = $anl->analysisText($out,\%opts)
+##  + text string for output $out with options \%opts
+sub analysisText {
+  return (
+	  '['
+	  .($_[1][1] ? '+' : '-').'latin1'
+	  .','
+	  .($_[1][2] ? '+' : '-').'latinx'
+	  .'] '
+	  .$_[1][0]
+	 );
+}
+
+##--------------------------------------------------------------
+## Methods: Formatting: Verbose Text
+
+## @lines = $anl->analysisVerbose($out,\%opts)
+##  + verbose text line(s) for output $out with options \%opts
+##  + default version just calls analysisText()
+sub analysisVerbose {
+  return "isLatin1=$_[1][1] isLatinExt=$_[1][2] latin1Text=$_[1][0]";
+}
+
+##--------------------------------------------------------------
+## Methods: Formatting: XML
+
+## $nod = $anl->analysisXmlNode($out,\%opts)
+##  + XML node for output $out with options \%opts
+##  + returns new XML element:
+##    <$anl->{xmlAnalysisElt} isLatin1="$bool" isLatinExt="$bool" latin1Text="$str"/>
+sub analysisXmlNode {
+  my $nod = XML::LibXML::Element->new($_[0]{xmlAnalysisElt} || DTA::CAB::Utils::xml_safe_string(ref($_[0])));
+  $nod->setAttribute('isLatin1', $_[1][1]);
+  $nod->setAttribute('isLatinExt', $_[1][2]);
+  $nod->setAttribute('latin1Text', $_[1][0]);
+  return $nod;
+}
+
+## $nod = $anl->defaultXmlNode($val)
+##  + default XML node generator
+##  + inherited from DTA::CAB::Analyzer
 
 ##==============================================================================
 ## Methods: Debug

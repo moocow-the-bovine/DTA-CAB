@@ -7,7 +7,6 @@
 package DTA::CAB::Analyzer::Automaton;
 
 use DTA::CAB::Analyzer;
-use DTA::CAB::Analyzer::Automaton::Analysis;
 
 use Gfsm;
 use Encode qw(encode decode);
@@ -61,6 +60,11 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- errors etc (inherited from ::Analyzer)
 ##     errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
+##
+##     ##-- Formatting: XML
+##     subanalysisFormatter => $fmt, ##-- sub-analysis formatter
+##     xmlAnalysesElt => $elt, ##-- parent element name for XML formatting
+##     xmlAnalysisElt => $elt, ##-- child element name for XML formatting
 ##    )
 sub new {
   my $that = shift;
@@ -102,8 +106,10 @@ sub new {
 			      #ncachea  => 0,
 
 			      ##-- output
-			      #analysisKey   => 'fst',
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
+			      #xmlAnalysesElt => 'analyses',
+			      #xmlAnalysisElt => 'analysis',
+			      #subanalysisFormatter => undef,
 
 			      ##-- user args
 			      @_
@@ -297,44 +303,25 @@ sub loadDict {
 ## Methods: Analysis
 ##==============================================================================
 
-## $key = $anl->analysisKey()
-##   + get token output key for analysis sub
-##   + default is $anl->{analysisKey} or 'fst'
-sub analysisKey {
-  return $_[0]{analysisKey} if (defined($_[0]{analysisKey}));
-  return $_[0]{analysisKey} = 'fst';
-}
-
-## $class = $anl->analysisClass()
-##   + get token output class for analysis sub
-##   + default is $anl->{analysisClass} or 'DTA::CAB::Analyzer::Automaton::Analysis'
-sub analysisClass {
-  return $_[0]{analysisClass} if (defined($_[0]{analysisClass}));
-  return $_[0]{analysisClass} = 'DTA::CAB::Analyzer::Automaton::Analysis';
-}
-
-## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+## $out = $anl->analyze($in,\%analyzeOptions)
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->analyzeSub()
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->getAnalyzeSub()
-##  + sets $tok->{ $anl->analysisKey() } = \@analyses
-##  + analyses:
-##    \@analyses  = [ \@analysis1, \@analysis2, ..., \@analysisN ]
+##  + returned sub is callable as:
+##      $out = $coderef->($in,\%opts)
+##  + $out = [ \@analysis1, ..., \@analysisN ]
 ##  + each \@analysisI is an array:
 ##    \@analysisI = [ $analysisUpperString, $analysisWeight ]
-##  + really just a convenience wrapper for analysis_sub()
+##  + if $anl->analysisClass() returned defined, $out is blessed into it
 ##  + implicitly loads analysis data (automaton and labels)
-##  + returned sub is callable as:
-##     $token = $coderef->($token_or_text,\%analyzeOptions)
 sub getAnalyzeSub {
   my $aut = shift;
 
   ##-- setup common variables
-  my $akey   = $aut->analysisKey();
-  my $aclass = $aut->analysisClass();
+  my $aclass = $aut->{analysisClass};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $result = $aut->{result};
@@ -346,17 +333,17 @@ sub getAnalyzeSub {
   my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI max_paths max_weight max_ops);
   my $doprofile = $aut->{profile};
 
-  my ($tok,$opts,$uword,@wlabs, $isdict, $analyses);
+  my ($w,$opts,$uword,@wlabs, $isdict, $analyses);
   return sub {
-    ($tok,$opts) = @_;
-    $tok  = DTA::CAB::Token->toToken($tok);
+    ($w,$opts) = @_;
+    $w    = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
 
     ##-- set default options
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
 
     ##-- normalize word
-    $uword = $tok->{text};
+    $uword = $w;
     if    ($opts->{tolower})   { $uword = lc($uword); }
     elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
@@ -374,7 +361,7 @@ sub getAnalyzeSub {
 	##-- verbosely
 	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
 	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	  $aut->{errfh}->print(ref($aut),": Warning: ignoring unknown character '", substr($uword,$_,1), "' in word '$tok->{text}' (normalized to '$uword').\n");
+	  $aut->{errfh}->print(ref($aut),": Warning: ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
 	}
 	@wlabs = grep {defined($_)} @wlabs;
       } else {
@@ -409,14 +396,71 @@ sub getAnalyzeSub {
       }
     }
 
-    ##-- return
-    #return bless($analyses, $aut->{analysisClass}||'DTA::CAB::Analysis::Automaton');
-    $tok->{$akey} = bless($analyses, $aclass);
-
-    return $tok;
+    ##-- bless & return
+    $analyses = bless($analyses,$aclass) if (defined($aclass));
+    return $analyses;
   };
 }
 
+##==============================================================================
+## Methods: Output Formatting
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Formatting: Perl
+
+## $str = $anl->analysisPerl($out,\%opts)
+##  + inherited from DTA::CAB::Analyzer
+
+##--------------------------------------------------------------
+## Methods: Formatting: Text
+
+## $str = $anl->analysisText($out,\%opts)
+##  + text string for output $out with options \%opts
+sub analysisText {
+  return join("\t", map { "$_->[0] <$_->[1]>" } @{$_[1]});
+}
+
+##--------------------------------------------------------------
+## Methods: Formatting: Verbose Text
+
+## @lines = $anl->analysisVerbose($out,\%opts)
+##  + verbose text line(s) for output $out with options \%opts
+##  + default version just calls analysisText()
+sub analysisVerbose {
+  return map {
+    ("$_->[0] <$_->[1]>",
+     ($_->[2] && UNIVERSAL::can($_[0]{subanalysisFormatter},'analysisVerbose')
+      ? (map { "\t".$_ } $_[0]{subanalysisFormatter}->analysisVerbose($_->[2]))
+      : qw()),
+    )
+  } @{$_[1]};
+}
+
+##--------------------------------------------------------------
+## Methods: Formatting: XML
+
+## $nod = $anl->analysisXmlNode($out,\%opts)
+##  + XML node for output $out with options \%opts
+##  + returns new XML element:
+##     <$xmlAnalysesElt>
+##       <$xmlAnalysisElt weight="$w" string="$str"/>
+##       ...
+##     </$xmlAnalysisElt>
+sub analysisXmlNode {
+  my ($aut,$analyses) = @_;
+  my $nod = XML::LibXML::Element->new($aut->{xmlAnalysesElt} || DTA::CAB::Utils::xml_safe_string(ref($_[0]).".analyses"));
+  my $child_name = $aut->{xmlAnalysisElt} || 'analysis';
+  my ($child);
+  foreach (@$analyses) {
+    $child = $nod->addNewChild(undef,$child_name);
+    $child->setAttribute('string',$_->[0]);
+    $child->setAttribute('weight',$_->[1]);
+    $child->addChild($aut->{subanalysisFormatter}->analysisXmlNode($_->[2]))
+      if ($_->[2] && UNIVERSAL::can($aut->{subanalysisFormatter},'analysisXmlNode'));
+  }
+  return $nod;
+}
 
 1; ##-- be happy
 

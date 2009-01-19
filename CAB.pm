@@ -9,9 +9,10 @@ use DTA::CAB::Analyzer;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
-use DTA::CAB::Analyzer::Morph;
-use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::Transliterator;
+use DTA::CAB::Analyzer::Morph;
+use DTA::CAB::Analyzer::MorphSafe;
+use DTA::CAB::Analyzer::Rewrite;
 
 use IO::File;
 use Carp;
@@ -37,7 +38,11 @@ sub new {
 			   ##-- analyzers
 			   xlit  => DTA::CAB::Analyzer::Transliterator->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
+			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
+
+			   ##-- formatting: XML
+			   xmlTokenElt => 'token', ##-- token element
 
 			   ##-- user args
 			   @_
@@ -56,7 +61,9 @@ sub ensureLoaded {
   my $rc  = 1;
   $rc &&= $cab->{xlit}->ensureLoaded()  if ($cab->{xlit});
   $rc &&= $cab->{morph}->ensureLoaded() if ($cab->{morph});
+  $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
+  $cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph});
   return $rc;
 }
 
@@ -74,42 +81,117 @@ sub ensureLoaded {
 ##  + guts for $anl->analyzeSub()
 sub getAnalyzeSub {
   my $cab = shift;
-  my ($xlit,$morph,$rw) = @$cab{qw(xlit morph rw)};
+  my ($xlit,$morph,$msafe,$rw) = @$cab{qw(xlit morph msafe rw)};
   my $a_xlit  = $xlit->getAnalyzeSub()  if ($xlit);
   my $a_morph = $morph->getAnalyzeSub() if ($morph);
+  my $a_msafe = $msafe->getAnalyzeSub() if ($msafe);
   my $a_rw    = $rw->getAnalyzeSub()    if ($rw);
-  my ($tok,$opts, $xtok);
+  my ($w,$opts,$tok,$out_xlit,$l,$out_morph,$out_msafe,$out_rw);
   return sub {
-    ($tok,$opts) = @_;
-    $tok = $xtok = DTA::CAB::Token->toToken($tok);
+    #($tok,$opts) = @_;
+    $w   = shift;
+    $w   = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
+    #$tok = $xtok = DTA::CAB::Token->toToken($tok);
+    $tok = bless({text=>$w}, 'DTA::CAB::Token');
 
-    if ($a_xlit) {
+    if ($a_xlit && defined($out_xlit=$tok->{xlit}=$a_xlit->($w,$opts))) {
       ##-- analyze: transliterate
-      $a_xlit->($tok,$opts);
-      $xtok = $tok->{xlit};
+      $l = $out_xlit->[0];
+    } else {
+      $l = $w;
     }
 
-    if ($a_morph) {
-      ##-- analyze: morph
-      $a_morph->($xtok,$opts) if ($a_morph);
-	if (!@{$xtok->{morph}}) {
-	  ##-- analyzer: rewrite (if morphological analysis is "unsafe")
-	  if ($a_rw) {
-	    $a_rw->($xtok);
-	    foreach (@{$xtok->{rw}}) {
-	      push(@$_, $a_morph->($_->[0])->{morph});
-	    }
-	  }
+    ##-- analyze: morph
+    $out_morph = $tok->{morph} = ($a_morph ? $a_morph->($l,$opts) : undef);
+
+    ##-- analyze: morph: safe?
+    $out_msafe = $tok->{msafe} = ($a_msafe ? $a_msafe->($out_morph,$opts) : undef);
+
+    ##-- analyze: rewrite (if morphological analysis is "unsafe")
+    if (!$out_msafe && $a_rw) {
+      $out_rw = $tok->{rw} = $a_rw->($l,$opts);
+      if ($a_morph) {
+	##-- analyze: rewrite: sub-morphology
+	foreach (@$out_rw) {
+	  push(@$_, $a_morph->($_->[0],$opts));
 	}
-    } elsif ($a_rw) {
-      ##-- no morph analysis: just rewrite
-      $a_rw->($xtok);
+      }
     }
 
     return $tok;
   };
 }
 
+##==============================================================================
+## Methods: Output Formatting
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Formatting: Perl
+
+## $str = $anl->analysisPerl($out,\%opts)
+##  + inherited from DTA::CAB::Analyzer
+
+##--------------------------------------------------------------
+## Methods: Formatting: Text
+
+## $str = $anl->analysisText($out,\%opts)
+##  + text string for output $out with options \%opts
+sub analysisText {
+  my ($cab,$tok) = @_;
+  return join("\t",
+	      $tok->{text},
+	      '/xlit:',  ($cab->{xlit}  && $tok->{xlit}  ? ($cab->{xlit}->analysisText($tok->{xlit}))   : qw()),
+	      '/morph:', ($cab->{morph} && $tok->{morph} ? ($cab->{morph}->analysisText($tok->{morph})) : qw()),
+	      '/msafe:', ($cab->{msafe} && $tok->{msafe} ? ($cab->{msafe}->analysisText($tok->{msafe})) : qw()),
+	      '/rw:',    ($cab->{rw}    && $tok->{rw}    ? ($cab->{morph}->analysisText($tok->{rw}))    : qw()),
+	     );
+}
+
+##--------------------------------------------------------------
+## Methods: Formatting: Verbose Text
+
+## @lines = $anl->analysisVerbose($out,\%opts)
+##  + verbose text line(s) for output $out with options \%opts
+##  + default version just calls analysisText()
+sub analysisVerbose {
+  my ($cab,$tok) = @_;
+  return
+    ($tok->{text},
+     ($cab->{xlit}  && $tok->{xlit}  ? (" +(xlit)", map { "\t$_" } $cab->{xlit}->analysisVerbose($tok->{xlit}))   : qw()),
+     ($cab->{morph} && $tok->{morph} ? (" +(morph)", map { "\t$_" } $cab->{morph}->analysisVerbose($tok->{morph})) : qw()),
+     ($cab->{msafe} && 1             ? (" +(msafe)", map { "\t$_" } $cab->{msafe}->analysisVerbose($tok->{msafe})) : qw()),
+     ($cab->{rw}    && $tok->{rw}    ? (" +(rewrite)", map { "\t$_" } $cab->{rw}->analysisVerbose($tok->{rw})) : qw()),
+    );
+}
+
+
+##--------------------------------------------------------------
+## Methods: Formatting: XML
+
+## $nod = $anl->analysisXmlNode($out,\%opts)
+##  + XML node for output $out with options \%opts
+##  + returns new XML element:
+##    <$anl->{xmlTokenElt} text="$text">
+##      <xlit> ... </xlit>
+##      <morph safe="$msafe"> ... </morph>
+##      <rewrite> ... </rewrite>
+##    </$anl->{xmlTokenElt}>
+sub analysisXmlNode {
+  my ($cab,$tok) = @_;
+  my $nod = XML::LibXML::Element->new($cab->{xmlTokenElt} || DTA::CAB::Utils::xml_safe_string(ref($cab)));
+  my ($kid);
+  $nod->setAttribute('text', $tok->{text});
+  $nod->addChild($cab->{xlit}->analysisXmlNode($tok->{xlit}))   if ($cab->{xlit} && $tok->{xlit});
+  $nod->addChild($kid=$cab->{morph}->analysisXmlNode($tok->{morph})) if ($cab->{morph} && $tok->{morph});
+  $kid->setAttribute("safe", $tok->{msafe} ? 1 : 0);
+  $nod->addChild($cab->{rw}->analysisXmlNode($tok->{rw}))       if ($cab->{rw} && $tok->{rw});
+  return $nod;
+}
+
+## $nod = $anl->defaultXmlNode($val)
+##  + default XML node generator
+##  + inherited from DTA::CAB::Analyzer
 
 
 __END__

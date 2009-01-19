@@ -5,8 +5,6 @@
 ## Description: generic API for tokens passed to/from DTA::CAB::Analyzer
 
 package DTA::CAB::Token;
-
-use XML::LibXML;
 use Carp;
 use strict;
 
@@ -27,10 +25,10 @@ use strict;
 ##     text => $raw_text,      ##-- raw token text
 ##     ##
 ##     ##-- Post-Analysis Attributes (?)
-##     #a_xlit  => $a_xlit,     ##-- analysis output by DTA::CAB::Transliterator
-##     #a_morph => $a_morph,    ##-- analysis output by DTA::CAB::Automaton subclass for literal morphology lookup
-##     #a_safe  => $a_safe,     ##-- analysis output by DTA::CAB::
-##     #a_rw    => $a_rw,       ##-- analysis output by DTA::CAB::Automaton subclass for rewrite lookup
+##     #xlit  => $a_xlit,     ##-- analysis output by DTA::CAB::Analyzer::Transliterator
+##     #morph => $a_morph,    ##-- analysis output by DTA::CAB::Analyzer::Morph subclass for literal morphology lookup
+##     #safe  => $a_safe,     ##-- analysis output by DTA::CAB::Analyzer::MorphSafe (?)
+##     #rw    => $a_rw,       ##-- analysis output by DTA::CAB::Analyzer::Rewrite subclass for rewrite lookup
 ##    }
 sub new {
   return bless({
@@ -49,43 +47,8 @@ sub toToken {
 }
 
 ##==============================================================================
-## Methods: Formatting
+## Methods: Formatting (obsolete)
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nam = _xmlSafeName($str)
-sub _xmlSafeName {
-  my $s = shift;
-  $s =~ s/\:\:/\./g;
-  $s =~ s/[\:\/\\]/\_/g;
-  $s =~ s/\s/_/g;
-  return $s;
-}
-
-## $nam = $a->xmlElementName()
-##  + for default node creation
-sub xmlElementName {
-  return _xmlSafeName(lc(ref($_[0])) || $_[0] || __PACKAGE__);
-}
-
-## $nod = $a->xmlNode()
-## $nod = $a->xmlNode($eltName)
-##  + create and return an XML node for token
-sub xmlNode {
-  my ($tok,$name) = @_;
-  my $nod = XML::LibXML::Element->new($name || $tok->xmlElementName);
-  #$nod->setAttribute('text',$tok->{text});
-  my ($k,$v);
-  foreach $k (sort(keys(%$tok))) {
-    $v = $tok->{$k};
-    if (ref($v) && UNIVERSAL::can($v,'xmlNode')) { $nod->addChild($v->xmlNode($k)); }
-    else { $nod->setAttribute($k,$v); }
-  }
-  return $nod;
-}
-
 
 1; ##-- be happy
 

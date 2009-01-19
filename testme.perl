@@ -23,23 +23,23 @@ sub test_xlit {
 
   our $w0 = decode('latin1', 'foo');   ##-- $w0: ascii:  +latin1,+latinx,+native
   our $x0 = $xlit->analyze($w0);
-  print "$w0: xml: ", $x0->xmlNode->toString(1), "\n";
+  #print "$w0: xml: ", $x0->xmlNode->toString(1), "\n";
+  #print "$w0: ", $xlit->analysisText($x0), "\n";
+  print "$w0: ", $xlit->analysisXmlNode($x0)->toString(1), "\n";
 
   our $w1 = decode('latin1', 'bär');   ##-- $w1: latin1: +latin1,+latinx,+native
   our $x1 = $xlit->analyze($w1);
-  print "$w1: xml: ", $x1->xmlNode->toString(1), "\n";
+  print "$w1: ", $xlit->analysisXmlNode($x1)->toString(1), "\n";
 
   our $w2 = "\x{0153}";                ##-- $w2: oe ligature: -latin1,+latinx,-native
   our $x2 = $xlit->analyze($w2);
-  print "$w2: xml: ", $x2->xmlNode->toString(1), "\n";
 
   our $w3 = "\x{03c0}\x{03b5}";        ##-- $w2: \pi \varepsilon (~"pe") : -latin1,-latinx,-native
   our $x3 = $xlit->analyze($w3);
-  print "$w3: xml: ", $x3->xmlNode->toString(1), "\n";
+  print "$w3: ", $xlit->analysisXmlNode($x3)->toString(1), "\n";
 
   our $w4 = decode('latin1',"\x{00e6}"); ##-- $w2: ae ligature: (~"ae") : +latin1,+latinx,-native (no: this *is* native...)
   our $x4 = $xlit->analyze($w4);
-  print "$w4: xml: ", $x4->xmlNode->toString(1), "\n";
 
   print "done: test_xlit()\n";
 }
@@ -51,16 +51,12 @@ sub test_xlit {
 
 sub test_mootm {
   our $xlit  = DTA::CAB::Analyzer::Transliterator->new();
-  our $morph = DTA::CAB::Analyzer::Automaton::Gfsm->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict', analysisKey=>'morph');
+  our $morph = DTA::CAB::Analyzer::Automaton::Gfsm->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict');
   $morph->ensureLoaded();
-  our $w = 'einen';
+  our $w = 'Hilfe';
   our $x = $morph->analyze($w);
-  print map { "\t$w : $_->[0] <$_->[1]>\n" } @{$x->{morph}};
-  print "[xmlString] : $w\n", $x->xmlNode->toString(1), "\n";
-
-  our $x1 = $xlit->analyze($w);
-  $morph->analyze($x1->{xlit});
-  print "[xlit+xmlString] : $w\n", $x1->xmlNode->toString(1), "\n";
+  print map { "\t$w : $_->[0] <$_->[1]>\n" } @$x;
+  print "[xmlString] : $w\n", $morph->analysisXmlNode($x)->toString(1), "\n";
 }
 #test_mootm;
 
@@ -73,14 +69,14 @@ sub dumpAnalyses {
 ## test: rw
 
 sub test_rw {
-  our $rw = DTA::CAB::Analyzer::Automaton::Gfsm::XL->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab',analysisKey=>'rw');
+  our $rw = DTA::CAB::Analyzer::Automaton::Gfsm::XL->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab',max_paths=>2);
   $rw->ensureLoaded();
-  our $sub = $rw->analyzeSub();
   our $w = 'seyne';
   our $a = $rw->analyze($w);
   print map { "\t$w: $_->[0] <$_->[1]>\n" } @$a;
 
-  print "[xmlString] : $w\n", $a->xmlNode->toString(1), "\n";
+  print "[text] : $w\n", $rw->analysisText($a), "\n";
+  print "[xmlString] : $w\n", $rw->analysisXmlNode($a)->toString(1), "\n";
 }
 #test_rw;
 
@@ -113,14 +109,35 @@ sub test_cab {
     (
      xlit =>DTA::CAB::Analyzer::Transliterator->new(),
      morph=>DTA::CAB::Analyzer::Morph->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict'),
-     rw   =>DTA::CAB::Analyzer::Rewrite->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab',analysisKey=>'rw',max_paths=>2),
+     msafe=>DTA::CAB::Analyzer::MorphSafe->new(),
+     rw   =>DTA::CAB::Analyzer::Rewrite->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab', max_paths=>2),
     );
+  $cab->{rw}{subanalysisFormatter} = $cab->{morph};
   $cab->ensureLoaded();
+  our ($w,$x);
+  $w = 'eyne';
+  $x = $cab->analyze($w);
+  print "[text]    : $w\n", $cab->analysisText($x), "\n";
+  print "[verbose] : $w\n", (map { "$_\n" } $cab->analysisVerbose($x)), "\n";
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
 
-  our $w = 'eyne';
-  our $x = DTA::CAB::Token->toToken($w);
-  $cab->analyze($x);
-  print "[xmlString] : $w\n", $x->xmlNode->toString(1), "\n";
+  $w = 'Hilfe';
+  $x = $cab->analyze($w);
+  print "[text]    : $w\n", $cab->analysisText($x), "\n";
+  print "[verbose] : $w\n", (map { "$_\n" } $cab->analysisVerbose($x)), "\n";
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
+
+  $x = $cab->analyze('Oje'); ##-- test: unsafe: ITJ
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
+
+  $x = $cab->analyze('de'); ##-- test: unsafe: FM
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
+
+  $x = $cab->analyze('Schmidt'); ##-- test: unsafe: NE
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
+
+  $x = $cab->analyze('Gel'); ##-- test: unsafe: root "Gel"
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
 }
 test_cab;
 

@@ -71,15 +71,7 @@ sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $key = $anl->analysisKey()
-##   + get token output key for analysis sub
-##   + default is $anl->{analysisKey} or 'gfsm'
-sub analysisKey {
-  return $_[0]{analysisKey} if (defined($_[0]{analysisKey}));
-  return $_[0]{analysisKey} = 'gfsm';
-}
-
-## $token = $anl->analyze($token_or_text,\%analyzeOptions)
+## $out = $anl->analyze($in,\%analyzeOptions)
 ##  + inherited from DTA::CAB::Analyzer
 
 ## $coderef = $anl->analyzeSub()
