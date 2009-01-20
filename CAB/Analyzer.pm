@@ -5,10 +5,11 @@
 ## Description: generic analyzer API
 
 package DTA::CAB::Analyzer;
-use DTA::CAB::Token;
+use DTA::CAB::Utils;
+use DTA::CAB::Persistent;
+use DTA::CAB::Logger;
 use Data::Dumper;
 use XML::LibXML;
-use DTA::CAB::Utils;
 use Carp;
 use strict;
 
@@ -16,6 +17,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
+our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 
 ##==============================================================================
 ## Constructors etc.
@@ -24,8 +26,6 @@ use strict;
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure:
 ##    (
-##     ##-- errors etc
-##     errfh   => $fh,         ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
 ##     ##
 ##     ##-- formatting: xml
 ##     analysisXmlElt => $elt, ##-- name of xml element for analysisXmlNode() method
@@ -33,9 +33,6 @@ use strict;
 sub new {
   my $that = shift;
   my $anl = bless({
-		   ##-- errors
-		   errfh   => \*STDERR,
-
 		   ##-- formatting: xml
 		   #analysisXmlElt => 'a',
 
@@ -61,6 +58,27 @@ sub initialize { return; }
 ##  + ensures analysis data is loaded from default files
 ##  + default version always returns true
 sub ensureLoaded { return 1; }
+
+##==============================================================================
+## Methods: Persistence
+##==============================================================================
+
+##======================================================================
+## Methods: Persistence: Perl
+
+## @keys = $class_or_obj->noSaveKeys()
+##  + returns list of keys not to be saved
+##  + default just returns empty list
+sub noSaveKeys { return ('_analyze'); }
+
+## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
+##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
+sub loadPerlRef {
+  my $that = shift;
+  my $obj = $that->SUPER::loadPerlRef(@_);
+  delete($obj->{_analyze});
+  return $obj;
+}
 
 ##==============================================================================
 ## Methods: Analysis

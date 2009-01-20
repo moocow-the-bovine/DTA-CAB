@@ -135,9 +135,10 @@ sub fstOk { return defined($_[0]{fst}) && defined($_[0]{fst}->cascade) && $_[0]{
 *loadFst = \&loadCascade;
 sub loadCascade {
   my ($aut,$cscfile) = @_;
+  $aut->info("loading cascade file '$cscfile'");
   my $csc = Gfsm::XL::Cascade->new();
   if (!$csc->load($cscfile)) {
-    confess(ref($aut)."::loadCascade(): load failed for '$cscfile': $!");
+    $aut->logconfess("loadCascade(): load failed for '$cscfile': $!");
     return undef;
   }
   $aut->{fst} = Gfsm::XL::Cascade::Lookup->new($csc);
@@ -168,6 +169,5 @@ sub loadCascade {
 
 ## $coderef = $anl->getAnalyzeSub()
 ##  + inherited from DTA::CAB::Analyzer::Automaton
-
 
 1; ##-- be happy

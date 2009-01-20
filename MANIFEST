@@ -6,6 +6,16 @@ README.txt
 README.POD
 
 CAB.pm
+CAB/Analyzer.pm
+CAB/Analyzer/Automaton.pm
+CAB/Analyzer/Automaton/Gfsm.pm
+CAB/Analyzer/Automaton/Gfsm/XL.pm
+CAB/Analyzer/Morph.pm
+CAB/Analyzer/MorphSafe.pm
+CAB/Analyzer/Rewrite.pm
+CAB/Analyzer/Transliterator.pm
+CAB/Token.pm
+CAB/Utils.pm
 
 t/00_basic.t
 t/common.plt

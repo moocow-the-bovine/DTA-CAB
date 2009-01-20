@@ -5,6 +5,7 @@
 
 package DTA::CAB;
 
+use DTA::CAB::Logger;
 use DTA::CAB::Analyzer;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
@@ -13,6 +14,7 @@ use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+
 
 use IO::File;
 use Carp;
@@ -66,6 +68,28 @@ sub ensureLoaded {
   $cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph});
   return $rc;
 }
+
+##==============================================================================
+## Methods: Persistence
+##==============================================================================
+
+##======================================================================
+## Methods: Persistence: Perl
+
+## $saveRef = $obj->savePerlRef()
+##  + return reference to be saved (top-level objects only)
+##  + default implementation just returns $obj
+sub savePerlRef {
+  my $cab = shift;
+  return {
+	  map { ($_=>(UNIVERSAL::can($cab->{$_},'savePerlRef') ? $cab->{$_}->savePerlRef : $cab->{$_})) } keys(%$cab)
+	 };
+}
+
+## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
+##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
+##  + inherited from DTA::CAB::Persistent
+
 
 ##==============================================================================
 ## Methods: Analysis

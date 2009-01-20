@@ -23,7 +23,7 @@ sub new {
 
 			      ##-- Formatting: XML
 			      xmlAnalysesElt => 'morph',
-			      xmlAnalysisElt => 'a',
+			      xmlAnalysisElt => 'ma',
 			      #xmlSubanalysisFormatter => $fmt,
 
 			      ##-- user args

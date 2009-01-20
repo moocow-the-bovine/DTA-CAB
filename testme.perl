@@ -1,10 +1,9 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
+
 use DTA::CAB;
-#use DTA::CAB::Analyzer::Automaton::Gfsm;
-#use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
-#use DTA::CAB::Analyzer::Transliterator;
+use DTA::CAB::Server;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
@@ -13,7 +12,11 @@ BEGIN {
   binmode($DB::OUT,':utf8') if (defined($DB::OUT));
   binmode(STDOUT,':utf8');
   binmode(STDERR,':utf8');
+  DTA::CAB::Logger->logInit();
 }
+
+##-- init logger
+#DTA::CAB::Logger::logInit();
 
 ##==============================================================================
 ## test: transliterator
@@ -139,7 +142,37 @@ sub test_cab {
   $x = $cab->analyze('Gel'); ##-- test: unsafe: root "Gel"
   print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
 }
-test_cab;
+#test_cab;
+
+
+##==============================================================================
+## test: all: load
+
+sub test_cab_load {
+  our $cab = DTA::CAB->new();
+  our $s   = $cab->savePerlString();
+  $cab = $cab->loadPerlFile("cab.PL");
+  $cab->ensureLoaded();
+  our ($w,$x);
+  $w = 'eyne';
+  $x = $cab->analyze($w);
+  print "[text]    : $w\n", $cab->analysisText($x), "\n";
+  print "[verbose] : $w\n", (map { "$_\n" } $cab->analysisVerbose($x)), "\n";
+  print "[xml]     : $w\n", $cab->analysisXmlNode($x)->toString(1), "\n";
+}
+#test_cab_load();
+
+##==============================================================================
+## test: cab: server
+
+sub test_cab_server {
+  our $srv = DTA::CAB::Server->loadPerlFile('cab-server.PL');
+  $srv->prepare();
+  $srv->run();
+  $srv->info("exiting");
+}
+test_cab_server();
+
 
 
 ##==============================================================================

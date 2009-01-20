@@ -217,9 +217,10 @@ sub load {
 ## $aut = $aut->loadFst($fstfile)
 sub loadFst {
   my ($aut,$fstfile) = @_;
+  $aut->info("loading FST file '$fstfile'");
   $aut->{fst} = $aut->fstClass->new() if (!defined($aut->{fst}));
   $aut->{fst}->load($fstfile)
-    or confess(ref($aut)."::loadFst(): load failed for '$fstfile': $!");
+    or $aut->logconfess("loadFst(): load failed for '$fstfile': $!");
   $aut->{result} = $aut->{fst}->shadow; #if (defined($aut->{result}) && $aut->{fst}->can('shadow'));
   delete($aut->{_analyze});
   return $aut;
@@ -231,9 +232,10 @@ sub loadFst {
 ## $aut = $aut->loadLabels($labfile)
 sub loadLabels {
   my ($aut,$labfile) = @_;
+  $aut->info("loading labels file '$labfile'");
   $aut->{lab} = $aut->labClass->new() if (!defined($aut->{lab}));
   $aut->{lab}->load($labfile)
-    or confess(ref($aut)."::loadLabels(): load failed for '$labfile': $!");
+    or $aut->logconfess("loadLabels(): load failed for '$labfile': $!");
   $aut->parseLabels();
   delete($aut->{_analyze});
   return $aut;
@@ -265,8 +267,9 @@ sub parseLabels {
 ## $aut = $aut->loadDict($dictfile)
 sub loadDict {
   my ($aut,$dictfile) = @_;
+  $aut->info("loading dictionary file '$dictfile'");
   my $dictfh = IO::File->new("<$dictfile")
-    or confess(ref($aut),"::loadDict() open failed for dictionary file '$dictfile': $!");
+    or $aut->logconfess("::loadDict() open failed for dictionary file '$dictfile': $!");
 
   my $dict = $aut->{dict};
   my ($line,$word,@analyses,$entry,$aw,$a,$w);
@@ -298,6 +301,32 @@ sub loadDict {
   return $aut;
 }
 
+##==============================================================================
+## Methods: Persistence
+##==============================================================================
+
+##======================================================================
+## Methods: Persistence: Perl
+
+## @keys = $class_or_obj->noSaveKeys()
+##  + returns list of keys not to be saved
+##  + default just returns empty list
+sub noSaveKeys {
+  my $that = shift;
+  return ($that->SUPER::noSaveKeys, qw(dict fst lab laba labc labh result _analyze));
+}
+
+## $saveRef = $obj->savePerlRef()
+##  + inherited from DTA::CAB::Persistent
+
+## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
+##  + implicitly calls $obj->clear()
+sub loadPerlRef {
+  my ($that,$ref) = @_;
+  my $obj = $that->SUPER::loadPerlRef($ref);
+  $obj->clear();
+  return $obj;
+}
 
 ##==============================================================================
 ## Methods: Analysis
