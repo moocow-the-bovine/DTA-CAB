@@ -28,16 +28,21 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ##    }
 sub new {
   my $that = shift;
-  return bless({
-		##-- dispatch analyzers
-		as => {},
-		##
-		##-- user args
-		@_
-	       },
-	       ref($that)||$that);
+  my $obj = bless({
+		   ##-- dispatch analyzers
+		   as => {},
+		   ##
+		   ##-- user args
+		   @_
+		  },
+		  ref($that)||$that);
+  $obj->initialize();
+  return $obj;
 }
 
+## undef = $obj->initialize()
+##  + called to initialize new objects after new()
+sub initialize { return $_[0]; }
 
 ##==============================================================================
 ## Methods: Generic Server API
@@ -49,10 +54,10 @@ sub prepare {
   my $srv = shift;
   my $rc  = 1;
 
-  ##-- init: logger
+  ##-- prepare: logger
   DTA::CAB::Logger->ensureLog();
 
-  ##-- init: analyzers
+  ##-- prepare: analyzers
   foreach (sort(keys(%{$srv->{as}}))) {
     $srv->info("initializing analyzer '$_'");
     if (!$srv->{as}{$_}->ensureLoaded) {
@@ -61,11 +66,38 @@ sub prepare {
     }
   }
 
+  ##-- prepare: signal handlers
+  $rc &&= $srv->prepareSignalHandlers();
+
+  ##-- prepare: subclass-local
+  $rc &&= $srv->prepareLocal(@_);
+
   ##-- return
   $srv->info("initialization complete");
 
   return $rc;
 }
+
+## $rc = $srv->prepareSignalHandlers()
+##  + initialize signal handlers
+sub prepareSignalHandlers {
+  my $srv = shift;
+  my $catcher = sub {
+    my $signame = shift;
+    $srv->logdie("caught signal SIG$signame - exiting");
+  };
+  my ($sig);
+  foreach $sig (qw(HUP TERM KILL)) {
+    $SIG{$sig} = $catcher;
+  }
+  return $catcher;
+}
+
+## $rc = $srv->prepareLocal(@args_to_prepare)
+##  + subclass-local initialization
+##  + called by prepare() after default prepare() guts have run
+sub prepareLocal { return 1; }
+
 
 ## $rc = $srv->run()
 ##  + run the server (just a dummy method)

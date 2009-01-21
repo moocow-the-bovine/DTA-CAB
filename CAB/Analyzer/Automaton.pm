@@ -59,7 +59,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     nknown  => $nknown,   ##-- #/known tokens (dict- or fst-analyzed)
 ##
 ##     ##-- errors etc (inherited from ::Analyzer)
-##     errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
+##     #errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
+##     # : OBSOLETE: use DTA::CAB::Logger methods (log4perl) instead!
 ##
 ##     ##-- Formatting: XML
 ##     subanalysisFormatter => $fmt, ##-- sub-analysis formatter
@@ -390,7 +391,7 @@ sub getAnalyzeSub {
 	##-- verbosely
 	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
 	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	  $aut->{errfh}->print(ref($aut),": Warning: ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+	  $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
 	}
 	@wlabs = grep {defined($_)} @wlabs;
       } else {

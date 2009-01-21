@@ -209,6 +209,39 @@ sub defaultXmlNode {
   return $vnod;
 }
 
+##==============================================================================
+## Methods: XML-RPC
+##==============================================================================
+
+## \@sigs = $anl->xmlRpcSignatures()
+##  + returns an array-ref of valid XML-RPC signatures:
+##    [ "$returnType1 $argType1_1 $argType1_2 ...", ..., "$returnTypeN ..." ]
+##  + known types (see http://www.xmlrpc.com/spec):
+##    Tag	          Type                                             Example
+##    "i4" or "int"	  four-byte signed integer                         42
+##    "boolean"	  0 (false) or 1 (true)                            1
+##    "string"	          string                                           hello world
+##    "double"           double-precision signed floating point number    -24.7
+##    "dateTime.iso8601" date/time	                                   19980717T14:08:55
+##    "base64"	          base64-encoded binary                            eW91IGNhbid0IHJlYWQgdGhpcyE=
+##    "struct"           complex structure                                { x=>42, y=>24 }
+##  + Default returns "string string struct"
+sub xmlRpcSignature { return ['string string']; }
+
+## $str = $anl->xmlRpcHelp()
+##  + returns help string for default XML-RPC procedure
+sub xmlRpcHelp { return '?'; }
+
+## @procedures = $anl->xmlRpcMethods()
+##  + returns a list of procedures suitable for passing to RPC::XML::Server::add_procedure()
+##  + default method defines an 'analyze' method
+sub xmlRpcMethods {
+  my $anl   = shift;
+  my $asub  = $anl->analyzeSub();
+  return (
+	  { name=>'analyze', code=>$asub, signature=>$anl->xmlRpcSignature, help=>$anl->xmlRpcHelp },
+	 );
+}
 
 1; ##-- be happy
 
