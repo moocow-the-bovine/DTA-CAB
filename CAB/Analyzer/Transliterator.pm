@@ -7,6 +7,7 @@
 package DTA::CAB::Analyzer::Transliterator;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Token;
 
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
 use Unicode::UCD;       ##-- unicode character names, info, etc.
@@ -31,18 +32,15 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
-##    analysisKey => $key,   ##-- token analysis key (default='xlit')
-##  + object structure, inherited from DTA::CAB::Analyzer:
-##     ##-- errors etc
-##     errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
+##    analysisPrefix => $key,   ##-- token analysis prefix (default='xlit')
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'xlit',
+			   analysisPrefix => 'xlit',
 
 			   ##-- formatting: XML
-			   xmlAnalysisElt => 'xlit',
+			   #xmlAnalysisElt => 'xlit',
 
 			   ##-- user args
 			   @_
@@ -61,28 +59,24 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $out = $anl->analyze($token_or_text,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
+##------------------------------------------------------------------------
+## Methods: Analysis: Token
 
 ## $coderef = $anl->getAnalyzeSub()
 ##  + returned sub is callable as:
-##    $out = $coderef->($token_or_text,\%analyzeOptions)
-##  + $out = [
-##     $latin1Text_str,   ##-- best latin-1 approximation of $token->{text}
-##     $isLatin1_bool,    ##-- true iff $token->{text} is losslessly encodable as latin1
-##     $isLatinExt_bool,  ##-- true iff $token->{text} is losslessly encodable as latin-extended
-##    ]
-sub getAnalyzeSub {
+##      $tok = $coderef->($tok,\%analyzeOptions)
+##  + alters %$token, for ${prefix}=$anl->{analysisPrefix}
+##      $tok->{"${prefix}.latin1Text"} = $str,    ##-- best latin-1 approximation of $token->{text}
+##      $tok->{"${prefix}.isLatin1"}   = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin1
+##      $tok->{"${prefix}.isLatinExt"} = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
+sub getAnalyzeTokenSub {
   my $xlit = shift;
-  my $akey = $xlit->{analysisKey};
+  my $aprf = $xlit->{analysisPrefix};
 
-  my ($w,$uc,$l0,$l, $isLatin1,$isLatinExt);
+  my ($tok, $w,$uc,$l0,$l, $isLatin1,$isLatinExt);
   return sub {
-    $w   = shift;
-    $w   = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
+    $tok = toToken(shift);
+    $w   = $tok->{text};
     $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 
     ##-- construct latin-1 approximation
@@ -113,7 +107,7 @@ sub getAnalyzeSub {
 	    $l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
 	   ) {
 	  ##-- sanity check
-	  carp(ref($xlit)."::analyze(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
+	  carp(ref($xlit)."::analyzeToken(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
 	}
 
 	##-- set properties
@@ -123,13 +117,19 @@ sub getAnalyzeSub {
 	$l = $uc;
 	$isLatin1 = $isLatinExt = 1;
       }
+
     ##-- return
-    return [ $l, $isLatin1, $isLatinExt ];
+    #return [ $l, $isLatin1, $isLatinExt ];
+    #
+    $tok->{"${aprf}.latin1Text"} = $l;
+    $tok->{"${aprf}.isLatin1"}   = $isLatin1;
+    $tok->{"${aprf}.isLatinExt"} = $isLatinExt;
+    return $tok;
   };
 }
 
 ##==============================================================================
-## Methods: Output Formatting
+## Methods: Output Formatting --> OBSOLETE ?!
 ##==============================================================================
 
 ##--------------------------------------------------------------

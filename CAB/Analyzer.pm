@@ -8,6 +8,9 @@ package DTA::CAB::Analyzer;
 use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
+use DTA::CAB::Token;
+use DTA::CAB::Sentence;
+use DTA::CAB::Document;
 use Data::Dumper;
 use XML::LibXML;
 use Carp;
@@ -47,6 +50,12 @@ sub new {
 ##  + default implementation does nothing
 sub initialize { return; }
 
+## undef = $anl->dropClosures();
+##  + drops '_analyze*' closures
+sub dropClosures {
+  delete(@{$_[0]}{'_analyzeToken','_analyzeSentence','_analyzeDocument'});
+}
+
 ##==============================================================================
 ## Methods: I/O
 ##==============================================================================
@@ -68,47 +77,125 @@ sub ensureLoaded { return 1; }
 
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
-##  + default just returns empty list
-sub noSaveKeys { return ('_analyze'); }
+##  + default just returns list of known '_analyze' keys
+sub noSaveKeys {
+  return ('_analyzeToken','_analyzeSentence','_analyzeDocument');
+}
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
 ##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
 sub loadPerlRef {
   my $that = shift;
   my $obj = $that->SUPER::loadPerlRef(@_);
-  delete($obj->{_analyze});
+  $obj->dropClosures();
   return $obj;
 }
 
 ##==============================================================================
-## Methods: Analysis
+## Methods: Analysis Closures: Generic
+##
+## + General schema for thingies of type XXX:
+##    $coderef = $anl->getAnalyzeXXXSub();            ##-- generate closure
+##    $coderef = $anl->analyzeXXXSub();               ##-- get cached closure or generate
+##    $thingy  = $anl->analyzeXXX($thingy,\%options)  ##-- get & apply (cached) closure
+## + XXX may be one of: 'Token', 'Sentence', 'Document',...
+## + analyze() alone just aliases analyzeToken()
 ##==============================================================================
 
-## $out = $anl->analyze($in,\%analyzeOptions)
-##  + returns an object-dependent analysis $out for input $in
-##  + really just a convenience wrapper for $anl->analyzeSub()->($in,%options)
-sub analyze { return $_[0]->analyzeSub()->(@_[1..$#_]); }
+BEGIN {
+  *getAnalyzeSub = \&getAnalyzeTokenSub;
+  *analyzeSub    = \&analyzeTokenSub;
+  *analyze       = \&analyzeToken;
+}
 
-## $coderef = $anl->analyzeSub()
+##------------------------------------------------------------------------
+## Methods: Analysis: Token
+
+## $tok = $anl->analyzeToken($tok,\%analyzeOptions)
+##  + destructively alters input token $tok with analysis
+##  + really just a convenience wrapper for $anl->analyzeTokenSub()->($in,\%analyzeOptions)
+sub analyzeToken { return $_[0]->analyzeTokenSub()->(@_[1..$#_]); }
+
+## $coderef = $anl->analyzeTokenSub()
 ##  + returned sub should be callable as:
-##     $out = $coderef->($in,\%analyzeOptions)
-##  + caches sub in $anl->{_analyze}
+##     $tok = $coderef->($tok,\%analyzeOptions)
+##  + caches sub in $anl->{_analyzeToken}
 ##  + implicitly loads analysis data with $anl->ensureLoaded()
-##  + otherwise, calls $anl->getAnalyzeSub()
-sub analyzeSub {
+##  + otherwise, calls $anl->getAnalyzeTokenSub()
+sub analyzeTokenSub {
   my $anl = shift;
-  return $anl->{_analyze} if (defined($anl->{_analyze}));
+  return $anl->{_analyzeToken} if (defined($anl->{_analyzeToken}));
   $anl->ensureLoaded()
-    or die(ref($anl)."::analysis_sub(): could not load analysis data: $!");
-  return $anl->{_analyze}=$anl->getAnalyzeSub(@_);
+    or die(ref($anl)."::analyzeTokenSub(): could not load analysis data: $!");
+  return $anl->{_analyzeToken}=$anl->getAnalyzeTokenSub(@_);
 }
 
-## $coderef = $anl->getAnalyzeSub()
-##  + guts for $anl->analyzeSub()
-sub getAnalyzeSub {
+## $coderef = $anl->getAnalyzeTokenSub()
+##  + guts for $anl->analyzeTokenSub()
+sub getAnalyzeTokenSub {
   my $anl = shift;
-  croak(ref($anl)."::getAnalyzeSub(): not implemented");
+  croak(ref($anl)."::getAnalyzeTokenSub(): not implemented");
 }
+
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Sentence
+
+## $sent = $anl->analyzeSentence($sent,\%analyzeOptions)
+sub analyzeSentence { return $_[0]->analyzeSentenceSub()->(@_[1..$#_]); }
+
+## $coderef = $anl->analyzeSentenceSub()
+sub analyzeSentenceSub {
+  my $anl = shift;
+  return $anl->{_analyzeSentence} if (defined($anl->{_analyzeSentence}));
+  $anl->ensureLoaded()
+    or die(ref($anl)."::analyzeSentenceSub(): could not load analysis data: $!");
+  return $anl->{_analyzeSentence}=$anl->getAnalyzeSentenceSub(@_);
+}
+
+## $coderef = $anl->getAnalyzeSentenceSub()
+##  + guts for $anl->analyzeSentenceSub()
+##  + default implementation just calls analyzeToken() on each token of input sentence
+sub getAnalyzeSentenceSub {
+  my $anl = shift;
+  my $anl_tok = $anl->analyzeTokenSub();
+  my ($sent,$opts);
+  return sub {
+    ($sent,$opts) = @_;
+    $anl_tok->($_,$opts) foreach (@$sent[1..$#$sent]);
+    return $sent;
+  };
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Document
+
+## $sent = $anl->analyzeDocument($sent,\%analyzeOptions)
+sub analyzeDocument { return $_[0]->analyzeDocumentSub()->(@_[1..$#_]); }
+
+## $coderef = $anl->analyzeDocumentSub()
+sub analyzeDocumentSub {
+  my $anl = shift;
+  return $anl->{_analyzeDocument} if (defined($anl->{_analyzeDocument}));
+  $anl->ensureLoaded()
+    or die(ref($anl)."::analyzeDocumentSub(): could not load analysis data: $!");
+  return $anl->{_analyzeDocument}=$anl->getAnalyzeDocumentSub(@_);
+}
+
+## $coderef = $anl->getAnalyzeDocumentSub()
+##  + guts for $anl->analyzeDocumentSub()
+##  + default implementation just calls analyzeToken() on each token of input sentence
+sub getAnalyzeDocumentSub {
+  my $anl = shift;
+  my $anl_sent = $anl->analyzeSentenceSub();
+  my ($doc,$opts);
+  return sub {
+    ($doc,$opts) = @_;
+    $anl_sent->($_,$opts) foreach (@$doc[1..$#$doc]);
+    return $doc;
+  };
+}
+
 
 ##==============================================================================
 ## Methods: Output Formatting
@@ -219,12 +306,12 @@ sub defaultXmlNode {
 ##  + known types (see http://www.xmlrpc.com/spec):
 ##    Tag	          Type                                             Example
 ##    "i4" or "int"	  four-byte signed integer                         42
-##    "boolean"	  0 (false) or 1 (true)                            1
+##    "boolean"	          0 (false) or 1 (true)                            1
 ##    "string"	          string                                           hello world
-##    "double"           double-precision signed floating point number    -24.7
-##    "dateTime.iso8601" date/time	                                   19980717T14:08:55
+##    "double"            double-precision signed floating point number    -24.7
+##    "dateTime.iso8601"  date/time	                                   19980717T14:08:55
 ##    "base64"	          base64-encoded binary                            eW91IGNhbid0IHJlYWQgdGhpcyE=
-##    "struct"           complex structure                                { x=>42, y=>24 }
+##    "struct"            complex structure                                { x=>42, y=>24 }
 ##  + Default returns "string string struct"
 sub xmlRpcSignature { return ['string string']; }
 

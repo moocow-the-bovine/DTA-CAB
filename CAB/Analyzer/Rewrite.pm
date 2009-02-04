@@ -22,10 +22,13 @@ sub new {
 			      #analysisKey   => 'rewrite',
 			      #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
 
+			      ##-- analysis selection
+			      analyzeDst => 'rw',
+
 			      ##-- Formatting: XML
-			      subanalysisFormatter => DTA::CAB::Analyzer::Morph->new(),
-			      xmlAnalysesElt => 'rewrite',
-			      xmlAnalysisElt => 'rw',
+			      #subanalysisFormatter => DTA::CAB::Analyzer::Morph->new(),
+			      #xmlAnalysesElt => 'rewrite',
+			      #xmlAnalysisElt => 'rw',
 
 			      ##-- user args
 			      @_

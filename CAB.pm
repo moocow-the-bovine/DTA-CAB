@@ -14,7 +14,9 @@ use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
-
+use DTA::CAB::Token;
+use DTA::CAB::Sentence;
+use DTA::CAB::Document;
 
 use IO::File;
 use Carp;
@@ -44,7 +46,7 @@ sub new {
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
 
 			   ##-- formatting: XML
-			   xmlTokenElt => 'token', ##-- token element
+			   #xmlTokenElt => 'token', ##-- token element
 
 			   ##-- user args
 			   @_
@@ -95,49 +97,49 @@ sub savePerlRef {
 ## Methods: Analysis
 ##==============================================================================
 
-## $token = $anl->analyze($token_or_text,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
+##------------------------------------------------------------------------
+## Methods: Analysis: Token
 
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->getAnalyzeSub()
-##  + guts for $anl->analyzeSub()
-sub getAnalyzeSub {
+## $coderef = $anl->getAnalyzeTokenSub()
+##  + returned sub is callable as:
+##     $tok = $coderef->($tok,\%opts)
+##  + performs all known & selected analyses on $tok
+sub getAnalyzeTokenSub {
   my $cab = shift;
   my ($xlit,$morph,$msafe,$rw) = @$cab{qw(xlit morph msafe rw)};
-  my $a_xlit  = $xlit->getAnalyzeSub()  if ($xlit);
-  my $a_morph = $morph->getAnalyzeSub() if ($morph);
-  my $a_msafe = $msafe->getAnalyzeSub() if ($msafe);
-  my $a_rw    = $rw->getAnalyzeSub()    if ($rw);
-  my ($w,$opts,$tok,$out_xlit,$l,$out_morph,$out_msafe,$out_rw);
+  my $a_xlit  = $xlit->getAnalyzeTokenSub()  if ($xlit);
+  my $a_morph = $morph->getAnalyzeTokenSub() if ($morph);
+  my $a_msafe = $msafe->getAnalyzeTokenSub() if ($msafe);
+  my $a_rw    = $rw->getAnalyzeTokenSub()    if ($rw);
+  my ($tok, $w,$opts,$out_xlit,$l,$out_morph,$out_msafe,$out_rw);
   return sub {
-    #($tok,$opts) = @_;
-    $w   = shift;
-    $w   = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
-    #$tok = $xtok = DTA::CAB::Token->toToken($tok);
-    $tok = bless({text=>$w}, 'DTA::CAB::Token');
+    ($tok,$opts) = @_;
 
-    if ($a_xlit && defined($out_xlit=$tok->{xlit}=$a_xlit->($w,$opts))) {
-      ##-- analyze: transliterate
-      $l = $out_xlit->[0];
+    ##-- analyze: transliterator
+    if ($a_xlit) {
+      $a_xlit->($tok,$opts);
+      $l = $tok->{"xlit.latin1Text"};
     } else {
-      $l = $w;
+      $l = $tok->{text};
     }
 
     ##-- analyze: morph
-    $out_morph = $tok->{morph} = ($a_morph ? $a_morph->($l,$opts) : undef);
+    if ($a_morph) {
+      $a_morph->($tok, { ($opts ? %$opts : qw()), src=>$l });
+    }
 
     ##-- analyze: morph: safe?
-    $out_msafe = $tok->{msafe} = ($a_msafe ? $a_msafe->($out_morph,$opts) : undef);
+    if ($a_msafe) {
+      $a_msafe->($tok,$opts);
+    }
 
     ##-- analyze: rewrite (if morphological analysis is "unsafe")
-    if (!$out_msafe && $a_rw) {
-      $out_rw = $tok->{rw} = $a_rw->($l,$opts);
+    if ($a_rw && !$tok->{"morph.safe"}) {
+      $a_rw->($tok, { ($opts ? %$opts : qw()), src=>$l });
       if ($a_morph) {
 	##-- analyze: rewrite: sub-morphology
-	foreach (@$out_rw) {
-	  push(@$_, $a_morph->($_->[0],$opts));
+	foreach (@{ $tok->{rw} }) {
+	  $a_morph->($tok, { ($opts ? %$opts : qw()), src=>$_->[0], dst=>\$_->[2] });
 	}
       }
     }

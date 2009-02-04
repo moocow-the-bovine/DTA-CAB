@@ -5,6 +5,8 @@
 ## Description: generic API for tokens passed to/from DTA::CAB::Analyzer
 
 package DTA::CAB::Token;
+use DTA::CAB::Datum;
+use Exporter;
 use Carp;
 use strict;
 
@@ -12,13 +14,19 @@ use strict;
 ## Globals
 ##==============================================================================
 
+our @ISA = qw(Exporter DTA::CAB::Datum);
+
+our @EXPORT = qw(toToken);
+our @EXPORT_OK = @EXPORT;
+our %EXPORT_TAGS = (all=>\@EXPORT_OK);
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
-## $a = CLASS_OR_OBJ->new($text)
-## $a = CLASS_OR_OBJ->new($text,%args)
-## $a = CLASS_OR_OBJ->new(%args)
+## $tok = CLASS_OR_OBJ->new($text)
+## $tok = CLASS_OR_OBJ->new($text,%args)
+## $tok = CLASS_OR_OBJ->new(%args)
 ##  + object structure: HASH
 ##    {
 ##     ##-- Required Attributes
@@ -39,16 +47,18 @@ sub new {
 	       ref($_[0]) || $_[0]);
 }
 
-## $tok = CLASS->toToken($tok)
-## $tok = CLASS->toToken($text)
+## $tok = CLASS::toToken($tok)
+## $tok = CLASS::toToken($text)
 ##  + creates a new token object or returns its argument
 sub toToken {
-  return ref($_[1]) && ref($_[1]) eq __PACKAGE__ ? $_[1] : $_[0]->new($_[1]);
+  return ref($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__) ? $_[0] : __PACKAGE__->new($_[0]);
 }
 
 ##==============================================================================
-## Methods: Formatting (obsolete)
+## Methods: Formatting (new)
+##  + see DTA::CAB::Datum
 ##==============================================================================
+
 
 1; ##-- be happy
 

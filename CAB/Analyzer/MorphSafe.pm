@@ -26,16 +26,18 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
+##    ##-- analysis selection
+##    analysisSrcKey => $key,    ##-- input token key   (default: 'morph')
+##    analysisPrefix => $prefix, ##-- output key prefix (default: 'morph')
+##
 ##    ##-- formatting
 ##    xmlAnalysisElt => $elt,  ##-- analysis element name for analysisXmlNode() (default="morphSafe")
-##  + object structure, inherited from DTA::CAB::Analyzer:
-##     ##-- errors etc
-##     errfh   => $fh,         ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   #(none)
+			   analysisSrcKey => 'morph',
+			   analysisPrefix => 'morph',
 
 			   ##-- formatting
 			   #xmlAnalysisElt => 'morphSafe',
@@ -57,25 +59,28 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis
 ##==============================================================================
 
-## $bool = $anl->analyze($morph_analyses,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
+##------------------------------------------------------------------------
+## Methods: Analysis: Token
 
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
 
-## $coderef = $anl->getAnalyzeSub()
+## $coderef = $anl->getAnalyzeTokenSub()
 ##  + returned sub is callable as:
-##     $bool = $coderef->($tagh_analyses,\%analyzeOptions)
-##  + $bool is true iff $tagh_analyses are considered "safe" (read "non-empty")
-sub getAnalyzeSub {
+##     $tok = $coderef->($tok,\%opts)
+##  + tests safety of morphological analyses in $tok->{morph}
+##  + sets $tok->{ "$anl->{analysisPrefix}.safe" } = $bool
+sub getAnalyzeTokenSub {
   my $ms = shift;
 
-  my ($analyses);
+  my $srcKey = $ms->{analysisSrcKey};
+  my $prefix = $ms->{analysisPrefix};
+  my ($tok,$analyses,$safe);
   return sub {
-    $analyses = shift;
-    return
+    $tok = shift;
+    $analyses = $tok->{$srcKey};
+    $safe =
       (
-       @$analyses > 0            ##-- non-empty
+       $analyses                 ##-- defined & true
+       && @$analyses > 0         ##-- non-empty
        && (
 	   grep {                ##-- at least one non-"unsafe" analysis:
 	     $_->[0] !~ m(
@@ -104,7 +109,10 @@ sub getAnalyzeSub {
              )x
 	   } @$analyses
 	  )
-      );
+      ) ? 1 : 0;
+
+    ##-- output
+    $tok->{"${prefix}.safe"} = $safe;
   };
 }
 

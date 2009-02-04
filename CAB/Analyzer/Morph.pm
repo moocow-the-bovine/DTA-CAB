@@ -21,6 +21,9 @@ sub new {
 			      ##-- defaults
 			      #analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
 
+			      ##-- analysis selection
+			      analyzeDst => 'morph',
+
 			      ##-- Formatting: XML
 			      xmlAnalysesElt => 'morph',
 			      xmlAnalysisElt => 'ma',

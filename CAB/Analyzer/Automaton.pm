@@ -106,8 +106,11 @@ sub new {
 			      nknowna => 0,
 			      #ncachea  => 0,
 
-			      ##-- output
+			      ##-- analysis selection
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
+			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
+
+			      ##-- output
 			      #xmlAnalysesElt => 'analyses',
 			      #xmlAnalysisElt => 'analysis',
 			      #subanalysisFormatter => undef,
@@ -122,8 +125,8 @@ sub new {
 sub clear {
   my $aut = shift;
 
-  ##-- analysis sub
-  delete($aut->{_analyze});
+  ##-- analysis sub(s)
+  $aut->dropClosures();
 
   ##-- analysis objects
   delete($aut->{fst});
@@ -295,10 +298,9 @@ sub loadDict {
       push(@$entry, [$a,$w]);
     }
   }
-
   $dictfh->close;
 
-  delete($aut->{_analyze});
+  $aut->dropClosures();
   return $aut;
 }
 
@@ -314,7 +316,7 @@ sub loadDict {
 ##  + default just returns empty list
 sub noSaveKeys {
   my $that = shift;
-  return ($that->SUPER::noSaveKeys, qw(dict fst lab laba labc labh result _analyze));
+  return ($that->SUPER::noSaveKeys, qw(dict fst lab laba labc labh result));
 }
 
 ## $saveRef = $obj->savePerlRef()
@@ -333,25 +335,25 @@ sub loadPerlRef {
 ## Methods: Analysis
 ##==============================================================================
 
-## $out = $anl->analyze($in,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
+##------------------------------------------------------------------------
+## Methods: Analysis: Token
 
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->getAnalyzeSub()
+## $coderef = $anl->getAnalyzeTokenSub()
 ##  + returned sub is callable as:
-##      $out = $coderef->($in,\%opts)
-##  + $out = [ \@analysis1, ..., \@analysisN ]
-##  + each \@analysisI is an array:
-##    \@analysisI = [ $analysisUpperString, $analysisWeight ]
+##     $tok = $coderef->($tok,\%opts)
+##  + analyses text $opts{src}, defaults to $tok->{text}
+##  + sets output ${ $opts{dst} } = $out = [ \@analysis1, ..., \@analysisN ]
+##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
+##    - each \@analysisI is an array:
+##      \@analysisI = [ $analysisUpperString, $analysisWeight ]
 ##  + if $anl->analysisClass() returned defined, $out is blessed into it
 ##  + implicitly loads analysis data (automaton and labels)
-sub getAnalyzeSub {
+sub getAnalyzeTokenSub {
   my $aut = shift;
 
   ##-- setup common variables
   my $aclass = $aut->{analysisClass};
+  my $adst   = $aut->{analyzeDst};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $result = $aut->{result};
@@ -360,17 +362,19 @@ sub getAnalyzeSub {
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
   ##-- ananalysis options
-  my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI max_paths max_weight max_ops);
+  my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI max_paths max_weight max_ops); #)
   my $doprofile = $aut->{profile};
 
-  my ($w,$opts,$uword,@wlabs, $isdict, $analyses);
+  my ($tok, $w,$opts,$uword,@wlabs, $isdict, $analyses);
   return sub {
-    ($w,$opts) = @_;
-    $w    = $w->{text} if (UNIVERSAL::isa($w,'HASH'));
+    ($tok,$opts) = @_;
 
     ##-- set default options
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
+
+    ##-- get source text ($w)
+    $w = defined($opts->{src}) ? $opts->{src} : $tok->{text};
 
     ##-- normalize word
     $uword = $w;
@@ -426,9 +430,14 @@ sub getAnalyzeSub {
       }
     }
 
-    ##-- bless & return
+    ##-- bless analyses
     $analyses = bless($analyses,$aclass) if (defined($aclass));
-    return $analyses;
+
+    ##-- set output
+    if (defined($opts->{dst})) { ${ $opts->{dst} } = $analyses; }
+    else { $tok->{$adst} = $analyses; }
+
+    return $tok;
   };
 }
 
