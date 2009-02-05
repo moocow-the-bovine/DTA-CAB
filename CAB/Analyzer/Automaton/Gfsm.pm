@@ -64,21 +64,10 @@ sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 ##(inherited)
 
 ##==============================================================================
-## Methods: I/O
-##==============================================================================
-
-##==============================================================================
-## Methods: Analysis
-##==============================================================================
-
-## $out = $anl->analyze($in,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->getAnalyzeSub()
+## Methods: other
 ##  + inherited from DTA::CAB::Analyzer::Automaton
+##==============================================================================
+
 
 
 1; ##-- be happy

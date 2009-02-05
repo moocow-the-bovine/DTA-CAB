@@ -57,15 +57,6 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     ntoks   => $ntokens,  ##-- #/tokens processed
 ##     ndict  = > $ndict,    ##-- #/known tokens (dict-analyzed)
 ##     nknown  => $nknown,   ##-- #/known tokens (dict- or fst-analyzed)
-##
-##     ##-- errors etc (inherited from ::Analyzer)
-##     #errfh   => $fh,       ##-- FH for warnings/errors (default=\*STDERR; requires: "print()" method)
-##     # : OBSOLETE: use DTA::CAB::Logger methods (log4perl) instead!
-##
-##     ##-- Formatting: XML
-##     subanalysisFormatter => $fmt, ##-- sub-analysis formatter
-##     xmlAnalysesElt => $elt, ##-- parent element name for XML formatting
-##     xmlAnalysisElt => $elt, ##-- child element name for XML formatting
 ##    )
 sub new {
   my $that = shift;
@@ -109,11 +100,6 @@ sub new {
 			      ##-- analysis selection
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
-
-			      ##-- output
-			      #xmlAnalysesElt => 'analyses',
-			      #xmlAnalysisElt => 'analysis',
-			      #subanalysisFormatter => undef,
 
 			      ##-- user args
 			      @_
@@ -442,64 +428,8 @@ sub getAnalyzeTokenSub {
 }
 
 ##==============================================================================
-## Methods: Output Formatting
+## Methods: Output Formatting: OBSOLETE
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Formatting: Perl
-
-## $str = $anl->analysisPerl($out,\%opts)
-##  + inherited from DTA::CAB::Analyzer
-
-##--------------------------------------------------------------
-## Methods: Formatting: Text
-
-## $str = $anl->analysisText($out,\%opts)
-##  + text string for output $out with options \%opts
-sub analysisText {
-  return join("\t", map { "$_->[0] <$_->[1]>" } @{$_[1]});
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Verbose Text
-
-## @lines = $anl->analysisVerbose($out,\%opts)
-##  + verbose text line(s) for output $out with options \%opts
-##  + default version just calls analysisText()
-sub analysisVerbose {
-  return map {
-    ("$_->[0] <$_->[1]>",
-     ($_->[2] && UNIVERSAL::can($_[0]{subanalysisFormatter},'analysisVerbose')
-      ? (map { "\t".$_ } $_[0]{subanalysisFormatter}->analysisVerbose($_->[2]))
-      : qw()),
-    )
-  } @{$_[1]};
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nod = $anl->analysisXmlNode($out,\%opts)
-##  + XML node for output $out with options \%opts
-##  + returns new XML element:
-##     <$xmlAnalysesElt>
-##       <$xmlAnalysisElt weight="$w" string="$str"/>
-##       ...
-##     </$xmlAnalysisElt>
-sub analysisXmlNode {
-  my ($aut,$analyses) = @_;
-  my $nod = XML::LibXML::Element->new($aut->{xmlAnalysesElt} || DTA::CAB::Utils::xml_safe_string(ref($_[0]).".analyses"));
-  my $child_name = $aut->{xmlAnalysisElt} || 'analysis';
-  my ($child);
-  foreach (@$analyses) {
-    $child = $nod->addNewChild(undef,$child_name);
-    $child->setAttribute('string',$_->[0]);
-    $child->setAttribute('weight',$_->[1]);
-    $child->addChild($aut->{subanalysisFormatter}->analysisXmlNode($_->[2]))
-      if ($_->[2] && UNIVERSAL::can($aut->{subanalysisFormatter},'analysisXmlNode'));
-  }
-  return $nod;
-}
 
 1; ##-- be happy
 

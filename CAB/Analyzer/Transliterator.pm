@@ -129,69 +129,8 @@ sub getAnalyzeTokenSub {
 }
 
 ##==============================================================================
-## Methods: Output Formatting --> OBSOLETE ?!
+## Methods: Output Formatting --> OBSOLETE !
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Formatting: Perl
-
-## $str = $anl->analysisPerl($out,\%opts)
-##  + inherited from DTA::CAB::Analyzer
-
-##--------------------------------------------------------------
-## Methods: Formatting: Text
-
-## $str = $anl->analysisText($out,\%opts)
-##  + text string for output $out with options \%opts
-sub analysisText {
-  return (
-	  '['
-	  .($_[1][1] ? '+' : '-').'latin1'
-	  .','
-	  .($_[1][2] ? '+' : '-').'latinx'
-	  .'] '
-	  .$_[1][0]
-	 );
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Verbose Text
-
-## @lines = $anl->analysisVerbose($out,\%opts)
-##  + verbose text line(s) for output $out with options \%opts
-##  + default version just calls analysisText()
-sub analysisVerbose {
-  return "isLatin1=$_[1][1] isLatinExt=$_[1][2] latin1Text=$_[1][0]";
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nod = $anl->analysisXmlNode($out,\%opts)
-##  + XML node for output $out with options \%opts
-##  + returns new XML element:
-##    <$anl->{xmlAnalysisElt} isLatin1="$bool" isLatinExt="$bool" latin1Text="$str"/>
-sub analysisXmlNode {
-  my $nod = XML::LibXML::Element->new($_[0]{xmlAnalysisElt} || DTA::CAB::Utils::xml_safe_string(ref($_[0])));
-  $nod->setAttribute('isLatin1', $_[1][1]);
-  $nod->setAttribute('isLatinExt', $_[1][2]);
-  $nod->setAttribute('latin1Text', $_[1][0]);
-  return $nod;
-}
-
-## $nod = $anl->defaultXmlNode($val)
-##  + default XML node generator
-##  + inherited from DTA::CAB::Analyzer
-
-##==============================================================================
-## Methods: Debug
-##==============================================================================
-
-## $humanReadableString = $xlit->analysisHuman($analysis)
-#BEGIN { *analysisHuman = \&analysisString; }
-#sub analysisString {
-#  return (defined($_[1]) ? $_[1] : $_[0])->textString();
-#}
 
 
 1; ##-- be happy

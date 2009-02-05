@@ -159,15 +159,8 @@ sub loadCascade {
 
 ##==============================================================================
 ## Methods: Analysis
+##  + inherited from DTA::CAB::Analyzer::Automaton
 ##==============================================================================
 
-## $out = $anl->analyze($in,\%analyzeOptions)
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->analyzeSub()
-##  + inherited from DTA::CAB::Analyzer
-
-## $coderef = $anl->getAnalyzeSub()
-##  + inherited from DTA::CAB::Analyzer::Automaton
 
 1; ##-- be happy

@@ -6,6 +6,12 @@ use DTA::CAB;
 use DTA::CAB::Token;
 use DTA::CAB::Server;
 
+use DTA::CAB::Formatter;
+use DTA::CAB::Formatter::Text;
+use DTA::CAB::Formatter::Perl;
+use DTA::CAB::Formatter::XmlPerl;
+use DTA::CAB::Formatter::XmlNative;
+
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
 
@@ -160,7 +166,56 @@ sub test_cab {
   $x = $cab->analyze(toToken('Gel')); ##-- test: unsafe: root "Gel"
   print "[xml]     : $w\n", $x->xmlNode->toString(1), "\n";
 }
-test_cab;
+#test_cab;
+
+##==============================================================================
+## test: formatters
+
+sub test_formatters {
+  our $cab = DTA::CAB->new
+    (
+     xlit =>DTA::CAB::Analyzer::Transliterator->new(),
+     #morph=>DTA::CAB::Analyzer::Morph->new(fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict'),
+     morph=>DTA::CAB::Analyzer::Morph->new(fstFile=>undef, labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict'),
+     msafe=>DTA::CAB::Analyzer::MorphSafe->new(),
+     rw   =>DTA::CAB::Analyzer::Rewrite->new(fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab', max_paths=>2),
+    );
+  #$cab->{rw}{subanalysisFormatter} = $cab->{morph};
+  $cab->ensureLoaded();
+  @toks1 = map { toToken(decode('latin1',$_)) } qw(hilfe ihm seyne bär);
+  @toks2 = map { toToken(decode('latin1',$_)) } qw(oje .);
+  $s1    = DTA::CAB::Sentence->new(\@toks1);
+  $s2    = DTA::CAB::Sentence->new(\@toks2);
+  $doc   = DTA::CAB::Document->new([$s1,$s2]);
+
+  ##-- analyze
+  $cab->analyzeDocument($doc);
+
+  ##-- test: formatter: XmlNative
+  $fmt = DTA::CAB::Formatter::XmlNative->new();
+  print $fmt->formatToken($toks1[0])->toString(1);
+  print $fmt->formatSentence($s1)->toString(1);
+  print $fmt->formatDocument($doc)->toString(1);
+
+  ##-- test: formatter: XmlPerl
+  $fmt = DTA::CAB::Formatter::XmlPerl->new();
+  print $fmt->formatToken($toks1[0])->toString(1);
+  print $fmt->formatSentence($s1)->toString(1);
+  print $fmt->formatDocument($doc)->toString(1);
+
+  ##-- test: formatter: text
+  $fmt = DTA::CAB::Formatter::Text->new();
+  print $fmt->formatToken($toks1[0]);
+  print $fmt->formatSentence($s1);
+  print $fmt->formatDocument($doc);
+
+  ##-- test: formatter: perl
+  $fmt = DTA::CAB::Formatter::Perl->new();
+  print $fmt->formatToken($toks1[0]);
+  print $fmt->formatSentence($s1);
+  print $fmt->formatDocument($doc);
+}
+test_formatters();
 
 
 ##==============================================================================

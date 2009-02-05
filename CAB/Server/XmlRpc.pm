@@ -89,6 +89,7 @@ sub prepareLocal {
   while (($aname,$a)=each(%{$srv->{as}})) {
     foreach ($a->xmlRpcMethods) {
       if (UNIVERSAL::isa($_,'HASH')) {
+	##-- hack method 'name'
 	$_->{name} = 'analyze' if (!defined($_->{name}));
 	$_->{name} = $aname.'.'.$_->{name} if ($aname);
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});

@@ -24,11 +24,6 @@ sub new {
 			      ##-- analysis selection
 			      analyzeDst => 'morph',
 
-			      ##-- Formatting: XML
-			      xmlAnalysesElt => 'morph',
-			      xmlAnalysisElt => 'ma',
-			      #xmlSubanalysisFormatter => $fmt,
-
 			      ##-- user args
 			      @_
 			     );

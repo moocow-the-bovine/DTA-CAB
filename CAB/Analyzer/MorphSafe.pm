@@ -30,17 +30,12 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##    analysisSrcKey => $key,    ##-- input token key   (default: 'morph')
 ##    analysisPrefix => $prefix, ##-- output key prefix (default: 'morph')
 ##
-##    ##-- formatting
-##    xmlAnalysisElt => $elt,  ##-- analysis element name for analysisXmlNode() (default="morphSafe")
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
 			   analysisSrcKey => 'morph',
 			   analysisPrefix => 'morph',
-
-			   ##-- formatting
-			   #xmlAnalysisElt => 'morphSafe',
 
 			   ##-- user args
 			   @_
@@ -77,7 +72,8 @@ sub getAnalyzeTokenSub {
   return sub {
     $tok = shift;
     $analyses = $tok->{$srcKey};
-    $safe =
+    $safe = 1 if ($tok->{text} =~ /^[[:digit:][:punct:]]*$/); ##-- punctuation, digits are always "safe"
+    $safe ||=
       (
        $analyses                 ##-- defined & true
        && @$analyses > 0         ##-- non-empty
@@ -109,53 +105,16 @@ sub getAnalyzeTokenSub {
              )x
 	   } @$analyses
 	  )
-      ) ? 1 : 0;
+      );
 
     ##-- output
-    $tok->{"${prefix}.safe"} = $safe;
+    $tok->{"${prefix}.safe"} = $safe ? 1 : 0;
   };
 }
 
 ##==============================================================================
-## Methods: Output Formatting
+## Methods: Output Formatting: OBSOLETE
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Formatting: Perl
-
-## $str = $anl->analysisPerl($out,\%opts)
-##  + default implementation just uses Data::Dumper on $out
-##  + inherited from DTA::CAB::Analyzer
-
-##--------------------------------------------------------------
-## Methods: Formatting: Text
-
-## $str = $anl->analysisText($out,\%opts)
-##  + text string for output $out with options \%opts
-##  + default version uses analysisPerl()
-sub analysisText {
-  return "safe=".($_[1] ? 1 : 0);
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Verbose Text
-
-## @lines = $anl->analysisVerbose($out,\%opts)
-##  + verbose text line(s) for output $out with options \%opts
-##  + default version just calls analysisText()
-sub analysisVerbose { return "morphSafe=".($_[1] ? 1 : 0); }
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nod = $anl->analysisXmlNode($out,\%opts)
-##  + XML node for output $out with options \%opts
-##  + default implementation just reflects perl data structure
-sub analysisXmlNode {
-  my $nod = XML::LibXML::Element->new($_[0]{xmlAnalysisElt} || DTA::CAB::Utils::xml_safe_string(ref($_[0])));
-  $nod->setAttribute('safe', $_[1] ? 1 : 0);
-  return $nod;
-}
 
 
 1; ##-- be happy

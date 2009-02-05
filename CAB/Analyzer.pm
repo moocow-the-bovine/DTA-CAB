@@ -162,7 +162,7 @@ sub getAnalyzeSentenceSub {
   my ($sent,$opts);
   return sub {
     ($sent,$opts) = @_;
-    $anl_tok->($_,$opts) foreach (@$sent[1..$#$sent]);
+    @$sent[1..$#$sent] = map { $anl_tok->($_,$opts) } @$sent[1..$#$sent];
     return $sent;
   };
 }
@@ -191,110 +191,15 @@ sub getAnalyzeDocumentSub {
   my ($doc,$opts);
   return sub {
     ($doc,$opts) = @_;
-    $anl_sent->($_,$opts) foreach (@$doc[1..$#$doc]);
+    @$doc[1..$#$doc] = map { $anl_sent->($_,$opts) } @$doc[1..$#$doc];
     return $doc;
   };
 }
 
-
 ##==============================================================================
-## Methods: Output Formatting
+## Methods: Output Formatting : OBSOLETE!
 ##==============================================================================
 
-##--------------------------------------------------------------
-## Methods: Formatting: Perl
-
-## $str = $anl->analysisPerl($out,\%opts)
-##  + default implementation just uses Data::Dumper on $out
-##  + %opts:
-##    name => $varName
-sub analysisPerl {
-  my @names = defined($_[2]) && defined($_[2]{name}) ? ($_[2]{name}) : qw();
-  return Data::Dumper->Dump([$_[1]],@names);
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Text
-
-## $str = $anl->analysisText($out,\%opts)
-##  + text string for output $out with options \%opts
-##  + default version uses analysisPerl()
-sub analysisText {
-  my $s = $_[0]->analysisPerl(@_[1..$#_]);
-  $s =~ s/\n+\s+/ /g;
-  $s =~ s/^\$VAR(?:\d+)\s*=\s*//;
-  return $s;
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Verbose Text
-
-## @lines = $anl->analysisVerbose($out,\%opts)
-##  + verbose text line(s) for output $out with options \%opts
-##  + default version just calls analysisText()
-sub analysisVerbose {
-  return split(/\n/,$_[0]->analysisText(@_[1..$#_]));
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nod = $anl->analysisXmlNode($out,\%opts)
-##  + XML node for output $out with options \%opts
-##  + default implementation just reflects perl data structure
-sub analysisXmlNode { return $_[0]->defaultXmlNode($_[1]); }
-
-## $nod = $anl->defaultXmlNode($val)
-##  + default XML node generator
-sub defaultXmlNode {
-  my ($anl,$val) = @_;
-  my ($vnod);
-  if (UNIVERSAL::can($val,'xmlNode')) {
-    ##-- xml-aware object: $val->xmlNode()
-    return $val->xmlNode(@_[2..$#_]);
-  }
-  elsif (!ref($val)) {
-    ##-- non-reference: <VALUE>$val</VALUE> or <VALUE undef="1"/>
-    $vnod = XML::LibXML::Element->new("VALUE");
-    if (defined($val)) {
-      $vnod->appendText($val);
-    } else {
-      $vnod->setAttribute("undef","1");
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'HASH')) {
-    ##-- HASH ref: <HASH ref="$ref"> ... <ENTRY key="$eltKey">defaultXmlNode($eltVal)</ENTRY> ... </HASH>
-    $vnod = XML::LibXML::Element->new("HASH");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'HASH');
-    foreach (keys(%$val)) {
-      my $enod = $vnod->addNewChild(undef,"ENTRY");
-      $enod->setAttribute("key",$_);
-      $enod->addChild($anl->defaultXmlNode($val->{$_}));
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'ARRAY')) {
-    ##-- ARRAY ref: <ARRAY ref="$ref"> ... xmlNode($eltVal) ... </ARRAY>
-    $vnod = XML::LibXML::Element->new("ARRAY");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'ARRAY');
-    foreach (@$val) {
-      $vnod->addChild($anl->defaultXmlNode($_));
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'SCALAR')) {
-    ##-- SCALAR ref: <SCALAR ref="$ref"> xmlNode($$val) </SCALAR>
-    $vnod = XML::LibXML::Element->new("SCALAR");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'SCALAR');
-    $vnod->addChild($anl->defaultXmlNode($$val));
-  }
-  else {
-    ##-- other reference (CODE,etc.): <VALUE ref="$ref">"$val"</OTHER>
-    carp(ref($anl)."::analysisXmlNode(): default handler called for reference '$val'");
-    $vnod = XML::LibXML::Element->new("VALUE");
-    $vnod->setAttribute("ref",ref($val));
-    $vnod->appendText("$val");
-  }
-  return $vnod;
-}
 
 ##==============================================================================
 ## Methods: XML-RPC
@@ -313,20 +218,39 @@ sub defaultXmlNode {
 ##    "base64"	          base64-encoded binary                            eW91IGNhbid0IHJlYWQgdGhpcyE=
 ##    "struct"            complex structure                                { x=>42, y=>24 }
 ##  + Default returns "string string struct"
-sub xmlRpcSignature { return ['string string']; }
+#sub xmlRpcSignature { return ['string string']; }
 
 ## $str = $anl->xmlRpcHelp()
 ##  + returns help string for default XML-RPC procedure
-sub xmlRpcHelp { return '?'; }
+#sub xmlRpcHelp { return '?'; }
 
 ## @procedures = $anl->xmlRpcMethods()
-##  + returns a list of procedures suitable for passing to RPC::XML::Server::add_procedure()
+##  + returns a list of procedures suitable for passing to RPC::XML::Server::add_proc()
 ##  + default method defines an 'analyze' method
 sub xmlRpcMethods {
   my $anl   = shift;
-  my $asub  = $anl->analyzeSub();
   return (
-	  { name=>'analyze', code=>$asub, signature=>$anl->xmlRpcSignature, help=>$anl->xmlRpcHelp },
+	  {
+	   ##-- Analyze: Token
+	   name      => 'analyzeToken',
+	   code      => $anl->analyzeTokenSub,
+	   signature => [ 'struct string', 'struct struct' ],
+	   help      => 'Analyze a single token (structure with "text" field)',
+	  },
+	  {
+	   ##-- Analyze: Sentence
+	   name      => 'analyzeSentence',
+	   code      => $anl->analyzeSentenceSub,
+	   signature => [ 'array array' ],
+	   help      => 'Analyze a single sentence (array of tokens)',
+	  },
+	  {
+	   ##-- Analyze: Document
+	   name      => 'analyzeDocument',
+	   code      => $anl->analyzeDocumentSub,
+	   signature => [ 'array array' ],
+	   help      => 'Analyze a whole document (array of sentences)',
+	  },
 	 );
 }
 

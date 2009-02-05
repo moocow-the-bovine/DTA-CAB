@@ -111,9 +111,10 @@ sub getAnalyzeTokenSub {
   my $a_morph = $morph->getAnalyzeTokenSub() if ($morph);
   my $a_msafe = $msafe->getAnalyzeTokenSub() if ($msafe);
   my $a_rw    = $rw->getAnalyzeTokenSub()    if ($rw);
-  my ($tok, $w,$opts,$out_xlit,$l,$out_morph,$out_msafe,$out_rw);
+  my ($tok, $w,$opts,$l);
   return sub {
     ($tok,$opts) = @_;
+    $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
 
     ##-- analyze: transliterator
     if ($a_xlit) {
