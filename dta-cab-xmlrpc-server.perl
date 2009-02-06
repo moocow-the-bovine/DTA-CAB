@@ -85,7 +85,7 @@ $srv->{encoding}   = $serverEncoding if (defined($serverEncoding));
 $srv->prepare()
   or $srv->logdie("prepare() failed!");
 $srv->run();
-$srv->info("$0: exiting");
+$srv->info("exiting");
 
 __END__
 =pod

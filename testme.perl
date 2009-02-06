@@ -55,7 +55,7 @@ sub test_xlit {
 
   print "done: test_xlit()\n";
 }
-#test_xlit();
+test_xlit();
 
 
 ##==============================================================================
@@ -220,7 +220,7 @@ sub test_formatters {
   print $fmt->formatSentence($s1);
   print $fmt->formatDocument($doc);
 }
-test_formatters();
+#test_formatters();
 
 
 ##==============================================================================

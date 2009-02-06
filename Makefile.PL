@@ -21,6 +21,10 @@ WriteMakefile
 		    'Pod::Usage'=>undef,
 		    'Storable'=>undef,
 		    'Time::HiRes'=>undef,
+		    ##--
+		    'Log::Log4perl' => 1.07,
+		    'Text::Unidecode' => 0.04,
+		    'RPC::XML' => 0.59,
 		   },
 
    #EXE_FILES   => [qw(dta-cab.perl),],

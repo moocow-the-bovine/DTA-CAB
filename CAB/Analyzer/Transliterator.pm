@@ -82,7 +82,8 @@ sub getAnalyzeTokenSub {
 
     ##-- construct latin-1 approximation
     if (
-	$uc =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	#$uc =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	$uc  =~ m([^\x{00}-\x{ff}]) #)
        )
       {
 	$l0 = $uc;
@@ -96,7 +97,9 @@ sub getAnalyzeTokenSub {
 	##-- default: copy plain latin-1 characters, transliterate rest with Text::Unidecode::unidecode()
 	$l  = join('',
 		   map {
-		     ($_ =~ m(\p{inBasicLatin}|\p{InLatin1Supplement}) #)
+		     (
+		      #$_ =~ m(\p{inBasicLatin}|\p{InLatin1Supplement}) #)
+		      $_  =~ m([\x{00}-\x{ff}]) #)
 		      ? $_	##-- Latin-1 character: just copy
 		      : Text::Unidecode::unidecode($_) ##-- Non-Latin-1: transliterate
 		     )
@@ -105,10 +108,11 @@ sub getAnalyzeTokenSub {
 	$l = decode('latin1',$l);
 
 	if (
-	    $l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	    #$l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	    $l  =~ m([^\x{00}-\x{ff}]) #)
 	   ) {
 	  ##-- sanity check
-	  carp(ref($xlit)."::analyzeToken(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
+	  $xlit->logwarn("analyzeToken(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
 	}
 
 	##-- set properties

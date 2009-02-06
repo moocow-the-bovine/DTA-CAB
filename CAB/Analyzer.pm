@@ -235,21 +235,21 @@ sub xmlRpcMethods {
 	   name      => 'analyzeToken',
 	   code      => $anl->analyzeTokenSub,
 	   signature => [ 'struct string', 'struct struct' ],
-	   help      => 'Analyze a single token (structure with "text" field)',
+	   help      => 'Analyze a single token (text string or struct with "text" string field)',
 	  },
 	  {
 	   ##-- Analyze: Sentence
 	   name      => 'analyzeSentence',
 	   code      => $anl->analyzeSentenceSub,
-	   signature => [ 'array array' ],
-	   help      => 'Analyze a single sentence (array of tokens)',
+	   signature => [ 'struct array', 'struct struct' ],
+	   help      => 'Analyze a single sentence (array of tokens or struct with "tokens" array field)',
 	  },
 	  {
 	   ##-- Analyze: Document
 	   name      => 'analyzeDocument',
 	   code      => $anl->analyzeDocumentSub,
-	   signature => [ 'array array' ],
-	   help      => 'Analyze a whole document (array of sentences)',
+	   signature => [ 'struct array', 'struct struct' ],
+	   help      => 'Analyze a whole document (array of sentences or struct with "body" array field)',
 	  },
 	 );
 }
