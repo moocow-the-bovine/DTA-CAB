@@ -8,9 +8,7 @@ package DTA::CAB::Analyzer;
 use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
-use DTA::CAB::Token;
-use DTA::CAB::Sentence;
-use DTA::CAB::Document;
+use DTA::CAB::Datum ':all';
 use Data::Dumper;
 use XML::LibXML;
 use Carp;
@@ -162,7 +160,8 @@ sub getAnalyzeSentenceSub {
   my ($sent,$opts);
   return sub {
     ($sent,$opts) = @_;
-    @$sent[1..$#$sent] = map { $anl_tok->($_,$opts) } @$sent[1..$#$sent];
+    $sent = toSentence($sent);
+    @{$sent->{tokens}} = map { $anl_tok->(toToken($_),$opts) } @{$sent->{tokens}};
     return $sent;
   };
 }
@@ -191,7 +190,8 @@ sub getAnalyzeDocumentSub {
   my ($doc,$opts);
   return sub {
     ($doc,$opts) = @_;
-    @$doc[1..$#$doc] = map { $anl_sent->($_,$opts) } @$doc[1..$#$doc];
+    $doc = toDocument($doc);
+    @{$doc->{body}} = map { $anl_sent->(toSentence($_),$opts) } @{$doc->{body}};
     return $doc;
   };
 }

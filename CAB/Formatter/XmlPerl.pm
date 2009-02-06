@@ -6,6 +6,7 @@
 
 package DTA::CAB::Formatter::XmlPerl;
 use DTA::CAB::Formatter;
+use DTA::CAB::Datum ':all';
 use XML::LibXML;
 use Carp;
 use strict;

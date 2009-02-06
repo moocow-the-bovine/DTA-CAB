@@ -3,7 +3,7 @@
 use lib qw(.);
 
 use DTA::CAB;
-use DTA::CAB::Token;
+use DTA::CAB::Datum ':all';
 use DTA::CAB::Server;
 
 use DTA::CAB::Formatter;
@@ -14,6 +14,8 @@ use DTA::CAB::Formatter::XmlNative;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
+
+#use utf8;
 
 BEGIN {
   binmode($DB::OUT,':utf8') if (defined($DB::OUT));
@@ -38,7 +40,7 @@ sub test_xlit {
   #print "$w0: ", $xlit->analysisXmlNode($x0)->toString(1), "\n";
   print "$w0: ", $x0->xmlNode->toString(1), "\n";
 
-  our $w1 = decode('latin1', 'bär');   ##-- $w1: latin1: +latin1,+latinx,+native
+  our $w1 = decode('utf8', "b\x{e4}r");   ##-- $w1: latin1: +latin1,+latinx,+native
   our $x1 = $xlit->analyze(toToken($w1));
   print "$w1: ", $x1->xmlNode->toString(1), "\n";
 
@@ -182,26 +184,29 @@ sub test_formatters {
     );
   #$cab->{rw}{subanalysisFormatter} = $cab->{morph};
   $cab->ensureLoaded();
-  @toks1 = map { toToken(decode('latin1',$_)) } qw(hilfe ihm seyne bär);
-  @toks2 = map { toToken(decode('latin1',$_)) } qw(oje .);
-  $s1    = DTA::CAB::Sentence->new(\@toks1);
-  $s2    = DTA::CAB::Sentence->new(\@toks2);
-  $doc   = DTA::CAB::Document->new([$s1,$s2]);
+  @ws1   = map { decode('latin1',$_) } (qw(hilfe ihm seyne),"b\x{e4}r");
+  @ws2   = map { decode('latin1',$_) } qw(oje .);
+  @toks1 = map { toToken($_) } @ws1;
+  @toks2 = map { toToken($_) } @ws2;
+  $s1    = toSentence(\@toks1);
+  $s2    = toSentence(\@toks2);
+  $doc   = toDocument([$s1,$s2]);
+  #$doc  = [ [@ws1],[@ws2] ]; #-- also ok
 
   ##-- analyze
-  $cab->analyzeDocument($doc);
+  $doc = $cab->analyzeDocument($doc);
 
   ##-- test: formatter: XmlNative
   $fmt = DTA::CAB::Formatter::XmlNative->new();
-  print $fmt->formatToken($toks1[0])->toString(1);
-  print $fmt->formatSentence($s1)->toString(1);
-  print $fmt->formatDocument($doc)->toString(1);
+  print $fmt->formatToken($toks1[0])->toString(1), "\n";
+  print $fmt->formatSentence($s1)->toString(1), "\n";
+  print $fmt->formatDocument($doc)->toString(1), "\n";
 
   ##-- test: formatter: XmlPerl
   $fmt = DTA::CAB::Formatter::XmlPerl->new();
-  print $fmt->formatToken($toks1[0])->toString(1);
-  print $fmt->formatSentence($s1)->toString(1);
-  print $fmt->formatDocument($doc)->toString(1);
+  print $fmt->formatToken($toks1[0])->toString(1), "\n";
+  print $fmt->formatSentence($s1)->toString(1), "\n";
+  print $fmt->formatDocument($doc)->toString(1), "\n";
 
   ##-- test: formatter: text
   $fmt = DTA::CAB::Formatter::Text->new();

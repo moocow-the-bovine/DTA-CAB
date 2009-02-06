@@ -6,7 +6,6 @@
 
 package DTA::CAB::Token;
 use DTA::CAB::Datum;
-use Exporter;
 use Carp;
 use strict;
 
@@ -15,10 +14,6 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(Exporter DTA::CAB::Datum);
-
-our @EXPORT = qw(toToken);
-our @EXPORT_OK = @EXPORT;
-our %EXPORT_TAGS = (all=>\@EXPORT_OK);
 
 ##==============================================================================
 ## Constructors etc.
@@ -45,13 +40,6 @@ sub new {
 		 : (text=>$_[1],@_[2..$#_]))
 	       },
 	       ref($_[0]) || $_[0]);
-}
-
-## $tok = CLASS::toToken($tok)
-## $tok = CLASS::toToken($text)
-##  + creates a new token object or returns its argument
-sub toToken {
-  return ref($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__) ? $_[0] : __PACKAGE__->new($_[0]);
 }
 
 ##==============================================================================

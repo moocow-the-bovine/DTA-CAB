@@ -8,10 +8,7 @@ package DTA::CAB::Formatter;
 use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
-use DTA::CAB::Datum;
-use DTA::CAB::Token;
-use DTA::CAB::Sentence;
-use DTA::CAB::Document;
+use DTA::CAB::Datum ':all';
 use IO::File;
 use Carp;
 use strict;
@@ -99,14 +96,14 @@ sub formatToken {
 ##  + default version just concatenates formatted tokens + 1 additional "\n"
 sub formatSentence {
   my ($fmt,$sent) = @_;
-  return join('', map {$fmt->formatToken($_)} @$sent[1..$#$sent])."\n";
+  return join('', map {$fmt->formatToken($_)} @{toSentence($sent)->{tokens}})."\n";
 }
 
 ## $out = $fmt->formatDocument($doc)
 ##  + default version just concatenates formatted sentences + 1 additional "\n"
 sub formatDocument {
   my ($fmt,$doc) = @_;
-  return join('', map {$fmt->formatSentence($_)} @$doc[1..$#$doc])."\n";
+  return join('', map {$fmt->formatSentence($_)} @{toDocument($doc)->{body}})."\n";
 }
 
 

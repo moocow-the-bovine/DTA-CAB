@@ -34,6 +34,9 @@ our @ISA = qw(DTA::CAB::Server);
 ##     ##-- XML-RPC procedure naming
 ##     procNamePrefix => $prefix, ##-- default: 'dta.cab.'
 ##     ##
+##     ##-- hacks
+##     encoding => $enc,   ##-- sets $RPC::XML::ENCODING on prepare(), used by underlying server
+##     ##
 ##     ##-- (inherited from DTA::CAB::Server)
 ##     as => \%analyzers,  ##-- ($name => $cab_analyzer_obj, ...)
 ##    }
@@ -60,6 +63,9 @@ sub new {
 			   ##-- XML-RPC procedure naming
 			   procNamePrefix => 'dta.cab.',
 			   ##
+			   ##-- hacks
+			   #encoding => 'UTF-8',
+			   ##
 			   ##-- user args
 			   @_
 			  );
@@ -67,6 +73,18 @@ sub new {
 
 ## undef = $obj->initialize()
 ##  + called to initialize new objects after new()
+
+##==============================================================================
+## Methods: Encoding Hacks
+##==============================================================================
+
+## \&coderef = $srv->wrapMethodEncoding(\&coderef)
+##  + wraps a code-ref into $srv->{encoding}-safe code
+sub wrapMethodEncoding {
+  my ($srv,$code) = @_;
+  return $code if (!defined($srv->{encoding}));
+  return sub { DTA::CAB::Utils::deep_encode($srv->{encoding}, $code->(@_)); }
+}
 
 
 ##==============================================================================
@@ -84,6 +102,12 @@ sub prepareLocal {
     $srv->logcroak("could not create underlying server object: $xsrv\n");
   }
 
+  ##-- hack: set server encoding
+  if (defined($srv->{encoding})) {
+    $srv->info("(hack) setting RPC::XML::ENCODING = $srv->{encoding}");
+    $RPC::XML::ENCODING = $srv->{encoding};
+  }
+
   ##-- register analysis methods
   my ($aname,$a, $xp);
   while (($aname,$a)=each(%{$srv->{as}})) {
@@ -93,6 +117,7 @@ sub prepareLocal {
 	$_->{name} = 'analyze' if (!defined($_->{name}));
 	$_->{name} = $aname.'.'.$_->{name} if ($aname);
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});
+	$_->{code} = $srv->wrapMethodEncoding($_->{code}); ##-- hack encoding
       }
       $xp = $xsrv->add_proc($_);
       if (!ref($xp)) {
@@ -114,7 +139,6 @@ sub run {
   my $srv = shift;
   $srv->prepare() if (!$srv->{xsrv}); ##-- sanity check
   $srv->logcroak("run(): no underlying RPC::XML object!") if (!$srv->{xsrv});
-
   $srv->info("server starting on host ", $srv->{xsrv}->host, ", port ", $srv->{xsrv}->port, "\n");
   $srv->{xsrv}->server_loop(%{$srv->{runopt}});
   $srv->info("server exiting\n");

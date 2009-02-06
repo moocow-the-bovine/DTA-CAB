@@ -19,13 +19,34 @@ our @ISA = qw(DTA::CAB::Datum);
 ## Constructors etc.
 ##==============================================================================
 
-## $s = CLASS_OR_OBJ->new(\@tokens,%sentenceAttrs)
-##  + object structure: ARRAY
-##    [
-##     \%sentenceAttrs,          ##-- sentence-global data (may be undef)
-##     @tokens,                  ##-- sentence tokens (DTA::CAB::Token objects)
-##    ]
+
+
+## $s = CLASS_OR_OBJ->new(\@tokens,%args)
+##  + object structure: HASH
+##    {
+##     tokens => \@tokens,   ##-- DTA::CAB::Token objects
+##    }
 sub new {
+  return bless({
+		tokens => ($#_>=1 ? $_[1] : []),
+		@_[2..$#_],
+	       }, ref($_[0])||$_[0]);
+}
+
+##  + object structure: ARRAY
+##    [ @tokens ]                ##-- sentence tokens (DTA::CAB::Token objects)
+##                               ##   + may contain "dummy" tokens w/o 'text' attribute
+sub new_v1 {
+  return bless((@_==2 && ref($_[1]) eq 'ARRAY'
+		? $_[1]
+		: [ @_[1..$#_] ]),
+	       ref($_[0]) || $_[0]);
+}
+
+##  + object structure: ARRAY
+##    [ \%attrs, @tokens ]                ##-- sentence tokens (DTA::CAB::Token objects)
+##                                        ##   + may contain "dummy" tokens w/o 'text' attribute
+sub new_v0 {
   return bless([
 		{@_[2..$#_]},
 		@{$_[1]},

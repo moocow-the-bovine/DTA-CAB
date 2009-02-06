@@ -7,6 +7,7 @@
 package DTA::CAB::Formatter::XmlNative;
 use DTA::CAB::Formatter;
 use DTA::CAB::Formatter::XmlPerl;
+use DTA::CAB::Datum ':all';
 use XML::LibXML;
 use Carp;
 use strict;
@@ -74,6 +75,7 @@ sub new {
 ##  + returns formatted token $tok as an XML node
 sub formatToken {
   my ($fmt,$tok) = @_;
+  $tok = toToken($tok);
 
   ##-- node, text
   my $nod = XML::LibXML::Element->new($fmt->{tokenElt});
@@ -126,19 +128,40 @@ sub formatToken {
 ## $xmlnod = $fmt->formatSentence($sent)
 sub formatSentence {
   my ($fmt,$sent) = @_;
+  $sent = toSentence($sent);
   my $snod = XML::LibXML::Element->new($fmt->{sentenceElt});
-  $snod->addChild($fmt->defaultXmlNode($sent->[0])); ##-- header
-  $snod->addChild($fmt->formatToken($_)) foreach (@$sent[1..$#$sent]);
+#
+#  ##-- format non-tokens (?)
+#  if (keys(%$sent) > 1 || !exists($sent->{tokens})) {
+#    my $toks = $sent->{tokens};
+#    delete($sent->{tokens});
+#    $snod->addChild($fmt->defaultXmlNode($sent));
+#    $sent->{tokens} = $toks;
+#  }
+#
+  ##-- format sentence 'tokens'
+  $snod->addChild($fmt->formatToken($_)) foreach (@{$sent->{tokens}});
   return $snod;
 }
 
 ## $xmlnod = $fmt->formatDocument($doc)
 sub formatDocument {
   my ($fmt,$doc) = @_;
-  my $dnod = XML::LibXML::Element->new($fmt->{documentElt});
-  $dnod->addChild($fmt->defaultXmlNode($doc->[0])); ##-- header
-  $dnod->addChild($fmt->formatSentence($_)) foreach (@$doc[1..$#$doc]);
-  return $dnod;
+  $doc = toDocument($doc);
+  my $docnod = XML::LibXML::Element->new($fmt->{documentElt});
+
+  ##-- format non-body (?)
+  my $headnod = $docnod->addNewChild(undef, 'head');
+  my $docbody = $doc->{body}; ##-- save
+  delete($doc->{body});
+  $headnod->addChild($fmt->defaultXmlNode($doc));
+  $doc->{body} = $docbody;    ##-- restore
+
+  ##-- format doc 'body'
+  my $bodynod = $docnod->addNewChild(undef, 'body');
+  $bodynod->addChild($fmt->formatSentence($_)) foreach (@{$doc->{body}});
+
+  return $docnod;
 }
 
 

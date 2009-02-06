@@ -7,6 +7,7 @@
 package DTA::CAB::Analyzer::Transliterator;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)

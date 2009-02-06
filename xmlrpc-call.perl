@@ -5,6 +5,7 @@ use RPC::XML::Client;
 use Encode qw(encode decode);
 use Getopt::Long qw(:config no_ignore_case);
 use File::Basename qw(basename);
+use Data::Dumper;
 use Pod::Usage;
 
 ##==============================================================================
@@ -46,6 +47,7 @@ GetOptions(##-- General
 	   'array|a!' => \$do_array,
 	   'local-encoding|le=s' => \$local_encoding,   ##-- decode() + encode()
 	   'server-encoding|se=s' => \$server_encoding, ##-- encode() + decode()
+	   'dump|d!' => \$dump,
 	   'outfile|o=s' => \$outfile,
 	  );
 
@@ -115,14 +117,23 @@ if (!ref($rsp)) {
 open(OUT,">$outfile")
   or die("$prog: open failed for output file '$outfile': $!");
 
-my $rspstr = $rsp->as_string;
-$rspstr = decode($server_encoding, $rspstr) if (defined($server_encoding) && !utf8::is_utf8($rspstr));
-$rspstr = encode($server_encoding, $rspstr) if (defined($server_encoding) &&  utf8::is_utf8($rspstr));
-#$rspstr = encode($local_encoding,$rspstr)   if (defined($local_encoding));
-print OUT
-  '<?xml version="1.0"', (defined($server_encoding) ? " encoding=\"$server_encoding\"" : qw()), "?>\n",
-  $rspstr,
-  "\n";
+if ($dump) {
+  ##-- dump value
+  my $val = $rsp->value;
+  print OUT Data::Dumper->new([$val],['response'])->Sortkeys(1)->Indent(1)->Dump, "\n";
+} else {
+  ##-- output XML-RPC string
+  my $rspstr = $rsp->as_string;
+  $rspstr = decode($server_encoding, $rspstr) if (defined($server_encoding) && !utf8::is_utf8($rspstr));
+  $rspstr = encode($server_encoding, $rspstr) if (defined($server_encoding) &&  utf8::is_utf8($rspstr));
+  #$rspstr = encode($local_encoding,$rspstr)   if (defined($local_encoding));
+
+  print OUT
+    ('<?xml version="1.0"', (defined($server_encoding) ? " encoding=\"$server_encoding\"" : qw()), "?>\n",
+     $rspstr,
+     "\n",
+    );
+}
 
 __END__
 =pod
@@ -150,6 +161,7 @@ xmlrpc-call.perl - XML RPC command-line tool
   -server  URL                    ##-- set server URL (default: http://localhost:80)
   -from    INPUT_FILE             ##-- read literal query from INPUT_FILE (default=command line)
   -output  OUTPUT_FILE            ##-- XML output (default=-)
+  -dump                           ##-- if true, just dump value with Data::Dumper
 
 =cut
 

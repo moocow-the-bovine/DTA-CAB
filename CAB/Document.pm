@@ -19,18 +19,16 @@ our @ISA = qw(DTA::CAB::Datum);
 ## Constructors etc.
 ##==============================================================================
 
-## $doc = CLASS_OR_OBJ->new(\@sentences,%documentAttrs)
+## $doc = CLASS_OR_OBJ->new(\@sentences,%args)
 ##  + object structure: HASH
-##    [
-##     \%documentAttrs,          ##-- document-global attributes (may be undef)
-##     @sentences,               ##-- document sentences (DTA::CAB::Sentence objects)
-##    ]
+##    {
+##     body => \@sentences,  ##-- DTA::CAB::Sentence objects
+##    }
 sub new {
-  return bless([
-		{@_[2..$#_]},
-		@{$_[1]},
-	       ],
-	       ref($_[0]) || $_[0]);
+  return bless({
+		body => ($#_>=1 ? $_[1] : []),
+		@_[2..$#_],
+	       }, ref($_[0])||$_[0]);
 }
 
 ##==============================================================================

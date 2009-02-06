@@ -72,7 +72,7 @@ sub getAnalyzeTokenSub {
   return sub {
     $tok = shift;
     $analyses = $tok->{$srcKey};
-    $safe = 1 if ($tok->{text} =~ /^[[:digit:][:punct:]]*$/); ##-- punctuation, digits are always "safe"
+    $safe = ($tok->{text} =~ m/^[[:digit:][:punct:]]*$/); ##-- punctuation, digits are always "safe"
     $safe ||=
       (
        $analyses                 ##-- defined & true

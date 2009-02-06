@@ -7,6 +7,7 @@
 package DTA::CAB::Utils;
 use Exporter;
 use Carp;
+use Encode qw(encode decode);
 use strict;
 
 ##==============================================================================
@@ -19,6 +20,7 @@ our %EXPORT_TAGS =
   (
    xml  => [qw(xml_safe_string)],
    data => [qw(path_value)],
+   encode => [qw(deep_encode deep_decode deep_recode)],
   );
 our @EXPORT_OK = [map {@$_} values(%EXPORT_TAGS)];
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -34,6 +36,54 @@ sub xml_safe_string {
   $s =~ s/\:\:/\./g;
   $s =~ s/[\s\/\\]/_/g;
   return $s;
+}
+
+##==============================================================================
+## Functions: Deep recoding
+##==============================================================================
+
+## $decoded = deep_decode($encoding,$thingy,$force)
+sub deep_decode {
+  my ($enc,$thingy,$force) = @_;
+  my @queue = (\$thingy);
+  my ($ar);
+  while (defined($ar=shift(@queue))) {
+    if (UNIVERSAL::isa($$ar,'ARRAY')) {
+      push(@queue, map { \$_ } @{$$ar});
+    } elsif (UNIVERSAL::isa($$ar,'HASH')) {
+      push(@queue, map { \$_ } values %{$$ar});
+    } elsif (UNIVERSAL::isa($$ar, 'SCALAR') || UNIVERSAL::isa($$ar,'REF')) {
+      push(@queue, $$ar);
+    } elsif (!ref($$ar)) {
+      $$ar = decode($enc,$$ar) if ($force || !utf8::is_utf8($$ar));
+    }
+  }
+  return $thingy;
+}
+
+## $encoded = deep_encode($encoding,$thingy,$force)
+sub deep_encode {
+  my ($enc,$thingy,$force) = @_;
+  my @queue = (\$thingy);
+  my ($ar);
+  while (defined($ar=shift(@queue))) {
+    if (UNIVERSAL::isa($$ar,'ARRAY')) {
+      push(@queue, map { \$_ } @{$$ar});
+    } elsif (UNIVERSAL::isa($$ar,'HASH')) {
+      push(@queue, map { \$_ } values %{$$ar});
+    } elsif (UNIVERSAL::isa($$ar, 'SCALAR') || UNIVERSAL::isa($$ar,'REF')) {
+      push(@queue, $$ar);
+    } elsif (!ref($$ar)) {
+      $$ar = encode($enc,$$ar) if ($force || utf8::is_utf8($$ar));
+    }
+  }
+  return $thingy;
+}
+
+## $recoded = deep_recode($from,$to,$thingy);
+sub deep_recode {
+  my ($from,$to,$thingy) = @_;
+  return deep_encode($to,deep_decode($from,$thingy));
 }
 
 ##==============================================================================

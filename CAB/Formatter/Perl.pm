@@ -31,34 +31,42 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- Dumper
+			   dumper => Data::Dumper->new([])->Purity(1)->Terse(0)->Indent(1),
+
 			   ##-- user args
 			   @_
 			  );
 }
 
 ##==============================================================================
+## Methods: verbosity
+
+## $fmt = $fmt->verbose($level)
+##   + 0 <= $level <= 3 : set verbosity level (Data::Dumper 'Indent' property)
+sub verbose {
+  $_[0]{dumper}->Indent($_[1]);
+  return $_[0];
+}
+
+##==============================================================================
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
+
 ## $out = $fmt->formatToken($tok)
-##  + returns formatted token $tok
 sub formatToken {
-  my ($fmt,$tok) = @_;
-  return Data::Dumper->Dump([$tok]);
+  return $_[0]{dumper}->Reset->Names(['token'])->Values([$_[1]])->Dump;
 }
 
 ## $out = $fmt->formatSentence($sent)
-##  + default version just concatenates formatted tokens
 sub formatSentence {
-  my ($fmt,$sent) = @_;
-  return Data::Dumper->Dump([$sent]);
+  return $_[0]{dumper}->Reset->Names(['sentence'])->Values([$_[1]])->Dump;
 }
 
 ## $out = $fmt->formatDocument($doc)
-##  + default version just concatenates formatted sentences
 sub formatDocument {
-  my ($fmt,$doc) = @_;
-  return Data::Dumper->Dump([$doc]);
+  return $_[0]{dumper}->Reset->Names(['document'])->Values([$_[1]])->Dump;
 }
 
 

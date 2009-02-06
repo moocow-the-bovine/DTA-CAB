@@ -6,6 +6,7 @@
 
 package DTA::CAB::Formatter::Text;
 use DTA::CAB::Formatter;
+use DTA::CAB::Datum ':all';
 use Carp;
 use strict;
 
@@ -75,14 +76,14 @@ sub formatToken {
 ##  + default version just concatenates formatted tokens
 sub formatSentence {
   my ($fmt,$sent) = @_;
-  return join('', map {$fmt->formatToken($_)} @$sent[1..$#$sent])."\n";
+  return join('', map {$fmt->formatToken($_)} @{toSentence($sent)->{tokens}})."\n";
 }
 
 ## $out = $fmt->formatDocument($doc)
 ##  + default version just concatenates formatted sentences
 sub formatDocument {
   my ($fmt,$doc) = @_;
-  return join('', map {$fmt->formatSentence($_)} @$doc[1..$#$doc]);
+  return join('', map {$fmt->formatSentence($_)} @{toDocument($doc)->{body}})."\n";
 }
 
 

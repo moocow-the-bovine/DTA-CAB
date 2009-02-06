@@ -6,6 +6,8 @@
 package DTA::CAB;
 
 use DTA::CAB::Logger;
+use DTA::CAB::Persistent;
+
 use DTA::CAB::Analyzer;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
@@ -14,9 +16,17 @@ use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+
+use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 use DTA::CAB::Sentence;
 use DTA::CAB::Document;
+
+use DTA::CAB::Formatter;
+use DTA::CAB::Formatter::Text;
+use DTA::CAB::Formatter::Perl;
+use DTA::CAB::Formatter::XmlNative;
+use DTA::CAB::Formatter::XmlPerl;
 
 use IO::File;
 use Carp;
