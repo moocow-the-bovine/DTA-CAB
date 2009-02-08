@@ -41,6 +41,7 @@ sub new {
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
+
 ## $xmlnod = $fmt->formatToken($tok)
 ##  + returns formatted token $tok as an XML node
 sub formatToken {
@@ -69,6 +70,13 @@ sub xmlDocument {
   my $doc = XML::LibXML::Document->new($xmlversion,$xmlencoding);
   $doc->setDocumentElement($nod);
   return $doc;
+}
+
+## $out = $fmt->formatString($xmlnod)
+sub formatString {
+  my ($fmt,$nod) = @_;
+  return $fmt->xmlDocument($nod)->toString(0);
+  #return $nod->toString(1);
 }
 
 ##==============================================================================

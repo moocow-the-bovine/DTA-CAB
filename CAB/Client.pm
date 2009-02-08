@@ -41,14 +41,43 @@ sub new {
 sub initialize { return $_[0]; }
 
 ##==============================================================================
-## Methods: Generic Client API
+## Methods: Generic Client API: Connections
 ##==============================================================================
 
-## $response = $cli->query($method, @args)
-sub query {
+## $bool = $cli->connected
+sub connected { return 0; }
+
+## $bool = $cli->connect()
+sub connect { return $_[0]->connected; }
+
+## $bool = $cli->disconnect()
+sub disconnect { return !$_[0]->connected; }
+
+## @analyzers = $cli->analyzers()
+sub analyzers { return qw(); }
+
+##==============================================================================
+## Methods: Generic Client API: Queries
+##==============================================================================
+
+## $tok = $cli->analyzeToken($analyzer, $tok, \%opts)
+sub analyzeToken {
   my $cli = shift;
-  $cli->logcroak("query() method not implemented!");
+  $cli->logcroak("analyzeToken() method not implemented!");
 }
+
+## $sent = $cli->analyzeSentence($analyzer, $sent, \%opts)
+sub analyzeSentence {
+  my $cli = shift;
+  $cli->logcroak("analyzeSentence() method not implemented!");
+}
+
+## $doc = $cli->analyzeDocument($analyzer, $doc, \%opts)
+sub analyzeDocument {
+  my $cli = shift;
+  $cli->logcroak("analyzeDocument() method not implemented!");
+}
+
 
 1; ##-- be happy
 

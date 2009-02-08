@@ -27,6 +27,7 @@ use DTA::CAB::Formatter::Text;
 use DTA::CAB::Formatter::Perl;
 use DTA::CAB::Formatter::XmlNative;
 use DTA::CAB::Formatter::XmlPerl;
+use DTA::CAB::Formatter::XmlRpc;
 
 use IO::File;
 use Carp;

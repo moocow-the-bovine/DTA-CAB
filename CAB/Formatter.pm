@@ -83,6 +83,10 @@ sub loadPerlRef {
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
+## $str = $fmt->formatString($out)
+##  + get string from output if not defined
+sub formatString { return $_[1]; }
+
 ## $out = $fmt->formatToken($tok)
 ##  + returns formatted token $tok
 ##  + child classes MUST implement this

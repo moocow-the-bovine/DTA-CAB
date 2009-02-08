@@ -64,7 +64,7 @@ sub new {
 			   procNamePrefix => 'dta.cab.',
 			   ##
 			   ##-- hacks
-			   #encoding => 'UTF-8',
+			   encoding => 'UTF-8',
 			   ##
 			   ##-- user args
 			   @_
@@ -130,6 +130,11 @@ sub prepareLocal {
     }
   }
 
+  ##-- register 'listAnalyzers' method
+  my $listproc = $srv->listAnalyzersProc;
+  $xsrv->add_proc($listproc);
+  $srv->info("registered XML-RPC listing procedure $listproc->{name}()\n");
+
   return 1;
 }
 
@@ -145,6 +150,25 @@ sub run {
 
   return 1;
 }
+
+##==============================================================================
+## Methods: Additional
+##==============================================================================
+
+## \%procSpec = $srv->listAnalyzersProc()
+sub listAnalyzersProc {
+  my $srv = shift;
+  my $anames = DTA::CAB::Utils::deep_encode($srv->{encoding},
+					    [ map {($srv->{procNamePrefix}||'').$_ } keys(%{$srv->{as}}) ]
+					   );
+  return {
+	  name => ($srv->{procNamePrefix}||'').'listAnalyzers',
+	  code => sub { return $anames; },
+	  help => 'list registered analyzer names',
+	  signature => [ 'array' ],
+	 };
+}
+
 
 1; ##-- be happy
 

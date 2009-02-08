@@ -32,7 +32,7 @@ our %EXPORT_TAGS = (all=>\@EXPORT_OK);
 sub toToken {
   return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Token'));
   return bless({text=>$_[0]},'DTA::CAB::Token') if (!ref($_[0]));
-  return bless($_[0],'DTA::CAB::Token') if (ref($_[0]) eq 'HASH');
+  return bless($_[0],'DTA::CAB::Token') if (ref($_[0]) eq 'HASH' && exists($_[0]{text}));
   return DTA::CAB::Token->new(@_); ##-- default
 }
 
@@ -42,6 +42,7 @@ sub toToken {
 sub toSentence {
   return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Sentence'));
   return bless({tokens=>$_[0]},'DTA::CAB::Sentence') if (UNIVERSAL::isa($_[0],'ARRAY'));
+  return bless($_[0],'DTA::CAB::Sentence') if (ref($_[0]) eq 'HASH' && exists($_[0]{tokens}));
   return DTA::CAB::Sentence->new(@_); ##-- default
 }
 
@@ -51,6 +52,7 @@ sub toSentence {
 sub toDocument {
   return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Document'));
   return bless({body=>$_[0]},'DTA::CAB::Document') if (UNIVERSAL::isa($_[0],'ARRAY'));
+  return bless($_[0],'DTA::CAB::Document') if (ref($_[0]) eq 'HASH' && exists($_[0]{body}));
   return DTA::CAB::Document->new(@_); ##-- default
 }
 
