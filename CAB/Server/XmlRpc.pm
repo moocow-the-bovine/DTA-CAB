@@ -120,7 +120,7 @@ sub prepareLocal {
 	$_->{name} = 'analyze' if (!defined($_->{name}));
 	$_->{name} = $aname.'.'.$_->{name} if ($aname);
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});
-	$_->{code} = $srv->wrapMethodEncoding($_->{code}); ##-- hack encoding
+	$_->{code} = $srv->wrapMethodEncoding($_->{code}); # if ($_->{name} !~ m/analyzeData$/);; ##-- hack encoding?
       }
       $xp = $xsrv->add_proc($_);
       if (!ref($xp)) {

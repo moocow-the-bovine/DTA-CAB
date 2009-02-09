@@ -9,6 +9,7 @@ use DTA::CAB::Formatter;
 use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Datum ':all';
 use RPC::XML;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -88,7 +89,7 @@ sub xmlNode {
 sub formatString {
   my ($fmt,$rpcobj) = @_;
   #return $fmt->xmlDocument($rpcobj)->toString(1);
-  return $rpcobj->as_string;
+  return encode('UTF-8', $rpcobj->as_string);
 }
 
 

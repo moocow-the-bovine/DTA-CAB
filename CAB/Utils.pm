@@ -55,7 +55,7 @@ sub deep_decode {
     } elsif (UNIVERSAL::isa($$ar, 'SCALAR') || UNIVERSAL::isa($$ar,'REF')) {
       push(@queue, $$ar);
     } elsif (!ref($$ar)) {
-      $$ar = decode($enc,$$ar) if ($force || !utf8::is_utf8($$ar));
+      $$ar = decode($enc,$$ar) if (defined($$ar) && ($force || !utf8::is_utf8($$ar)));
     }
   }
   return $thingy;
@@ -74,7 +74,7 @@ sub deep_encode {
     } elsif (UNIVERSAL::isa($$ar, 'SCALAR') || UNIVERSAL::isa($$ar,'REF')) {
       push(@queue, $$ar);
     } elsif (!ref($$ar)) {
-      $$ar = encode($enc,$$ar) if ($force || utf8::is_utf8($$ar));
+      $$ar = encode($enc,$$ar) if (defined($$ar) && ($force || utf8::is_utf8($$ar)));
     }
   }
   return $thingy;

@@ -78,6 +78,13 @@ sub analyzeDocument {
   $cli->logcroak("analyzeDocument() method not implemented!");
 }
 
+## $doc = $cli->analyzeData($analyzer, $doc, \%opts)
+sub analyzeData {
+  my $cli = shift;
+  $cli->logcroak("analyzeGeneric() method not implemented!");
+}
+
+
 
 1; ##-- be happy
 

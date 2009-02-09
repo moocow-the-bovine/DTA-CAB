@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Client::XmlRpc;
+use DTA::CAB::Utils ':all';
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
@@ -20,12 +21,12 @@ our $VERSION = 0.01;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-BEGIN {
-  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-  binmode(STDIN, ':utf8');
-  binmode(STDOUT,':utf8');
-  binmode(STDERR,':utf8');
-}
+#BEGIN {
+#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
+#  binmode(STDIN, ':utf8');
+#  binmode(STDOUT,':utf8');
+#  binmode(STDERR,':utf8');
+#}
 
 ##-- Client
 our $serverURL  = 'http://localhost:8000';
@@ -37,6 +38,9 @@ our $analyzer = 'dta.cab.default';
 our $action = 'list';
 our %analyzeOpts = qw();   ##-- currently unused
 our $formatClass = 'Text'; ##-- default format class
+our $parserClass = 'TT';   ##-- default parser class
+
+our $rawClass = 'Freeze'; ##-- I/O class for raw comms
 
 ##==============================================================================
 ## Command-line
@@ -51,12 +55,15 @@ GetOptions(##-- General
 	   'server-encoding|se=s' => \$serverEncoding,
 	   'analyzer|a=s' => \$analyzer,
 	   'format-class|fc=s' => \$formatClass,
+	   'parser-class|pc=s' => \$parserClass,
+	   'raw-class|rc=s' => \$rawClass,
 
 	   ##-- Action
 	   'list|l'   => sub { $action='list'; },
 	   'token|t' => sub { $action='token'; },
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
+	   'raw|r' => sub { $action='raw'; }, ##-- server-side parsing
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
@@ -89,6 +96,11 @@ $formatClass = 'DTA::CAB::Formatter::'.$formatClass if (!UNIVERSAL::isa($formatC
 our $fmt = $formatClass->new()
   or die("$0: could not create formatter of class $formatClass: $!");
 
+##-- parser class
+$parserClass = 'DTA::CAB::Parser::'.$parserClass if (!UNIVERSAL::isa($parserClass,'DTA::CAB::Parser'));
+our $prs = $parserClass->new()
+  or die("$0: could not create parser of class $parserClass: $!");
+
 ##===================
 ## Actions
 
@@ -99,22 +111,47 @@ if ($action eq 'list') {
 }
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
-  foreach $tokin (@ARGV) {
+  foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     print $fmt->formatString( $fmt->formatToken($tokout) );
   }
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
-  our $s_in  = [@ARGV];
+  our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   print $fmt->formatString( $fmt->formatSentence($s_out) );
 }
 elsif ($action eq 'document') {
-  ##-- action: 'document' (TODO: interpret args as filenames & parse 'em!)
-  our $d_in  = [[@ARGV]];
-  our $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
-  print $fmt->formatString( $fmt->formatDocument($d_out) );
+  ##-- action: 'document': interpret args as filenames & parse 'em!
+  our ($d_in,$d_out);
+  foreach $doc_filename (@ARGV) {
+    $d_in = DTA::CAB::Utils::deep_decode($localEncoding, $prs->parseFile($doc_filename))
+      or die("$0: parse failed for input file '$doc_filename': $!");
+    $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
+    print $fmt->formatString( $fmt->formatDocument($d_out) );
+  }
+}
+elsif ($action eq 'raw') {
+  ##-- action: 'generic': do server-side parsing
+  our ($d_in,$raw_in,$raw_out,$d_out);
+
+  ##-- raw data formatter
+  our $raw_fmt = "DTA::CAB::Formatter::${rawClass}"->new()
+    or die("$0: could not create raw formatter of class '$rawClass': $!");
+
+  ##-- raw data parser
+  our $raw_prs = "DTA::CAB::Parser::${rawClass}"->new()
+    or die("$0: could not create raw parser of class '$rawClass': $!");
+
+  foreach $doc_filename (@ARGV) {
+    $d_in = DTA::CAB::Utils::deep_decode($localEncoding, $prs->parseFile($doc_filename))
+      or die("$0: parse failed for input file '$doc_filename': $!");
+    $raw_in  = $raw_fmt->formatString( $raw_fmt->formatDocument($d_in) );
+    $raw_out = $cli->analyzeData( $analyzer, $raw_in, {%analyzeOpts, parserClass=>$rawClass, formatClass=>$rawClass} );
+    $d_out   = $raw_prs->parseString( $raw_out );
+    print $fmt->formatString( $fmt->formatDocument($d_out) );
+  }
 }
 else {
   die("$0: unknown action '$action'");

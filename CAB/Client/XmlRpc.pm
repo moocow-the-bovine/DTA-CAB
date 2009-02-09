@@ -43,6 +43,12 @@ sub new {
 			   ##
 			   ##-- RPC::XML stuff
 			   xcli => undef,
+			   xargs => {
+				     compress_requests => 0,    ##-- send compressed requests?
+				     compress_thresh   => 8192, ##-- byte limit for compressed requests
+				     ##
+				     message_file_thresh => 0,  ##-- disable file-based message spooling
+				    },
 			   ##
 			   ##-- user args
 			   @_,
@@ -60,8 +66,10 @@ sub connected { return $_[0]{xcli} ? 1 : 0; }
 ##  + establish connection
 sub connect {
   my $cli = shift;
-  $cli->{xcli} = RPC::XML::Client->new($cli->{serverURL})
+  $cli->{xcli} = RPC::XML::Client->new($cli->{serverURL}, %{$cli->{xargs}})
     or $cli->logdie("could not create underlying RPC::XML::Client: $!");
+  $cli->{xcli}->message_file_thresh(0)
+    if (defined($cli->{xargs}{message_file_thresh}) && !$cli->{xargs}{message_file_thresh});
   return 1;
 }
 
@@ -83,16 +91,19 @@ sub analyzers {
 ##==============================================================================
 
 ## $rsp_or_error = $cli->request($req)
+## $rsp_or_error = $cli->request($req, $doDeepEncoding=1)
 ##  + send XML-RPC request, log if error occurs
 sub request {
-  my ($cli,$req) = @_;
+  my ($cli,$req,$doRecode) = @_;
 
   ##-- cache RPC::XML encoding
+  $doRecode   = 1 if (!defined($doRecode));
   my $enc_tmp = $RPC::XML::ENCODING;
   $RPC::XML::ENCODING = $cli->{serverEncoding};
 
   $cli->connect() if (!$cli->{xcli});
-  my $rsp = $cli->{xcli}->send_request( DTA::CAB::Utils::deep_encode($cli->{serverEncoding}, $req) );
+  $req = DTA::CAB::Utils::deep_encode($cli->{serverEncoding}, $req) if ($doRecode);
+  my $rsp = $cli->{xcli}->send_request( $req );
   if (!ref($rsp)) {
     $cli->error("RPC::XML::Client::send_request() failed: $rsp");
   }
@@ -101,9 +112,10 @@ sub request {
   }
 
   ##-- cleanup & return
-  $RPC::XML::ENCODING              = $enc_tmp;
-  return DTA::CAB::Utils::deep_decode($cli->{serverEncoding},$rsp);
+  $RPC::XML::ENCODING = $enc_tmp;
+  return $doRecode ? DTA::CAB::Utils::deep_decode($cli->{serverEncoding},$rsp) : $rsp;
 }
+
 
 ##==============================================================================
 ## Methods: Generic Client API: Queries
@@ -126,7 +138,7 @@ sub analyzeToken {
   my ($cli,$aname,$tok,$opts) = @_;
   my $rsp = $cli->request($cli->newRequest("$aname.analyzeToken",
 					   $tok,
-					   #$opts,
+					   (defined($opts) ? $opts : qw())
 					  ));
   return ref($rsp) && !$rsp->is_fault ? toToken($rsp->value) : $rsp;
 }
@@ -136,7 +148,7 @@ sub analyzeSentence {
   my ($cli,$aname,$sent,$opts) = @_;
   my $rsp = $cli->request($cli->newRequest("$aname.analyzeSentence",
 					   $sent,
-					   #$opts,
+					   (defined($opts) ? $opts : qw())
 					  ));
   return ref($rsp) && !$rsp->is_fault ? toSentence($rsp->value) : $rsp;
 }
@@ -146,9 +158,20 @@ sub analyzeDocument {
   my ($cli,$aname,$doc,$opts) = @_;
   my $rsp = $cli->request($cli->newRequest("$aname.analyzeDocument",
 					   $doc,
-					   #$opts,
+					   (defined($opts) ? $opts : qw())
 					  ));
-  return ref($rsp) && $rsp->is_fault ? toDocument($rsp->value) : $rsp;
+  return ref($rsp) && !$rsp->is_fault ? toDocument($rsp->value) : $rsp;
+}
+
+## $data_str = $cli->analyzeRaw($analyzer, $input_str, \%opts)
+sub analyzeData {
+  my ($cli,$aname,$data,$opts) = @_;
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeData",
+					   RPC::XML::base64->new($data),
+					   (defined($opts) ? $opts : qw())
+					  ),
+			  0); ##-- no deep recode
+  return ref($rsp) && !$rsp->is_fault ? $rsp->value : $rsp;
 }
 
 
