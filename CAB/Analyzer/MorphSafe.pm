@@ -27,15 +27,15 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
 ##    ##-- analysis selection
-##    analysisSrcKey => $key,    ##-- input token key   (default: 'morph')
-##    analysisPrefix => $prefix, ##-- output key prefix (default: 'morph')
+##    analysisSrcKey => $srcKey,    ##-- input token key   (default: 'morph')
+##    analysisKey    => $key,       ##-- output key        (default: 'msafe')
 ##
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
 			   analysisSrcKey => 'morph',
-			   analysisPrefix => 'morph',
+			   analysisKey    => 'msafe',
 
 			   ##-- user args
 			   @_
@@ -62,15 +62,15 @@ sub ensureLoaded { return 1; }
 ##  + returned sub is callable as:
 ##     $tok = $coderef->($tok,\%opts)
 ##  + tests safety of morphological analyses in $tok->{morph}
-##  + sets $tok->{ "$anl->{analysisPrefix}.safe" } = $bool
+##  + sets $tok->{ $anl->{analysisKey} } = $bool
 sub getAnalyzeTokenSub {
   my $ms = shift;
 
   my $srcKey = $ms->{analysisSrcKey};
-  my $prefix = $ms->{analysisPrefix};
-  my ($tok,$analyses,$safe);
+  my $akey   = $ms->{analysisKey};
+  my ($tok,$opts,$analyses,$safe);
   return sub {
-    $tok = shift;
+    ($tok,$opts) = @_;
     $analyses = $tok->{$srcKey};
     $safe = ($tok->{text} =~ m/^[[:digit:][:punct:]]*$/); ##-- punctuation, digits are always "safe"
     $safe ||=
@@ -108,13 +108,9 @@ sub getAnalyzeTokenSub {
       );
 
     ##-- output
-    $tok->{"${prefix}.safe"} = $safe ? 1 : 0;
+    $tok->{$akey} = $safe ? 1 : 0;
   };
 }
-
-##==============================================================================
-## Methods: Output Formatting: OBSOLETE
-##==============================================================================
 
 
 1; ##-- be happy

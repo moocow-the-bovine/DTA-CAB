@@ -107,6 +107,9 @@ sub prepareLocal {
     $srv->info("(hack) setting RPC::XML::ENCODING = $srv->{encoding}");
     $RPC::XML::ENCODING = $srv->{encoding};
   }
+  ##-- hack: set $RPC::XML::FORCE_STRING_ENCODINTG
+  $srv->info("(hack) setting RPC::XML::FORCE_STRING_ENCODING = 1");
+  $RPC::XML::FORCE_STRING_ENCODING = 1;
 
   ##-- register analysis methods
   my ($aname,$a, $xp);

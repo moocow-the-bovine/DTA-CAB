@@ -32,6 +32,7 @@ our $outfile  = '-';
 ##-- defaults
 our $local_encoding = undef;
 our $server_encoding = undef;
+our $force_strings = 0;
 
 ##==============================================================================
 ## Command-line
@@ -47,6 +48,7 @@ GetOptions(##-- General
 	   'array|a!' => \$do_array,
 	   'local-encoding|le=s' => \$local_encoding,   ##-- decode() + encode()
 	   'server-encoding|se=s' => \$server_encoding, ##-- encode() + decode()
+	   'strings-only|S' => \$force_strings,         ##-- force strings?
 	   'dump|d!' => \$dump,
 	   'outfile|o=s' => \$outfile,
 	  );
@@ -66,8 +68,9 @@ if ($version) {
 
 $server = 'http://'.$server if ($server !~ m|//|);
 
-##-- setup server encoding (hack)
+##-- setup RPC::XML hacks
 $RPC::XML::ENCODING = $server_encoding if (defined($server_encoding));
+$RPC::XML::FORCE_STRING_ENCODING = $force_strings if (defined($force_strings));
 
 ##-- setup request
 my ($req);

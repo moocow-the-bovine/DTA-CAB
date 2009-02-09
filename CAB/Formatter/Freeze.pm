@@ -1,12 +1,12 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Formatter::Text.pm
+## File: DTA::CAB::Formatter::Freeze.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: Datum formatter: verbose human-readable text
+## Description: Datum formatter: Storable::freeze
 
-package DTA::CAB::Formatter::Text;
+package DTA::CAB::Formatter::Freeze;
 use DTA::CAB::Formatter;
-use DTA::CAB::Datum ':all';
+use Storable;
 use Carp;
 use strict;
 
@@ -36,54 +36,24 @@ sub new {
 			  );
 }
 
+
 ##==============================================================================
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
 ## $out = $fmt->formatToken($tok)
-##  + returns formatted token $tok
 sub formatToken {
-  my ($fmt,$tok) = @_;
-  my $out = $tok->{text}."\n";
-
-  ##-- Transliterator ('xlit')
-  $out .= ("\txlit:"
-	   ." isLatin1=".$tok->{xlit}[1]
-	   ." isLatinExt=".$tok->{xlit}[2]
-	   ." latin1Text=".$tok->{xlit}[0]
-	   ."\n")
-    if (defined($tok->{xlit}));
-
-  ##-- Morph ('morph')
-  $out .= join('', map { "\tmorph: $_->[0] <$_->[1]>\n" } @{$tok->{morph}}) if ($tok->{morph});
-
-  ##-- MorphSafe ('morph.safe')
-  $out .= "\tmorph.safe: ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
-
-  ##-- Rewrites + analyses
-  $out .= join('',
-	       map {
-		 ("\trw: $_->[0] <$_->[1]>\n",
-		  ($_->[2] ? map { "\t\tmorph/rw: $_->[0] <$_->[1]>\n" } @{$_->[2]} : qw()))
-	       } @{$tok->{rw}})
-    if ($tok->{rw});
-
-  ##-- ... ???
-  return $out;
+  return Storable::nfreeze($_[1]);
 }
 
 ## $out = $fmt->formatSentence($sent)
-##  + default version just concatenates formatted tokens
 sub formatSentence {
-  my ($fmt,$sent) = @_;
-  return join('', map {$fmt->formatToken($_)} @{toSentence($sent)->{tokens}})."\n";
+  return Storable::nfreeze($_[1]);
 }
 
 ## $out = $fmt->formatDocument($doc)
-##  + default version just concatenates formatted sentences
 sub formatDocument {
-  my ($fmt,$doc) = @_;
-  return join('', map {$fmt->formatSentence($_)} @{toDocument($doc)->{body}})."\n";
+  return Storable::nfreeze($_[1]);
 }
 
 

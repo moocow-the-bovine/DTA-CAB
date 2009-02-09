@@ -6,7 +6,7 @@
 
 package DTA::CAB::Formatter::XmlNative;
 use DTA::CAB::Formatter;
-use DTA::CAB::Formatter::XmlPerl;
+use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Datum ':all';
 use XML::LibXML;
 use Carp;
@@ -16,7 +16,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Formatter::XmlPerl);
+our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 
 ##==============================================================================
 ## Constructors etc.
@@ -82,10 +82,11 @@ sub formatToken {
   $nod->setAttribute($fmt->{tokenTextAttr},$tok->{text});
 
   ##-- Transliterator ('xlit')
-  if (defined($tok->{"xlit.latin1Text"})) {
-    $nod->setAttribute('isLatin1',   $tok->{'xlit.isLatin1'});
-    $nod->setAttribute('isLatinExt', $tok->{'xlit.isLatinExt'});
-    $nod->setAttribute('latin1Text', $tok->{'xlit.latin1Text'});
+  if (defined($tok->{xlit})) {
+    my $xnod = $nod->addNewChild(undef, 'xlit');
+    $xnod->setAttribute('isLatin1',   $tok->{xlit}[1]);
+    $xnod->setAttribute('isLatinExt', $tok->{xlit}[2]);
+    $xnod->setAttribute('latin1Text', $tok->{xlit}[0]);
   }
 
   ##-- Morphology automaton ('morph')
@@ -99,10 +100,13 @@ sub formatToken {
     }
   }
 
-  ##-- MorphSafe ('morph.safe')
-  $nod->setAttribute('morph.safe', ($tok->{"morph.safe"} ? 1 : 0)) if (exists($tok->{"morph.safe"}));
+  ##-- MorphSafe ('msafe')
+  if (exists($tok->{msafe})) {
+    $mnod = $nod->addNewChild(undef,'msafe');
+    $mnod->setAttribute('safe', $tok->{msafe} ? 1 : 0);
+  }
 
-  ##-- Rewrite
+  ##-- Rewrite ('rw')
   my ($rwnod,$rwanod);
   if ($tok->{rw}) {
     $nod->addChild( $rwnod = XML::LibXML::Element->new($fmt->{rwElt}) );

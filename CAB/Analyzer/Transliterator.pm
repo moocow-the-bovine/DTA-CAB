@@ -33,15 +33,12 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
-##    analysisPrefix => $key,   ##-- token analysis prefix (default='xlit')
+##    analysisKey => $key,   ##-- token analysis key (default='xlit')
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisPrefix => 'xlit',
-
-			   ##-- formatting: XML
-			   #xmlAnalysisElt => 'xlit',
+			   analysisKey => 'xlit',
 
 			   ##-- user args
 			   @_
@@ -66,13 +63,15 @@ sub ensureLoaded { return 1; }
 ## $coderef = $anl->getAnalyzeSub()
 ##  + returned sub is callable as:
 ##      $tok = $coderef->($tok,\%analyzeOptions)
-##  + alters %$token, for ${prefix}=$anl->{analysisPrefix}
-##      $tok->{"${prefix}.latin1Text"} = $str,    ##-- best latin-1 approximation of $token->{text}
-##      $tok->{"${prefix}.isLatin1"}   = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin1
-##      $tok->{"${prefix}.isLatinExt"} = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
+##  + sets (for $key=$anl->{analysisKey}):
+##      $tok->{$key} = [ $latin1Text, $isLatin1, $isLatinX]
+##    with:
+##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
+##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
+##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
 sub getAnalyzeTokenSub {
   my $xlit = shift;
-  my $aprf = $xlit->{analysisPrefix};
+  my $akey = $xlit->{analysisKey};
 
   my ($tok, $w,$uc,$l0,$l, $isLatin1,$isLatinExt);
   return sub {
@@ -125,10 +124,8 @@ sub getAnalyzeTokenSub {
 
     ##-- return
     #return [ $l, $isLatin1, $isLatinExt ];
-    #
-    $tok->{"${aprf}.latin1Text"} = $l;
-    $tok->{"${aprf}.isLatin1"}   = $isLatin1;
-    $tok->{"${aprf}.isLatinExt"} = $isLatinExt;
+    $tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
+
     return $tok;
   };
 }

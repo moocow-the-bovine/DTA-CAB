@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Formatter::Text.pm
+## File: DTA::CAB::Formatter::TT.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: Datum formatter: verbose human-readable text
+## Description: Datum formatter: one-word-per line text format
 
-package DTA::CAB::Formatter::Text;
+package DTA::CAB::Formatter::TT;
 use DTA::CAB::Formatter;
 use DTA::CAB::Datum ':all';
 use Carp;
@@ -41,35 +41,34 @@ sub new {
 ##==============================================================================
 
 ## $out = $fmt->formatToken($tok)
-##  + returns formatted token $tok
 sub formatToken {
   my ($fmt,$tok) = @_;
-  my $out = $tok->{text}."\n";
+  my $out = $tok->{text};
 
   ##-- Transliterator ('xlit')
-  $out .= ("\txlit:"
+  $out .= ("\t+xlit:"
 	   ." isLatin1=".$tok->{xlit}[1]
 	   ." isLatinExt=".$tok->{xlit}[2]
 	   ." latin1Text=".$tok->{xlit}[0]
-	   ."\n")
+	  )
     if (defined($tok->{xlit}));
 
   ##-- Morph ('morph')
-  $out .= join('', map { "\tmorph: $_->[0] <$_->[1]>\n" } @{$tok->{morph}}) if ($tok->{morph});
+  $out .= join('', map { "\t+morph: $_->[0] <$_->[1]>" } @{$tok->{morph}}) if ($tok->{morph});
 
   ##-- MorphSafe ('morph.safe')
-  $out .= "\tmorph.safe: ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
+  $out .= "\t+morph.safe: ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));
 
   ##-- Rewrites + analyses
   $out .= join('',
 	       map {
-		 ("\trw: $_->[0] <$_->[1]>\n",
-		  ($_->[2] ? map { "\t\tmorph/rw: $_->[0] <$_->[1]>\n" } @{$_->[2]} : qw()))
+		 ("\t+rw: $_->[0] <$_->[1]>",
+		  ($_->[2] ? map { "\t+morph/rw: $_->[0] <$_->[1]>" } @{$_->[2]} : qw()))
 	       } @{$tok->{rw}})
     if ($tok->{rw});
 
   ##-- ... ???
-  return $out;
+  return $out."\n";
 }
 
 ## $out = $fmt->formatSentence($sent)

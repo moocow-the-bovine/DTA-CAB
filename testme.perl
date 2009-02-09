@@ -14,6 +14,7 @@ use DTA::CAB::Formatter::XmlNative;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
+use Storable;
 
 #use utf8;
 
@@ -55,7 +56,7 @@ sub test_xlit {
 
   print "done: test_xlit()\n";
 }
-test_xlit();
+#test_xlit();
 
 
 ##==============================================================================
@@ -221,6 +222,168 @@ sub test_formatters {
   print $fmt->formatDocument($doc);
 }
 #test_formatters();
+
+##==============================================================================
+## test: parsers
+sub test_parser_doc0 {
+  my $sentence = bless( {
+			 'tokens' => [
+				      bless({
+				       'msafe' => '1',
+				       'text' => 'Dies',
+				       'xlit' => ['Dies','1','1'],
+				       'morph' => [
+						   ['Dies[_NN][abstr_maszgroe][masc][sg]*','0'],
+						   ['diese[_PDS][nom][sg][neut]','2.5'],
+						   ['diese[_PDS][acc][sg][neut]','2.5'],
+						   ['diese[_PDAT][nom][sg][neut]','2.5'],
+						   ['diese[_PDAT][acc][sg][neut]','2.5']
+						  ],
+				       'rw' => [
+						['Dies','0',
+						 [
+						  ['Dies[_NN][abstr_maszgroe][masc][sg]*','0'],
+						  ['diese[_PDS][nom][sg][neut]','2.5'],
+						  ['diese[_PDS][acc][sg][neut]','2.5'],
+						  ['diese[_PDAT][nom][sg][neut]','2.5'],
+						  ['diese[_PDAT][acc][sg][neut]','2.5']
+						 ]
+						]
+					       ]
+				      }, 'DTA::CAB::Token'),
+				      bless({
+				       'msafe' => '1',
+				       'text' => 'ist',
+				       'xlit' => ['ist','1','1'],
+				       'morph' => [
+						   ['sei~n[_VVFIN][third][sg][pres][ind]','0'],
+						   ['sei~n[_VAFIN][third][sg][pres][ind]','0']
+						  ],
+				       'rw' => [
+						['ist','0',
+						 [
+						  ['sei~n[_VVFIN][third][sg][pres][ind]','0'],
+						  ['sei~n[_VAFIN][third][sg][pres][ind]','0']
+						 ]
+						]
+					       ]
+				      }, 'DTA::CAB::Token'),
+				      bless({
+				       'msafe' => '1',
+				       'text' => 'ein',
+				       'xlit' => ['ein','1','1'],
+				       'morph' => [
+						   ['eine[_ARTINDEF][sg][nom][masc]','0'],
+						   ['eine[_ARTINDEF][sg][nom][neut]','0'],
+						   ['eine[_ARTINDEF][sg][acc][neut]','0'],
+						   ['ein~en[_VVIMP][sg]','0'],
+						   ['ein[_ADV]','0'],
+						   ['ein[_PTKVZ]','0'],
+						   ['ein[_ADJD]','5'],
+						   ['ein[_CARD][num]','5']
+						  ],
+				       'rw' => [
+						['ein','0',
+						 [
+						  ['eine[_ARTINDEF][sg][nom][masc]','0'],
+						  ['eine[_ARTINDEF][sg][nom][neut]','0'],
+						  ['eine[_ARTINDEF][sg][acc][neut]','0'],
+						  ['ein~en[_VVIMP][sg]','0'],
+						  ['ein[_ADV]','0'],
+						  ['ein[_PTKVZ]','0'],
+						  ['ein[_ADJD]','5'],
+						  ['ein[_CARD][num]','5']
+						 ]
+						]
+					       ]
+				      }, 'DTA::CAB::Token'),
+				      bless({
+				       'msafe' => '1',
+				       'text' => 'Test',
+				       'xlit' => ['Test','1','1'],
+				       'morph' => [
+						   ['Test[_NN][abstr][masc][sg][nom_acc_dat]','0'],
+						   ['Test[_NE][lastname][none][nongen]','0']
+						  ],
+				       'rw' => [
+						['Test','0',
+						 [
+						  ['Test[_NN][abstr][masc][sg][nom_acc_dat]','0'],
+						  ['Test[_NE][lastname][none][nongen]','0']
+						 ]
+						]
+					       ]
+				      }, 'DTA::CAB::Token'),
+				      bless({
+				       'msafe' => '1',
+				       'text' => '.',
+				       'xlit' => ['.','1','1'],
+				       #'morph' => [],
+				       #'rw' => []
+				      }, 'DTA::CAB::Token')
+				     ]
+			}, 'DTA::CAB::Sentence' );
+  return bless({body=>[$sentence]},'DTA::CAB::Document');
+}
+
+sub test_parsers {
+  our $doc0 = test_parser_doc0();
+  our $pfmt  = DTA::CAB::Formatter::Perl->new;
+  $pfmt->{dumper}->Terse(0)->Sortkeys(1);
+  our $pstr0 = $pfmt->formatDocument($doc0);
+  our ($fmt,$prs,$str0,$doc1,$pstr);
+
+  ##-- test: fmt + parse: Freeze
+  $fmt = DTA::CAB::Formatter::Freeze->new;
+  $prs = DTA::CAB::Parser::Freeze->new;
+  $str0 = $fmt->formatDocument($doc0);
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  ##-- test: fmt + parse: Text
+  $fmt = DTA::CAB::Formatter::Text->new;
+  $prs = DTA::CAB::Parser::Text->new;
+  $str0 = $fmt->formatDocument($doc0);
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  ##-- test: fmt + parse: TT
+  $fmt = DTA::CAB::Formatter::TT->new;
+  $prs = DTA::CAB::Parser::TT->new;
+  $str0 = $fmt->formatDocument($doc0);
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  ##-- test: fmt + parse: XmlNative
+  $fmt = DTA::CAB::Formatter::XmlNative->new;
+  $prs = DTA::CAB::Parser::XmlNative->new;
+  $str0 = $fmt->formatString( $fmt->formatDocument($doc0) );
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  ##-- test: fmt + parse: XmlPerl
+  $fmt = DTA::CAB::Formatter::XmlPerl->new;
+  $prs = DTA::CAB::Parser::XmlPerl->new;
+  $str0 = $fmt->formatString( $fmt->formatDocument($doc0) );
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  ##-- test: fmt + parse: XmlRpc
+  $fmt = DTA::CAB::Formatter::XmlRpc->new;
+  $prs = DTA::CAB::Parser::XmlRpc->new;
+  $str0 = $fmt->formatString( $fmt->formatDocument($doc0) );
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->formatDocument($doc1);
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
+
+  print "test_parsers(): done\n";
+}
+test_parsers();
 
 
 ##==============================================================================

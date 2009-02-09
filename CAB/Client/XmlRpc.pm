@@ -86,9 +86,12 @@ sub analyzers {
 ##  + send XML-RPC request, log if error occurs
 sub request {
   my ($cli,$req) = @_;
-  $cli->connect() if (!$cli->{xcli});
-  my $tmp = $RPC::XML::ENCODING;
+
+  ##-- cache RPC::XML encoding
+  my $enc_tmp = $RPC::XML::ENCODING;
   $RPC::XML::ENCODING = $cli->{serverEncoding};
+
+  $cli->connect() if (!$cli->{xcli});
   my $rsp = $cli->{xcli}->send_request( DTA::CAB::Utils::deep_encode($cli->{serverEncoding}, $req) );
   if (!ref($rsp)) {
     $cli->error("RPC::XML::Client::send_request() failed: $rsp");
@@ -96,7 +99,9 @@ sub request {
   elsif ($rsp->is_fault) {
     $cli->error("XML-RPC fault (".$rsp->code.") ".$rsp->string);
   }
-  $RPC::XML::ENCODING = $tmp;
+
+  ##-- cleanup & return
+  $RPC::XML::ENCODING              = $enc_tmp;
   return DTA::CAB::Utils::deep_decode($cli->{serverEncoding},$rsp);
 }
 
@@ -104,33 +109,45 @@ sub request {
 ## Methods: Generic Client API: Queries
 ##==============================================================================
 
+## $req = $cli->newRequest($methodName, @args)
+##  + returns new RPC::XML::request
+##  + encodes all elementary data types as strings
+sub newRequest {
+  my ($cli,$method,@args) = @_;
+  my $str_tmp = $RPC::XML::FORCE_STRING_ENCODING;
+  $RPC::XML::FORCE_STRING_ENCODING = 1;
+  my $req = RPC::XML::request->new($method,@args);
+  $RPC::XML::FORCE_STRING_ENCODING = $str_tmp;
+  return $req;
+}
+
 ## $tok = $cli->analyzeToken($analyzer, $tok, \%opts)
 sub analyzeToken {
   my ($cli,$aname,$tok,$opts) = @_;
-  my $rsp = $cli->request(RPC::XML::request->new("$aname.analyzeToken",
-						 $tok,
-						 #$opts,
-						));
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeToken",
+					   $tok,
+					   #$opts,
+					  ));
   return ref($rsp) && !$rsp->is_fault ? toToken($rsp->value) : $rsp;
 }
 
 ## $sent = $cli->analyzeSentence($analyzer, $sent, \%opts)
 sub analyzeSentence {
   my ($cli,$aname,$sent,$opts) = @_;
-  my $rsp = $cli->request(RPC::XML::request->new("$aname.analyzeSentence",
-						 $sent,
-						 #$opts,
-						));
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeSentence",
+					   $sent,
+					   #$opts,
+					  ));
   return ref($rsp) && !$rsp->is_fault ? toSentence($rsp->value) : $rsp;
 }
 
 ## $doc = $cli->analyzeDocument($analyzer, $doc, \%opts)
 sub analyzeDocument {
   my ($cli,$aname,$doc,$opts) = @_;
-  my $rsp = $cli->request(RPC::XML::request->new("$aname.analyzeDocument",
-						 $doc,
-						 #$opts,
-						));
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeDocument",
+					   $doc,
+					   #$opts,
+					  ));
   return ref($rsp) && $rsp->is_fault ? toDocument($rsp->value) : $rsp;
 }
 

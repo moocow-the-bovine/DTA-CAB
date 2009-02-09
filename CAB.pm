@@ -23,11 +23,24 @@ use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 
 use DTA::CAB::Formatter;
+use DTA::CAB::Formatter::Freeze;
 use DTA::CAB::Formatter::Text;
+use DTA::CAB::Formatter::TT;
 use DTA::CAB::Formatter::Perl;
+use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Formatter::XmlNative;
 use DTA::CAB::Formatter::XmlPerl;
 use DTA::CAB::Formatter::XmlRpc;
+
+use DTA::CAB::Parser;
+use DTA::CAB::Parser::Freeze;
+use DTA::CAB::Parser::Perl;
+use DTA::CAB::Parser::Text;
+use DTA::CAB::Parser::TT;
+use DTA::CAB::Parser::XmlCommon;
+use DTA::CAB::Parser::XmlNative;
+use DTA::CAB::Parser::XmlPerl;
+use DTA::CAB::Parser::XmlRpc;
 
 use IO::File;
 use Carp;
@@ -130,14 +143,15 @@ sub getAnalyzeTokenSub {
     ##-- analyze: transliterator
     if ($a_xlit) {
       $a_xlit->($tok,$opts);
-      $l = $tok->{"xlit.latin1Text"};
+      $l = $tok->{$xlit->{analysisKey}}[0];
     } else {
       $l = $tok->{text};
     }
+    $opts->{src} = $l;
 
     ##-- analyze: morph
     if ($a_morph) {
-      $a_morph->($tok, { ($opts ? %$opts : qw()), src=>$l });
+      $a_morph->($tok, $opts);
     }
 
     ##-- analyze: morph: safe?
@@ -146,12 +160,14 @@ sub getAnalyzeTokenSub {
     }
 
     ##-- analyze: rewrite (if morphological analysis is "unsafe")
-    if ($a_rw && !$tok->{"morph.safe"}) {
-      $a_rw->($tok, { ($opts ? %$opts : qw()), src=>$l });
+    if ($a_rw && !$tok->{msafe}) {
+      $a_rw->($tok, $opts);
       if ($a_morph) {
 	##-- analyze: rewrite: sub-morphology
 	foreach (@{ $tok->{rw} }) {
-	  $a_morph->($tok, { ($opts ? %$opts : qw()), src=>$_->[0], dst=>\$_->[2] });
+	  $opts->{src} = $_->[0];
+	  $opts->{dst} = \$_->[2];
+	  $a_morph->($tok, $opts);
 	}
       }
     }

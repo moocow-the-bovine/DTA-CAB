@@ -6,6 +6,7 @@
 
 package DTA::CAB::Formatter::XmlRpc;
 use DTA::CAB::Formatter;
+use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Datum ':all';
 use RPC::XML;
 use Carp;
@@ -15,7 +16,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Formatter);
+our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 
 ##==============================================================================
 ## Constructors etc.
