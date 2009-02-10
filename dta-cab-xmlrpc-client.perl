@@ -7,6 +7,7 @@ use DTA::CAB::Utils ':all';
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
+use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
 ##==============================================================================
@@ -36,6 +37,8 @@ our $analyzer = 'dta.cab.default';
 
 our $outfile = '-';
 
+our $doProfile = 1;
+
 ##-- actions
 our $action = 'list';
 our %analyzeOpts = qw();    ##-- currently unused
@@ -49,14 +52,18 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- Server & I/O
+	   ##-- Server
 	   'server-url|server|url|s|u=s' => \$serverURL,
-	   'local-encoding|le=s'  => \$localEncoding,
-	   'server-encoding|se=s' => \$serverEncoding,
 	   'analyzer|a=s' => \$analyzer,
+	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
+
+	   ##-- I/O
+	   'output-file|of|o=s' => \$outfile,
 	   'format-class|fc=s' => \$formatClass,
 	   'parser-class|pc=s' => \$parserClass,
-	   'output-file|of|o=s' => \$outfile,
+	   'local-encoding|le=s'  => \$localEncoding,
+	   'server-encoding|se=s' => \$serverEncoding,
+	   'profile|p!' => \$doProfile,
 
 	   ##-- Action
 	   'list|l'   => sub { $action='list'; },
@@ -105,6 +112,11 @@ our $prs = $parserClass->new(encoding=>$localEncoding)
 our $outfh = IO::File->new(">$outfile")
   or die("$0: open failed for output file '$outfile': $!");
 
+##-- profiling
+our $tv_started = [gettimeofday] if ($doProfile);
+our $ntoks = 0;
+our $nchrs = 0;
+
 ##===================
 ## Actions
 
@@ -128,34 +140,59 @@ elsif ($action eq 'sentence') {
 }
 elsif ($action eq 'document') {
   ##-- action: 'document': interpret args as filenames & parse 'em!
-  our ($d_in,$d_out);
+  our ($d_in,$d_out,$s_out);
   $prs->{encoding} = $fmt->{encoding} = $localEncoding;
   foreach $doc_filename (@ARGV) {
     $d_in = $prs->parseFile($doc_filename)
       or die("$0: parse failed for input file '$doc_filename': $!");
     $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
-    $outfh->print( $fmt->formatString($fmt->formatDocument($d_out)) );
+    $s_out = $fmt->formatString($fmt->formatDocument($d_out));
+    $outfh->print( $s_out );
+    if ($doProfile) {
+      $ntoks += $d_out->nTokens();
+      $nchrs += (-s $doc_filename);
+    }
   }
 }
 elsif ($action eq 'raw') {
   ##-- action: 'generic': do server-side parsing
-  our ($d_in,$raw_in,$raw_out,$d_out);
+  our ($s_in,$s_out);
 
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
-    $d_in = join('',<DOC>);
-    $d_in = decode($localEncoding, $d_in) if ($localEncoding && $parserClass !~ 'Freeze');
+    $s_in = join('',<DOC>);
+    $s_in = decode($localEncoding, $s_in) if ($localEncoding && $parserClass !~ 'Freeze');
     close(DOC);
-    $d_out = $cli->analyzeData($analyzer, $d_in, {%analyzeOpts, parserClass=>$parserClass, formatClass=>$formatClass});
-    $d_out = encode($localEncoding, $d_out) if ($localEncoding && utf8::is_utf8($d_out) && $formatClass !~ 'Freeze');
-    $outfh->print( $d_out );
+    $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, parserClass=>$parserClass, formatClass=>$formatClass});
+    $s_out = encode($localEncoding, $s_out) if ($localEncoding && utf8::is_utf8($s_out) && $formatClass !~ 'Freeze');
+    $outfh->print( $s_out );
+    if ($doProfile) {
+      $nchrs += length($s_in);
+    }
   }
 }
 else {
   die("$0: unknown action '$action'");
 }
-
 $cli->disconnect();
+
+##-- profiling
+sub si_str {
+  my $x = shift;
+  return sprintf("%.2fK", $x/10**3)  if ($x >= 10**3);
+  return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);
+  return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);
+  return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);
+  return sprintf("%.2f", $x);
+}
+if ($doProfile) {
+  my $elapsed = tv_interval($tv_started,[gettimeofday]);
+  my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : 0);
+  my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : 0);
+  print STDERR
+    (sprintf("%s: %d tok, %d chr in %.2f sec: %s tok/sec ~ %s chr/sec\n",
+	     $prog, $ntoks,$nchrs, $elapsed, $toksPerSec,$chrsPerSec));
+}
 
 
 __END__
@@ -177,17 +214,18 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
  Server Selection
   -serverURL URL                  ##-- set server URL (default: localhost:8000)
   -analyzer NAME                  ##-- set analyzer name (default: 'dta.cab.default')
+  -analyze-option OPT=VALUE       ##-- set analysis option (default: none)
   -server-encoding ENCODING       ##-- override server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- override local encoding (default: UTF-8)
+  -format-class CLASS             ##-- select output formatter class (default: Text)
+  -parser-class CLASS             ##-- select input parser class (default: Text)
 
  Analysis Selection:
   -list                           ##-- query registered analyzers from server
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
-  -document                       ##-- ARGUMENTS are filenames, analyzed as documents (TODO!)
-
- I/O
-  -format-class CLASS             ##-- select output formatter class (default: Text)
+  -document                       ##-- ARGUMENTS are filenames, analyzed as documents
+  -raw                            ##-- ARGUMENTS are filenames, server-side parsing & formatting
 
 =cut
 

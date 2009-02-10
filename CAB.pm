@@ -128,6 +128,13 @@ sub savePerlRef {
 ##  + returned sub is callable as:
 ##     $tok = $coderef->($tok,\%opts)
 ##  + performs all known & selected analyses on $tok
+##  + known \%opts:
+##     do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
+##     do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
+##     do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
+##     do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
+##     do_morph_rw => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
+##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
   my ($xlit,$morph,$msafe,$rw) = @$cab{qw(xlit morph msafe rw)};
@@ -141,7 +148,7 @@ sub getAnalyzeTokenSub {
     $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
 
     ##-- analyze: transliterator
-    if ($a_xlit) {
+    if ($a_xlit && (!defined($opts->{do_xlit}) || $opts->{do_xlit})) {
       $a_xlit->($tok,$opts);
       $l = $tok->{$xlit->{analysisKey}}[0];
     } else {
@@ -150,19 +157,19 @@ sub getAnalyzeTokenSub {
     $opts->{src} = $l;
 
     ##-- analyze: morph
-    if ($a_morph) {
+    if ($a_morph && (!defined($opts->{do_morph}) || $opts->{do_morph})) {
       $a_morph->($tok, $opts);
     }
 
     ##-- analyze: morph: safe?
-    if ($a_msafe) {
+    if ($a_msafe && (!defined($opts->{do_msafe}) || $opts->{do_msafe})) {
       $a_msafe->($tok,$opts);
     }
 
     ##-- analyze: rewrite (if morphological analysis is "unsafe")
-    if ($a_rw && !$tok->{msafe}) {
+    if ($a_rw && !$tok->{msafe} && (!defined($opts->{do_rw}) || $opts->{do_rw})) {
       $a_rw->($tok, $opts);
-      if ($a_morph) {
+      if ($a_morph && (!defined($opts->{do_morph_rw}) || $opts->{do_morph_rw})) {
 	##-- analyze: rewrite: sub-morphology
 	foreach (@{ $tok->{rw} }) {
 	  $opts->{src} = $_->[0];

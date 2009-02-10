@@ -105,7 +105,8 @@ sub request {
   $req = DTA::CAB::Utils::deep_encode($cli->{serverEncoding}, $req) if ($doRecode);
   my $rsp = $cli->{xcli}->send_request( $req );
   if (!ref($rsp)) {
-    $cli->error("RPC::XML::Client::send_request() failed: $rsp");
+    $cli->error("RPC::XML::Client::send_request() failed:");
+    $cli->error($rsp);
   }
   elsif ($rsp->is_fault) {
     $cli->error("XML-RPC fault (".$rsp->code.") ".$rsp->string);

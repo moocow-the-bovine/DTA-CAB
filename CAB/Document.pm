@@ -35,6 +35,13 @@ sub new {
 ## Methods: ???
 ##==============================================================================
 
+## $n = $doc->nTokens()
+sub nTokens {
+  my $ntoks = 0;
+  $ntoks += scalar(@{$_->{tokens}}) foreach (@{$_[0]->{body}});
+  return $ntoks;
+}
+
 1; ##-- be happy
 
 __END__
