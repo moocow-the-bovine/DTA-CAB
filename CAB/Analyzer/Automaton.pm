@@ -356,6 +356,7 @@ sub getAnalyzeTokenSub {
     ($tok,$opts) = @_;
 
     ##-- set default options
+    $opts = $opts ? {%$opts} : {}; ##-- copy / create
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
 

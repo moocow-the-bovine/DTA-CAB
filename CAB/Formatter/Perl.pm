@@ -7,6 +7,7 @@
 package DTA::CAB::Formatter::Perl;
 use DTA::CAB::Formatter;
 use Data::Dumper;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -31,6 +32,9 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- encoding
+			   encoding => 'UTF-8',
+
 			   ##-- Dumper
 			   dumper => Data::Dumper->new([])->Purity(1)->Terse(0)->Indent(1),
 

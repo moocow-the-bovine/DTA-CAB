@@ -10,6 +10,7 @@ use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
 use IO::File;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -26,7 +27,10 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
-##     ##-- output file (optional)
+##     ##-- output encoding (for formatString, etc.)
+##     encoding => $encoding,         ##-- defualt: 'UTF-8', where applicable
+##
+##     ##-- output file (NYI)
 ##     #outfh => $output_filehandle,  ##-- for default toFile() method
 ##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
 ##    )
@@ -84,8 +88,13 @@ sub loadPerlRef {
 ##==============================================================================
 
 ## $str = $fmt->formatString($out)
-##  + get string from output if not defined
-sub formatString { return $_[1]; }
+## $str = $fmt->formatString($out, $formatLevel)
+##  + get byte-string from output if not defined
+##  + default implementation just encodes string
+sub formatString {
+  return encode($_[0]{encoding},$_[1]) if ($_[0]{encoding} && utf8::is_utf8($_[1]));
+  return $_[1];
+}
 
 ## $out = $fmt->formatToken($tok)
 ##  + returns formatted token $tok

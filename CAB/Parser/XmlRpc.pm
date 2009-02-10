@@ -29,6 +29,8 @@ our @ISA = qw(DTA::CAB::Parser);
 sub new {
   my $that = shift;
   my $prs = bless({
+		   ##-- encoding (should be handled by RPC::XML::Parser stuff?)
+
 		   ##-- RPC::XML parse
 		   xprs => RPC::XML::Parser->new(),
 

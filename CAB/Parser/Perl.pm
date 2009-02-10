@@ -7,6 +7,7 @@
 package DTA::CAB::Parser::Perl;
 use DTA::CAB::Datum ':all';
 use IO::File;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -27,6 +28,10 @@ our @ISA = qw(DTA::CAB::Parser);
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- encoding
+		   #encoding => 'UTF-8',
+		   encoding => undef, ##-- n/a: always perl-ish utf-8
+
 		   ##-- data source
 		   src  => undef, ##-- $str
 
@@ -76,6 +81,7 @@ sub fromString {
   my $prs = shift;
   $prs->close();
   $prs->{src} = shift;
+  #$prs->{src} = decode($prs->{encoding},$prs->{src}) if ($prs->{encoding} && !utf8::is_utf8($prs->{src}));
   return $prs;
 }
 
@@ -92,6 +98,7 @@ sub parseDocument {
   }
   my ($doc);
   $doc = eval "no strict; $prs->{src}";
+  $doc = DTA::CAB::Utils::deep_utf8_upgrade($doc);
   if ($@) {
     $prs->warn("parseDocument(): error in eval: $@");
   }

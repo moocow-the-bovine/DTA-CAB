@@ -170,7 +170,8 @@ sub analyzeData {
 					   RPC::XML::base64->new($data),
 					   (defined($opts) ? $opts : qw())
 					  ),
-			  0); ##-- no deep recode
+			  #0 ##-- no deep recode
+			 );
   return ref($rsp) && !$rsp->is_fault ? $rsp->value : $rsp;
 }
 

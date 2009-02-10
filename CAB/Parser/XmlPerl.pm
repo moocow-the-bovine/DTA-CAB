@@ -54,9 +54,8 @@ sub parseNode {
     $ref = $nod->getAttribute('ref');
     $val = {};
     $val = bless($val,$ref) if ($ref && $ref ne 'HASH');
-    my ($hkey,$hval);
     foreach (grep {$_->nodeName eq 'ENTRY'} $nod->childNodes) {
-      $val->{ $_->getAttribute('key') } = $prs->parseNode( $_->lastChild );
+      $val->{ $_->getAttribute('key') } = $prs->parseNode(grep {ref($_) eq 'XML::LibXML::Element'} $_->childNodes);
     }
   }
   elsif ($nodname eq 'ARRAY') {
@@ -70,7 +69,7 @@ sub parseNode {
   }
   elsif ($nodname eq 'SCALAR') {
     ##-- SCALAR ref: <SCALAR ref="$ref"> xmlNode($$val) </SCALAR>
-    my $val0 = $prs->parseNode( $nod->lastChild );
+    my $val0 = $prs->parseNode( grep {ref($_) eq 'XML::LibXML::Element'} $_->childNodes );
     $ref = $nod->getAttribute('ref');
     $val = \$val0;
     $val = bless($val,$ref) if ($ref && $ref ne 'SCALAR');

@@ -29,10 +29,14 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     encoding => $inputEncoding,  ##-- default: UTF-8
 ##    )
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- encoding
+		   encoding => 'UTF-8',
+
 		   ##-- user args
 		   @_
 		  }, ref($that)||$that);

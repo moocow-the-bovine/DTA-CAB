@@ -34,6 +34,9 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- encoding
+			   encoding => 'UTF-8',
+
 			   ##-- user args
 			   @_
 			  );
@@ -73,7 +76,9 @@ sub xmlParser {
 }
 
 ## $xmlstr = $fmt->xmlString($rpcobj)
-sub xmlString { return ref($_[1]) ? $_[1]->as_string : $_[1]; }
+sub xmlString {
+  return ref($_[1]) ? $_[1]->as_string : $_[1];
+}
 
 ## $xmldoc = $fmt->xmlDocument($rpcobj)
 sub xmlDocument {
@@ -85,11 +90,12 @@ sub xmlNode {
   return $_[0]->xmlDocument($_[1])->documentElement;
 }
 
-## $out = $fmt->formatString($rpcobj)
+## $out = $fmt->formatString($rpcobj,$level)
 sub formatString {
-  my ($fmt,$rpcobj) = @_;
-  #return $fmt->xmlDocument($rpcobj)->toString(1);
-  return encode('UTF-8', $rpcobj->as_string);
+  my ($fmt,$rpcobj,$level) = @_;
+  return (defined($level) && $level>0
+	  ? $fmt->xmlDocument($rpcobj)->toString($level)
+	  : encode($fmt->{encoding}, $rpcobj->as_string));
 }
 
 

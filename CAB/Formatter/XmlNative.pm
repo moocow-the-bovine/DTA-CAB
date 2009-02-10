@@ -48,6 +48,9 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- encoding
+			   encoding => 'UTF-8',
+
 			   ##-- XML element names
 			   documentElt => 'doc',
 			   sentenceElt => 's',

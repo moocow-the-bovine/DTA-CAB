@@ -171,82 +171,14 @@ sub getAnalyzeTokenSub {
 	}
       }
     }
-
+    delete(@$opts{qw(src dst)}); ##-- hack
     return $tok;
   };
 }
 
 ##==============================================================================
-## Methods: Output Formatting
+## Methods: Output Formatting: OBSOLETE
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Formatting: Perl
-
-## $str = $anl->analysisPerl($out,\%opts)
-##  + inherited from DTA::CAB::Analyzer
-
-##--------------------------------------------------------------
-## Methods: Formatting: Text
-
-## $str = $anl->analysisText($out,\%opts)
-##  + text string for output $out with options \%opts
-sub analysisText {
-  my ($cab,$tok) = @_;
-  return join("\t",
-	      $tok->{text},
-	      '/xlit:',  ($cab->{xlit}  && $tok->{xlit}  ? ($cab->{xlit}->analysisText($tok->{xlit}))   : qw()),
-	      '/morph:', ($cab->{morph} && $tok->{morph} ? ($cab->{morph}->analysisText($tok->{morph})) : qw()),
-	      '/msafe:', ($cab->{msafe} && $tok->{msafe} ? ($cab->{msafe}->analysisText($tok->{msafe})) : qw()),
-	      '/rw:',    ($cab->{rw}    && $tok->{rw}    ? ($cab->{morph}->analysisText($tok->{rw}))    : qw()),
-	     );
-}
-
-##--------------------------------------------------------------
-## Methods: Formatting: Verbose Text
-
-## @lines = $anl->analysisVerbose($out,\%opts)
-##  + verbose text line(s) for output $out with options \%opts
-##  + default version just calls analysisText()
-sub analysisVerbose {
-  my ($cab,$tok) = @_;
-  return
-    ($tok->{text},
-     ($cab->{xlit}  && $tok->{xlit}  ? (" +(xlit)", map { "\t$_" } $cab->{xlit}->analysisVerbose($tok->{xlit}))   : qw()),
-     ($cab->{morph} && $tok->{morph} ? (" +(morph)", map { "\t$_" } $cab->{morph}->analysisVerbose($tok->{morph})) : qw()),
-     ($cab->{msafe} && 1             ? (" +(msafe)", map { "\t$_" } $cab->{msafe}->analysisVerbose($tok->{msafe})) : qw()),
-     ($cab->{rw}    && $tok->{rw}    ? (" +(rewrite)", map { "\t$_" } $cab->{rw}->analysisVerbose($tok->{rw})) : qw()),
-    );
-}
-
-
-##--------------------------------------------------------------
-## Methods: Formatting: XML
-
-## $nod = $anl->analysisXmlNode($out,\%opts)
-##  + XML node for output $out with options \%opts
-##  + returns new XML element:
-##    <$anl->{xmlTokenElt} text="$text">
-##      <xlit> ... </xlit>
-##      <morph safe="$msafe"> ... </morph>
-##      <rewrite> ... </rewrite>
-##    </$anl->{xmlTokenElt}>
-sub analysisXmlNode {
-  my ($cab,$tok) = @_;
-  my $nod = XML::LibXML::Element->new($cab->{xmlTokenElt} || DTA::CAB::Utils::xml_safe_string(ref($cab)));
-  my ($kid);
-  $nod->setAttribute('text', $tok->{text});
-  $nod->addChild($cab->{xlit}->analysisXmlNode($tok->{xlit}))   if ($cab->{xlit} && $tok->{xlit});
-  $nod->addChild($kid=$cab->{morph}->analysisXmlNode($tok->{morph})) if ($cab->{morph} && $tok->{morph});
-  $kid->setAttribute("safe", $tok->{msafe} ? 1 : 0);
-  $nod->addChild($cab->{rw}->analysisXmlNode($tok->{rw}))       if ($cab->{rw} && $tok->{rw});
-  return $nod;
-}
-
-## $nod = $anl->defaultXmlNode($val)
-##  + default XML node generator
-##  + inherited from DTA::CAB::Analyzer
-
 
 __END__
 

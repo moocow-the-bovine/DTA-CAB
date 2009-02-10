@@ -8,6 +8,7 @@ package DTA::CAB::Parser::Freeze;
 use DTA::CAB::Datum ':all';
 use Storable;
 use IO::File;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -28,6 +29,9 @@ our @ISA = qw(DTA::CAB::Parser);
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- encoding
+		   encoding => undef, ##-- not applicable
+
 		   ##-- data source
 		   src  => undef, ##-- $str
 

@@ -31,6 +31,9 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- encoding (n/a)
+			   encoding => undef,
+
 			   ##-- user args
 			   @_
 			  );

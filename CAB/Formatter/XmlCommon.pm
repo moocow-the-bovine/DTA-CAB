@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Formatter::XmlPerl.pm
+## File: DTA::CAB::Formatter::XmlCommon.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: Datum formatter: XML (common utilities)
 
@@ -8,6 +8,7 @@ package DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Formatter;
 use DTA::CAB::Datum ':all';
 use XML::LibXML;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -32,6 +33,9 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- default encoding
+			   encoding => 'UTF-8',
+
 			   ##-- user args
 			   @_
 			  );
@@ -41,8 +45,8 @@ sub new {
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
-## $str = $fmt->formatString($out)
-sub formatString { return $_[0]->xmlNodeString($_[1]); }
+## $str = $fmt->formatString($out,$fmtLevel)
+sub formatString { return $_[0]->xmlNodeString(@_[1..$#_]); }
 
 ## (abstract)
 
@@ -54,6 +58,7 @@ sub formatString { return $_[0]->xmlNodeString($_[1]); }
 sub xmlNodeDocument {
   my ($fmt,$nod,$xmlversion,$xmlencoding) = @_;
   $xmlversion = "1.0" if (!defined($xmlversion));
+  $xmlencoding = $fmt->{encoding} if (!defined($xmlencoding));
   $xmlencoding = "UTF-8" if (!defined($xmlencoding));
   my $doc = XML::LibXML::Document->new($xmlversion,$xmlencoding);
   $doc->setDocumentElement($nod);
@@ -64,7 +69,6 @@ sub xmlNodeDocument {
 sub xmlNodeString {
   my ($fmt,$nod,$level) = @_;
   return $fmt->xmlNodeDocument($nod)->toString(defined($level) ? $level : 0);
-  #return $nod->toString(defined($level) ? $level : 0);
 }
 
 

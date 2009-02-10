@@ -7,6 +7,7 @@
 package DTA::CAB::Formatter::Text;
 use DTA::CAB::Formatter;
 use DTA::CAB::Datum ':all';
+use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -31,6 +32,9 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
+			   ##-- encoding
+			   encoding => 'UTF-8',
+
 			   ##-- user args
 			   @_
 			  );

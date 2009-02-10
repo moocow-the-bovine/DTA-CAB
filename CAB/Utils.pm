@@ -20,7 +20,7 @@ our %EXPORT_TAGS =
   (
    xml  => [qw(xml_safe_string)],
    data => [qw(path_value)],
-   encode => [qw(deep_encode deep_decode deep_recode)],
+   encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
   );
 our @EXPORT_OK = [map {@$_} values(%EXPORT_TAGS)];
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -85,6 +85,26 @@ sub deep_recode {
   my ($from,$to,$thingy) = @_;
   return deep_encode($to,deep_decode($from,$thingy));
 }
+
+## $upgraded = deep_utf8_upgrade($thingy)
+sub deep_utf8_upgrade {
+  my ($thingy) = @_;
+  my @queue = (\$thingy);
+  my ($ar);
+  while (defined($ar=shift(@queue))) {
+    if (UNIVERSAL::isa($$ar,'ARRAY')) {
+      push(@queue, map { \$_ } @{$$ar});
+    } elsif (UNIVERSAL::isa($$ar,'HASH')) {
+      push(@queue, map { \$_ } values %{$$ar});
+    } elsif (UNIVERSAL::isa($$ar, 'SCALAR') || UNIVERSAL::isa($$ar,'REF')) {
+      push(@queue, $$ar);
+    } elsif (!ref($$ar)) {
+      utf8::upgrade($$ar) if (defined($$ar));
+    }
+  }
+  return $thingy;
+}
+
 
 ##==============================================================================
 ## Functions: abstract data path value

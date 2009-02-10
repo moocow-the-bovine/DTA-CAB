@@ -29,6 +29,9 @@ our @ISA = qw(DTA::CAB::Parser);
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- encoding (should be handled  by XML parser)
+		   #encoding => 'UTF-8',
+
 		   ##-- XML::LibXML parser
 		   xprs => XML::LibXML->new,
 
