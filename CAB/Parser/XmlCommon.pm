@@ -25,6 +25,12 @@ our @ISA = qw(DTA::CAB::Parser);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- new here
+##     xdoc => $xdoc,                           ##-- XML::LibXML::Document
+##     xprs => $xprs,                           ##-- XML::LibXML parser
+##
+##     ##---- INHERITED from DTA::CAB::Parser
+##     #encoding => $inputEncoding,             ##-- default: UTF-8, where applicable
 ##    )
 sub new {
   my $that = shift;
@@ -32,11 +38,9 @@ sub new {
 		   ##-- encoding (should be handled  by XML parser)
 		   #encoding => 'UTF-8',
 
-		   ##-- XML::LibXML parser
+		   ##-- XML::LibXML stuff
 		   xprs => XML::LibXML->new,
-
-		   ##-- source document
-		   doc => undef,
+		   xdoc => undef,
 
 		   ##-- user args
 		   @_
@@ -52,7 +56,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(doc xprs);
+  return qw(xdoc xprs);
 }
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
@@ -69,7 +73,7 @@ sub loadPerlRef {
 
 ## $prs = $prs->close()
 sub close {
-  delete($_[0]{doc});
+  delete($_[0]{xdoc});
   return $_[0];
 }
 
@@ -77,7 +81,7 @@ sub close {
 sub fromFile {
   my ($prs,$file) = @_;
   return $prs->fromFh($file) if (ref($file));
-  $prs->{doc} = $prs->{xprs}->parse_file($file)
+  $prs->{xdoc} = $prs->{xprs}->parse_file($file)
     or $prs->logconfess("XML::LibXML::parse_file() failed for '$file': $!");
   return $prs;
 }
@@ -85,7 +89,7 @@ sub fromFile {
 ## $prs = $prs->fromFh($filename_or_handle)
 sub fromFh {
   my ($prs,$fh) = @_;
-  $prs->{doc} = $prs->{xprs}->parse_fh($fh)
+  $prs->{xdoc} = $prs->{xprs}->parse_fh($fh)
     or $prs->logconfess("XML::LibXML::parse_fh() failed for handle '$fh': $!");
   return $prs;
 }
@@ -93,7 +97,7 @@ sub fromFh {
 ## $prs = $prs->fromString($string)
 sub fromString {
   my $prs = shift;
-  $prs->{doc} = $prs->{xprs}->parse_string($_[0])
+  $prs->{xdoc} = $prs->{xprs}->parse_string($_[0])
     or $prs->logconfess("XML::LibXML::parse_string() failed for '$_[0]': $!");
   return $prs;
 }

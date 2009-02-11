@@ -24,6 +24,11 @@ our @ISA = qw(DTA::CAB::Parser);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- new here
+##     doc => $doc,                          ##-- buffered input document
+##
+##     ##---- INHERITED from DTA::CAB::Parser
+##     encoding => $inputEncoding,             ##-- default: UTF-8, where applicable
 ##    )
 sub new {
   my $that = shift;
@@ -31,9 +36,6 @@ sub new {
 		   ##-- encoding
 		   #encoding => 'UTF-8',
 		   encoding => undef, ##-- n/a: always perl-ish utf-8
-
-		   ##-- data source
-		   src  => undef, ##-- $str
 
 		   ##-- user args
 		   @_
@@ -49,15 +51,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(src);
-}
-
-## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
-##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
-sub loadPerlRef {
-  my $that = shift;
-  my $obj = $that->SUPER::loadPerlRef(@_);
-  return $obj;
+  return qw(src doc);
 }
 
 ##=============================================================================
@@ -66,7 +60,7 @@ sub loadPerlRef {
 
 ## $prs = $prs->close()
 sub close {
-  delete($_[0]{src});
+  delete($_[0]{doc});
   return $_[0];
 }
 
@@ -80,8 +74,21 @@ sub close {
 sub fromString {
   my $prs = shift;
   $prs->close();
-  $prs->{src} = shift;
-  #$prs->{src} = decode($prs->{encoding},$prs->{src}) if ($prs->{encoding} && !utf8::is_utf8($prs->{src}));
+  return $prs->parsePerlString($_[0]);
+}
+
+##==============================================================================
+## Methods: Local
+##==============================================================================
+
+## $prs = $prs->parsePerlString($str)
+sub parsePerlString {
+  my $prs = shift;
+  my ($doc);
+  $doc = eval "no strict; $prs->{src}";
+  $prs->warn("parsePerlString(): error in eval: $@") if ($@);
+  $doc = DTA::CAB::Utils::deep_utf8_upgrade($doc);
+  $prs->{doc} = $prs->forceDocument($doc);
   return $prs;
 }
 
@@ -90,20 +97,7 @@ sub fromString {
 ##==============================================================================
 
 ## $doc = $prs->parseDocument()
-sub parseDocument {
-  my $prs = shift;
-  if (!defined($prs->{src})) {
-    $prs->error("parseDocument(): no source selected!");
-    return undef;
-  }
-  my ($doc);
-  $doc = eval "no strict; $prs->{src}";
-  $doc = DTA::CAB::Utils::deep_utf8_upgrade($doc);
-  if ($@) {
-    $prs->warn("parseDocument(): error in eval: $@");
-  }
-  return $prs->forceDocument($doc);
-}
+sub parseDocument { return $_[0]{doc}; }
 
 1; ##-- be happy
 

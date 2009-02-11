@@ -7,6 +7,7 @@ use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
 use Getopt::Long qw(:config no_ignore_case);
+use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
 ##==============================================================================
@@ -21,29 +22,31 @@ our $VERSION = 0.01;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-#BEGIN {
-#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-#  binmode(STDIN, ':utf8');
-#  binmode(STDOUT,':utf8');
-#  binmode(STDERR,':utf8');
-#}
-
-##-- Formatting
-our $formatClass = 'Text';  ##-- default format class
-our $parserClass = 'Text';  ##-- default parser class
+##-- I/O
+our $rcFile      = undef;
+our $parserClass = 'Text';
+our $formatClass = 'Text';
 our %parserOpts  = (encoding=>'UTF-8');
-our %formatOpts  = (encoding=>'UTF-8',level=>0);
+our %formatOpts  = (encoding=>'UTF-8',level=>1);
+our $outfile     = '-';
 
-our $outfile = '-';
+##-- options
+our %analyzeOpts = qw();
+our $doProfile = 1;
 
 ##==============================================================================
 ## Command-line
 GetOptions(##-- General
 	   'help|h'    => \$help,
-	   'man|m'     => \$man,
+	   'man|M'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- I/O+
+	   ##-- Analysis
+	   'configuration|c=s'    => \$rcFile,
+	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
+	   'profile|p!' => \$doProfile,
+
+	   ##-- I/O
 	   'output-file|output|o=s' => \$outfile,
 	   'parser-class|pc=s'    => \$parserClass,
 	   'parser-encoding|pe|input-encoding|ie=s'   => \$parserOpts{encoding},
@@ -56,6 +59,7 @@ GetOptions(##-- General
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
+pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
 
 if ($version) {
   print STDERR
@@ -72,6 +76,10 @@ if ($version) {
 ##-- log4perl initialization
 DTA::CAB::Logger->ensureLog();
 
+##-- analyzer
+our $cab = DTA::CAB->loadPerlFile($rcFile)
+  or die("$0: load failed for analyzer from '$rcFile': $!");
+
 ##======================================================
 ## Parser, Formatter
 
@@ -85,20 +93,59 @@ $formatClass = 'DTA::CAB::Formatter::'.$formatClass if (!UNIVERSAL::isa($formatC
 our $fmt = $formatClass->new(%formatOpts)
   or die("$0: could not create formatter of class $formatClass: $!");
 
-#DTA::CAB->debug("using parser class ", ref($prs));
-#DTA::CAB->debug("using format class ", ref($fmt));
+$cab->info("using parser class ", ref($prs));
+$cab->info("using format class ", ref($fmt));
 
 ##======================================================
-## Churn data
+## Prepare
+
+$cab->ensureLoaded()
+  or die("$0: could not load analyzer: $!");
+
+##-- profiling
+our $tv_started = [gettimeofday] if ($doProfile);
+our $ntoks = 0;
+our $nchrs = 0;
+
+##======================================================
+## Analyze
 
 our ($file,$doc);
 push(@ARGV,'-') if (!@ARGV);
 foreach $file (@ARGV) {
+  $cab->info("processing file '$file'");
   $doc = $prs->parseFile($file)
     or die("$0: parse failed for input file '$file': $!");
+  $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
   $fmt->putDocumentRaw($doc);
+  if ($doProfile) {
+    $ntoks += $doc->nTokens;
+    $nchrs += (-s $file);
+  }
 }
+
 $fmt->toFile($outfile);
+
+##======================================================
+## Report
+
+##-- profiling
+sub si_str {
+  my $x = shift;
+  return sprintf("%.2fK", $x/10**3)  if ($x >= 10**3);
+  return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);
+  return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);
+  return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);
+  return sprintf("%.2f", $x);
+}
+if ($doProfile) {
+  my $elapsed = tv_interval($tv_started,[gettimeofday]);
+  my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : 0);
+  my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : 0);
+  print STDERR
+    (sprintf("%s: %d tok, %d chr in %.2f sec: %s tok/sec ~ %s chr/sec\n",
+	     $prog, $ntoks,$nchrs, $elapsed, $toksPerSec,$chrsPerSec));
+}
 
 
 __END__
@@ -106,21 +153,24 @@ __END__
 
 =head1 NAME
 
-dta-cab-convert.perl - Format conversion for DTA::CAB documents
+dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
 =head1 SYNOPSIS
 
- dta-cab-convert.perl [OPTIONS...] DOCUMENT_FILE(s)...
+ dta-cab-analyze.perl [OPTIONS...] DOCUMENT_FILE(s)...
 
  General Options:
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
 
+ Analysis Options
+  -config RCFILE                  ##-- load analyzer config file RCFILE
+  -analysis-option OPT=VALUE      ##-- set analysis option
+
  I/O Options
-  -output-file FILE               ##-- set output file (default: STDOUT)
-  -parser-class CLASS             ##-- select input parser class (default: Text)
-  -format-class CLASS             ##-- select output formatter class (default: Text)
+  -parser-class CLASS             ##-- set input parser class (default: Text)
+  -format-class CLASS             ##-- set output formatter class (default: Text)
   -parser-encoding ENCODING       ##-- override input encoding (default: UTF-8)
   -format-encoding ENCODING       ##-- override output encoding (default: UTF-8)
   -parser-option OPT=VALUE        ##-- set parser option

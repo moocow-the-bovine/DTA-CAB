@@ -25,16 +25,19 @@ our @ISA = qw(DTA::CAB::Formatter);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- NEW
+##     xdoc => $doc,                   ##-- XML::LibXML::Document (buffered)
+##
 ##     ##---- INHERITED from DTA::CAB::Formatter
-##     ##-- output file (optional)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     encoding  => $encoding,         ##-- output encoding
+##     level     => $formatLevel,      ##-- format level
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- default encoding
+			   ##-- defaults
 			   encoding => 'UTF-8',
+			   level    => 0,
 
 			   ##-- user args
 			   @_
@@ -42,38 +45,72 @@ sub new {
 }
 
 ##==============================================================================
+## Methods: Formatting: output selection
+##==============================================================================
+
+## $fmt = $fmt->flush()
+##  + flush accumulated output
+sub flush {
+  delete($_[0]{xdoc});
+  return $_[0];
+}
+
+## $str = $fmt->toString()
+## $str = $fmt->toString($formatLevel)
+##  + flush buffered output document to byte-string
+sub toString {
+  my $xdoc = $_[0]->xmlDocument;
+  $xdoc->setEncoding($_[0]{encoding}) if ($_[0]{encoding} ne $xdoc->encoding);
+  return $xdoc->toString(defined($_[1]) ? $_[1] : $_[0]{level});
+}
+
+## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+##  + flush buffered output document to $filename_or_handle
+##  + default implementation calls $fmt->toFh()
+
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+##  + flush buffered output document to filehandle $fh
+sub toFh {
+  my $xdoc = $_[0]->xmlDocument;
+  $xdoc->setEncoding($_[0]{encoding}) if ($_[0]{encoding} ne $xdoc->encoding);
+  $xdoc->toFH($_[1], (defined($_[2]) ? $_[2] : $_[0]{level}));
+  return $_[0];
+}
+
+##==============================================================================
+## Methods: Formatting: local
+##==============================================================================
+
+## $xmldoc = $fmt->xmlDocument()
+##  + create or return output buffer $fmt->{xdoc}
+sub xmlDocument {
+  return $_[0]{xdoc} if (defined($_[0]{xdoc}));
+  return $_[0]{xdoc} = XML::LibXML::Document->new("1.0",$_[0]{encoding});
+}
+
+## $rootnode = $fmt->xmlRootNode($nodname)
+##  + returns root node
+sub xmlRootNode {
+  my ($fmt,$name) = @_;
+  my $xdoc = $fmt->xmlDocument;
+  my $root = $xdoc->documentElement;
+  if (!defined($root)) {
+    $xdoc->setDocumentElement($root = XML::LibXML::Element->new($name));
+  }
+  return $root;
+}
+
+##==============================================================================
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
-## $str = $fmt->formatString($out,$fmtLevel)
-sub formatString { return $_[0]->xmlNodeString(@_[1..$#_]); }
-
-## (abstract)
-
-##==============================================================================
-## Methods: Formatting: XML: Node -> Document, * -> String
-##==============================================================================
-
-## $xmldoc = $fmt->xmlNodeDocument($docelt, $xmlversion="1.0", $xmlencoding="UTF-8")
-sub xmlNodeDocument {
-  my ($fmt,$nod,$xmlversion,$xmlencoding) = @_;
-  $xmlversion = "1.0" if (!defined($xmlversion));
-  $xmlencoding = $fmt->{encoding} if (!defined($xmlencoding));
-  $xmlencoding = "UTF-8" if (!defined($xmlencoding));
-  my $doc = XML::LibXML::Document->new($xmlversion,$xmlencoding);
-  $doc->setDocumentElement($nod);
-  return $doc;
-}
-
-## $out = $fmt->xmlNodeString($xmlnod,$formatLevel)
-sub xmlNodeString {
-  my ($fmt,$nod,$level) = @_;
-  return $fmt->xmlNodeDocument($nod)->toString(defined($level) ? $level : 0);
-}
+sub putToken { $_[0]->logconfess("putToken(): not implemented"); }
+sub putSentence { $_[0]->logconfess("putSentence(): not implemented"); }
+sub putDocument { $_[0]->logconfess("putDocument(): not implemented"); }
 
 
 ##==============================================================================
-## Methods: Formatting: XML Nodes
+## Methods: Formatting: XML Nodes: Generic
 ##==============================================================================
 
 ## $nod = $fmt->defaultXmlNode($value,\%opts)

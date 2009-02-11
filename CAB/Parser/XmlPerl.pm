@@ -23,7 +23,7 @@ our @ISA = qw(DTA::CAB::Parser::XmlCommon);
 ##==============================================================================
 
 ## $fmt = CLASS_OR_OBJ->new(%args)
-##  + object structure: assumed HASH
+##  + see Parser::XmlCommon
 
 ##==============================================================================
 ## Methods: Persistence
@@ -37,7 +37,7 @@ our @ISA = qw(DTA::CAB::Parser::XmlCommon);
 
 
 ##==============================================================================
-## Methods: Parsing: Generic API
+## Methods: Parsing: Local
 ##==============================================================================
 
 ## $obj = $prs->parseNode($nod)
@@ -80,13 +80,19 @@ sub parseNode {
   return $val;
 }
 
+##==============================================================================
+## Methods: Parsing: Generic API
+##==============================================================================
+
+## $doc = $prs->parseDocument()
+##  + parses buffered XML::LibXML::Document
 sub parseDocument {
   my $prs = shift;
-  if (!defined($prs->{doc})) {
-    $prs->logconfess("parseDocument(): no source document defined!");
+  if (!defined($prs->{xdoc})) {
+    $prs->logconfess("parseDocument(): no source document {xdoc} defined!");
     return undef;
   }
-  my $parsed = $prs->parseNode($prs->{doc}->documentElement);
+  my $parsed = $prs->parseNode($prs->{xdoc}->documentElement);
 
   ##-- force document
   return $prs->forceDocument($parsed);

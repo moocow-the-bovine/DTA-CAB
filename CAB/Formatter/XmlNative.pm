@@ -25,7 +25,7 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
-##     ##---- NEW
+##     ##---- NEW in Formatter::XmlNative
 ##     ##-- XML element names
 ##     documentElt      => $eltName,    ##-- default: 'doc'
 ##     sentenceElt      => $eltName,    ##-- default: 's'
@@ -40,16 +40,22 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 ##     rwStringAttr     => $attr,       ##-- default: 's'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
 ##
+##     ##---- INHERITED from DTA::CAB::Formatter::XmlCommon
+##     xdoc => $doc,                   ##-- XML::LibXML::Document (buffered)
+##
 ##     ##---- INHERITED from DTA::CAB::Formatter
-##     ##-- output file (optional)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     encoding  => $encoding,         ##-- output encoding
+##     level     => $formatLevel,      ##-- format level
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- encoding
+			   ##-- output buffer
+			   #xdoc => undef,
+
+			   ##-- Formatter
 			   encoding => 'UTF-8',
+			   level => 0,
 
 			   ##-- XML element names
 			   documentElt => 'doc',
@@ -71,12 +77,12 @@ sub new {
 }
 
 ##==============================================================================
-## Methods: Formatting: Generic API
+## Methods: Formatting: Local: Nodes
 ##==============================================================================
 
-## $xmlnod = $fmt->formatToken($tok)
+## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
-sub formatToken {
+sub tokenNode {
   my ($fmt,$tok) = @_;
   $tok = toToken($tok);
 
@@ -132,8 +138,8 @@ sub formatToken {
   return $nod;
 }
 
-## $xmlnod = $fmt->formatSentence($sent)
-sub formatSentence {
+## $xmlnod = $fmt->sentenceNode($sent)
+sub sentenceNode {
   my ($fmt,$sent) = @_;
   $sent = toSentence($sent);
   my $snod = XML::LibXML::Element->new($fmt->{sentenceElt});
@@ -147,12 +153,12 @@ sub formatSentence {
 #  }
 #
   ##-- format sentence 'tokens'
-  $snod->addChild($fmt->formatToken($_)) foreach (@{$sent->{tokens}});
+  $snod->addChild($fmt->tokenNode($_)) foreach (@{$sent->{tokens}});
   return $snod;
 }
 
-## $xmlnod = $fmt->formatDocument($doc)
-sub formatDocument {
+## $xmlnod = $fmt->documentNode($doc)
+sub documentNode {
   my ($fmt,$doc) = @_;
   $doc = toDocument($doc);
   my $docnod = XML::LibXML::Element->new($fmt->{documentElt});
@@ -166,12 +172,72 @@ sub formatDocument {
 
   ##-- format doc 'body'
   my $bodynod = $docnod->addNewChild(undef, 'body');
-  $bodynod->addChild($fmt->formatSentence($_)) foreach (@{$doc->{body}});
+  $bodynod->addChild($fmt->sentenceNode($_)) foreach (@{$doc->{body}});
 
   return $docnod;
 }
 
+##==============================================================================
+## Methods: Formatting: Local: Utils
+##==============================================================================
 
+## $xmldoc = $fmt->xmlDocument()
+##  + create or return output buffer $fmt->{xdoc}
+##  + inherited from XmlCommon
+
+## $rootnode = $fmt->xmlRootNode($nodname)
+##  + returns root node
+##  + inherited from XmlCommon
+
+## $bodynode = $fmt->xmlBodyNode()
+sub xmlBodyNode {
+  my $fmt = shift;
+  my $root = $fmt->xmlRootNode($fmt->{documentElt});
+  my ($body) = $root->findnodes("./body[last()]");
+  return $body if (defined($body));
+  return $root->addNewChild(undef,'body');
+}
+
+## $sentnod = $fmt->xmlSentenceNode()
+sub xmlSentenceNode {
+  my $fmt = shift;
+  my $body = $fmt->xmlBodyNode();
+  my ($snod) = $body->findnodes("./$fmt->{sentenceElt}[last()]");
+  return $snod if (defined($snod));
+  return $body->addNewChild(undef,$fmt->{sentenceElt});
+}
+
+##==============================================================================
+## Methods: Formatting: API
+##==============================================================================
+
+## $fmt = $fmt->putToken($tok)
+sub putToken {
+  my ($fmt,$tok) = @_;
+  $fmt->sentenceNode->addChild($fmt->tokenNode($tok));
+  return $fmt;
+}
+
+## $fmt = $fmt->putSentence($sent)
+sub putSentence {
+  my ($fmt,$sent) = @_;
+  $fmt->bodyNode->addChild($fmt->sentenceNode($sent));
+  return $fmt;
+}
+
+## $fmt = $fmt->putDocument($doc)
+sub putDocument {
+  my ($fmt,$doc) = @_;
+  my $docnod = $fmt->documentNode($doc);
+  my $xdoc = $fmt->xmlDocument();
+  my ($root);
+  if (!defined($root=$xdoc->documentElement)) {
+    $xdoc->setDocumentElement($docnod);
+  } else {
+    $root->addChild($_) foreach ($docnod->childNodes);
+  }
+  return $fmt;
+}
 
 1; ##-- be happy
 

@@ -25,17 +25,20 @@ our @ISA = qw(DTA::CAB::Parser);
 ##==============================================================================
 
 ## $prs = CLASS_OR_OBJ->new(%args)
-##  + object structure: assumed HASH
+##  + object structure:
+##    (
+##     ##---- new here
+##     xprs => $xprs,                           ##-- RPC::XML::Parser parser
+##     xdata => $xdata,                         ##-- parsed data
+##
+##     ##---- INHERITED from DTA::CAB::Parser
+##     #encoding => $inputEncoding,             ##-- default: UTF-8, where applicable
+##    )
 sub new {
   my $that = shift;
   my $prs = bless({
-		   ##-- encoding (should be handled by RPC::XML::Parser stuff?)
-
 		   ##-- RPC::XML parse
 		   xprs => RPC::XML::Parser->new(),
-
-		   ##-- parsed data
-		   #xdata => undef,
 
 		   ##-- user args
 		   @_
@@ -45,12 +48,17 @@ sub new {
 
 ##==============================================================================
 ## Methods: Persistence
-##  + see Parser
 ##==============================================================================
+
+## @keys = $class_or_obj->noSaveKeys()
+##  + returns list of keys not to be saved
+##  + default just returns empty list
+sub noSaveKeys {
+  return qw(xprs xdata);
+}
 
 ##=============================================================================
 ## Methods: Parsing: Input selection
-##  + see Parser
 ##==============================================================================
 
 ## $prs = $prs->close()
@@ -64,7 +72,7 @@ sub close {
 sub fromString {
   my $prs = shift;
   $prs->close;
-  $prs->{xdata} = $prs->{xprs}->parse(shift);
+  $prs->{xdata} = $prs->{xprs}->parse($_[0]);
   return $prs->checkData();
 }
 
@@ -117,6 +125,7 @@ sub parseDocument {
       @{$_->{tokens}} = map { toToken($_) } @{$_->{tokens}};
     }
   }
+
   return $doc;
 }
 

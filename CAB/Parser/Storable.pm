@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Parser::Freeze.pm
+## File: DTA::CAB::Parser::Storable.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: Datum parser: Storable::freeze
+## Description: Datum parser using Storable::freeze() & co.
 
-package DTA::CAB::Parser::Freeze;
+package DTA::CAB::Parser::Storable;
 use DTA::CAB::Datum ':all';
 use Storable;
 use IO::File;
@@ -25,15 +25,21 @@ our @ISA = qw(DTA::CAB::Parser);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##-- new
+##     doc => $doc,                          ##-- buffered input document
+##
+##     ##---- INHERITED from DTA::CAB::Parser
+##     encoding => $inputEncoding,             ##-- default: UTF-8, where applicable
 ##    )
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- input buffer
+		   #doc => undef,
+
 		   ##-- encoding
 		   encoding => undef, ##-- not applicable
 
-		   ##-- data source
-		   src  => undef, ##-- $str
 
 		   ##-- user args
 		   @_
@@ -49,15 +55,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(src);
-}
-
-## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
-##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
-sub loadPerlRef {
-  my $that = shift;
-  my $obj = $that->SUPER::loadPerlRef(@_);
-  return $obj;
+  return qw(doc);
 }
 
 ##=============================================================================
@@ -66,21 +64,28 @@ sub loadPerlRef {
 
 ## $prs = $prs->close()
 sub close {
-  delete($_[0]{src});
+  delete($_[0]{doc});
   return $_[0];
 }
 
 ## $prs = $prs->fromFile($filename_or_handle)
 ##  + default calls $prs->fromFh()
 
-## $prs = $prs->fromFh($filename_or_handle)
-##  + default calls $prs->fromString() on file contents
+## $prs = $prs->fromFh($fh)
+sub fromFh {
+  my ($prs,$fh) = @_;
+  $prs->close;
+  $prs->{doc} = Storable::retrieve_fd($fh)
+    or $prs->logconfess("fromFh(): Storable::retrieve_fd() failed: $!");
+  return $prs;
+}
 
 ## $prs = $prs->fromString($string)
 sub fromString {
   my $prs = shift;
   $prs->close();
-  $prs->{src} = shift;
+  $prs->{doc} = Storable::thaw($_[0])
+    or $prs->logconfess("fromString(): Storable::thaw() failed: $!");
   return $prs;
 }
 
@@ -89,15 +94,15 @@ sub fromString {
 ##==============================================================================
 
 ## $doc = $prs->parseDocument()
-sub parseDocument {
-  my $prs = shift;
-  if (!defined($prs->{src})) {
-    $prs->error("parseDocument(): no source selected!");
-    return undef;
-  }
-  return $prs->forceDocument( Storable::thaw($prs->{src}) );
-}
+##   + just returns buffered object in $prs->{doc}
+sub parseDocument { return $_[0]->forceDocument( $_[0]{doc} ); }
 
+
+##==============================================================================
+## Aliases
+##==============================================================================
+package DTA::CAB::Parser::Freeze;
+our @ISA = qw(DTA::CAB::Parser::Storable);
 
 1; ##-- be happy
 

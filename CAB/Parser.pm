@@ -29,7 +29,7 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
-##     encoding => $inputEncoding,  ##-- default: UTF-8
+##     encoding => $inputEncoding,  ##-- default: UTF-8, where applicable
 ##    )
 sub new {
   my $that = shift;
@@ -105,7 +105,7 @@ sub fromFh {
 ##   + parse document from currently selected input source
 sub parseDocument {
   my $prs = shift;
-  $prs->logconfess("parseDocument() not yet implemented!");
+  $prs->logconfess("parseDocument() not implemented!");
 }
 
 ## $doc = $prs->parseString($str)

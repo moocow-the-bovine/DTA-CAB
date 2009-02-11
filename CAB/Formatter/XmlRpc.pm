@@ -10,6 +10,7 @@ use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Datum ':all';
 use RPC::XML;
 use Encode qw(encode decode);
+use Storable;
 use Carp;
 use strict;
 
@@ -26,16 +27,24 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- new
+##     xprs => $parser,               ##-- XML::LibXML::Parser object
+##     docbuf => $obj,                ##-- DTA::CAB::Document output buffer
+##
+##     ##---- INHERITED from DTA::CAB::Formatter::XmlCommon
+##     #xdoc => $doc,                  ##-- XML::LibXML::Document (buffered)
+##
 ##     ##---- INHERITED from DTA::CAB::Formatter
-##     ##-- output file (optional)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     encoding  => $encoding,         ##-- output encoding
+##     level     => $formatLevel,      ##-- format level
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- encoding
+			   ##-- defaults
+			   docbuf   => DTA::CAB::Document->new(),
 			   encoding => 'UTF-8',
+			   level    => 0,
 
 			   ##-- user args
 			   @_
@@ -43,59 +52,100 @@ sub new {
 }
 
 ##==============================================================================
-## Methods: Formatting: Generic API
+## Methods: Formatting: output selection
 ##==============================================================================
 
-
-## $rpcobj = $fmt->formatToken($tok)
-##  + returns formatted token $tok as an XML node
-sub formatToken {
-  return RPC::XML::smart_encode( $_[1] );
+## $fmt = $fmt->flush()
+##  + flush accumulated output
+sub flush {
+  $_[0]{docbuf} = DTA::CAB::Document->new();
+  return $_[0];
 }
 
-## $rpcobj = $fmt->formatSentence($sent)
-sub formatSentence {
-  return RPC::XML::smart_encode( $_[1] );
-}
-
-## $rpcobj = $fmt->formatDocument($doc)
-sub formatDocument {
-  return RPC::XML::smart_encode( $_[1] );
-}
-
-##==============================================================================
-## Methods: Formatting: Nodes -> Documents
-##==============================================================================
-
-our ($parser);
-
-## $parser = CLASS_OR_OBJ->xmlParser()
-sub xmlParser {
-  return $parser if ($parser);
-  return $parser = XML::LibXML->new();
-}
-
-## $xmlstr = $fmt->xmlString($rpcobj)
-sub xmlString {
-  return ref($_[1]) ? $_[1]->as_string : $_[1];
-}
-
-## $xmldoc = $fmt->xmlDocument($rpcobj)
-sub xmlDocument {
-  return $_[0]->xmlParser->parse_string($_[0]->xmlString($_[1]));
-}
-
-## $xmlnod = $fmt->xmlNode($rpcobj)
-sub xmlNode {
-  return $_[0]->xmlDocument($_[1])->documentElement;
-}
-
-## $out = $fmt->formatString($rpcobj,$level)
-sub formatString {
-  my ($fmt,$rpcobj,$level) = @_;
+## $str = $fmt->toString()
+## $str = $fmt->toString($formatLevel)
+##  + flush buffered output in $fmt->{docbuf} to byte-string (using Storable::freeze())
+sub toString {
+  my ($fmt,$level) = @_;
+  my $rpcobj = RPC::XML::smart_encode( $fmt->{docbuf} );
+  $level     = $fmt->{level} if (!defined($level));
   return (defined($level) && $level>0
-	  ? $fmt->xmlDocument($rpcobj)->toString($level)
+	  ? $fmt->rpcXmlDocument($rpcobj)->toString($level)
 	  : encode($fmt->{encoding}, $rpcobj->as_string));
+}
+
+## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+##  + flush buffered output to $filename_or_handle
+##  + default implementation calls $fmt->toFh()
+
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+sub toFh {
+  my ($fmt,$fh,$level) = @_;
+  my $rpcobj = RPC::XML::smart_encode( $fmt->{docbuf} );
+  $level     = $fmt->{level} if (!defined($level));
+  $fmt->rpcXmlDocument($rpcobj)->toFH($fh,$level);
+  return $fmt;
+}
+
+##==============================================================================
+## Methods: Formatting: Local
+##==============================================================================
+
+## $parser = $fmt->xmlParser()
+sub xmlParser {
+  return $_[0]{xprs} if ($_[0]{xprs});
+  return $_[0]{xprs} = XML::LibXML->new();
+}
+
+## $xmldoc = $fmt->rpcXmlDocument($rpcobj_or_string)
+sub rpcXmlDocument {
+  return $_[0]->xmlParser->parse_string( ref($_[1]) ? $_[1]->as_string : $_[1] );
+}
+
+##==============================================================================
+## Methods: Formatting: Recommended API
+##==============================================================================
+
+## $fmt = $fmt->putToken($tok)
+sub putToken { $_[0]->putTokenRaw(Storable::dclone($_[1])); }
+sub putTokenRaw {
+  my ($fmt,$tok) = @_;
+  my $buf = $fmt->{docbuf};
+  if (@{$buf->{body}}) {
+    push(@{$buf->{body}[$#{$buf->{body}}]}, $tok);
+  } else {
+    push(@{$buf->{body}}, toSentence([$tok]));
+  }
+}
+
+## $fmt = $fmt->putSentence($sent)
+sub putSentence { $_[0]->putSentenceRaw(Storable::dclone($_[1])); }
+sub putSentenceRaw {
+  my ($fmt,$sent) = @_;
+  push(@{$fmt->{docbuf}{body}}, $sent);
+  return $fmt;
+}
+
+##==============================================================================
+## Methods: Formatting: Required API
+##==============================================================================
+
+## $fmt = $fmt->putDocument($doc)
+sub putDocument { $_[0]->putDocumentRaw(Storable::dclone($_[1])); }
+sub putDocumentRaw {
+  my ($fmt,$doc) = @_;
+  my $buf = $fmt->{docbuf};
+  if (scalar(keys(%$buf))==1 && !@{$buf->{body}}) {
+    ##-- steal $doc
+    $fmt->{docbuf} = $doc;
+  } else {
+    ##-- append $doc->{body} onto $buf->{body}
+    push(@{$buf->{body}}, @{$doc->{body}});
+    foreach (grep {$_ ne 'body'} keys(%$doc)) {
+      $buf->{$_} = $doc->{$_}; ##-- clobber existing keys
+    }
+  }
+  return $fmt;
 }
 
 

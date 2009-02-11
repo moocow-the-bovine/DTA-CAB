@@ -129,14 +129,14 @@ elsif ($action eq 'token') {
   ##-- action: 'tokens'
   foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
-    $outfh->print($fmt->formatString( $fmt->formatToken($tokout) ));
+    $outfh->print( $fmt->flush->putTokenRaw($tokout)->toString );
   }
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
-  $outfh->print( $fmt->formatString($fmt->formatSentence($s_out)) );
+  $outfh->print( $fmt->flush->putSentenceRaw($s_out)->toString );
 }
 elsif ($action eq 'document') {
   ##-- action: 'document': interpret args as filenames & parse 'em!
@@ -146,7 +146,7 @@ elsif ($action eq 'document') {
     $d_in = $prs->parseFile($doc_filename)
       or die("$0: parse failed for input file '$doc_filename': $!");
     $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
-    $s_out = $fmt->formatString($fmt->formatDocument($d_out));
+    $s_out = $fmt->flush->putDocumentRaw($d_out)->toString;
     $outfh->print( $s_out );
     if ($doProfile) {
       $ntoks += $d_out->nTokens();
@@ -161,10 +161,10 @@ elsif ($action eq 'raw') {
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
     $s_in = join('',<DOC>);
-    $s_in = decode($localEncoding, $s_in) if ($localEncoding && $parserClass !~ 'Freeze');
+    $s_in = decode($localEncoding, $s_in) if ($localEncoding && $parserClass !~ 'Storable');
     close(DOC);
     $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, parserClass=>$parserClass, formatClass=>$formatClass});
-    $s_out = encode($localEncoding, $s_out) if ($localEncoding && utf8::is_utf8($s_out) && $formatClass !~ 'Freeze');
+    $s_out = encode($localEncoding, $s_out) if ($localEncoding && utf8::is_utf8($s_out) && $formatClass !~ 'Storable');
     $outfh->print( $s_out );
     if ($doProfile) {
       $nchrs += length($s_in);

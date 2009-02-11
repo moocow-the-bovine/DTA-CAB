@@ -27,19 +27,18 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
-##     ##-- output encoding (for formatString, etc.)
+##     ##-- output
 ##     encoding => $encoding,         ##-- defualt: 'UTF-8', where applicable
-##
-##     ##-- output file (NYI)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     level    => $formatLevel,      ##-- formatting level (not supported by all formatters)
+##     outbuf   => $stringBuffer,     ##-- output buffer (not supported by all formatters)
 ##    )
 sub new {
   my $that = shift;
   my $fmt = bless({
-		   ##-- output handle
-		   #outfile => undef,
-		   #outfh   => undef,
+		   ##-- output
+		   #encoding => 'UTF-8',  ##-- output encoding
+		   #level    => 0,
+		   #outbuf   => '',
 
 		   ##-- user args
 		   @_
@@ -55,7 +54,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw();
+  return qw(outbuf);
 }
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
@@ -70,54 +69,97 @@ sub loadPerlRef {
 ## Methods: Formatting: output selection
 ##==============================================================================
 
-## $fmt = $fmt->toFile($filename_or_fh)
-#sub toFile {
-#  my ($fmt,$file) = @_;
-#  $fmt->{outfile} = $file;
-#  if (ref($file)) {
-#    $fmt->{outfh} = $file;
-#  } else {
-#    $fmt->{outfh} = IO::File->new(">$file")
-#      or $fmt->logdie("toFile(): open failed for '$file': $!");
-#  }
-#  return $fmt;
-#}
-
-##==============================================================================
-## Methods: Formatting: Generic API
-##==============================================================================
-
-## $str = $fmt->formatString($out)
-## $str = $fmt->formatString($out, $formatLevel)
-##  + get byte-string from output if not defined
-##  + default implementation just encodes string
-sub formatString {
-  return encode($_[0]{encoding},$_[1]) if ($_[0]{encoding} && utf8::is_utf8($_[1]));
-  return $_[1];
+## $fmt = $fmt->flush()
+##  + flush accumulated output
+##  + default implementation just deletes $fmt->{outbuf}
+sub flush {
+  delete($_[0]{outbuf});
+  return $_[0];
 }
 
-## $out = $fmt->formatToken($tok)
-##  + returns formatted token $tok
-##  + child classes MUST implement this
-sub formatToken {
+## $lvl = $fmt->formatLevel()
+## $fmt = $fmt->formatLevel($level)
+##  + set output formatting level
+sub formatLevel {
+  my ($fmt,$level) = @_;
+  return $fmt->{level} if (!defined($level));
+  $fmt->{level}=$level;
+  return $fmt;
+}
+
+## $str = $fmt->toString()
+## $str = $fmt->toString($formatLevel)
+##  + flush buffered output document to byte-string
+##  + default implementation just encodes string in $fmt->{outbuf}
+sub toString {
+  $_[0]->formatLevel($_[1]) if (defined($_[1]));
+  return encode($_[0]{encoding},$_[0]{outbuf})
+    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
+  return $_[0]{outbuf};
+}
+
+## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+##  + flush buffered output document to $filename_or_handle
+##  + default implementation calls $fmt->toFh()
+sub toFile {
+  my ($fmt,$file,$level) = @_;
+  my $fh = ref($file) ? $file : IO::File->new(">$file");
+  $fmt->logdie("toFile(): open failed for file '$file': $!") if (!$fh);
+  $fh->binmode();
+  my $rc = $fmt->toFh($fh,$level);
+  $fh->close() if (!ref($file));
+  return $rc;
+}
+
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+##  + flush buffered output document to filehandle $fh
+##  + default implementation calls to $fmt->formatString($formatLevel)
+sub toFh {
+  my ($fmt,$fh,$level) = @_;
+  $fh->print($fmt->toString($level));
+  return $fmt;
+}
+
+
+##==============================================================================
+## Methods: Formatting: Recommended API
+##==============================================================================
+
+## $fmt = $fmt->putToken($tok)
+##  + default implementations of other methods assume output is concatenated onto $fmt->{outbuf}
+sub putTokenRaw { return $_[0]->putToken($_[1]); }
+sub putToken {
   my $fmt = shift;
-  $fmt->logconfess("formatToken() not yet implemented!");
+  $fmt->logconfess("putToken() not implemented!");
   return undef;
 }
 
-## $out = $fmt->formatSentence($sent)
-##  + default version just concatenates formatted tokens + 1 additional "\n"
-sub formatSentence {
+## $fmt = $fmt->putSentence($sent)
+##  + default implementation just iterates $fmt->putToken() & appends 1 additional "\n" to $fmt->{outbuf}
+sub putSentenceRaw { return $_[0]->putSentence($_[1]); }
+sub putSentence {
   my ($fmt,$sent) = @_;
-  return join('', map {$fmt->formatToken($_)} @{toSentence($sent)->{tokens}})."\n";
+  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
+  $fmt->{outbuf} .= "\n";
+  return $fmt;
 }
 
-## $out = $fmt->formatDocument($doc)
-##  + default version just concatenates formatted sentences + 1 additional "\n"
-sub formatDocument {
+##==============================================================================
+## Methods: Formatting: Required API
+##==============================================================================
+
+## $fmt = $fmt->putDocument($doc)
+##  + default implementation just iterates $fmt->putSentence()
+##  + should be non-destructive for $doc
+sub putDocument {
   my ($fmt,$doc) = @_;
-  return join('', map {$fmt->formatSentence($_)} @{toDocument($doc)->{body}})."\n";
+  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
+  return $fmt;
 }
+
+## $fmt = $fmt->putDocumentRaw($doc)
+##  + may copy plain $doc reference
+sub putDocumentRaw { return $_[0]->putDocument($_[1]); }
 
 
 1; ##-- be happy

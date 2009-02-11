@@ -24,19 +24,21 @@ our @ISA = qw(DTA::CAB::Formatter);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- NEW
+##     dumper => $data_dumper,         ##-- underlying Data::Dumper object
+##
 ##     ##---- INHERITED from DTA::CAB::Formatter
-##     ##-- output file (optional)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     #encoding => $encoding,         ##-- n/a
+##     level     => $formatLevel,      ##-- sets Data::Dumper->Indent() option
+##     outbuf    => $stringBuffer,     ##-- buffered output
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- encoding
-			   encoding => 'UTF-8',
-
 			   ##-- Dumper
-			   dumper => Data::Dumper->new([])->Purity(1)->Terse(0)->Indent(1),
+			   dumper => Data::Dumper->new([])->Purity(1)->Terse(0),
+			   level  => 0,
+			   outbuf => '',
 
 			   ##-- user args
 			   @_
@@ -44,33 +46,52 @@ sub new {
 }
 
 ##==============================================================================
-## Methods: verbosity
+## Methods: Formatting: output selection
+##==============================================================================
 
-## $fmt = $fmt->verbose($level)
-##   + 0 <= $level <= 3 : set verbosity level (Data::Dumper 'Indent' property)
-sub verbose {
-  $_[0]{dumper}->Indent($_[1]);
+## $fmt = $fmt->flush()
+##  + flush accumulated output
+sub flush {
+  delete($_[0]{outbuf});
   return $_[0];
 }
+
+## $str = $fmt->toString()
+## $str = $fmt->toString($formatLevel)
+##  + flush buffered output document to byte-string
+##  + default implementation just encodes string in $fmt->{outbuf}
+sub toString { return $_[0]{outbuf}; }
+
+## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+##  + flush buffered output document to $filename_or_handle
+##  + default implementation calls $fmt->toFh()
+
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+##  + flush buffered output document to filehandle $fh
+##  + default implementation calls to $fmt->formatString($formatLevel)
+
 
 ##==============================================================================
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
 
-## $out = $fmt->formatToken($tok)
-sub formatToken {
-  return $_[0]{dumper}->Reset->Names(['token'])->Values([$_[1]])->Dump;
+## $fmt = $fmt->putToken($tok)
+sub putToken {
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['token'])->Values([$_[1]])->Dump;
+  return $_[0];
 }
 
-## $out = $fmt->formatSentence($sent)
-sub formatSentence {
-  return $_[0]{dumper}->Reset->Names(['sentence'])->Values([$_[1]])->Dump;
+## $fmt = $fmt->putSentence($sent)
+sub putSentence {
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['sentence'])->Values([$_[1]])->Dump;
+  return $_[0];
 }
 
-## $out = $fmt->formatDocument($doc)
-sub formatDocument {
-  return $_[0]{dumper}->Reset->Names(['document'])->Values([$_[1]])->Dump;
+## $fmt = $fmt->putDocument($doc)
+sub putDocument {
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['document'])->Values([$_[1]])->Dump;
+  return $_[0];
 }
 
 

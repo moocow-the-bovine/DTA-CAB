@@ -24,15 +24,17 @@ our @ISA = qw(DTA::CAB::Parser);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- new here
+##     doc => $doc,                          ##-- buffered input document
+##
+##     ##---- INHERITED from DTA::CAB::Parser
+##     encoding => $inputEncoding,             ##-- default: UTF-8, where applicable
 ##    )
 sub new {
   my $that = shift;
   my $fmt = bless({
-		   ##-- encoding
+		   doc => undef,
 		   encoding => 'UTF-8',
-
-		   ##-- data source
-		   src  => undef, ##-- $str
 
 		   ##-- user args
 		   @_
@@ -48,11 +50,8 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(src);
+  return qw(doc);
 }
-
-## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
-##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
 
 ##=============================================================================
 ## Methods: Parsing: Input selection
@@ -60,7 +59,7 @@ sub noSaveKeys {
 
 ## $prs = $prs->close()
 sub close {
-  delete($_[0]{src});
+  delete($_[0]{doc});
   return $_[0];
 }
 
@@ -74,19 +73,17 @@ sub close {
 sub fromString {
   my $prs = shift;
   $prs->close();
-  $prs->{src} = shift;
-  $prs->{src} = decode($prs->{encoding},$prs->{src}) if ($prs->{encoding} && !utf8::is_utf8($prs->{src}));
-  return $prs;
+  return $prs->parseTTString($_[0]);
 }
 
 ##==============================================================================
-## Methods: Parsing: Generic API
+## Methods: Parsing: Local
 ##==============================================================================
 
-## $doc = $prs->parseDocument()
-sub parseDocument {
-  my $prs = shift;
-  my $src = $prs->{src};
+sub parseTTString {
+  my ($prs,$src) = @_;
+  $src = decode($prs->{encoding},$src) if ($prs->{encoding} && !utf8::is_utf8($src));
+
   my (@sents,$tok,$rw,$line);
   my ($text,@fields,$field);
   my $s = [];
@@ -140,9 +137,18 @@ sub parseDocument {
   }
   push(@sents,$s) if (@$s); ##-- final sentence
 
-  ##-- construct & return document
-  return bless({body=>[ map { bless({tokens=>$_},'DTA::CAB::Sentence') } @sents ]}, 'DTA::CAB::Document');
+  ##-- construct & buffer document
+  $prs->{doc} = bless({body=>[ map { bless({tokens=>$_},'DTA::CAB::Sentence') } @sents ]}, 'DTA::CAB::Document');
+  return $prs;
 }
+
+
+##==============================================================================
+## Methods: Parsing: Generic API
+##==============================================================================
+
+## $doc = $prs->parseDocument()
+sub parseDocument { return $_[0]{doc}; }
 
 1; ##-- be happy
 

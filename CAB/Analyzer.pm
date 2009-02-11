@@ -302,7 +302,8 @@ sub analyzeDataSub {
     $doc = $prs->parseString($_[0]);
     #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
     $doc = $a_doc->($doc,$opts);
-    $str = $fmt->formatString($fmt->formatDocument($doc));
+    $str = $fmt->flush->putDocument($doc)->toString;
+    $fmt->flush;
 
     return RPC::XML::base64->new($str);
   };

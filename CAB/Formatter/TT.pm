@@ -24,16 +24,19 @@ our @ISA = qw(DTA::CAB::Formatter);
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
 ##    (
+##     ##---- NEW
+##
 ##     ##---- INHERITED from DTA::CAB::Formatter
-##     ##-- output file (optional)
-##     #outfh => $output_filehandle,  ##-- for default toFile() method
-##     #outfile => $filename,         ##-- for determining whether $output_filehandle is local
+##     encoding  => $encoding,         ##-- output encoding
+##     #level    => $formatLevel,      ##-- n/a
+##     outbuf    => $stringBuffer,     ##-- buffered output
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- encoding
 			   encoding => 'UTF-8',
+			   #outbuf => ''
 
 			   ##-- user args
 			   @_
@@ -41,11 +44,41 @@ sub new {
 }
 
 ##==============================================================================
+## Methods: Formatting: output selection
+##==============================================================================
+
+## $fmt = $fmt->flush()
+##  + flush accumulated output
+sub flush {
+  delete($_[0]{outbuf});
+  return $_[0];
+}
+
+## $str = $fmt->toString()
+## $str = $fmt->toString($formatLevel)
+##  + flush buffered output document to byte-string
+##  + default implementation just encodes string in $fmt->{outbuf}
+sub toString {
+  return encode($_[0]{encoding},$_[0]{outbuf})
+    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
+  return $_[0]{outbuf};
+}
+
+## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+##  + flush buffered output document to $filename_or_handle
+##  + default implementation calls $fmt->toFh()
+
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+##  + flush buffered output document to filehandle $fh
+##  + default implementation calls to $fmt->formatString($formatLevel)
+
+
+##==============================================================================
 ## Methods: Formatting: Generic API
 ##==============================================================================
 
-## $out = $fmt->formatToken($tok)
-sub formatToken {
+## $fmt = $fmt->putToken($tok)
+sub putToken {
   my ($fmt,$tok) = @_;
   my $out = $tok->{text};
 
@@ -72,21 +105,25 @@ sub formatToken {
     if ($tok->{rw});
 
   ##-- ... ???
-  return $out."\n";
+  $fmt->{outbuf} .= $out."\n";
+  return $fmt;
 }
 
-## $out = $fmt->formatSentence($sent)
+## $fmt = $fmt->putSentence($sent)
 ##  + default version just concatenates formatted tokens
-sub formatSentence {
+sub putSentence {
   my ($fmt,$sent) = @_;
-  return join('', map {$fmt->formatToken($_)} @{toSentence($sent)->{tokens}})."\n";
+  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
+  $fmt->{outbuf} .= "\n";
+  return $fmt;
 }
 
-## $out = $fmt->formatDocument($doc)
+## $fmt = $fmt->putDocument($doc)
 ##  + default version just concatenates formatted sentences
-sub formatDocument {
+sub putDocument {
   my ($fmt,$doc) = @_;
-  return join('', map {$fmt->formatSentence($_)} @{toDocument($doc)->{body}})."\n";
+  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
+  return $fmt;
 }
 
 

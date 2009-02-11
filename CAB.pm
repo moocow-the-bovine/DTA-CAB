@@ -23,18 +23,18 @@ use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 
 use DTA::CAB::Formatter;
-use DTA::CAB::Formatter::Freeze;
+use DTA::CAB::Formatter::Perl;
+use DTA::CAB::Formatter::Storable;
 use DTA::CAB::Formatter::Text;
 use DTA::CAB::Formatter::TT;
-use DTA::CAB::Formatter::Perl;
 use DTA::CAB::Formatter::XmlCommon;
 use DTA::CAB::Formatter::XmlNative;
 use DTA::CAB::Formatter::XmlPerl;
 use DTA::CAB::Formatter::XmlRpc;
 
 use DTA::CAB::Parser;
-use DTA::CAB::Parser::Freeze;
 use DTA::CAB::Parser::Perl;
+use DTA::CAB::Parser::Storable;
 use DTA::CAB::Parser::Text;
 use DTA::CAB::Parser::TT;
 use DTA::CAB::Parser::XmlCommon;
