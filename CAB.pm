@@ -13,6 +13,7 @@ use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use DTA::CAB::Analyzer::Transliterator;
+use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
@@ -22,25 +23,8 @@ use DTA::CAB::Token;
 use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 
-use DTA::CAB::Formatter;
-use DTA::CAB::Formatter::Perl;
-use DTA::CAB::Formatter::Storable;
-use DTA::CAB::Formatter::Text;
-use DTA::CAB::Formatter::TT;
-use DTA::CAB::Formatter::XmlCommon;
-use DTA::CAB::Formatter::XmlNative;
-use DTA::CAB::Formatter::XmlPerl;
-use DTA::CAB::Formatter::XmlRpc;
-
-use DTA::CAB::Parser;
-use DTA::CAB::Parser::Perl;
-use DTA::CAB::Parser::Storable;
-use DTA::CAB::Parser::Text;
-use DTA::CAB::Parser::TT;
-use DTA::CAB::Parser::XmlCommon;
-use DTA::CAB::Parser::XmlNative;
-use DTA::CAB::Parser::XmlPerl;
-use DTA::CAB::Parser::XmlRpc;
+use DTA::CAB::Format;
+use DTA::CAB::Format::All;
 
 use IO::File;
 use Carp;
@@ -65,6 +49,7 @@ sub new {
   return $that->SUPER::new(
 			   ##-- analyzers
 			   xlit  => DTA::CAB::Analyzer::Transliterator->new(),
+			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
@@ -88,10 +73,11 @@ sub ensureLoaded {
   my $cab = shift;
   my $rc  = 1;
   $rc &&= $cab->{xlit}->ensureLoaded()  if ($cab->{xlit});
+  $rc &&= $cab->{lts}->ensureLoaded()   if ($cab->{lts});
   $rc &&= $cab->{morph}->ensureLoaded() if ($cab->{morph});
   $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
-  $cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph});
+  #$cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph}); ##-- OBSOLETE!
   return $rc;
 }
 
@@ -131,14 +117,16 @@ sub savePerlRef {
 ##  + known \%opts:
 ##     do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
 ##     do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
+##     do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
 ##     do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
 ##     do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
 ##     do_morph_rw => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
 ##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
-  my ($xlit,$morph,$msafe,$rw) = @$cab{qw(xlit morph msafe rw)};
+  my ($xlit,$lts,$morph,$msafe,$rw) = @$cab{qw(xlit lts morph msafe rw)};
   my $a_xlit  = $xlit->getAnalyzeTokenSub()  if ($xlit);
+  my $a_lts   = $lts->getAnalyzeTokenSub()   if ($lts);
   my $a_morph = $morph->getAnalyzeTokenSub() if ($morph);
   my $a_msafe = $msafe->getAnalyzeTokenSub() if ($msafe);
   my $a_rw    = $rw->getAnalyzeTokenSub()    if ($rw);
@@ -155,6 +143,11 @@ sub getAnalyzeTokenSub {
       $l = $tok->{text};
     }
     $opts->{src} = $l;
+
+    ##-- analyze: lts
+    if ($a_lts && (!defined($opts->{do_lts}) || $opts->{do_lts})) {
+      $a_lts->($tok, $opts);
+    }
 
     ##-- analyze: morph
     if ($a_morph && (!defined($opts->{do_morph}) || $opts->{do_morph})) {
@@ -178,6 +171,7 @@ sub getAnalyzeTokenSub {
 	}
       }
     }
+
     delete(@$opts{qw(src dst)}); ##-- hack
     return $tok;
   };

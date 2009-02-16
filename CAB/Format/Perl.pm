@@ -101,7 +101,7 @@ sub fromString {
 sub parsePerlString {
   my $fmt = shift;
   my ($doc);
-  $doc = eval "no strict; $fmt->{src}";
+  $doc = eval "no strict; $_[0]";
   $fmt->warn("parsePerlString(): error in eval: $@") if ($@);
   $doc = DTA::CAB::Utils::deep_utf8_upgrade($doc);
   $fmt->{doc} = $fmt->forceDocument($doc);

@@ -280,30 +280,25 @@ sub analyzeDataSub {
   require RPC::XML;
   my $anl = shift;
   my $a_doc = $anl->analyzeDocumentSub;
-  my $class2p = {};
   my $class2f = {};
-  my ($opts,$prs,$doc,$fmt,$str);
+  my ($opts, $ifmt,$ofmt,$doc,$str);
   return sub {
     $opts = $_[1];
     $opts = {} if (!defined($opts));
-    $opts->{parserClass} = 'Text' if (!defined($opts->{parserClass}));
-    $opts->{formatClass} = $opts->{parserClass} if (!defined($opts->{formatClass}));
-    $opts->{parserClass} = "DTA::CAB::Parser::$opts->{parserClass}"
-      if (!UNIVERSAL::isa($opts->{parserClass},'DTA::CAB::Parser'));
-    $opts->{formatClass} = "DTA::CAB::Formatter::$opts->{formatClass}"
-      if (!UNIVERSAL::isa($opts->{formatClass},'DTA::CAB::Formatter'));
+    $opts->{inputClass}  = 'Text' if (!defined($opts->{inputClass}));
+    $opts->{outputClass} = $opts->{inputClass} if (!defined($opts->{outputClass}));
 
-    ##-- get parser, formatter
-    $prs = $class2p->{$opts->{parserClass}};
-    $prs = $class2p->{$opts->{parserClass}} = $opts->{parserClass}->new if (!defined($class2f->{$opts->{parserClass}}));
-    $fmt = $class2f->{$opts->{formatClass}};
-    $fmt = $class2f->{$opts->{formatClass}} = $opts->{formatClass}->new if (!defined($class2f->{$opts->{formatClass}}));
+    ##-- get input & output format classes
+    $ifmt = $class2f->{$opts->{inputClass}}  = DTA::CAB::Format->newFormat($opts->{inputClass})
+      if (!defined($ifmt=$class2f->{$opts->{inputClass}}));
+    $ofmt = $class2f->{$opts->{outputClass}} = DTA::CAB::Format->newFormat($opts->{outputClass})
+      if (!defined($ofmt=$class2f->{$opts->{outputClass}}));
 
-    $doc = $prs->parseString($_[0]);
+    $doc = $ifmt->parseString($_[0]);
     #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
     $doc = $a_doc->($doc,$opts);
-    $str = $fmt->flush->putDocument($doc)->toString;
-    $fmt->flush;
+    $str = $ofmt->flush->putDocument($doc)->toString;
+    $ofmt->flush;
 
     return RPC::XML::base64->new($str);
   };

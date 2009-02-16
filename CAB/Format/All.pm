@@ -6,6 +6,7 @@
 
 package DTA::CAB::Format::All;
 use DTA::CAB::Format;
+#use DTA::CAB::Format::Freeze;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Text;

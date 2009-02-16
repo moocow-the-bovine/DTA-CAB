@@ -94,14 +94,28 @@ sub fromFh {
   return $fmt;
 }
 
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString( $string)
+## $fmt = $fmt->fromString(\$string)
+##  + requires perl 5.8 or better with PerlIO layer for "real" string I/O handles
 sub fromString {
   my $fmt = shift;
-  $fmt->close();
+  my $fh  = IO::Handle->new();
+  my $str = shift;
+  CORE::open($fh,'<',(ref($str) ? $str : \$str))
+      or $fmt->logconfess("could not open() filehandle for string ref");
+  #$fh->binmode();
+  my $rc = $fmt->fromFh($fh);
+  $fh->close();
+  return $fmt;
+}
+sub fromString_freeze {
+  my $fmt = shift;
+  $fmt->close;
   $fmt->{doc} = Storable::thaw($_[0])
     or $fmt->logconfess("fromString(): Storable::thaw() failed: $!");
   return $fmt;
 }
+
 
 ##--------------------------------------------------------------
 ## Methods: Parsing: Generic API
@@ -129,6 +143,17 @@ sub flush {
 ## $str = $fmt->toString($formatLevel=!$netorder)
 ##  + flush buffered output in $fmt->{docbuf} to byte-string (using Storable::freeze())
 sub toString {
+  my $fmt = shift;
+  my $fh  = IO::Handle->new();
+  my $str = '';
+  CORE::open($fh,'>',\$str)
+      or $fmt->logconfess("could not open() filehandle for string ref");
+  #$fh->binmode();
+  my $rc = $fmt->toFh($fh,@_);
+  $fh->close();
+  return $str;
+}
+sub toString_freeze {
   my $fmt = shift;
   return $fmt->{netorder} ? Storable::nfreeze($fmt->{docbuf}) : Storable::freeze($fmt->{docbuf});
 }

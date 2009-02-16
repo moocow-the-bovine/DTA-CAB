@@ -22,28 +22,25 @@ our $VERSION = 0.01;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-#BEGIN {
-#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-#  binmode(STDIN, ':utf8');
-#  binmode(STDOUT,':utf8');
-#  binmode(STDERR,':utf8');
-#}
 
-##-- Client
+##-- Server Options
 our $serverURL  = 'http://localhost:8000';
 our $serverEncoding = 'UTF-8';
 our $localEncoding  = 'UTF-8';
+
+##-- Analysis & Action Options
 our $analyzer = 'dta.cab.default';
-
-our $outfile = '-';
-
-our $doProfile = 1;
-
-##-- actions
 our $action = 'list';
 our %analyzeOpts = qw();    ##-- currently unused
-our $formatClass = 'Text';  ##-- default format class
-our $parserClass = 'Text';  ##-- default parser class
+our $doProfile = 1;
+
+##-- I/O Options
+our $inputClass  = 'Text';  ##-- default format class
+our $outputClass = 'Text';  ##-- default parser class
+our %inputOpts   = (encoding=>undef);
+our %outputOpts  = (encoding=>undef,level=>0);
+our $outfile     = '-';
+
 
 ##==============================================================================
 ## Command-line
@@ -52,25 +49,30 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- Server
+	   ##-- Server Options
 	   'server-url|server|url|s|u=s' => \$serverURL,
-	   'analyzer|a=s' => \$analyzer,
-	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
-
-	   ##-- I/O
-	   'output-file|of|o=s' => \$outfile,
-	   'format-class|fc=s' => \$formatClass,
-	   'parser-class|pc=s' => \$parserClass,
 	   'local-encoding|le=s'  => \$localEncoding,
 	   'server-encoding|se=s' => \$serverEncoding,
-	   'profile|p!' => \$doProfile,
 
-	   ##-- Action
+	   ##-- Analysis Options
+	   'analyzer|a=s' => \$analyzer,
+	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
+	   'profile|p!' => \$doProfile,
 	   'list|l'   => sub { $action='list'; },
 	   'token|t' => sub { $action='token'; },
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'raw|r' => sub { $action='raw'; }, ##-- server-side parsing
+
+	   ##-- I/O: input
+	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
+	   'input-option|io|parser-option|po=s'     => \%inputOpts,
+	   ##-- I/O: output
+	   'output-file|output|o=s' => \$outfile,
+	   'output-class|oc|format-class|fc=s'        => \$outputClass,
+	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
+	   'output-option|oo=s'                       => \%outputOpts,
+	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
@@ -98,61 +100,71 @@ our $cli = DTA::CAB::Client::XmlRpc->new(
 					);
 $cli->connect() or die("$0: connect() failed: $!");
 
-##-- format class
-$formatClass = 'DTA::CAB::Formatter::'.$formatClass if (!UNIVERSAL::isa($formatClass,'DTA::CAB::Formatter'));
-our $fmt = $formatClass->new(encoding=>$localEncoding)
-  or die("$0: could not create formatter of class $formatClass: $!");
 
-##-- parser class
-$parserClass = 'DTA::CAB::Parser::'.$parserClass if (!UNIVERSAL::isa($parserClass,'DTA::CAB::Parser'));
-our $prs = $parserClass->new(encoding=>$localEncoding)
-  or die("$0: could not create parser of class $parserClass: $!");
+##======================================================
+## Input & Output Formats
+
+$inputOpts{encoding} = $localEncoding if (!defined($inputOpts{encoding}) && $localEncoding);
+$ifmt = DTA::CAB::Format->newFormat($inputClass,%inputOpts)
+  or die("$0: could not create input parser of class $inputClass: $!");
+
+$outputOpts{encoding}=$localEncoding if (!defined($outputOpts{encoding}) && $localEncoding);
+$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
+$ofmt = DTA::CAB::Format->newFormat($outputClass,%outputOpts)
+  or die("$0: could not create output formatter of class $outputClass: $!");
+
+#DTA::CAB->debug("using input format class ", ref($prs));
+#DTA::CAB->debug("using output format class ", ref($fmt));
 
 ##-- output file
 our $outfh = IO::File->new(">$outfile")
   or die("$0: open failed for output file '$outfile': $!");
+
+##======================================================
+## Profiling
 
 ##-- profiling
 our $tv_started = [gettimeofday] if ($doProfile);
 our $ntoks = 0;
 our $nchrs = 0;
 
-##===================
+##======================================================
 ## Actions
 
 if ($action eq 'list') {
   ##-- action: list
   my @anames = $cli->analyzers;
-  $outfh->print(map { "$_\n" } @anames);
+  $outfh->print("$0: analyzer list for $serverURL\n", map { "$_\n" } @anames);
 }
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
   foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
-    $outfh->print( $fmt->flush->putTokenRaw($tokout)->toString );
+    $ofmt->putTokenRaw($tokout);
   }
+  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
-  $outfh->print( $fmt->flush->putSentenceRaw($s_out)->toString );
+  $ofmt->putSentenceRaw($s_out);
+  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'document') {
   ##-- action: 'document': interpret args as filenames & parse 'em!
   our ($d_in,$d_out,$s_out);
-  $prs->{encoding} = $fmt->{encoding} = $localEncoding;
   foreach $doc_filename (@ARGV) {
-    $d_in = $prs->parseFile($doc_filename)
+    $d_in = $ifmt->parseFile($doc_filename)
       or die("$0: parse failed for input file '$doc_filename': $!");
     $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
-    $s_out = $fmt->flush->putDocumentRaw($d_out)->toString;
-    $outfh->print( $s_out );
+    $ofmt->putDocumentRaw($d_out);
     if ($doProfile) {
       $ntoks += $d_out->nTokens();
       $nchrs += (-s $doc_filename);
     }
   }
+  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'raw') {
   ##-- action: 'generic': do server-side parsing
@@ -161,10 +173,12 @@ elsif ($action eq 'raw') {
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
     $s_in = join('',<DOC>);
-    $s_in = decode($localEncoding, $s_in) if ($localEncoding && $parserClass !~ 'Storable');
+    $s_in = decode($ifmt->{encoding}, $s_in)
+      if ($ifmt->{encoding} && defined($ifmt->new->{encoding}));
     close(DOC);
-    $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, parserClass=>$parserClass, formatClass=>$formatClass});
-    $s_out = encode($localEncoding, $s_out) if ($localEncoding && utf8::is_utf8($s_out) && $formatClass !~ 'Storable');
+    $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, inputClass=>$inputClass, outputClass=>$outputClass});
+    $s_out = encode($localEncoding, $s_out)
+      if ($ofmt->{encoding} && utf8::is_utf8($s_out) && defined($ofmt->new->{encoding}));
     $outfh->print( $s_out );
     if ($doProfile) {
       $nchrs += length($s_in);
@@ -211,21 +225,29 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
 
- Server Selection
+ Server Options
   -serverURL URL                  ##-- set server URL (default: localhost:8000)
+  -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
+  -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
+
+ Analysis Options
   -analyzer NAME                  ##-- set analyzer name (default: 'dta.cab.default')
   -analyze-option OPT=VALUE       ##-- set analysis option (default: none)
-  -server-encoding ENCODING       ##-- override server encoding (default: UTF-8)
-  -local-encoding ENCODING        ##-- override local encoding (default: UTF-8)
-  -format-class CLASS             ##-- select output formatter class (default: Text)
-  -parser-class CLASS             ##-- select input parser class (default: Text)
-
- Analysis Selection:
-  -list                           ##-- query registered analyzers from server
+  -profile , -noprofile           ##-- do/don't report profiling information (default: do)
+  -list                           ##-- just query registered analyzers from server (default)
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents
   -raw                            ##-- ARGUMENTS are filenames, server-side parsing & formatting
+
+ I/O Options
+  -input-class CLASS              ##-- select input parser class (default: Text)
+  -input-option OPT=VALUE         ##-- set input parser option
+  -output-class CLASS             ##-- select output formatter class (default: Text)
+  -output-option OPT=VALUE        ##-- set output formatter option
+  -output-encoding ENCODING       ##-- override output encoding (default: -local-encoding)
+  -output-level LEVEL             ##-- override output formatter level (default: 1)
+  -output-file FILE               ##-- set output file (default: STDOUT)
 
 =cut
 

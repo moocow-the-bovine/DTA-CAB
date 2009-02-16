@@ -2,6 +2,7 @@
 
 our $cab =
   {
+   lts   => { fstFile=>'lts-dta.gfst', labFile=>'lts-dta.lab',  }, #dictFile=>'dta-lts.dict'
    morph => { fstFile=>'mootm-tagh.gfst', labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict' },
    rw    => { fstFile=>'dta-rw+tagh.gfsc', labFile=>'dta-rw.lab', max_paths=>1, max_weight=>10 },
    ##--

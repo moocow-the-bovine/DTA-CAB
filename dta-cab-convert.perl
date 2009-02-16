@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
+use DTA::CAB::Format;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
@@ -28,11 +29,11 @@ our ($help,$man,$version,$verbose);
 #  binmode(STDERR,':utf8');
 #}
 
-##-- Formatting
-our $formatClass = 'Text';  ##-- default format class
-our $parserClass = 'Text';  ##-- default parser class
-our %parserOpts  = (encoding=>'UTF-8');
-our %formatOpts  = (encoding=>'UTF-8',level=>0);
+##-- Formats
+our $inputClass  = 'Text';  ##-- default format class
+our $outputClass = 'Text';  ##-- default parser class
+our %inputOpts   = (encoding=>'UTF-8');
+our %outputOpts  = (encoding=>undef,level=>0);
 
 our $outfile = '-';
 
@@ -43,15 +44,17 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- I/O+
+	   ##-- I/O: input
+	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
+	   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
+	   'input-option|io|parser-option|po=s'      => \%inputOpts,
+
+	   ##-- I/O: output
 	   'output-file|output|o=s' => \$outfile,
-	   'parser-class|pc=s'    => \$parserClass,
-	   'parser-encoding|pe|input-encoding|ie=s'   => \$parserOpts{encoding},
-	   'parser-option|po=s'   => \%parserOpts,
-	   'format-class|fc=s'    => \$formatClass,
-	   'format-encoding|fe|output-encoding|oe=s'  => \$formatOpts{encoding},
-	   'format-option|fo=s'   => \%formatOpts,
-	   'format-level|fl|l=s'  => \$formatOpts{level},
+	   'output-class|oc|format-class|fc=s'        => \$outputClass,
+	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
+	   'output-option|oo=s'                       => \%outputOpts,
+	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
@@ -73,20 +76,17 @@ if ($version) {
 DTA::CAB::Logger->ensureLog();
 
 ##======================================================
-## Parser, Formatter
+## Input & Output Formats
 
-##-- parser
-$parserClass = 'DTA::CAB::Parser::'.$parserClass if (!UNIVERSAL::isa($parserClass,'DTA::CAB::Parser'));
-our $prs = $parserClass->new(%parserOpts)
-  or die("$0: could not create parser of class $parserClass: $!");
+$ifmt = DTA::CAB::Format->newFormat($inputClass,%inputOpts)
+  or die("$0: could not create input parser of class $inputClass: $!");
 
-##-- formatter
-$formatClass = 'DTA::CAB::Formatter::'.$formatClass if (!UNIVERSAL::isa($formatClass,'DTA::CAB::Formatter'));
-our $fmt = $formatClass->new(%formatOpts)
-  or die("$0: could not create formatter of class $formatClass: $!");
+$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
+$ofmt = DTA::CAB::Format->newFormat($outputClass,%outputOpts)
+  or die("$0: could not create output formatter of class $outputClass: $!");
 
-#DTA::CAB->debug("using parser class ", ref($prs));
-#DTA::CAB->debug("using format class ", ref($fmt));
+#DTA::CAB->debug("using input format class ", ref($prs));
+#DTA::CAB->debug("using output format class ", ref($fmt));
 
 ##======================================================
 ## Churn data
@@ -94,11 +94,11 @@ our $fmt = $formatClass->new(%formatOpts)
 our ($file,$doc);
 push(@ARGV,'-') if (!@ARGV);
 foreach $file (@ARGV) {
-  $doc = $prs->parseFile($file)
+  $doc = $ifmt->parseFile($file)
     or die("$0: parse failed for input file '$file': $!");
-  $fmt->putDocumentRaw($doc);
+  $ofmt->putDocumentRaw($doc);
 }
-$fmt->toFile($outfile);
+$ofmt->toFile($outfile);
 
 
 __END__
@@ -118,14 +118,15 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
   -version                        ##-- show version & exit
 
  I/O Options
+  -input-class CLASS              ##-- select input parser class (default: Text)
+  -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)
+  -input-option OPT=VALUE         ##-- set input parser option
+
+  -output-class CLASS             ##-- select output formatter class (default: Text)
+  -output-encoding ENCODING       ##-- override output encoding (default: input encoding)
+  -output-option OPT=VALUE        ##-- set output formatter option
+  -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
-  -parser-class CLASS             ##-- select input parser class (default: Text)
-  -format-class CLASS             ##-- select output formatter class (default: Text)
-  -parser-encoding ENCODING       ##-- override input encoding (default: UTF-8)
-  -format-encoding ENCODING       ##-- override output encoding (default: UTF-8)
-  -parser-option OPT=VALUE        ##-- set parser option
-  -format-option OPT=VALUE        ##-- set formatter option
-  -format-level LEVEL             ##-- override formatter level (default: 1)
 
 =cut
 

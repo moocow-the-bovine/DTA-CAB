@@ -6,11 +6,7 @@ use DTA::CAB;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Server;
 
-use DTA::CAB::Formatter;
-use DTA::CAB::Formatter::Text;
-use DTA::CAB::Formatter::Perl;
-use DTA::CAB::Formatter::XmlPerl;
-use DTA::CAB::Formatter::XmlNative;
+use DTA::CAB::Format::All;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
@@ -334,48 +330,48 @@ sub test_parsers {
   our ($fmt,$prs,$str0,$doc1,$pstr);
 
   ##-- test: fmt + parse: Freeze
-  $fmt = DTA::CAB::Formatter::Freeze->new;
-  $prs = DTA::CAB::Parser::Freeze->new;
+  $fmt = DTA::CAB::Format::Freeze->new;
+  $prs = DTA::CAB::Format::Freeze->new;
   $str0 = $fmt->putDocument($doc0)->toString;
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;
   print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: Text
-  $fmt = DTA::CAB::Formatter::Text->new;
-  $prs = DTA::CAB::Parser::Text->new;
+  $fmt = DTA::CAB::Format::Text->new;
+  $prs = DTA::CAB::Format::Text->new;
   $str0 = $fmt->putDocument($doc0)->toString;
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;
   print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: TT
-  $fmt = DTA::CAB::Formatter::TT->new;
-  $prs = DTA::CAB::Parser::TT->new;
+  $fmt = DTA::CAB::Format::TT->new;
+  $prs = DTA::CAB::Format::TT->new;
   $str0 = $fmt->putDocument($doc0)->toString;
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;
   print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: XmlNative
-  $fmt = DTA::CAB::Formatter::XmlNative->new;
-  $prs = DTA::CAB::Parser::XmlNative->new;
+  $fmt = DTA::CAB::Format::XmlNative->new;
+  $prs = DTA::CAB::Format::XmlNative->new;
   $str0 = $fmt->putDocument($doc0)->toString(1);
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;
   print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: XmlPerl
-  $fmt = DTA::CAB::Formatter::XmlPerl->new;
-  $prs = DTA::CAB::Parser::XmlPerl->new;
+  $fmt = DTA::CAB::Format::XmlPerl->new;
+  $prs = DTA::CAB::Format::XmlPerl->new;
   $str0 = $fmt->putDocument($doc0)->toString(1);
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;
   print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: XmlRpc
-  $fmt = DTA::CAB::Formatter::XmlRpc->new;
-  $prs = DTA::CAB::Parser::XmlRpc->new;
+  $fmt = DTA::CAB::Format::XmlRpc->new;
+  $prs = DTA::CAB::Format::XmlRpc->new;
   $str0 = $fmt->putDocument($doc0)->toString(1);
   $doc1 = $prs->parseString($str0);
   $pstr = $pfmt->flush->putDocument($doc1)->toString;

@@ -23,7 +23,7 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 ## Constructors etc.
 ##==============================================================================
 
-## $prs = CLASS_OR_OBJ->new(%args)
+## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure:
 ##    (
 ##     ##-- input
@@ -40,7 +40,7 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 ##    )
 sub new {
   my $that = shift;
-  my $prs = bless({
+  my $fmt = bless({
 		   ##-- input
 		   rxprs => RPC::XML::Parser->new(),
 		   #rxdata => undef,
@@ -58,7 +58,7 @@ sub new {
 		   ##-- user args
 		   @_
 		  }, ref($that)||$that);
-  return $prs;
+  return $fmt;
 }
 
 ##==============================================================================
@@ -80,61 +80,61 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Parsing: Input selection
 
-## $prs = $prs->close()
+## $fmt = $fmt->close()
 ##  + close current input source, if any
 sub close {
   delete($_[0]{rxdata});
   return $_[0];
 }
 
-## $prs = $prs->fromString($string)
+## $fmt = $fmt->fromString($string)
 sub fromString {
-  my $prs = shift;
-  $prs->close;
-  $prs->{rxdata} = $prs->{rxprs}->parse($_[0]);
-  return $prs->checkData();
+  my $fmt = shift;
+  $fmt->close;
+  $fmt->{rxdata} = $fmt->{rxprs}->parse($_[0]);
+  return $fmt->checkData();
 }
 
-## $prs = $prs->fromFile($filename_or_handle)
-##  + default calls $prs->fromFh()
+## $fmt = $fmt->fromFile($filename_or_handle)
+sub fromFile { return $_[0]->DTA::CAB::Format::fromFile(@_[1..$#_]); }
 
-## $prs = $prs->fromFh($handle)
+## $fmt = $fmt->fromFh($handle)
 sub fromFh {
-  my ($prs,$fh) = @_;
-  $prs->close;
-  $prs->{rxdata} = $prs->{rxprs}->parse($fh);
-  return $prs->checkData();
+  my ($fmt,$fh) = @_;
+  $fmt->close;
+  $fmt->{rxdata} = $fmt->{rxprs}->parse($fh);
+  return $fmt->checkData();
 }
 
-## $prs_or_undef = $prs->checkData()
+## $fmt_or_undef = $fmt->checkData()
 ##  + check for valid parse
 sub checkData {
-  my $prs = shift;
-  if (!defined($prs->{rxdata})) {
-    $prs->logwarn("checkData(): no parse data {rxdata} defined");
+  my $fmt = shift;
+  if (!defined($fmt->{rxdata})) {
+    $fmt->logwarn("checkData(): no parse data {rxdata} defined");
     return undef;
   }
-  elsif (!ref($prs->{rxdata})) {
-    $prs->logwarn("checkData(): parse error: $prs->{rxdata}");
+  elsif (!ref($fmt->{rxdata})) {
+    $fmt->logwarn("checkData(): parse error: $fmt->{rxdata}");
     return undef;
   }
-  elsif ($prs->{rxdata}->is_fault) {
-    $prs->logwarn("checkData(): fault: (".$prs->{rxdata}->code.") ".$prs->{rxdata}->string);
+  elsif ($fmt->{rxdata}->is_fault) {
+    $fmt->logwarn("checkData(): fault: (".$fmt->{rxdata}->code.") ".$fmt->{rxdata}->string);
     return undef;
   }
-  return $prs;
+  return $fmt;
 }
 
 ##--------------------------------------------------------------
 ## Methods: Parsing: Generic API
 
 sub parseDocument {
-  my $prs = shift;
-  if (!defined($prs->{rxdata})) {
-    $prs->logconfess("parseDocument(): no source data {rxdata} defined!");
+  my $fmt = shift;
+  if (!defined($fmt->{rxdata})) {
+    $fmt->logconfess("parseDocument(): no source data {rxdata} defined!");
     return undef;
   }
-  my $doc = $prs->forceDocument($prs->{rxdata}->value);
+  my $doc = $fmt->forceDocument($fmt->{rxdata}->value);
 
   ##-- force doc refs, deep
   if (UNIVERSAL::isa($doc,'DTA::CAB::Document')) {
