@@ -50,7 +50,7 @@ sub parseDocument {
   }
   my $root = $prs->{xdoc}->documentElement;
   my $sents = [];
-  my ($s,$tok, $snod,$toknod, $subnod,$subname, $manod,$rwnod, $rw);
+  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $rw);
   foreach $snod (@{ $root->findnodes('//body//s') }) {
     push(@$sents, bless({tokens=>($s=[])},'DTA::CAB::Sentence'));
     foreach $toknod (@{ $snod->findnodes('.//w') }) {
@@ -65,6 +65,13 @@ sub parseDocument {
 			  $subnod->getAttribute('isLatin1'),
 			  $subnod->getAttribute('isLatinExt'),
 			 ];
+	}
+	elsif ($subname eq 'lts') {
+	  ##-- token: field: 'lts'
+	  $tok->{lts} = [];
+	  foreach $panod (grep {$_->nodeName eq 'pho'} $subnod->childNodes) {
+	    push(@{$tok->{lts}}, [$panod->getAttribute('s'), $panod->getAttribute('w')]);
+	  }
 	}
 	elsif ($subname eq 'morph') {
 	  ##-- token: field: 'morph'

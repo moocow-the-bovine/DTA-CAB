@@ -35,7 +35,12 @@ our @ISA = qw(DTA::CAB::Formatter);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- Dumper
+			   ##-- I/O common
+			   encoding => undef,
+
+			   ##-- Input
+
+			   ##-- Output
 			   dumper => Data::Dumper->new([])->Purity(1)->Terse(0),
 			   level  => 0,
 			   outbuf => '',

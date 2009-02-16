@@ -110,6 +110,11 @@ sub parseTextString {
       $tok->{morph} = [] if (!$tok->{morph});
       push(@{$tok->{morph}}, [$1,$2]);
     }
+    elsif ($line =~ m/^\tlts: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: lts analysis
+      $tok->{lts} = [] if (!$tok->{lts});
+      push(@{$tok->{lts}}, [$1,$2]);
+    }
     elsif ($line =~ m/^\tmorph.safe: (\d)$/) {
       ##-- token: field: morph-safety check
       $tok->{msafe} = $1;

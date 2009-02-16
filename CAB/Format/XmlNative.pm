@@ -1,14 +1,14 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Formatter::XmlNative.pm
+## File: DTA::CAB::Format::XmlNative.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: Datum formatter: XML (near perl-code)
+## Description: Datum parser|formatter: XML (native)
 
-package DTA::CAB::Formatter::XmlNative;
-use DTA::CAB::Formatter;
-use DTA::CAB::Formatter::XmlCommon;
+package DTA::CAB::Format::XmlNative;
+use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Datum ':all';
 use XML::LibXML;
+use IO::File;
 use Carp;
 use strict;
 
@@ -16,21 +16,28 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
+our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $fmt = CLASS_OR_OBJ->new(%args)
-##  + object structure: assumed HASH
-##    (
-##     ##---- NEW in Formatter::XmlNative
-##     ##-- XML element names
+##  + object structure: HASH ref
+##    {
+##     ##-- input
+##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
+##     xprs => $xprs,                          ##-- XML::LibXML parser
+##
+##     ##-- output
+##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     level => $level,                        ##-- output formatting level (default=0)
+##
+##     ##-- common: XML element & attribute names
 ##     documentElt      => $eltName,    ##-- default: 'doc'
 ##     sentenceElt      => $eltName,    ##-- default: 's'
 ##     tokenElt         => $eltName,    ##-- default: 'w'
-##     tokenTextATtr    => $attr,       ##-- default: 'text'
+##     tokenTextAttr    => $attr,       ##-- default: 'text'
 ##     ##
 ##     ltsElt           => $eltName,    ##-- default: 'lts'
 ##     ltsAnalysisElt   => $eltName,    ##-- default: 'pho'
@@ -46,25 +53,19 @@ our @ISA = qw(DTA::CAB::Formatter::XmlCommon);
 ##     rwAnalysisElt    => $eltName,    ##-- default: 'rw'
 ##     rwStringAttr     => $attr,       ##-- default: 's'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
-##
-##     ##---- INHERITED from DTA::CAB::Formatter::XmlCommon
-##     xdoc => $doc,                   ##-- XML::LibXML::Document (buffered)
-##
-##     ##---- INHERITED from DTA::CAB::Formatter
-##     encoding  => $encoding,         ##-- output encoding
-##     level     => $formatLevel,      ##-- format level
-##    )
+##    }
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- output buffer
-			   #xdoc => undef,
+			   ##-- input
+			   xprs => XML::LibXML->new,
+			   xdoc => undef,
 
-			   ##-- Formatter
+			   ##-- output
 			   encoding => 'UTF-8',
 			   level => 0,
 
-			   ##-- XML element names
+			   ##-- common: XML names
 			   documentElt => 'doc',
 			   sentenceElt => 's',
 			   tokenElt => 'w',
@@ -91,8 +92,96 @@ sub new {
 }
 
 ##==============================================================================
-## Methods: Formatting: Local: Nodes
+## Methods: Persistence
+##  + see Format::XmlCommon
 ##==============================================================================
+
+##=============================================================================
+## Methods: Parsing
+##==============================================================================
+
+
+##--------------------------------------------------------------
+## Methods: Parsing: Input selection
+##  + see Format::XmlCommon
+
+##--------------------------------------------------------------
+## Methods: Parsing: Generic API
+
+## $doc = $fmt->parseDocument()
+##  + parses buffered XML::LibXML::Document
+sub parseDocument {
+  my $fmt = shift;
+  if (!defined($fmt->{xdoc})) {
+    $fmt->logconfess("parseDocument(): no source document {xdoc} defined!");
+    return undef;
+  }
+  my $root = $fmt->{xdoc}->documentElement;
+  my $sents = [];
+  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $rw);
+  foreach $snod (@{ $root->findnodes("//body//$fmt->{sentenceElt}") }) {
+    push(@$sents, bless({tokens=>($s=[])},'DTA::CAB::Sentence'));
+    foreach $toknod (@{ $snod->findnodes(".//$fmt->{tokenElt}") }) {
+      push(@$s,$tok=bless({},'DTA::CAB::Token'));
+      $tok->{text} = $toknod->getAttribute($fmt->{tokenTextAttr});
+      foreach $subnod (grep {UNIVERSAL::isa($_,'XML::LibXML::Element')} $toknod->childNodes) {
+	$subname = $subnod->nodeName;
+	if ($subname eq 'xlit') {
+	  ##-- token: field: 'xlit'
+	  $tok->{xlit} = [
+			  $subnod->getAttribute('latin1Text'),
+			  $subnod->getAttribute('isLatin1'),
+			  $subnod->getAttribute('isLatinExt'),
+			 ];
+	}
+	elsif ($subname eq $fmt->{ltsElt}) {
+	  ##-- token: field: 'lts'
+	  $tok->{lts} = [];
+	  foreach $panod (grep {$_->nodeName eq $fmt->{ltsAnalysisElt}} $subnod->childNodes) {
+	    push(@{$tok->{lts}}, [$panod->getAttribute($fmt->{ltsStringAttr}), $panod->getAttribute($fmt->{ltsWeightAttr})]);
+	  }
+	}
+	elsif ($subname eq $fmt->{morphElt}) {
+	  ##-- token: field: 'morph'
+	  $tok->{morph} = [];
+	  foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $subnod->childNodes) {
+	    push(@{$tok->{morph}}, [$manod->getAttribute($fmt->{morphStringAttr}), $manod->getAttribute($fmt->{morphWeightAttr})]);
+	  }
+	}
+	elsif ($subname eq 'msafe') {
+	  ##-- token: field: 'msafe'
+	  $tok->{msafe} = $subnod->getAttribute('safe');
+	}
+	elsif ($subname eq $fmt->{rwElt}) {
+	  ##-- token: field: 'rewrite'
+	  $tok->{rw} = [];
+	  foreach $rwnod (grep {$_->nodeName eq $fmt->{rwAnalysisElt}} $subnod->childNodes) {
+	    push(@{$tok->{rw}}, $rw=[$rwnod->getAttribute($fmt->{rwStringAttr}), $rwnod->getAttribute($fmt->{rwWeightAttr}), []]);
+	    foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $rwnod->childNodes) {
+	      push(@{$rw->[2]}, [$manod->getAttribute($fmt->{morphStringAttr}), $manod->getAttribute($fmt->{morphWeightAttr})]);
+	    }
+	  }
+	}
+	else {
+	  ##-- token: field: ???
+	  $fmt->debug("parseDocument(): unknown token child node '$subname' -- skipping");
+	  ; ##-- just ignore
+	}
+      }
+    }
+  }
+
+  ##-- construct & return document
+  return bless({body=>$sents}, 'DTA::CAB::Document');
+}
+
+
+##=============================================================================
+## Methods: Formatting
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Formatting: Local: Nodes
 
 ## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
@@ -202,9 +291,8 @@ sub documentNode {
   return $docnod;
 }
 
-##==============================================================================
+##--------------------------------------------------------------
 ## Methods: Formatting: Local: Utils
-##==============================================================================
 
 ## $xmldoc = $fmt->xmlDocument()
 ##  + create or return output buffer $fmt->{xdoc}
@@ -232,9 +320,8 @@ sub xmlSentenceNode {
   return $body->addNewChild(undef,$fmt->{sentenceElt});
 }
 
-##==============================================================================
+##--------------------------------------------------------------
 ## Methods: Formatting: API
-##==============================================================================
 
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
@@ -263,6 +350,7 @@ sub putDocument {
   }
   return $fmt;
 }
+
 
 1; ##-- be happy
 

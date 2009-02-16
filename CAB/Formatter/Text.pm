@@ -91,6 +91,9 @@ sub putToken {
 	   ."\n")
     if (defined($tok->{xlit}));
 
+  ##-- LTS ('lts')
+  $out .= join('', map { "\tlts: $_->[0] <$_->[1]>\n" } @{$tok->{lts}}) if ($tok->{lts});
+
   ##-- Morph ('morph')
   $out .= join('', map { "\tmorph: $_->[0] <$_->[1]>\n" } @{$tok->{morph}}) if ($tok->{morph});
 

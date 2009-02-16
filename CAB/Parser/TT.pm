@@ -107,6 +107,11 @@ sub parseTTString {
 	  ##-- token: field: xlit
 	  $tok->{xlit} = [$3,$1,$2];
 	}
+	elsif ($field =~ m/\+lts: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+	  ##-- token: field: lts analysis
+	  $tok->{lts} = [] if (!$tok->{lts});
+	  push(@{$tok->{lts}}, [$1,$2]);
+	}
 	elsif ($field =~ m/\+morph: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: morph analysis
 	  $tok->{morph} = [] if (!$tok->{morph});
