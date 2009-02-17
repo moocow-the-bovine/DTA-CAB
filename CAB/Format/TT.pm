@@ -120,12 +120,12 @@ sub parseTTString {
 	  ##-- token: field: xlit
 	  $tok->{xlit} = [$3,$1,$2];
 	}
-	elsif ($field =~ m/\+lts: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+	elsif ($field =~ m/\+lts: (.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: lts analysis
 	  $tok->{lts} = [] if (!$tok->{lts});
 	  push(@{$tok->{lts}}, [$1,$2]);
 	}
-	elsif ($field =~ m/\+morph: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+	elsif ($field =~ m/\+morph: (.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: morph analysis
 	  $tok->{morph} = [] if (!$tok->{morph});
 	  push(@{$tok->{morph}}, [$1,$2]);
@@ -134,12 +134,12 @@ sub parseTTString {
 	  ##-- token: field: morph-safety check
 	  $tok->{msafe} = $1;
 	}
-	elsif ($field =~ m/^\+rw: (.*\S) <([\d\.\+\-eE]+)>$/) {
+	elsif ($field =~ m/^\+rw: (.*) <([\d\.\+\-eE]+)>$/) {
 	  ##-- token: field: rewrite target
 	  $tok->{rw} = [] if (!$tok->{rw});
 	  push(@{$tok->{rw}}, $rw=[$1,$2]);
 	}
-	elsif ($field =~ m/^\+morph\/rw: (.*\S) <([\d\.\+\-eE]+)>$/) {
+	elsif ($field =~ m/^\+morph\/rw: (.*) <([\d\.\+\-eE]+)>$/) {
 	  ##-- token: morph analysis of rewrite target
 	  $tok->{rw} = [ [] ] if (!$tok->{rw});
 	  $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);

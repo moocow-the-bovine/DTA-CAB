@@ -30,6 +30,7 @@ our @ISA = qw(DTA::CAB::Client);
 ##     ##-- server
 ##     serverURL => $url,             ##-- default: localhost:8000
 ##     serverEncoding => $encoding,   ##-- default: UTF-8
+##     timeout => $timeout,           ##-- timeout in seconds, default: 300 (5 minutes)
 ##
 ##     ##-- underlying RPC::XML client
 ##     xcli => $xcli,                 ##-- RPC::XML::Client object
@@ -40,6 +41,7 @@ sub new {
 			   ##-- server
 			   serverURL      => 'http://localhost:8000',
 			   serverEncoding => 'UTF-8', ##-- default server encoding
+			   timeout => 300,
 			   ##
 			   ##-- RPC::XML stuff
 			   xcli => undef,
@@ -70,6 +72,8 @@ sub connect {
     or $cli->logdie("could not create underlying RPC::XML::Client: $!");
   $cli->{xcli}->message_file_thresh(0)
     if (defined($cli->{xargs}{message_file_thresh}) && !$cli->{xargs}{message_file_thresh});
+  $cli->{xcli}->useragent->timeout($cli->{timeout})
+    if (defined($cli->{timeout}));
   return 1;
 }
 
@@ -114,7 +118,7 @@ sub request {
 
   ##-- cleanup & return
   $RPC::XML::ENCODING = $enc_tmp;
-  return $doRecode ? DTA::CAB::Utils::deep_decode($cli->{serverEncoding},$rsp) : $rsp;
+  return $doRecode ? DTA::CAB::Utils::deep_decode($cli->{serverEncoding}, $rsp) : $rsp;
 }
 
 
@@ -171,7 +175,7 @@ sub analyzeData {
 					   RPC::XML::base64->new($data),
 					   (defined($opts) ? $opts : qw())
 					  ),
-			  #0 ##-- no deep recode
+			  0 ##-- no deep encode/decode
 			 );
   return ref($rsp) && !$rsp->is_fault ? $rsp->value : $rsp;
 }

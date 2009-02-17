@@ -118,12 +118,12 @@ sub parseTextString {
       ##-- token: xlit
       $tok->{xlit} = [$3,$1,$2];
     }
-    elsif ($line =~ m/^\tmorph: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+    elsif ($line =~ m/^\tmorph: (.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: morph analysis
       $tok->{morph} = [] if (!$tok->{morph});
       push(@{$tok->{morph}}, [$1,$2]);
     }
-    elsif ($line =~ m/^\tlts: (.*\S) \<([\d\.\+\-eE]+)\>$/) {
+    elsif ($line =~ m/^\tlts: (.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: lts analysis
       $tok->{lts} = [] if (!$tok->{lts});
       push(@{$tok->{lts}}, [$1,$2]);
@@ -132,12 +132,12 @@ sub parseTextString {
       ##-- token: field: morph-safety check
       $tok->{msafe} = $1;
     }
-    elsif ($line =~ m/^\trw: (.*\S) <([\d\.\+\-eE]+)>$/) {
+    elsif ($line =~ m/^\trw: (.*) <([\d\.\+\-eE]+)>$/) {
       ##-- token: field: rewrite target
       $tok->{rw} = [] if (!$tok->{rw});
       push(@{$tok->{rw}}, $rw=[$1,$2]);
     }
-    elsif ($line =~ m/^\t\tmorph\/rw: (.*\S) <([\d\.\+\-eE]+)>$/) {
+    elsif ($line =~ m/^\t\tmorph\/rw: (.*) <([\d\.\+\-eE]+)>$/) {
       ##-- token: field: morph analysis of rewrite target
       $tok->{rw} = [ [] ] if (!$tok->{rw});
       $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);

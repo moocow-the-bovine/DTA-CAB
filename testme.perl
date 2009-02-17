@@ -5,8 +5,7 @@ use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Server;
-
-use DTA::CAB::Format::All;
+use DTA::CAB::Format::Builtin;
 
 use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
@@ -15,9 +14,9 @@ use Storable;
 #use utf8;
 
 BEGIN {
-  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-  binmode(STDOUT,':utf8');
-  binmode(STDERR,':utf8');
+#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
+#  binmode(STDOUT,':utf8');
+#  binmode(STDERR,':utf8');
   DTA::CAB::Logger->logInit();
 }
 
@@ -379,7 +378,46 @@ sub test_parsers {
 
   print "test_parsers(): done\n";
 }
-test_parsers();
+#test_parsers();
+
+##==============================================================================
+## test: xml-rpc / storable
+
+sub xrpc_checktxt {
+  my ($label,$txt,$xtxt) = @_;
+  print
+    (
+     #"\n",
+     "${label}: xtxt: $xtxt\n",
+     "${label}: utf8: ", (utf8::is_utf8($xtxt) ? "ok" : "NOT ok"), "\n",
+     "${label}:   eq: ", ($txt eq $xtxt ? "ok" : "NOT ok"), "\n",
+    );
+}
+
+sub test_xmlrpc_storable {
+  $RPC::XML::ENCODING = "UTF-8";   ##-- hack
+  my $txt = decode('latin1','Onö');
+  my $tok = toToken($txt);
+  my $snt = toSentence([$tok]);
+  my $doc = toDocument([$snt]);
+  xrpc_checktxt("init", $txt, $doc->{body}[0]{tokens}[0]{text});
+
+  my $fmt = DTA::CAB::Format::Storable->new();
+  my $rxprs = RPC::XML::Parser->new();
+
+  my $s0   = $fmt->flush->putDocument($doc)->toString;
+  my $doc0 = $fmt->parseString($s0);
+  xrpc_checktxt("doc0", $txt, $doc0->{body}[0]{tokens}[0]{text});
+
+  my $b64_0 = RPC::XML::base64->new($s0);
+  my $b64_1 = $rxprs->parse($b64_0->as_string);
+  my $s1    = $b64_1->value;
+  my $doc1  = $fmt->parseString($s1);
+  xrpc_checktxt("doc1", $txt, $doc1->{body}[0]{tokens}[0]{text});
+
+  print STDERR "test_xmlrpc_storable: done.\n";
+}
+test_xmlrpc_storable();
 
 
 ##==============================================================================

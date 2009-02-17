@@ -227,6 +227,7 @@ sub getAnalyzeDocumentSub {
 ## @procedures = $anl->xmlRpcMethods()
 ##  + returns a list of procedures suitable for passing to RPC::XML::Server::add_proc()
 ##  + default method defines an 'analyze' method
+##  + additional keys recognized in procedure specs: see DTA::CAB::Server::XmlRpc::prepareLocal()
 sub xmlRpcMethods {
   my $anl   = shift;
   return (
@@ -238,6 +239,7 @@ sub xmlRpcMethods {
 			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
 	   help      => 'Analyze a single token (text string or struct with "text" string field)',
+	   wrapEncoding => 1,
 	  },
 	  {
 	   ##-- Analyze: Sentence
@@ -247,6 +249,7 @@ sub xmlRpcMethods {
 			  'struct struct', 'struct struct struct', ## struct ?opts -> struct
 			],
 	   help      => 'Analyze a single sentence (array of tokens or struct with "tokens" array field)',
+	   wrapEncoding => 1,
 	  },
 	  {
 	   ##-- Analyze: Document
@@ -257,6 +260,7 @@ sub xmlRpcMethods {
 			 'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
 	   help      => 'Analyze a whole document (array of sentences or struct with "body" array field)',
+	   wrapEncoding => 1,
 	  },
 	  ##-- Analyze: raw data
 	  {
@@ -270,6 +274,7 @@ sub xmlRpcMethods {
 			 'base64 base64 struct', ## base64 ?opts -> base64
 			],
 	   help => 'Analyze raw document data with server-side parsing & formatting',
+	   wrapEncoding => 0,
 	  },
 	 );
 }
@@ -280,19 +285,16 @@ sub analyzeDataSub {
   require RPC::XML;
   my $anl = shift;
   my $a_doc = $anl->analyzeDocumentSub;
-  my $class2f = {};
-  my ($opts, $ifmt,$ofmt,$doc,$str);
+  my ($opts, $ifmt,$ofmt,$iopts,$oopts, $doc,$str);
   return sub {
     $opts = $_[1];
     $opts = {} if (!defined($opts));
-    $opts->{inputClass}  = 'Text' if (!defined($opts->{inputClass}));
-    $opts->{outputClass} = $opts->{inputClass} if (!defined($opts->{outputClass}));
+    $opts->{reader} = {} if (!$opts->{reader});
+    $opts->{writer} = {} if (!$opts->{writer});
 
-    ##-- get input & output format classes
-    $ifmt = $class2f->{$opts->{inputClass}}  = DTA::CAB::Format->newFormat($opts->{inputClass})
-      if (!defined($ifmt=$class2f->{$opts->{inputClass}}));
-    $ofmt = $class2f->{$opts->{outputClass}} = DTA::CAB::Format->newFormat($opts->{outputClass})
-      if (!defined($ofmt=$class2f->{$opts->{outputClass}}));
+    ##-- get format reader,writer
+    $ifmt = DTA::CAB::Format->newReader(%{$opts->{reader}});
+    $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %{$opts->{writer}});
 
     $doc = $ifmt->parseString($_[0]);
     #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!

@@ -342,9 +342,10 @@ sub getAnalyzeTokenSub {
   my $adst   = $aut->{analyzeDst};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
+  my $fst_ok = $aut->fstOk();
   my $result = $aut->{result};
-  my $labc = $aut->{labc};
-  my $laba = $aut->{laba};
+  my $labc   = $aut->{labc};
+  my $laba   = $aut->{laba};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
   ##-- ananalysis options
@@ -374,8 +375,8 @@ sub getAnalyzeTokenSub {
       $analyses = $dict->{$uword};
       $isdict   = 1;
     }
-    else {
-      ##-- not in dict: fst lookup
+    elsif ($fst_ok) {
+      ##-- not in dict: fst lookup (if fst is kosher)
 
       ##-- get labels
       if ($opts->{check_symbols}) {
@@ -406,6 +407,10 @@ sub getAnalyzeTokenSub {
 		      $_->{w}]
 		   } @{$result->paths($Gfsm::LSUpper)}
 		  ];
+    } else {
+      ##-- no dictionary entry and no FST: empty analysis list
+      #$analyses = [];
+      $analyses = undef;
     }
 
     ##-- profiling
@@ -418,7 +423,7 @@ sub getAnalyzeTokenSub {
     }
 
     ##-- bless analyses
-    $analyses = bless($analyses,$aclass) if (defined($aclass));
+    $analyses = bless($analyses,$aclass) if (defined($analyses) && defined($aclass));
 
     ##-- set output
     if (defined($opts->{dst})) { ${ $opts->{dst} } = $analyses; }

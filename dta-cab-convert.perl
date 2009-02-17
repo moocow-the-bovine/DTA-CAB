@@ -78,11 +78,11 @@ DTA::CAB::Logger->ensureLog();
 ##======================================================
 ## Input & Output Formats
 
-$ifmt = DTA::CAB::Format->newFormat($inputClass,%inputOpts)
+$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
 $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newFormat($outputClass,%outputOpts)
+$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
 #DTA::CAB->debug("using input format class ", ref($prs));

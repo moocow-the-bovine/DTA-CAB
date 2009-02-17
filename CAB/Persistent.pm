@@ -71,9 +71,15 @@ sub savePerlRef {
 sub loadPerlRef {
   my ($that,$ref) = @_;
   my $obj = ref($that) ? $that : $that->new();
-  $obj = bless(unifyClobber($obj,$_[1]),ref($obj));
+  $obj = bless(unifyClobber($obj,$_[1],undef),ref($obj));
   if (UNIVERSAL::isa($that,'HASH') && UNIVERSAL::isa($obj,'HASH')) {
     %$that = %$obj; ##-- hack in case someone does "$obj->load()" and expects $obj to be destructively altered...
+    return $that;
+  } elsif (UNIVERSAL::isa($that,'ARRAY') && UNIVERSAL::isa($obj,'ARRAY')) {
+    @$that = @$obj; ##-- ... analagous hack for array refs
+    return $that;
+  } elsif (UNIVERSAL::isa($that,'SCALAR') && UNIVERSAL::isa($obj,'SCALAR')) {
+    $$that = $$obj; ##-- ... analagous hack for scalar refs
     return $that;
   }
   return $obj;

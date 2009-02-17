@@ -42,13 +42,24 @@ sub xml_safe_string {
 ## Functions: Deep recoding
 ##==============================================================================
 
-## $decoded = deep_decode($encoding,$thingy,$force)
+## $decoded = deep_decode($encoding,$thingy,%options)
+##  + %options:
+##     force    => $bool,   ##-- decode even if the utf8 flag is set
+##     skipvals => \@vals,  ##-- don't decode (or recurse into)  $val (overrides $force)
+##     skiprefs => \@refs,  ##-- don't decode (or recurse into) $$ref (overrides $force)
+##     skippkgs => \@pkgs,  ##-- don't decode (or recurse into) anything of package $pkg (overrides $force)
 sub deep_decode {
-  my ($enc,$thingy,$force) = @_;
+  my ($enc,$thingy,%opts) = @_;
+  my %skipvals = defined($opts{skipvals}) ? (map {($_=>undef)} @{$opts{skipvals}}) : qw();
+  my %skiprefs = defined($opts{skiprefs}) ? (map {($_=>undef)} @{$opts{skiprefs}}) : qw();
+  my %skippkgs = defined($opts{skippkgs}) ? (map {($_=>undef)} @{$opts{skippkgs}}) : qw();
+  my $force    = $opts{force};
   my @queue = (\$thingy);
   my ($ar);
   while (defined($ar=shift(@queue))) {
-    if (UNIVERSAL::isa($$ar,'ARRAY')) {
+    if (exists($skiprefs{$ar}) || exists($skipvals{$$ar}) || (ref($$ar) && exists($skippkgs{ref($$ar)}))) {
+      next;
+    } elsif (UNIVERSAL::isa($$ar,'ARRAY')) {
       push(@queue, map { \$_ } @{$$ar});
     } elsif (UNIVERSAL::isa($$ar,'HASH')) {
       push(@queue, map { \$_ } values %{$$ar});
@@ -61,13 +72,24 @@ sub deep_decode {
   return $thingy;
 }
 
-## $encoded = deep_encode($encoding,$thingy,$force)
+## $encoded = deep_encode($encoding,$thingy,%opts)
+##  + %opts:
+##     force => $bool,            ##-- encode even if the utf8 flag is NOT set
+##     skipvals => \@vals,        ##-- don't encode (or recurse into)  $val (overrides $force)
+##     skiprefs => \@refs,        ##-- don't encode (or recurse into) $$ref (overrides $force)
+##     skippkgs => \@pkgs,        ##-- don't encode (or recurse into) anything of package $pkg (overrides $force)
 sub deep_encode {
-  my ($enc,$thingy,$force) = @_;
+  my ($enc,$thingy,%opts) = @_;
+  my %skipvals = defined($opts{skipvals}) ? (map {($_=>undef)} @{$opts{skipvals}}) : qw();
+  my %skiprefs = defined($opts{skiprefs}) ? (map {($_=>undef)} @{$opts{skiprefs}}) : qw();
+  my %skippkgs = defined($opts{skippkgs}) ? (map {($_=>undef)} @{$opts{skippkgs}}) : qw();
+  my $force    = $opts{force};
   my @queue = (\$thingy);
   my ($ar);
   while (defined($ar=shift(@queue))) {
-    if (UNIVERSAL::isa($$ar,'ARRAY')) {
+    if (exists($skiprefs{$ar}) || exists($skipvals{$$ar}) || (ref($$ar) && exists($skippkgs{ref($$ar)}))) {
+      next;
+    } elsif (UNIVERSAL::isa($$ar,'ARRAY')) {
       push(@queue, map { \$_ } @{$$ar});
     } elsif (UNIVERSAL::isa($$ar,'HASH')) {
       push(@queue, map { \$_ } values %{$$ar});
@@ -80,10 +102,10 @@ sub deep_encode {
   return $thingy;
 }
 
-## $recoded = deep_recode($from,$to,$thingy);
+## $recoded = deep_recode($from,$to,$thingy, %opts);
 sub deep_recode {
-  my ($from,$to,$thingy) = @_;
-  return deep_encode($to,deep_decode($from,$thingy));
+  my ($from,$to,$thingy,%opts) = @_;
+  return deep_encode($to,deep_decode($from,$thingy,%opts),%opts);
 }
 
 ## $upgraded = deep_utf8_upgrade($thingy)

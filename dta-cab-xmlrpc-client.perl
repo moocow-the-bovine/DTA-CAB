@@ -11,6 +11,11 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
 ##==============================================================================
+## DEBUG
+##==============================================================================
+do "storable-debug.pl" if (-f "storable-debug.pl");
+
+##==============================================================================
 ## Constants & Globals
 ##==============================================================================
 
@@ -27,6 +32,7 @@ our ($help,$man,$version,$verbose);
 our $serverURL  = 'http://localhost:8000';
 our $serverEncoding = 'UTF-8';
 our $localEncoding  = 'UTF-8';
+our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
 
 ##-- Analysis & Action Options
 our $analyzer = 'dta.cab.default';
@@ -53,6 +59,7 @@ GetOptions(##-- General
 	   'server-url|server|url|s|u=s' => \$serverURL,
 	   'local-encoding|le=s'  => \$localEncoding,
 	   'server-encoding|se=s' => \$serverEncoding,
+	   'timeout|T=i' => \$timeout,
 
 	   ##-- Analysis Options
 	   'analyzer|a=s' => \$analyzer,
@@ -97,6 +104,7 @@ DTA::CAB::Logger->ensureLog();
 our $cli = DTA::CAB::Client::XmlRpc->new(
 					 serverURL=>$serverURL,
 					 serverEncoding=>$serverEncoding,
+					 timeout=>$timeout,
 					);
 $cli->connect() or die("$0: connect() failed: $!");
 
@@ -105,12 +113,12 @@ $cli->connect() or die("$0: connect() failed: $!");
 ## Input & Output Formats
 
 $inputOpts{encoding} = $localEncoding if (!defined($inputOpts{encoding}) && $localEncoding);
-$ifmt = DTA::CAB::Format->newFormat($inputClass,%inputOpts)
+$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
 $outputOpts{encoding}=$localEncoding if (!defined($outputOpts{encoding}) && $localEncoding);
 $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newFormat($outputClass,%outputOpts)
+$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
 #DTA::CAB->debug("using input format class ", ref($prs));
@@ -123,10 +131,31 @@ our $outfh = IO::File->new(">$outfile")
 ##======================================================
 ## Profiling
 
-##-- profiling
-our $tv_started = [gettimeofday] if ($doProfile);
 our $ntoks = 0;
 our $nchrs = 0;
+
+our @tv_values = qw();
+sub profile_start {
+  return if (scalar(@tv_values) % 2 != 0); ##-- timer already running
+  push(@tv_values,[gettimeofday]);
+}
+sub profile_stop {
+  return if (scalar(@tv_values) % 2 == 0); ##-- timer already stopped
+  push(@tv_values,[gettimeofday]);
+}
+sub profile_elapsed {
+  my ($started,$stopped);
+  my @values = @tv_values;
+  my $elapsed = 0;
+  while (@values) {
+    ($started,$stopped) = splice(@values,0,2);
+    $stopped  = [gettimeofday] if (!defined($stopped));
+    $elapsed += tv_interval($started,$stopped);
+  }
+  return $elapsed;
+}
+
+profile_start() if ($doProfile);
 
 ##======================================================
 ## Actions
@@ -169,19 +198,28 @@ elsif ($action eq 'document') {
 elsif ($action eq 'raw') {
   ##-- action: 'generic': do server-side parsing
   our ($s_in,$s_out);
+  %analyzeOpts = (
+		  %analyzeOpts,
+		  reader => {%inputOpts, class=>$inputClass},
+		  writer => {%outputOpts,class=>$outputClass},
+		 );
 
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
     $s_in = join('',<DOC>);
     $s_in = decode($ifmt->{encoding}, $s_in)
-      if ($ifmt->{encoding} && defined($ifmt->new->{encoding}));
+      if (0 && $ifmt->{encoding} && defined($ifmt->new->{encoding}));
     close(DOC);
     $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, inputClass=>$inputClass, outputClass=>$outputClass});
-    $s_out = encode($localEncoding, $s_out)
-      if ($ofmt->{encoding} && utf8::is_utf8($s_out) && defined($ofmt->new->{encoding}));
+    $s_out = encode($ofmt->{encoding}, $s_out)
+      if (0 && $ofmt->{encoding} && utf8::is_utf8($s_out) && defined($ofmt->new->{encoding}));
     $outfh->print( $s_out );
     if ($doProfile) {
       $nchrs += length($s_in);
+      ##-- count tokens, pausing profile timer
+      profile_stop();
+      $ntoks += $ofmt->parseString($s_out)->nTokens;
+      profile_start();
     }
   }
 }
@@ -200,14 +238,14 @@ sub si_str {
   return sprintf("%.2f", $x);
 }
 if ($doProfile) {
-  my $elapsed = tv_interval($tv_started,[gettimeofday]);
+  profile_stop();
+  my $elapsed = profile_elapsed();
   my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : 0);
   my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : 0);
   print STDERR
     (sprintf("%s: %d tok, %d chr in %.2f sec: %s tok/sec ~ %s chr/sec\n",
 	     $prog, $ntoks,$nchrs, $elapsed, $toksPerSec,$chrsPerSec));
 }
-
 
 __END__
 =pod
@@ -229,6 +267,7 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -serverURL URL                  ##-- set server URL (default: localhost:8000)
   -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
+  -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
 
  Analysis Options
   -analyzer NAME                  ##-- set analyzer name (default: 'dta.cab.default')

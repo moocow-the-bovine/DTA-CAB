@@ -22,6 +22,8 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 
+our $CLASS_DEFAULT = 'DTA::CAB::Format::Text'; ##-- default class
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -67,6 +69,22 @@ sub newFormat {
   $that->logconfess("newFormat(): cannot create unknown format class '$class'")
     if (!UNIVERSAL::isa($class,'DTA::CAB::Format'));
   return $class->new(%opts);
+}
+
+## $fmt = CLASS->newReader(%opts)
+##  + special %opts:
+##     class => $class,   ##-- classname or DTA::CAB::Format suffix
+sub newReader {
+  my ($that,%opts) = @_;
+  return $that->newFormat( ($opts{class}||$CLASS_DEFAULT), %opts );
+}
+
+## $fmt = CLASS->newWriter(%opts)
+##  + special %opts:
+##     class => $class,   ##-- classname or DTA::CAB::Format suffix
+sub newWriter {
+  my ($that,%opts) = @_;
+  return $that->newFormat( ($opts{class}||$CLASS_DEFAULT), %opts );
 }
 
 ##==============================================================================

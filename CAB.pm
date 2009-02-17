@@ -24,7 +24,7 @@ use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 
 use DTA::CAB::Format;
-use DTA::CAB::Format::All;
+use DTA::CAB::Format::Builtin;
 
 use IO::File;
 use Carp;

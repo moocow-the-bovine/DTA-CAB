@@ -48,34 +48,39 @@ sub unifyClone {
   return Storable::dclone($_[0]);
 }
 
-## $xy = unify($x,$y)
-sub unify { return _unify_guts(unifyClone($_[0]),unifyClone($_[1]),\&_unify1_top); }
+## $xy = unify($x,$y, $OUTPUT_TOP)
+sub unify { return _unify_guts(unifyClone($_[0]),unifyClone($_[1]),\&_unify1_top, @_[2..$#_]); }
 
-## $xy = unifyClobber($x,$y)
+## $xy = unifyClobber($x,$y, $OUTPUT_TOP)
 ##  + clobbers old values of $x with new values from $y if unification would produce $TOP
-sub unifyClobber { return _unify_guts(unifyClone($_[0]),unifyClone($_[1]),\&_unify1_clobber); }
+sub unifyClobber { return _unify_guts(unifyClone($_[0]),unifyClone($_[1]),\&_unify1_clobber, @_[2..$#_]); }
 
-## $xy = _unfiy($x,$y)
+## $xy = _unfiy($x,$y, $OUTPUT_TOP)
 ##   + destructively alters $x, adopts literal references from $y where possible
-sub _unify { return _unify_guts($_[0],$_[1],\&_unify1_top); }
+##   + does *NOT* clobber defined values in $x with undef values in $y!
+##     - to clobber defined $x values with undef in $y, set $y values to $TOP and pass $OUTPUT_TOP=undef
+sub _unify { return _unify_guts($_[0],$_[1],\&_unify1_top, @_[2..$#_]); }
 
 ## $xy = _unfiyClobber($x,$y)
 ##   + destructively alters $x, adopts literal references from $y where possible
-sub _unifyClobber { return _unify_guts($_[0],$_[1],\&_unify1_clobber); }
+sub _unifyClobber { return _unify_guts($_[0],$_[1],\&_unify1_clobber, @_[2..$#_]); }
 
 ## $x_altered = _unfiy_guts($x,$y,\&unify1_sub)
 ##   + destructively alters $x, adopts literal references from $y where possible
 sub _unify_guts {
-  my ($x0,$y0,$uscalar) = @_;
+  my ($x0,$y0,$uscalar,$topout) = @_;
+  $topout = $TOP if (!exists($_[3]));
   $uscalar = \&_unify1_top if (!defined($uscalar));
   my @eqr = (\$x0,\$y0);
   my ($x,$y);
   while (@eqr) {
     ($x,$y) = splice(@eqr,0,2);
     ##
-    if    (!defined($$x)) { $$x=$$y; }           ##-- Case: (undef,*)
-    elsif (!defined($$y)) { next; }              ##-- Case: (*,undef)
-    elsif (isa($$x,'HASH') && isa($$y,'HASH')) { ##-- Case: (\%x,\%y)
+    if    (defined($$x) && $$x eq $TOP) { $$x=$topout; } ##-- Case: (TOP,$y)   -> $OUTPUT_TOP
+    elsif (defined($$y) && $$y eq $TOP) { $$x=$topout; } ##-- Case: (TOP,$y)   -> $OUTPUT_TOP
+    elsif (!defined($$x)) { $$x=$$y; }               ##-- Case: (undef,$y) -> $y
+    elsif (!defined($$y)) { next; }                  ##-- Case: ($x,undef) -> $x
+    elsif (isa($$x,'HASH') && isa($$y,'HASH')) {     ##-- Case: (\%x,\%y)
       push(@eqr, map { (\$$x->{$_},\$$y->{$_}) } keys(%$$y));
     }
     elsif (isa($$x,'ARRAY') && isa($$x,'ARRAY')) { ##-- Case: (\@x,\@y)
@@ -104,12 +109,13 @@ sub _unify_guts {
   return $x0;
 }
 
-## $xval = _unfiy1_top($x,$y)
+## $xval = _unify1_top($x,$y)
 ##   + called for simple scalars
 sub _unify1_top { return $_[0] eq $_[1] ? $_[0] : $TOP; }
 
 ## $xval = _unfiy1_clobber($x,$y)
 ##   + called for simple scalars
+##   + maps TOP to undef
 sub _unify1_clobber { return $_[1]; }
 
 1;

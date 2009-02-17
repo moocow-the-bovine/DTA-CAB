@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Format::All
+## File: DTA::CAB::Format::Builtin
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: Load known DTA::CAB::Format subclasses
 
-package DTA::CAB::Format::All;
+package DTA::CAB::Format::Builtin;
 use DTA::CAB::Format;
 #use DTA::CAB::Format::Freeze;
 use DTA::CAB::Format::Perl;

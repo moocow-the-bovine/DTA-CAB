@@ -78,12 +78,20 @@ sub new {
 ## Methods: Encoding Hacks
 ##==============================================================================
 
-## \&coderef = $srv->wrapMethodEncoding(\&coderef)
-##  + wraps a code-ref into $srv->{encoding}-safe code
+## \%rpcProcHash = $srv->wrapMethodEncoding(\%rpcProcHash)
+##  + wraps an RPC::XML::procedure spec into $srv->{encoding}-safe code,
+##    only if $rpcProcHash{wrapEncoding} is set to a true value
 sub wrapMethodEncoding {
-  my ($srv,$code) = @_;
-  return $code if (!defined($srv->{encoding}));
-  return sub { DTA::CAB::Utils::deep_encode($srv->{encoding}, $code->(@_)); }
+  my $srv = shift;
+  if (defined($srv->{encoding}) && $_[0]{wrapEncoding}) {
+    my $code_orig = $_[0]{code_orig} = $_[0]{code};
+    $_[0]{code} = sub {
+      my $rv  = $code_orig->(@_);
+      my $rve = DTA::CAB::Utils::deep_encode($srv->{encoding}, $rv);
+      return $rve;
+    };
+  }
+  return $_[0];
 }
 
 
@@ -120,7 +128,7 @@ sub prepareLocal {
 	$_->{name} = 'analyze' if (!defined($_->{name}));
 	$_->{name} = $aname.'.'.$_->{name} if ($aname);
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});
-	$_->{code} = $srv->wrapMethodEncoding($_->{code}); # if ($_->{name} !~ m/analyzeData$/);; ##-- hack encoding?
+	$srv->wrapMethodEncoding($_); ##-- hack encoding?
       }
       $xp = $xsrv->add_proc($_);
       if (!ref($xp)) {
