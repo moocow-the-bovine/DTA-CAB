@@ -8,7 +8,7 @@ my %opts = (
 
 	    ##-- want_analyzers : list of sub-analyzers to delete (default: none): heavier-duty than 'no_fsts'
 	    #no_analyzers => [qw(xlit lts morph msafe rw)],
-	    #no_analyzers => [qw(lts morph msafe rw)],
+	    no_analyzers => [qw(lts morph msafe rw)],
 	    #no_analyzers => [qw(morph msafe rw)],
 	   );
 

@@ -3,7 +3,6 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
-use DTA::CAB::Format::All;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
@@ -29,8 +28,8 @@ our %analyzeOpts = qw();
 our $doProfile = 1;
 
 ##-- I/O Options
-our $inputClass  = 'Text';  ##-- default format class
-our $outputClass = 'Text';  ##-- default parser class
+our $inputClass  = undef;  ##-- default parser class
+our $outputClass = undef;  ##-- default format class
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
@@ -86,15 +85,15 @@ our $cab = DTA::CAB->loadPerlFile($rcFile)
 ##======================================================
 ## Input & Output Formats
 
-$ifmt = DTA::CAB::Format->newFormat($inputClass,%inputOpts)
+$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
 $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newFormat($outputClass,%outputOpts)
+$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
-$cab->info("using input format class ", ref($ifmt));
-$cab->info("using output format class ", ref($ofmt));
+DTA::CAB->debug("using input format class ", ref($ifmt));
+DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##======================================================
 ## Prepare

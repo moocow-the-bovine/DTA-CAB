@@ -13,7 +13,7 @@ use Pod::Usage;
 ##==============================================================================
 ## DEBUG
 ##==============================================================================
-do "storable-debug.pl" if (-f "storable-debug.pl");
+#do "storable-debug.pl" if (-f "storable-debug.pl");
 
 ##==============================================================================
 ## Constants & Globals
@@ -41,8 +41,8 @@ our %analyzeOpts = qw();    ##-- currently unused
 our $doProfile = 1;
 
 ##-- I/O Options
-our $inputClass  = 'Text';  ##-- default format class
-our $outputClass = 'Text';  ##-- default parser class
+our $inputClass  = undef;  ##-- default parser class
+our $outputClass = undef;  ##-- default format class
 our %inputOpts   = (encoding=>undef);
 our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
@@ -113,16 +113,16 @@ $cli->connect() or die("$0: connect() failed: $!");
 ## Input & Output Formats
 
 $inputOpts{encoding} = $localEncoding if (!defined($inputOpts{encoding}) && $localEncoding);
-$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,%inputOpts)
+$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,($action =~ m(raw|doc) ? (file=>$ARGV[0]) : qw()),%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
 $outputOpts{encoding}=$localEncoding if (!defined($outputOpts{encoding}) && $localEncoding);
 $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,%outputOpts)
+$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,($action !~ m(list) ? (file=>$outfile) : qw()),%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
-#DTA::CAB->debug("using input format class ", ref($prs));
-#DTA::CAB->debug("using output format class ", ref($fmt));
+DTA::CAB->debug("using input format class ", ref($ifmt));
+DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##-- output file
 our $outfh = IO::File->new(">$outfile")

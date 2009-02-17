@@ -30,8 +30,8 @@ our ($help,$man,$version,$verbose);
 #}
 
 ##-- Formats
-our $inputClass  = 'Text';  ##-- default format class
-our $outputClass = 'Text';  ##-- default parser class
+our $inputClass  = undef;  ##-- default input format class
+our $outputClass = undef;  ##-- default output format class
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
 
@@ -78,15 +78,15 @@ DTA::CAB::Logger->ensureLog();
 ##======================================================
 ## Input & Output Formats
 
-$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,%inputOpts)
+$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
 $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,%outputOpts)
+$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
-#DTA::CAB->debug("using input format class ", ref($prs));
-#DTA::CAB->debug("using output format class ", ref($fmt));
+DTA::CAB->debug("using input format class ", ref($ifmt));
+DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##======================================================
 ## Churn data

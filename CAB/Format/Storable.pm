@@ -20,6 +20,10 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Format);
 
+BEGIN {
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:sto|bin)/);
+}
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================

@@ -22,7 +22,11 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 
-our $CLASS_DEFAULT = 'DTA::CAB::Format::Text'; ##-- default class
+our $CLASS_DEFAULT = 'DTA::CAB::Format::TT'; ##-- default class for newFormat()
+
+## @classreg
+## + registered classes: see $CLASS->registerFormat()
+our @classreg = qw();
 
 ##==============================================================================
 ## Constructors etc.
@@ -61,7 +65,8 @@ sub new {
   return $fmt;
 }
 
-## $fmt = CLASS->newFormat($class_or_suffix, %opts)
+## $fmt = CLASS->newFormat($class_or_class_suffix, %opts)
+##  + allows additional opt 'filename'
 sub newFormat {
   my ($that,$class,%opts) = @_;
   $class = "DTA::CAB::Format::${class}"
@@ -73,18 +78,70 @@ sub newFormat {
 
 ## $fmt = CLASS->newReader(%opts)
 ##  + special %opts:
-##     class => $class,   ##-- classname or DTA::CAB::Format suffix
+##     class => $class,    ##-- classname or DTA::CAB::Format:: suffix
+##     file  => $filename, ##-- attempt to guess format from filename
 sub newReader {
   my ($that,%opts) = @_;
-  return $that->newFormat( ($opts{class}||$CLASS_DEFAULT), %opts );
+  my $class = $opts{file} && !$opts{class} ? $that->fileReaderClass($opts{file}) : $opts{class};
+  delete($opts{file});
+  return $that->newFormat( ($class||$CLASS_DEFAULT), %opts );
 }
 
 ## $fmt = CLASS->newWriter(%opts)
 ##  + special %opts:
-##     class => $class,   ##-- classname or DTA::CAB::Format suffix
+##     class => $class,    ##-- classname or DTA::CAB::Format suffix
+##     file  => $filename, ##-- attempt to guess format from filename
 sub newWriter {
   my ($that,%opts) = @_;
-  return $that->newFormat( ($opts{class}||$CLASS_DEFAULT), %opts );
+  my $class = $opts{file} && !$opts{class} ? $that->fileWriterClass($opts{file}) : $opts{class};
+  delete($opts{file});
+  return $that->newFormat( ($class||$CLASS_DEFAULT), %opts );
+}
+
+##==============================================================================
+## Methods: Child Class registration
+##==============================================================================
+
+## \%registered = $CLASS_OR_OBJ->registerFormat(%opts)
+##  + %opts:
+##      name          => $basename,      ##-- basename for the class
+##      readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
+##      writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
+##      filenameRegex => $regex,
+sub registerFormat {
+  my ($that,%opts) = @_;
+  $opts{name} = (ref($that)||$that) if (!defined($opts{name}));
+  $opts{readerClass} = $opts{name} if (!defined($opts{readerClass}));
+  $opts{writerClass} = $opts{name} if (!defined($opts{writerClass}));
+  my $reg = {%opts};
+  @classreg = grep { $_->{name} ne $opts{name} } @classreg; ##-- un-register any old class by this name
+  unshift(@classreg, $reg);
+  return $reg;
+}
+
+## \%registered_or_undef = $CLASS_OR_OBJ->guessFilenameFormat($filename)
+sub guessFilenameFormat {
+  my ($that,$filename) = @_;
+   foreach (@classreg) {
+    return $_ if (defined($_->{filenameRegex}) && $filename =~ $_->{filenameRegex});
+  }
+  return undef;
+}
+
+## $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename)
+##  + attempts to guess reader class name from $filename
+sub fileReaderClass {
+  my ($that,$filename) = @_;
+  my $reg = $that->guessFilenameFormat($filename);
+  return defined($reg) ? $reg->{readerClass} : undef;
+}
+
+## $readerClass_or_undef = $CLASS_OR_OBJ->fileWriterClass($filename)
+##  + attempts to guess writer class name from $filename
+sub fileWriterClass {
+  my ($that,$filename) = @_;
+  my $reg = $that->guessFilenameFormat($filename);
+  return defined($reg) ? $reg->{writerClass} : undef;
 }
 
 ##==============================================================================
