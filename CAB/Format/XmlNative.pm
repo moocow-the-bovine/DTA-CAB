@@ -19,7 +19,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml)|xml)$/);
 }
 
 ##==============================================================================
@@ -161,8 +161,13 @@ sub parseDocument {
 	  $tok->{rw} = [];
 	  foreach $rwnod (grep {$_->nodeName eq $fmt->{rwAnalysisElt}} $subnod->childNodes) {
 	    push(@{$tok->{rw}}, $rw=[$rwnod->getAttribute($fmt->{rwStringAttr}), $rwnod->getAttribute($fmt->{rwWeightAttr}), []]);
+	    ##-- rewrite: morph
 	    foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $rwnod->childNodes) {
 	      push(@{$rw->[2]}, [$manod->getAttribute($fmt->{morphStringAttr}), $manod->getAttribute($fmt->{morphWeightAttr})]);
+	    }
+	    ##-- rewrite: lts
+	    foreach $panod (grep {$_->nodeName eq $fmt->{ltsAnalysisElt}} $rwnod->childNodes) {
+	      push(@{$rw->[3]}, [$panod->getAttribute($fmt->{ltsStringAttr}), $panod->getAttribute($fmt->{ltsWeightAttr})]);
 	    }
 	  }
 	}
@@ -206,13 +211,13 @@ sub tokenNode {
   }
 
   ##-- LTS ('lts')
-  my ($ltsnod,$phonod);
+  my ($ltsnod,$panod);
   if ($tok->{lts}) {
     $nod->addChild( $ltsnod = XML::LibXML::Element->new($fmt->{ltsElt}) );
     foreach (@{$tok->{lts}}) {
-      $ltsnod->addChild( $phonod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
-      $phonod->setAttribute($fmt->{ltsStringAttr},$_->[0]);
-      $phonod->setAttribute($fmt->{ltsWeightAttr},$_->[1]);
+      $ltsnod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
+      $panod->setAttribute($fmt->{ltsStringAttr},$_->[0]);
+      $panod->setAttribute($fmt->{ltsWeightAttr},$_->[1]);
     }
   }
 
@@ -241,12 +246,20 @@ sub tokenNode {
       $rwnod->addChild( $rwanod = XML::LibXML::Element->new($fmt->{rwAnalysisElt}) );
       $rwanod->setAttribute($fmt->{rwStringAttr},$_->[0]);
       $rwanod->setAttribute($fmt->{rwWeightAttr},$_->[1]);
-      ##-- Rewrite: morph
+      ##-- rewrite: morph
       if ($_->[2]) {
 	foreach (@{$_->[2]}) {
 	  $rwanod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
 	  $manod->setAttribute($fmt->{morphStringAttr},$_->[0]);
 	  $manod->setAttribute($fmt->{morphWeightAttr},$_->[1]);
+	}
+      }
+      ##-- rewrite: lts
+      if ($_->[3]) {
+	foreach (@{$_->[3]}) {
+	  $rwanod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
+	  $panod->setAttribute($fmt->{ltsStringAttr},$_->[0]);
+	  $panod->setAttribute($fmt->{ltsWeightAttr},$_->[1]);
 	}
       }
     }

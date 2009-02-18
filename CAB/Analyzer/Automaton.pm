@@ -34,6 +34,11 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     labFile => $filename,    ##-- default: none
 ##     dictFile=> $filename,    ##-- default: none
 ##
+##     ##-- Analysis Output
+##     analysisClass  => $class, ##-- default: none (ARRAY)
+##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
+##     analyzeDstWord => $key,   ##-- output key for input text after applying 'tolower' etc.
+##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
 ##     check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
@@ -97,9 +102,10 @@ sub new {
 			      nknowna => 0,
 			      #ncachea  => 0,
 
-			      ##-- analysis selection
+			      ##-- analysis output
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
+			      #analyzeDstWord => undef, ##-- don't save analysis src after 'tolower' etc.
 
 			      ##-- user args
 			      @_
@@ -333,6 +339,8 @@ sub loadPerlRef {
 ##    - each \@analysisI is an array:
 ##      \@analysisI = [ $analysisUpperString, $analysisWeight ]
 ##  + if $anl->analysisClass() returned defined, $out is blessed into it
+##  + sets output ${ $opts{dstw} } = $outw = $opts{src}; ##-- after applying 'tolower' etc.
+##    - $opts{dstw} defaults to \$tok->{ $anl->{analyzeDstWord} } if $anl->{analyzeDstWord} is defined, otherwise ignored
 ##  + implicitly loads analysis data (automaton and labels)
 sub getAnalyzeTokenSub {
   my $aut = shift;
@@ -340,6 +348,7 @@ sub getAnalyzeTokenSub {
   ##-- setup common variables
   my $aclass = $aut->{analysisClass};
   my $adst   = $aut->{analyzeDst};
+  my $adstw  = $aut->{analyzeDstWord};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
@@ -370,7 +379,7 @@ sub getAnalyzeTokenSub {
     elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
 
-    ##-- check for word in dict
+    ##-- check for (normalized) word in dict
     if ($dict && exists($dict->{$uword})) {
       $analyses = $dict->{$uword};
       $isdict   = 1;
@@ -425,7 +434,15 @@ sub getAnalyzeTokenSub {
     ##-- bless analyses
     $analyses = bless($analyses,$aclass) if (defined($analyses) && defined($aclass));
 
-    ##-- set output
+    ##-- set token properties: analyzed word
+    if    (exists($opts->{dstw})) {
+      ${ $opts->{dstw} } = $uword if (defined($opts->{dstw}));
+    }
+    elsif (defined($adstw)) {
+      $tok->{$adstw} = $uword;
+    }
+
+    ##-- set token properties: analyses
     if (defined($opts->{dst})) { ${ $opts->{dst} } = $analyses; }
     else { $tok->{$adst} = $analyses; }
 

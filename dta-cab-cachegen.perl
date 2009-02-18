@@ -21,18 +21,12 @@ our $VERSION = 0.01;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-#BEGIN {
-#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-#  binmode(STDIN, ':utf8');
-#  binmode(STDOUT,':utf8');
-#  binmode(STDERR,':utf8');
-#}
-
 ##-- I/O
 our $rcFile          = undef;
 our $inputEncoding   = 'UTF-8';
 our $outputEncoding  = 'UTF-8';
 
+our $ltsDictFile = undef;
 our $morphDictFile = undef;
 our $rwDictFile = undef;
 
@@ -47,13 +41,17 @@ GetOptions(##-- General
 	   'configuration|c=s'    => \$rcFile,
 	   'input-encoding|ie=s'  => \$inputEncoding,
 	   'output-encoding|oe=s' => \$outputEncoding,
+	   'lts-cache|lts-dict|lc|ld|l=s'        => \$ltsDictFile,
 	   'morph-cache|morph-dict|md|mc|m=s'    => \$morphDictFile,
-	   'rw-cache|rw-dict|rc|rd|r=s'           => \$rwDictFile,
+	   'rw-cache|rw-dict|rc|rd|r=s'          => \$rwDictFile,
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
-pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
+pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'})
+  if (!defined($rcFile));
+pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file selected!'})
+  if (!grep {defined($_)} ($ltsDictFile,$morphDictFile,$rwDictFile));
 
 if ($version) {
   print STDERR
@@ -73,6 +71,24 @@ DTA::CAB::Logger->ensureLog();
 ##-- analyzer
 our $cab = DTA::CAB->loadPerlFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
+
+##-- delete unneccessary analyzers
+our %aopts = (do_msafe=>0, do_rw_morph=>0, do_rw_lts=>0); ##-- analysis options
+if (!defined($ltsDictFile)) {
+  delete($cab->{lts});
+  $aopts{do_lts} = 0;
+}
+
+if (!defined($morphDictFile)) {
+  delete($cab->{morph});
+  $aopts{do_morph} = 0;
+}
+
+if (!defined($rwDictFile)) {
+  delete($cab->{rw});
+  $aopts{do_rw} = 0;
+}
+
 our $a_tok = $cab->analyzeTokenSub();
 
 ##===================
@@ -86,11 +102,23 @@ while (defined($line=<>)) {
   $line = decode($inputEncoding,$line);
   ($text,$rest) = split(/\t/,$line);
   $tok = bless({text=>$text,(defined($rest) ? (rest=>$rest) : qw())},'DTA::CAB::Token');
-  push(@toks, $a_tok->($tok)); ##-- analyze
+  push(@toks, $a_tok->($tok),\%aopts); ##-- analyze
 }
 
 ##===================
-## Generate dictionary files
+## Generate dictionary file(s)
+
+if (defined($ltsDictFile)) {
+  $cab->trace("generating LTS cache '$ltsDictFile'");
+  my %lts = map {($_->{ltsText} => $_)} grep {defined($_->{ltsText}) && defined($_->{lts})} @toks;
+  open(DICT,">$ltsDictFile")
+    or die("$0: open failed for LTS cache '$ltsDictFile': $!");
+  my ($txt,$tok);
+  while (($txt,$tok)=each(%lts)) {
+    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->[0] <$_->[1]>"} @{$tok->{lts}})."\n");
+  }
+  close(DICT);
+}
 
 if (defined($morphDictFile)) {
   $cab->trace("generating morph cache '$morphDictFile'");
@@ -127,12 +155,15 @@ dta-cab-cachegen.perl - Cache generator for DTA::CAB server
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
 
- I/O Options
-  -config RCFILE                  ##-- load analyzer config file RCFILE
-  -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)
+ Analysis Options
+  -config          RCFILE         ##-- load analyzer config file RCFILE (required)
+  -input-encoding  ENCODING       ##-- override input encoding (default: UTF-8)
   -output-encoding ENCODING       ##-- override output encoding (default: UTF-8)
-  -morph-dict CACHEFILE           ##-- generate morph cache CACHEFILE
-  -rw-dict    CACHEFILE           ##-- generate rewrite cahce CACHEFILE
+
+ Cache Selection Options
+  -lts-dict   DICT_FILE           ##-- generate LTS cache file DICT_FILE
+  -morph-dict DICT_FILE           ##-- generate morph cache file DICT_FILE
+  -rw-dict    DICT_FILE           ##-- generate rewrite cache file DICT_FILE
 
 =cut
 

@@ -132,6 +132,10 @@ sub parseTextString {
       $tok->{lts} = [] if (!$tok->{lts});
       push(@{$tok->{lts}}, [$1,$2]);
     }
+    elsif ($line =~ m/^\tlts\/text: (.*)$/) {
+      ##-- token: field: lts input text (normalized)
+      $tok->{ltsText} = $1;
+    }
     elsif ($line =~ m/^\tmorph.safe: (\d)$/) {
       ##-- token: field: morph-safety check
       $tok->{msafe} = $1;
@@ -141,12 +145,19 @@ sub parseTextString {
       $tok->{rw} = [] if (!$tok->{rw});
       push(@{$tok->{rw}}, $rw=[$1,$2]);
     }
-    elsif ($line =~ m/^\t\tmorph\/rw: (.*) <([\d\.\+\-eE]+)>$/) {
+    elsif ($line =~ m/^\t\t(?:rw\/morph|morph\/rw): (.*) <([\d\.\+\-eE]+)>$/) {
       ##-- token: field: morph analysis of rewrite target
       $tok->{rw} = [ [] ] if (!$tok->{rw});
       $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
       $rw->[2]   = [] if (!$rw->[2]);
       push(@{$rw->[2]}, [$1,$2]);
+    }
+    elsif ($line =~ m/^\t\t(?:rw\/lts|lts\/rw): (.*) <([\d\.\+\-eE]+)>$/) {
+      ##-- token: field: LTS analysis of rewrite target
+      $tok->{rw} = [ [] ] if (!$tok->{rw});
+      $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
+      $rw->[3]   = [] if (!$rw->[3]);
+      push(@{$rw->[3]}, [$1,$2]);
     }
     else {
       ##-- unknown
@@ -210,14 +221,11 @@ sub putToken {
   my $out = $tok->{text}."\n";
 
   ##-- Transliterator ('xlit')
-  $out .= ("\txlit:"
-	   ." isLatin1=".$tok->{xlit}[1]
-	   ." isLatinExt=".$tok->{xlit}[2]
-	   ." latin1Text=".$tok->{xlit}[0]
-	   ."\n")
+  $out .= "\txlit: isLatin1=$tok->{xlit}[1] isLatinExt=$tok->{xlit}[2] latin1Text=$tok->{xlit}[0]\n"
     if (defined($tok->{xlit}));
 
   ##-- LTS ('lts')
+  $out .= "\tlts/text: $tok->{ltsText}\n" if (defined($tok->{ltsText}));
   $out .= join('', map { "\tlts: $_->[0] <$_->[1]>\n" } @{$tok->{lts}}) if ($tok->{lts});
 
   ##-- Morph ('morph')
@@ -230,7 +238,9 @@ sub putToken {
   $out .= join('',
 	       map {
 		 ("\trw: $_->[0] <$_->[1]>\n",
-		  ($_->[2] ? map { "\t\tmorph/rw: $_->[0] <$_->[1]>\n" } @{$_->[2]} : qw()))
+		  ($_->[3] ? map { "\t\trw/lts: $_->[0] <$_->[1]>\n" } @{$_->[3]} : qw()),
+		  ($_->[2] ? map { "\t\trw/morph: $_->[0] <$_->[1]>\n" } @{$_->[2]} : qw()),
+		 )
 	       } @{$tok->{rw}})
     if ($tok->{rw});
 

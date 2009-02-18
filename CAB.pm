@@ -120,7 +120,8 @@ sub savePerlRef {
 ##     do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
 ##     do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
 ##     do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
-##     do_morph_rw => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
+##     do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
+##     do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
 ##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
@@ -162,17 +163,28 @@ sub getAnalyzeTokenSub {
     ##-- analyze: rewrite (if morphological analysis is "unsafe")
     if ($a_rw && !$tok->{msafe} && (!defined($opts->{do_rw}) || $opts->{do_rw})) {
       $a_rw->($tok, $opts);
-      if ($a_morph && (!defined($opts->{do_morph_rw}) || $opts->{do_morph_rw})) {
-	##-- analyze: rewrite: sub-morphology
+      ##
+      ##-- analyze: rewrite: sub-morphology
+      if ($a_morph && (!defined($opts->{do_rw_morph}) || $opts->{do_rw_morph})) {
 	foreach (@{ $tok->{rw} }) {
 	  $opts->{src} = $_->[0];
 	  $opts->{dst} = \$_->[2];
 	  $a_morph->($tok, $opts);
 	}
       }
+      ##
+      ##-- analyze: rewrite: sub-LTS
+      if ($a_lts && (!defined($opts->{do_rw_lts}) || $opts->{do_rw_lts})) {
+	foreach (@{ $tok->{rw} }) {
+	  $opts->{src}  = $_->[0];
+	  $opts->{dst}  = \$_->[3];
+	  $opts->{dstw} = undef;
+	  $a_lts->($tok, $opts);
+	}
+      }
     }
 
-    delete(@$opts{qw(src dst)}); ##-- hack
+    delete(@$opts{qw(src dst dstw)}); ##-- hack
     return $tok;
   };
 }

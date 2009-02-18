@@ -14,15 +14,17 @@ use strict;
 our @ISA = qw(DTA::CAB::Analyzer::Automaton::Gfsm);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
+##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
-			      ##-- defaults
-			      #analysisClass => 'DTA::CAB::Analyzer::LTS::Analysis',
+			      ##-- overrides
+			      tolower => 1,
 
 			      ##-- analysis selection
-			      analyzeDst => 'lts',
+			      #analysisClass => 'DTA::CAB::Analyzer::LTS::Analysis',
+			      analyzeDst     => 'lts',
+			      analyzeDstWord => 'ltsText',
 
 			      ##-- user args
 			      @_
