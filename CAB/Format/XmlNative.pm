@@ -45,17 +45,20 @@ BEGIN {
 ##     ##
 ##     ltsElt           => $eltName,    ##-- default: 'lts'
 ##     ltsAnalysisElt   => $eltName,    ##-- default: 'pho'
-##     ltsStringAttr    => $attr,       ##-- default: 's'
+##     ltsLoAttr        => $attr,       ##-- default: 'lo'
+##     ltsHiAttr        => $attr,       ##-- default: 'hi'
 ##     ltsWeightAttr    => $attr,       ##-- default: 'w'
 ##     ##
 ##     morphElt         => $eltName,    ##-- default: 'morph'
 ##     morphAnalysisElt => $eltName,    ##-- default: 'ma'
-##     morphStringAttr  => $attr,       ##-- default: 's'
+##     morphLoAttr      => $attr,       ##-- default: 'lo'
+##     morphHiAttr      => $attr,       ##-- default: 'hi'
 ##     morphWeightAttr  => $attr,       ##-- default: 'w'
 ##     ##
 ##     rwElt            => $eltName,    ##-- default: 'rewrite'
 ##     rwAnalysisElt    => $eltName,    ##-- default: 'rw'
-##     rwStringAttr     => $attr,       ##-- default: 's'
+##     rwLoAttr         => $attr,       ##-- default: 'lo'
+##     rwHiAttr         => $attr,       ##-- default: 'hi'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
 ##    }
 sub new {
@@ -77,18 +80,21 @@ sub new {
 			   ##
 			   ltsElt           => 'lts',
 			   ltsAnalysisElt   => 'pho',
-			   ltsStringAttr    => 's',
+			   ltsLoAttr        => 'lo',
+			   ltsHiAttr        => 'hi',
 			   ltsWeightAttr    => 'w',
 			   ##
 			   morphElt => 'morph',
 			   morphAnalysisElt => 'ma',
-			   morphStringAttr  => 's',
+			   morphLoAttr      => 'lo',
+			   morphHiAttr      => 'hi',
 			   morphWeightAttr  => 'w',
 			   ##
 			   rwElt => 'rewrite',
 			   rwAnalysisElt => 'rw',
-			   rwStringAttr => 's',
-			   rwWeightAttr => 'w',
+			   rwLoAttr      => 'lo',
+			   rwHiAttr      => 'hi',
+			   rwWeightAttr  => 'w',
 
 			   ##-- user args
 			   @_
@@ -122,7 +128,7 @@ sub parseDocument {
   }
   my $root = $fmt->{xdoc}->documentElement;
   my $sents = [];
-  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $rw);
+  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $rw, $fsma);
   foreach $snod (@{ $root->findnodes("//body//$fmt->{sentenceElt}") }) {
     push(@$sents, bless({tokens=>($s=[])},'DTA::CAB::Sentence'));
     foreach $toknod (@{ $snod->findnodes(".//$fmt->{tokenElt}") }) {
@@ -142,14 +148,18 @@ sub parseDocument {
 	  ##-- token: field: 'lts'
 	  $tok->{lts} = [];
 	  foreach $panod (grep {$_->nodeName eq $fmt->{ltsAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{lts}}, [$panod->getAttribute($fmt->{ltsStringAttr}), $panod->getAttribute($fmt->{ltsWeightAttr})]);
+	    push(@{$tok->{lts}}, $fsma={});
+	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
+	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
 	  }
 	}
 	elsif ($subname eq $fmt->{morphElt}) {
 	  ##-- token: field: 'morph'
 	  $tok->{morph} = [];
 	  foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{morph}}, [$manod->getAttribute($fmt->{morphStringAttr}), $manod->getAttribute($fmt->{morphWeightAttr})]);
+	    push(@{$tok->{lts}}, $fsma={});
+	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
+	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
 	  }
 	}
 	elsif ($subname eq 'msafe') {
@@ -160,14 +170,23 @@ sub parseDocument {
 	  ##-- token: field: 'rewrite'
 	  $tok->{rw} = [];
 	  foreach $rwnod (grep {$_->nodeName eq $fmt->{rwAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{rw}}, $rw=[$rwnod->getAttribute($fmt->{rwStringAttr}), $rwnod->getAttribute($fmt->{rwWeightAttr}), []]);
-	    ##-- rewrite: morph
-	    foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $rwnod->childNodes) {
-	      push(@{$rw->[2]}, [$manod->getAttribute($fmt->{morphStringAttr}), $manod->getAttribute($fmt->{morphWeightAttr})]);
-	    }
-	    ##-- rewrite: lts
-	    foreach $panod (grep {$_->nodeName eq $fmt->{ltsAnalysisElt}} $rwnod->childNodes) {
-	      push(@{$rw->[3]}, [$panod->getAttribute($fmt->{ltsStringAttr}), $panod->getAttribute($fmt->{ltsWeightAttr})]);
+	    push(@{$tok->{rw}}, $rw=$fsma={});
+	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(rwLoAttr rwHiAttr rwWeightAttr)};
+	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
+	    ##-- rewrite: sub-analyses
+	    foreach ($rwnod->childNodes) {
+	      if ($_->nodeName eq $fmt->{ltsAnalysisElt}) {
+		##-- rewrite: lts
+		push(@{$rw->{lts}}, $fsma={});
+		@$fsma{qw(lo hi w)} = map {$:->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
+		delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
+	      }
+	      elsif ($_->nodeName eq $fmt->{morphAnalysisElt}) {
+		##-- rewrite: morph
+		push(@{$rw->{morph}}, $fsma={});
+		@$fsma{qw(lo hi w)} = map {$_->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
+		delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
+	      }
 	    }
 	  }
 	}
@@ -216,8 +235,9 @@ sub tokenNode {
     $nod->addChild( $ltsnod = XML::LibXML::Element->new($fmt->{ltsElt}) );
     foreach (@{$tok->{lts}}) {
       $ltsnod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
-      $panod->setAttribute($fmt->{ltsStringAttr},$_->[0]);
-      $panod->setAttribute($fmt->{ltsWeightAttr},$_->[1]);
+      $panod->setAttribute($fmt->{ltsLoAttr},$_->{lo}) if ($fmt->{ltsLoAttr} && defined($_->{lo}));
+      $panod->setAttribute($fmt->{ltsHiAttr},$_->{hi});
+      $panod->setAttribute($fmt->{ltsWeightAttr},$_->{w});
     }
   }
 
@@ -227,8 +247,9 @@ sub tokenNode {
     $nod->addChild( $mnod = XML::LibXML::Element->new($fmt->{morphElt}) );
     foreach (@{$tok->{morph}}) {
       $mnod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
-      $manod->setAttribute($fmt->{morphStringAttr},$_->[0]);
-      $manod->setAttribute($fmt->{morphWeightAttr},$_->[1]);
+      $manod->setAttribute($fmt->{morphLoAttr},$_->{lo}) if ($fmt->{morphLoAttr} && defined($_->{lo}));
+      $manod->setAttribute($fmt->{morphHiAttr},$_->{hi});
+      $manod->setAttribute($fmt->{morphWeightAttr},$_->{w});
     }
   }
 
@@ -244,22 +265,25 @@ sub tokenNode {
     $nod->addChild( $rwnod = XML::LibXML::Element->new($fmt->{rwElt}) );
     foreach (@{$tok->{rw}}) {
       $rwnod->addChild( $rwanod = XML::LibXML::Element->new($fmt->{rwAnalysisElt}) );
-      $rwanod->setAttribute($fmt->{rwStringAttr},$_->[0]);
-      $rwanod->setAttribute($fmt->{rwWeightAttr},$_->[1]);
-      ##-- rewrite: morph
-      if ($_->[2]) {
-	foreach (@{$_->[2]}) {
-	  $rwanod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
-	  $manod->setAttribute($fmt->{morphStringAttr},$_->[0]);
-	  $manod->setAttribute($fmt->{morphWeightAttr},$_->[1]);
+      $rwanod->setAttribute($fmt->{rwLoAttr},$_->{lo}) if ($fmt->{rwLoAttr} && defined($_->{lo}));
+      $rwanod->setAttribute($fmt->{rwHiAttr},$_->{hi});
+      $rwanod->setAttribute($fmt->{rwWeightAttr},$_->{w});
+      ##-- rewrite: lts
+      if ($_->{lts}) {
+	foreach (@{$_->{lts}}) {
+	  $rwanod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
+	  $panod->setAttribute($fmt->{ltsLoAttr},$_->{lo}) if ($fmt->{ltsLoAttr} && defined($_->{lo}));
+	  $panod->setAttribute($fmt->{ltsHiAttr},$_->{hi});
+	  $panod->setAttribute($fmt->{ltsWeightAttr},$_->{w});
 	}
       }
-      ##-- rewrite: lts
-      if ($_->[3]) {
-	foreach (@{$_->[3]}) {
-	  $rwanod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
-	  $panod->setAttribute($fmt->{ltsStringAttr},$_->[0]);
-	  $panod->setAttribute($fmt->{ltsWeightAttr},$_->[1]);
+      ##-- rewrite: morph
+      if ($_->{morph}) {
+	foreach (@{$_->{morph}}) {
+	  $rwanod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
+	  $manod->setAttribute($fmt->{morphLoAttr},$_->{lo}) if ($fmt->{morphLoAttr} && defined($_->{lo}));
+	  $manod->setAttribute($fmt->{morphHiAttr},$_->{hi});
+	  $manod->setAttribute($fmt->{morphWeightAttr},$_->{w});
 	}
       }
     }

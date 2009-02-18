@@ -118,46 +118,42 @@ sub parseTextString {
       ##-- new token: text
       push(@$s, $tok=bless({text=>$1},'DTA::CAB::Token'));
     }
-    elsif ($line =~ m/^\txlit: isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
+    elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
       ##-- token: xlit
       $tok->{xlit} = [$3,$1,$2];
     }
-    elsif ($line =~ m/^\tmorph: (.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: morph analysis
-      $tok->{morph} = [] if (!$tok->{morph});
-      push(@{$tok->{morph}}, [$1,$2]);
-    }
-    elsif ($line =~ m/^\tlts: (.*) \<([\d\.\+\-eE]+)\>$/) {
+    elsif ($line =~ m/^\t\+\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: lts analysis
       $tok->{lts} = [] if (!$tok->{lts});
-      push(@{$tok->{lts}}, [$1,$2]);
+      push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
-    elsif ($line =~ m/^\tlts\/text: (.*)$/) {
-      ##-- token: field: lts input text (normalized)
-      $tok->{ltsText} = $1;
+    elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: morph analysis
+      $tok->{morph} = [] if (!$tok->{morph});
+      push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
-    elsif ($line =~ m/^\tmorph.safe: (\d)$/) {
+    elsif ($line =~ m/^\t\+\[morph\/safe] (\d)$/) {
       ##-- token: field: morph-safety check
       $tok->{msafe} = $1;
     }
-    elsif ($line =~ m/^\trw: (.*) <([\d\.\+\-eE]+)>$/) {
+    elsif ($line =~ m/^\t\+\[rw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: rewrite target
       $tok->{rw} = [] if (!$tok->{rw});
-      push(@{$tok->{rw}}, $rw=[$1,$2]);
+      push(@{$tok->{rw}}, $rw={(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
-    elsif ($line =~ m/^\t\t(?:rw\/morph|morph\/rw): (.*) <([\d\.\+\-eE]+)>$/) {
-      ##-- token: field: morph analysis of rewrite target
-      $tok->{rw} = [ [] ] if (!$tok->{rw});
-      $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      $rw->[2]   = [] if (!$rw->[2]);
-      push(@{$rw->[2]}, [$1,$2]);
-    }
-    elsif ($line =~ m/^\t\t(?:rw\/lts|lts\/rw): (.*) <([\d\.\+\-eE]+)>$/) {
+    elsif ($line =~ m/^\t+\+\[rw\/lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: LTS analysis of rewrite target
-      $tok->{rw} = [ [] ] if (!$tok->{rw});
+      $tok->{rw} = [ {} ] if (!$tok->{rw});
       $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      $rw->[3]   = [] if (!$rw->[3]);
-      push(@{$rw->[3]}, [$1,$2]);
+      $rw->{lts} = [] if (!$rw->{lts});
+      push(@{$rw->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+    }
+    elsif ($line =~ m/^\t+\+\[rw\/morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: morph analysis of rewrite target
+      $tok->{rw}   = [ {} ] if (!$tok->{rw});
+      $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
+      $rw->{morph} = [] if (!$rw->{morph});
+      push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
     }
     else {
       ##-- unknown
@@ -221,25 +217,32 @@ sub putToken {
   my $out = $tok->{text}."\n";
 
   ##-- Transliterator ('xlit')
-  $out .= "\txlit: isLatin1=$tok->{xlit}[1] isLatinExt=$tok->{xlit}[2] latin1Text=$tok->{xlit}[0]\n"
+  $out .= "\t+[xlit] isLatin1=$tok->{xlit}[1] isLatinExt=$tok->{xlit}[2] latin1Text=$tok->{xlit}[0]\n"
     if (defined($tok->{xlit}));
 
   ##-- LTS ('lts')
-  $out .= "\tlts/text: $tok->{ltsText}\n" if (defined($tok->{ltsText}));
-  $out .= join('', map { "\tlts: $_->[0] <$_->[1]>\n" } @{$tok->{lts}}) if ($tok->{lts});
+  $out .= join('', map { "\t+[lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{lts}})
+    if ($tok->{lts});
 
   ##-- Morph ('morph')
-  $out .= join('', map { "\tmorph: $_->[0] <$_->[1]>\n" } @{$tok->{morph}}) if ($tok->{morph});
+  $out .= join('', map { "\t+[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{morph}})
+    if ($tok->{morph});
 
   ##-- MorphSafe ('morph.safe')
-  $out .= "\tmorph.safe: ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
+  $out .= "\t+[morph/safe] ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
 
   ##-- Rewrites + analyses
   $out .= join('',
 	       map {
-		 ("\trw: $_->[0] <$_->[1]>\n",
-		  ($_->[3] ? map { "\t\trw/lts: $_->[0] <$_->[1]>\n" } @{$_->[3]} : qw()),
-		  ($_->[2] ? map { "\t\trw/morph: $_->[0] <$_->[1]>\n" } @{$_->[2]} : qw()),
+		 ("\t+[rw] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n",
+		  (##-- rw/lts
+		   $_->{lts}
+		   ? map { "\t+[rw/lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$_->{lts}}
+		   : qw()),
+		  (##-- rw/morph
+		   $_->{morph}
+		   ? map { "\t+[rw/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$_->{morph}}
+		   : qw()),
 		 )
 	       } @{$tok->{rw}})
     if ($tok->{rw});

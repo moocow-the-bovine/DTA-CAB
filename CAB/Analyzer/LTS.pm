@@ -19,12 +19,12 @@ sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- overrides
-			      tolower => 1,
+			      #tolower => 1,
 
 			      ##-- analysis selection
 			      #analysisClass => 'DTA::CAB::Analyzer::LTS::Analysis',
 			      analyzeDst     => 'lts',
-			      analyzeDstWord => 'ltsText',
+			      wantAnalysisLo => 0,
 
 			      ##-- user args
 			      @_

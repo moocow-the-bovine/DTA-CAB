@@ -101,6 +101,22 @@ sub test_rw {
 #test_rw;
 
 ##==============================================================================
+## test: xlit + lts
+
+sub test_lts {
+  our $xlit  = DTA::CAB::Analyzer::Transliterator->new();
+  our $lts = DTA::CAB::Analyzer::LTS->new(fstFile=>'lts-dta.gfst', labFile=>'lts-dta.lab', dictFile=>undef, analyzeDst=>'lts');
+  $lts->ensureLoaded();
+  our $w = 'Hilfe!';
+  our $x = $lts->analyze(toToken($w));
+  #print join("\t", map {"$_->{lo} : $_->{hi} <$_->{w}>"} @{$x->{lts}});
+  #print map { "\t$_->{lo} : $_->{hi} <$_->{w}>\n" } @{$x->{lts}};
+  our $fmt = DTA::CAB::Format::TT->new();
+  print $fmt->putToken($x)->toString, "\n";
+}
+test_lts;
+
+##==============================================================================
 ## test: all: explicit
 
 sub test_all_explicit {

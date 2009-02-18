@@ -167,8 +167,9 @@ sub getAnalyzeTokenSub {
       ##-- analyze: rewrite: sub-morphology
       if ($a_morph && (!defined($opts->{do_rw_morph}) || $opts->{do_rw_morph})) {
 	foreach (@{ $tok->{rw} }) {
-	  $opts->{src} = $_->[0];
-	  $opts->{dst} = \$_->[2];
+	  $opts->{src} = $_->{hi};
+	  $opts->{src} =~ s/\\(.)/$1/g;
+	  $opts->{dst} = \$_->{morph};
 	  $a_morph->($tok, $opts);
 	}
       }
@@ -176,15 +177,14 @@ sub getAnalyzeTokenSub {
       ##-- analyze: rewrite: sub-LTS
       if ($a_lts && (!defined($opts->{do_rw_lts}) || $opts->{do_rw_lts})) {
 	foreach (@{ $tok->{rw} }) {
-	  $opts->{src}  = $_->[0];
-	  $opts->{dst}  = \$_->[3];
-	  $opts->{dstw} = undef;
+	  $opts->{src} = $_->{hi};
+	  $opts->{src} =~ s/\\(.)/$1/g;
+	  $opts->{dst} = \$_->{lts};
 	  $a_lts->($tok, $opts);
 	}
       }
     }
-
-    delete(@$opts{qw(src dst dstw)}); ##-- hack
+    delete(@$opts{qw(src dst)}); ##-- hack
     return $tok;
   };
 }

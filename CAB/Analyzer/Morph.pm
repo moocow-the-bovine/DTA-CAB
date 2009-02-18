@@ -23,6 +23,7 @@ sub new {
 
 			      ##-- analysis selection
 			      analyzeDst => 'morph',
+			      wantAnalysisLo => 0,
 
 			      ##-- user args
 			      @_

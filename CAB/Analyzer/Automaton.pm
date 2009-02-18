@@ -37,7 +37,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     ##-- Analysis Output
 ##     analysisClass  => $class, ##-- default: none (ARRAY)
 ##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
-##     analyzeDstWord => $key,   ##-- output key for input text after applying 'tolower' etc.
+##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
 ##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
@@ -105,7 +105,7 @@ sub new {
 			      ##-- analysis output
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
-			      #analyzeDstWord => undef, ##-- don't save analysis src after 'tolower' etc.
+			      wantAnalysisLo => 1,
 
 			      ##-- user args
 			      @_
@@ -334,13 +334,12 @@ sub loadPerlRef {
 ##  + returned sub is callable as:
 ##     $tok = $coderef->($tok,\%opts)
 ##  + analyses text $opts{src}, defaults to $tok->{text}
-##  + sets output ${ $opts{dst} } = $out = [ \@analysis1, ..., \@analysisN ]
+##  + sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
 ##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
-##    - each \@analysisI is an array:
-##      \@analysisI = [ $analysisUpperString, $analysisWeight ]
+##    - each \%analysisI is a HASH:
+##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
+##    - if $opts->{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
 ##  + if $anl->analysisClass() returned defined, $out is blessed into it
-##  + sets output ${ $opts{dstw} } = $outw = $opts{src}; ##-- after applying 'tolower' etc.
-##    - $opts{dstw} defaults to \$tok->{ $anl->{analyzeDstWord} } if $anl->{analyzeDstWord} is defined, otherwise ignored
 ##  + implicitly loads analysis data (automaton and labels)
 sub getAnalyzeTokenSub {
   my $aut = shift;
@@ -348,7 +347,6 @@ sub getAnalyzeTokenSub {
   ##-- setup common variables
   my $aclass = $aut->{analysisClass};
   my $adst   = $aut->{analyzeDst};
-  my $adstw  = $aut->{analyzeDstWord};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
@@ -358,7 +356,7 @@ sub getAnalyzeTokenSub {
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
   ##-- ananalysis options
-  my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI max_paths max_weight max_ops); #)
+  my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI wantAnalysisLo max_paths max_weight max_ops); #)
   my $doprofile = $aut->{profile};
 
   my ($tok, $w,$opts,$uword,@wlabs, $isdict, $analyses);
@@ -406,16 +404,25 @@ sub getAnalyzeTokenSub {
       #$result->_rmepsilon() if ($opts->{auto_rmeps});
 
       ##-- parse analyses
-      $analyses = [
-		   map {
-		     [join('',
-			   map {
-			     length($laba->[$_]) > 1 ? "[$laba->[$_]]" : $laba->[$_]
-			   } @{$_->{hi}}
-			  ),
-		      $_->{w}]
-		   } @{$result->paths($Gfsm::LSUpper)}
-		  ];
+      $analyses =
+	[
+	 map {
+	   {(
+	     'hi'=>join('',
+			map {
+			  (length($laba->[$_]) > 1
+			   ? "[$laba->[$_]]"
+			   : $laba->[$_]
+			   #: ($laba->[$_] =~ m/[\\\[\]\*\+\^\?\!\|\&\:\@\-]/ ##-- escape AT&T regex operators
+			   #   ? "\\$laba->[$_]"
+			   #   : $laba->[$_])
+			  )
+			} @{$_->{hi}}
+		       ),
+	     'w'=>$_->{w},
+	    )}
+	 } @{$result->paths($Gfsm::LSUpper)}
+	];
     } else {
       ##-- no dictionary entry and no FST: empty analysis list
       #$analyses = [];
@@ -434,12 +441,10 @@ sub getAnalyzeTokenSub {
     ##-- bless analyses
     $analyses = bless($analyses,$aclass) if (defined($analyses) && defined($aclass));
 
-    ##-- set token properties: analyzed word
-    if    (exists($opts->{dstw})) {
-      ${ $opts->{dstw} } = $uword if (defined($opts->{dstw}));
-    }
-    elsif (defined($adstw)) {
-      $tok->{$adstw} = $uword;
+    ##-- add 'lo' key to analyses ?
+    if ($analyses && $opts->{wantAnalysisLo}) {
+      #$uword =~ s/([\\\[\]\*\+\^\?\!\|\&\:\@\-])/\\$1/g; ##-- escape AT&T-style regexes
+      $_->{lo} = $uword foreach (@$analyses);
     }
 
     ##-- set token properties: analyses

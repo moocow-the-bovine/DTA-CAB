@@ -24,6 +24,7 @@ sub new {
 
 			      ##-- analysis selection
 			      analyzeDst => 'rw',
+			      wantAnalysisLo => 0,
 
 			      ##-- user args
 			      @_

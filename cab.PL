@@ -10,7 +10,7 @@ my %opts = (
 	    #no_analyzers => [qw(xlit lts morph msafe rw)],
 	    #no_analyzers => [qw(lts morph msafe rw)],
 	    #no_analyzers => [qw(morph msafe rw)],
-	    no_analyzers => [qw(morph msafe)],
+	    no_analyzers => [qw(morph)],
 	   );
 
 ##-- objects
