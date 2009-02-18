@@ -119,7 +119,7 @@ foreach $file (@ARGV) {
   $ofmt->putDocumentRaw($doc);
   if ($doProfile) {
     $ntoks += $doc->nTokens;
-    $nchrs += (-s $file);
+    $nchrs += (-s $file) if ($file ne '-');
   }
 }
 

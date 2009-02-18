@@ -72,8 +72,14 @@ DTA::CAB::Logger->ensureLog();
 our $cab = DTA::CAB->loadPerlFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
 
+##-- we need analysis 'lo' elements here
+$cab->{lts}{wantAnalysisLo} = 1;
+$cab->{morph}{wantAnalysisLo} = 1;
+$cab->{rw}{wantAnalysisLo} = 1;
+
 ##-- delete unneccessary analyzers
 our %aopts = (do_msafe=>0, do_rw_morph=>0, do_rw_lts=>0); ##-- analysis options
+
 if (!defined($ltsDictFile)) {
   delete($cab->{lts});
   $aopts{do_lts} = 0;
@@ -93,7 +99,7 @@ our $a_tok = $cab->analyzeTokenSub();
 
 ##===================
 ## Read input (1 word per line)
-$cab->trace("parsing input");
+$cab->info("parsing input file(s): ", join(', ', @ARGV));
 our @toks = qw();
 push(@ARGV,'-') if (!@ARGV);
 while (defined($line=<>)) {
@@ -102,38 +108,45 @@ while (defined($line=<>)) {
   $line = decode($inputEncoding,$line);
   ($text,$rest) = split(/\t/,$line);
   $tok = bless({text=>$text,(defined($rest) ? (rest=>$rest) : qw())},'DTA::CAB::Token');
-  push(@toks, $a_tok->($tok),\%aopts); ##-- analyze
+  push(@toks, $a_tok->($tok,\%aopts)); ##-- analyze
 }
 
 ##===================
 ## Generate dictionary file(s)
 
 if (defined($ltsDictFile)) {
-  $cab->trace("generating LTS cache '$ltsDictFile'");
-  my %lts = map {($_->{ltsText} => $_)} grep {defined($_->{ltsText}) && defined($_->{lts})} @toks;
+  $cab->info("generating LTS cache '$ltsDictFile'");
   open(DICT,">$ltsDictFile")
     or die("$0: open failed for LTS cache '$ltsDictFile': $!");
-  my ($txt,$tok);
-  while (($txt,$tok)=each(%lts)) {
-    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->[0] <$_->[1]>"} @{$tok->{lts}})."\n");
+  my ($txt,$pa,%didpho);
+  foreach $tok (grep {defined($_->{lts})} @toks) {
+    foreach $pa (@{$tok->{lts}}) {
+      next if (!defined($pa->{lo}) || $pa->{lo} eq '' || exists($didpho{$pa->{lo}}));
+      print DICT encode($outputEncoding, "$pa->{lo}\t$pa->{hi} <$pa->{w}>\n");
+      $didpho{$pa->{lo}}=undef;
+    }
   }
   close(DICT);
 }
 
 if (defined($morphDictFile)) {
-  $cab->trace("generating morph cache '$morphDictFile'");
-  open(DICT,">$morphDictFile") or die("$0: open failed for morph cache '$morphDictFile': $!");
+  $cab->info("generating morph cache '$morphDictFile'");
+  open(DICT,">$morphDictFile")
+    or die("$0: open failed for morph cache '$morphDictFile': $!");
   foreach $tok (grep {defined($_->{morph})} @toks) {
-    print DICT encode($outputEncoding, join("\t", $tok->{text}, map {"$_->[0] <$_->[1]>"} @{$tok->{morph}})."\n");
+    $txt = @{$tok->{morph}} && $tok->{morph}[0]{lo} ? $tok->{morph}[0]{lo} : $tok->{text};
+    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->{hi} <$_->{w}>"} @{$tok->{morph}})."\n");
   }
   close(DICT);
 }
 
 if (defined($rwDictFile)) {
-  $cab->trace("generating rewrite cache '$rwDictFile'");
-  open(DICT,">$rwDictFile") or die("$0: open failed for rewrite cache '$rwDictFile': $!");
+  $cab->info("generating rewrite cache '$rwDictFile'");
+  open(DICT,">$rwDictFile")
+    or die("$0: open failed for rewrite cache '$rwDictFile': $!");
   foreach $tok (grep {defined($_->{rw})} @toks) {
-    print DICT encode($outputEncoding, join("\t", $tok->{text}, map {"$_->[0] <$_->[1]>"} @{$tok->{rw}})."\n");
+    $txt = @{$tok->{rw}} && $tok->{rw}[0]{lo} ? $tok->{rw}[0]{lo} : $tok->{text};
+    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->{hi} <$_->{w}>"} @{$tok->{rw}})."\n");
   }
   close(DICT);
 }

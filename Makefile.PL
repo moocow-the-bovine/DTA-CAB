@@ -27,7 +27,13 @@ WriteMakefile
 		    'RPC::XML' => 0.59,
 		   },
 
-   #EXE_FILES   => [qw(dta-cab.perl),],
+   EXE_FILES   => [
+		   'dta-cab-analyze.perl',
+		   'dta-cab-cachegen.perl',
+		   'dta-cab-convert.perl',
+		   'dta-cab-xmlrpc-server.perl',
+		   'dta-cab-xmlrpc-client.perl',
+		  ],
   );
 
 
