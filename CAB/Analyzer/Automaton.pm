@@ -287,7 +287,7 @@ sub loadDict {
 	$a = $aw;
 	$w = 0;
       }
-      push(@$entry, [$a,$w]);
+      push(@$entry, {hi=>$a,w=>$w});
     }
   }
   $dictfh->close;
