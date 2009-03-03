@@ -157,14 +157,16 @@ sub xmlDocument {
   return $_[0]{xdoc} = XML::LibXML::Document->new("1.0",$_[0]{encoding});
 }
 
+## $rootnode = $fmt->xmlRootNode()
 ## $rootnode = $fmt->xmlRootNode($nodname)
 ##  + returns root node
+##  + $nodname defaults to 'doc'
 sub xmlRootNode {
   my ($fmt,$name) = @_;
   my $xdoc = $fmt->xmlDocument;
   my $root = $xdoc->documentElement;
   if (!defined($root)) {
-    $xdoc->setDocumentElement($root = XML::LibXML::Element->new($name));
+    $xdoc->setDocumentElement($root = XML::LibXML::Element->new(defined($name) ? $name : 'doc'));
   }
   return $root;
 }

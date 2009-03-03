@@ -43,7 +43,7 @@ GetOptions(##-- General
 
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
-	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
+	   'analysis-option|analyze-option|ao|aO|O=s' => \%analyzeOpts,
 	   'profile|p!' => \$doProfile,
 
 	   ##-- I/O: input

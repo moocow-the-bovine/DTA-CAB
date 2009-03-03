@@ -114,7 +114,7 @@ sub test_lts {
   our $fmt = DTA::CAB::Format::TT->new();
   print $fmt->putToken($x)->toString, "\n";
 }
-test_lts;
+#test_lts;
 
 ##==============================================================================
 ## test: all: explicit
@@ -233,6 +233,19 @@ sub test_formatters {
   print $fmt->formatDocument($doc);
 }
 #test_formatters();
+
+##==============================================================================
+## test: eq class
+use DTA::CAB::Analyzer::EqClass;
+sub test_eqclass {
+  our $eqc = DTA::CAB::Analyzer::EqClass->new( dictFile=>'eqc-test.dict', dictFileNope=>'dta-china.lts.dict' );
+  $eqc->ensureLoaded();
+  #our $x = DTA::CAB::Token->new(text=>'OEDE', lts=>[{hi=>'?2de',w=>0}]);
+  our $x = DTA::CAB::Token->new(text=>'Oede');
+  $eqc->analyzeToken($x);
+  print DTA::CAB::Format::Perl->new(level=>1)->putToken($x)->toString;
+}
+test_eqclass();
 
 ##==============================================================================
 ## test: parsers

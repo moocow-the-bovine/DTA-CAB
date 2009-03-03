@@ -167,7 +167,7 @@ sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 
 ## $bool = $aut->dictOk()
 ##  + should return false iff dict is undefined or "empty"
-sub dictOk { return defined($_[0]{dict}) && %{$_[0]{dict}}; }
+sub dictOk { return defined($_[0]{dict}) && scalar(%{$_[0]{dict}}); }
 
 ##==============================================================================
 ## Methods: I/O
@@ -333,7 +333,7 @@ sub loadPerlRef {
 ## $coderef = $anl->getAnalyzeTokenSub()
 ##  + returned sub is callable as:
 ##     $tok = $coderef->($tok,\%opts)
-##  + analyses text $opts{src}, defaults to $tok->{text}
+##  + analyzes text $opts{src}, defaults to $tok->{text}
 ##  + sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
 ##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
 ##    - each \%analysisI is a HASH:

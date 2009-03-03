@@ -49,6 +49,10 @@ BEGIN {
 ##     ltsHiAttr        => $attr,       ##-- default: 'hi'
 ##     ltsWeightAttr    => $attr,       ##-- default: 'w'
 ##     ##
+##     eqphoElt         => $eltName,    ##-- default: 'eqpho'
+##     eqphoSubElt      => $eltName,    ##-- default: 'w'
+##     eqphoTextAttr    => $attr,       ##-- default: 'text'
+##     ##
 ##     morphElt         => $eltName,    ##-- default: 'morph'
 ##     morphAnalysisElt => $eltName,    ##-- default: 'ma'
 ##     morphLoAttr      => $attr,       ##-- default: 'lo'
@@ -83,6 +87,10 @@ sub new {
 			   ltsLoAttr        => 'lo',
 			   ltsHiAttr        => 'hi',
 			   ltsWeightAttr    => 'w',
+			   ##
+			   eqphoElt         => 'eqpho',
+			   eqphoSubElt      => 'w',
+			   eqphoTextAttr    => 'text',
 			   ##
 			   morphElt => 'morph',
 			   morphAnalysisElt => 'ma',
@@ -128,7 +136,7 @@ sub parseDocument {
   }
   my $root = $fmt->{xdoc}->documentElement;
   my $sents = [];
-  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $rw, $fsma);
+  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $eqanod,$eqatxt, $rw, $fsma);
   foreach $snod (@{ $root->findnodes("//body//$fmt->{sentenceElt}") }) {
     push(@$sents, bless({tokens=>($s=[])},'DTA::CAB::Sentence'));
     foreach $toknod (@{ $snod->findnodes(".//$fmt->{tokenElt}") }) {
@@ -151,6 +159,14 @@ sub parseDocument {
 	    push(@{$tok->{lts}}, $fsma={});
 	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
 	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
+	  }
+	}
+	elsif ($subname eq $fmt->{eqphoElt}) {
+	  ##-- token: field: 'eqpho'
+	  $tok->{eqpho} = [];
+	  foreach $eqanod (grep {$_->nodeName eq $fmt->{eqphoSubElt}} $subnod->childNodes) {
+	    next if (!defined($eqatxt = $eqanod->getAttribute($fmt->{eqphoTextAttr})));
+	    push(@{$tok->{eqpho}}, $eqatxt);
 	  }
 	}
 	elsif ($subname eq $fmt->{morphElt}) {
@@ -238,6 +254,16 @@ sub tokenNode {
       $panod->setAttribute($fmt->{ltsLoAttr},$_->{lo}) if ($fmt->{ltsLoAttr} && defined($_->{lo}));
       $panod->setAttribute($fmt->{ltsHiAttr},$_->{hi});
       $panod->setAttribute($fmt->{ltsWeightAttr},$_->{w});
+    }
+  }
+
+  ##-- EqPho ('eqpho')
+  my ($eqpnod,$eqpanod);
+  if ($tok->{eqpho}) {
+    $nod->addChild( $eqpnod = XML::LibXML::Element->new($fmt->{eqphoElt}) );
+    foreach (@{$tok->{eqpho}}) {
+      $eqpnod->addChild( $eqpanod = XML::LibXML::Element->new($fmt->{eqphoSubElt}) );
+      $eqpanod->setAttribute($fmt->{eqphoTextAttr},$_) if ($fmt->{eqphoTextAttr} && defined($_));
     }
   }
 

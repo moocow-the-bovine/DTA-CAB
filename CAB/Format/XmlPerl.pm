@@ -183,7 +183,7 @@ sub xmlSentenceNode {
   }
   my ($toks) = $snod->findnodes('./ENTRY[@key="tokens"][last()]');
   if (!defined($toks)) {
-    $toks = $body->addNewChild("ENTRY");
+    $toks = $body->addNewChild(undef,"ENTRY");
     $toks->setAttribute("key","tokens");
   }
   my ($ary) = $toks->findnodes("./ARRAY[last()]");
@@ -199,14 +199,14 @@ sub xmlSentenceNode {
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
   my ($fmt,$tok) = @_;
-  $fmt->sentenceNode->addChild( $fmt->tokenNode($tok) );
+  $fmt->xmlSentenceNode->addChild( $fmt->tokenNode($tok) );
   return $fmt;
 }
 
 ## $fmt = $fmt->putSentence($sent)
 sub putSentence {
   my ($fmt,$sent) = @_;
-  $fmt->bodyNode->addChild( $fmt->sentenceNode($sent) );
+  $fmt->xmlBodyNode->addChild( $fmt->sentenceNode($sent) );
   return $fmt;
 }
 

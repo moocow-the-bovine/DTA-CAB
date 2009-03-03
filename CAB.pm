@@ -14,6 +14,7 @@ use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::LTS;
+use DTA::CAB::Analyzer::EqClass;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
@@ -50,6 +51,7 @@ sub new {
 			   ##-- analyzers
 			   xlit  => DTA::CAB::Analyzer::Transliterator->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
+			   eqpho => DTA::CAB::Analyzer::EqClass->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
@@ -74,6 +76,7 @@ sub ensureLoaded {
   my $rc  = 1;
   $rc &&= $cab->{xlit}->ensureLoaded()  if ($cab->{xlit});
   $rc &&= $cab->{lts}->ensureLoaded()   if ($cab->{lts});
+  $rc &&= $cab->{eqpho}->ensureLoaded() if ($cab->{eqpho});
   $rc &&= $cab->{morph}->ensureLoaded() if ($cab->{morph});
   $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
@@ -118,6 +121,7 @@ sub savePerlRef {
 ##     do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
 ##     do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
 ##     do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
+##     do_eqpho => $bool,    ##-- enable/disable phonetic-equivalence-class analysis (default: enabled)
 ##     do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
 ##     do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
 ##     do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
@@ -125,9 +129,10 @@ sub savePerlRef {
 ##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
-  my ($xlit,$lts,$morph,$msafe,$rw) = @$cab{qw(xlit lts morph msafe rw)};
+  my ($xlit,$lts,$eqpho,$morph,$msafe,$rw) = @$cab{qw(xlit lts eqpho morph msafe rw)};
   my $a_xlit  = $xlit->getAnalyzeTokenSub()  if ($xlit);
   my $a_lts   = $lts->getAnalyzeTokenSub()   if ($lts);
+  my $a_eqpho = $eqpho->getAnalyzeTokenSub() if ($eqpho);
   my $a_morph = $morph->getAnalyzeTokenSub() if ($morph);
   my $a_msafe = $msafe->getAnalyzeTokenSub() if ($msafe);
   my $a_rw    = $rw->getAnalyzeTokenSub()    if ($rw);
@@ -148,6 +153,11 @@ sub getAnalyzeTokenSub {
     ##-- analyze: lts
     if ($a_lts && (!defined($opts->{do_lts}) || $opts->{do_lts})) {
       $a_lts->($tok, $opts);
+    }
+
+    ##-- analyze: eqpho
+    if ($a_eqpho && (!defined($opts->{do_eqpho}) || $opts->{do_eqpho})) {
+      $a_eqpho->($tok, $opts);
     }
 
     ##-- analyze: morph
