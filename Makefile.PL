@@ -43,8 +43,8 @@ WriteMakefile
 
 sub MY::postamble {
   # how to format the README file
-  "README.txt : README.POD\n"
-  ."\tpod2text README.POD README.txt\n\n";
+  "README.txt : README.rpod\n"
+  ."\tpod2text README.rpod README.txt\n\n";
 }
 
 sub MY::dist_core {
