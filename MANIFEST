@@ -3,7 +3,7 @@ MANIFEST
 MANIFEST.SKIP
 
 README.txt
-README.POD
+README.rpod
 
 CAB.pm
 CAB/Analyzer.pm

@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Descript: robust morphological analysis: top-level
+## Description: robust morphological analysis: top-level
 
 package DTA::CAB;
 
@@ -212,13 +212,19 @@ __END__
 
 =head1 NAME
 
-DTA::CAB - "Cascaded Analysis Broker" for robust morphological analysis
+DTA::CAB - "Cascaded Analysis Broker" for robust morphological analysis, etc.
 
 =head1 SYNOPSIS
 
- ##-------------------------------------------------------------
- ## Requirements
  use DTA::CAB;
+ 
+ $cab = CLASS_OR_OBJ->new(%args);
+ 
+ ##-- DTA::CAB::Analyzer API
+ $tok = $cab->analyzeToken($tok,\%analyzeOptions)
+ $sent = $cab->analyzeSentence($sent,\%analyzeOptions)
+ $doc = $anl->analyzeDocument($sent,\%analyzeOptions)
+
 
 =cut
 
@@ -234,6 +240,29 @@ error-tolerant heuristic morphological analysis of tokenized text.
 
 =cut
 
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB: Constants
+=pod
+
+=head2 Constants
+
+=over 4
+
+=item Variable: $VERSION
+
+Module version.
+
+=item Variable: @ISA
+
+DTA::CAB inherits from L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>,
+and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> analysis API.
+
+=back
+
+=cut
+
+
 ##==============================================================================
 ## Methods
 ##==============================================================================
@@ -241,7 +270,105 @@ error-tolerant heuristic morphological analysis of tokenized text.
 
 =head1 METHODS
 
-Not yet written.
+=cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB: Constructors etc.
+=pod
+
+=head2 Constructors etc.
+
+=over 4
+
+=item new
+
+ $cab = CLASS_OR_OBJ->new(%args);
+
+%args, %$cab:
+
+ ##-- analyzers
+ xlit  => $xlit,  ##-- DTA::CAB::Analyzer::Transliterator object
+ lts   => $lts,   ##-- DTA::CAB::Analyzer::LTS object
+ eqpho => $eqpho, ##-- DTA::CAB::Analyzer::EqClass object
+ morph => $morph, ##-- DTA::CAB::Analyzer::Morph object
+ msafe => $msafe, ##-- DTA::CAB::Analyzer::MorphSafe object
+ rw    => $rw,    ##-- DTA::CAB::Analyzer::Rewrite object
+
+=back
+
+=cut
+
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB: Methods: I/O
+=pod
+
+=head2 Methods: I/O
+
+=over 4
+
+=item ensureLoaded
+
+ $bool = $cab->ensureLoaded();
+
+Ensures analysis data is loaded from default files.
+Calls ensureLoaded() for all defined sub-analyzers.
+
+=back
+
+=cut
+
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB: Methods: Persistence: Perl
+=pod
+
+=head2 Methods: Persistence: Perl
+
+=over 4
+
+=item savePerlRef
+
+ $saveRef = $cab->savePerlRef();
+
+Return reference to be saved (top-level objects only).
+Recurses 1 level on $cab values to construct $saveRef.
+
+=back
+
+=cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB: Methods: Analysis
+=pod
+
+=head2 Methods: Analysis
+
+=over 4
+
+=item getAnalyzeTokenSub
+
+ $coderef = $anl->getAnalyzeTokenSub();
+
+Implements L<DTA::CAB::Analyzer::getAnalyzeTokenSub()|DTA::CAB::Analyzer/item_getAnalyzeTokenSub>.
+Returned sub is callable as:
+
+ $tok = $coderef->($tok,\%opts)
+
+Performs all defined & selected analyses on $tok.
+Known \%opts:
+
+ do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
+ do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
+ do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
+ do_eqpho => $bool,    ##-- enable/disable phonetic-equivalence-class analysis (default: enabled)
+ do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
+ do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
+ do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
+ do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
+ ...                   ##-- ... and maybe more
+
+=back
 
 =cut
 
@@ -257,7 +384,7 @@ Bryan Jurish E<lt>moocow@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2006-2008 by Bryan Jurish
+Copyright (C) 2008-2009 by Bryan Jurish
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

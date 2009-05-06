@@ -245,8 +245,6 @@ Not yet written.
 
 Perl by Larry Wall.
 
-RPC::XML by Randy J. Ray.
-
 =head1 AUTHOR
 
 Bryan Jurish E<lt>moocow@bbaw.deE<gt>
@@ -263,6 +261,5 @@ at your option, any later version of Perl 5 you may have available.
 
 perl(1),
 DTA::CAB(3pm),
-RPC::XML(3pm).
 
 =cut
