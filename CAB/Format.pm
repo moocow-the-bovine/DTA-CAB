@@ -159,17 +159,18 @@ sub noSaveKeys {
 ##  + default inherited from DTA::CAB::Persistent
 
 ##==============================================================================
-## Methods: Parsing
+## Methods: Input
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Parsing: Input selection
+## Methods: Input: Input selection
 
 ## $fmt = $fmt->close()
 ##  + close current input source, if any
 sub close { return $_[0]; }
 
 ## $fmt = $fmt->fromString($string)
+##  + select input from string $string
 sub fromString {
   my ($fmt,$str) = @_;
   $fmt->close;
@@ -195,7 +196,7 @@ sub fromFh {
 }
 
 ##--------------------------------------------------------------
-## Methods: Parsing: Generic API
+## Methods: Input: Generic API
 
 ## $doc = $fmt->parseDocument()
 ##   + parse document from currently selected input source
@@ -223,7 +224,7 @@ sub parseFh {
 }
 
 ##--------------------------------------------------------------
-## Methods: Parsing: Utilties
+## Methods: Input: Utilties
 
 ## $doc = $fmt->forceDocument($reference)
 ##  + attempt to tweak $reference into a DTA::CAB::Document
@@ -262,11 +263,11 @@ sub forceDocument {
 }
 
 ##==============================================================================
-## Methods: Formatting
+## Methods: Output
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Formatting: accessors
+## Methods: Output: accessors
 
 ## $lvl = $fmt->formatLevel()
 ## $fmt = $fmt->formatLevel($level)
@@ -279,7 +280,7 @@ sub formatLevel {
 }
 
 ##--------------------------------------------------------------
-## Methods: Formatting: output selection
+## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()
 ##  + flush accumulated output
@@ -323,7 +324,7 @@ sub toFh {
 }
 
 ##--------------------------------------------------------------
-## Methods: Formatting: Recommended API
+## Methods: Output: Recommended API
 
 ## $fmt = $fmt->putToken($tok)
 ##  + default implementations of other methods assume output is concatenated onto $fmt->{outbuf}
@@ -345,7 +346,7 @@ sub putSentence {
 }
 
 ##--------------------------------------------------------------
-## Methods: Formatting: Required API
+## Methods: Output: Required API
 
 ## $fmt = $fmt->putDocument($doc)
 ##  + default implementation just iterates $fmt->putSentence()
@@ -408,7 +409,7 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
  @keys = $class_or_obj->noSaveKeys();
  
  ##========================================================================
- ## Methods: Parsing
+ ## Methods: Input
  
  $fmt = $fmt->close();
  $fmt = $fmt->fromString($string);
@@ -421,7 +422,7 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
  $doc = $fmt->forceDocument($reference);
  
  ##========================================================================
- ## Methods: Formatting
+ ## Methods: Output
  
  $lvl = $fmt->formatLevel();
  $fmt = $fmt->flush();
@@ -593,10 +594,10 @@ which is used by some many write subclasses.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format: Methods: Parsing
+## DESCRIPTION: DTA::CAB::Format: Methods: Input
 =pod
 
-=head2 Methods: Parsing
+=head2 Methods: Input
 
 =over 4
 
@@ -665,10 +666,10 @@ a slightly more in-depth version of L<DTA::CAB::Datum::toDocument()|DTA::CAB::Da
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format: Methods: Formatting
+## DESCRIPTION: DTA::CAB::Format: Methods: Output
 =pod
 
-=head2 Methods: Formatting
+=head2 Methods: Output
 
 =over 4
 
@@ -713,10 +714,10 @@ Fefault implementation calls to $fmt-E<gt>formatString($formatLevel).
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format: Methods: Formatting: Recommended API
+## DESCRIPTION: DTA::CAB::Format: Methods: Output: Recommended API
 =pod
 
-=head2 Methods: Formatting: Recommended API
+=head2 Methods: Output: Recommended API
 
 =over 4
 
