@@ -99,7 +99,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Client - abstract class for DTA::CAB server clients (TODO!)
+DTA::CAB::Client - abstract class for DTA::CAB server clients
 
 =cut
 
@@ -114,8 +114,8 @@ DTA::CAB::Client - abstract class for DTA::CAB server clients (TODO!)
  ##========================================================================
  ## Constructors etc.
  
- $obj = CLASS_OR_OBJ->new(%args);
- undef = $obj->initialize();
+ $cli = DTA::CAB::Client->new(%args);
+ undef = $cli->initialize();
  
  ##========================================================================
  ## Methods: Generic Client API: Connections
@@ -141,7 +141,7 @@ DTA::CAB::Client - abstract class for DTA::CAB server clients (TODO!)
 
 =head1 DESCRIPTION
 
-Work in progress!
+Abstract base class / API specification.
 
 =cut
 
@@ -174,15 +174,14 @@ L<DTA::CAB::Logger|/DTA::CAB::Logger>.
 
  $obj = CLASS_OR_OBJ->new(%args);
 
-TODO
-
-%args, %$obj:
-
- (none yet)
+%args, %$obj: none here; see subclass documentation for details.
 
 =item initialize
 
  undef = $obj->initialize();
+
+Called to initialize new objects after new().
+Default implementation does nothing.
 
 =back
 
@@ -201,24 +200,28 @@ TODO
  $bool = $cli->connected;
 
 Returns true iff a connection to the selected server has been established.
+Default implementation always returns false.
 
 =item connect
 
  $bool = $cli->connect();
 
 Establish a connection to the selected sever; returns true on success, false otherwise.
+Default implementation just calls L</connected>().
 
 =item disconnect
 
  $bool = $cli->disconnect();
 
 Close current connection, if any.
+Default implementation just calls L</connected>().
 
 =item analyzers
 
  @analyzers = $cli->analyzers();
 
 Return a list of analyzers known by the server.
+Default implementation just returns an empty list.
 
 =back
 
@@ -239,12 +242,16 @@ Return a list of analyzers known by the server.
 Server-side token analysis.
 $analyzer is the name of an analyzer known to the server.
 
+Default implementation just croak()s.
+
 =item analyzeSentence
 
  $sent = $cli->analyzeSentence($analyzer, $sent, \%opts);
 
 Server-side sentence analysis.
 $analyzer is the name of an analyzer known to the server.
+
+Default implementation just croak()s.
 
 =item analyzeDocument
 
@@ -253,12 +260,16 @@ $analyzer is the name of an analyzer known to the server.
 Server-side document analysis.
 $analyzer is the name of an analyzer known to the server.
 
+Default implementation just croak()s.
+
 =item analyzeData
 
  $doc = $cli->analyzeData($analyzer, $data, \%opts);
 
 Server-side raw data analysis.
 $analyzer is the name of an analyzer known to the server.
+
+Default implementation just croak()s.
 
 =back
 
