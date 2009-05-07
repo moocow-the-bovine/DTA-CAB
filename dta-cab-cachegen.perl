@@ -15,7 +15,7 @@ use Pod::Usage;
 
 ##-- program identity
 our $prog = basename($0);
-our $VERSION = 0.01;
+our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
 our ($help,$man,$version,$verbose);
@@ -37,10 +37,12 @@ GetOptions(##-- General
 	   'man|M'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- I/O
+	   ##-- Analysis Options
 	   'configuration|c=s'    => \$rcFile,
 	   'input-encoding|ie=s'  => \$inputEncoding,
 	   'output-encoding|oe=s' => \$outputEncoding,
+
+	   ##-- Cache Selection Options
 	   'lts-cache|lts-dict|lc|ld|l=s'        => \$ltsDictFile,
 	   'morph-cache|morph-dict|md|mc|m=s'    => \$morphDictFile,
 	   'rw-cache|rw-dict|rc|rd|r=s'          => \$rwDictFile,
@@ -50,7 +52,7 @@ pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'})
   if (!defined($rcFile));
-pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file selected!'})
+pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file(s) selected!'})
   if (!grep {defined($_)} ($ltsDictFile,$morphDictFile,$rwDictFile));
 
 if ($version) {
@@ -153,11 +155,12 @@ if (defined($rwDictFile)) {
 
 
 __END__
+
 =pod
 
 =head1 NAME
 
-dta-cab-cachegen.perl - Cache generator for DTA::CAB server
+dta-cab-cachegen.perl - Cache generator for DTA::CAB analyzers
 
 =head1 SYNOPSIS
 
@@ -187,7 +190,9 @@ dta-cab-cachegen.perl - Cache generator for DTA::CAB server
 
 =head1 DESCRIPTION
 
-Not yet written.
+dta-cab-cachegen.perl is a quick and dirty hack to generate
+analysis cache files for L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
+subclasses which support them.
 
 =cut
 
@@ -225,14 +230,68 @@ Display program and module version information and exit.
 =cut
 
 ##==============================================================================
-## Options: Other Options
+## Options: Analysis Options
 =pod
 
-=head2 Other Options
+=head2 Analysis Options
 
-Not yet written.
+=over 4
+
+=item -config          RCFILE
+
+Load analyzer config file RCFILE.
+B<Required>.
+
+=item -input-encoding  ENCODING
+
+Override input encoding (default: UTF-8).
+
+=item -output-encoding ENCODING
+
+Override output encoding (default: UTF-8).
+
+=back
 
 =cut
+
+##==============================================================================
+## Options: Cache Selection Options
+=pod
+
+=head2 Cache Selection Options
+
+=over 4
+
+=item -lts-dict DICT_FILE
+
+Generate LTS cache file DICT_FILE.
+
+=item -morph-dict DICT_FILE
+
+Generate morph cache file DICT_FILE.
+
+=item -rw-dict DICT_FILE
+
+Generate rewrite cache file DICT_FILE.
+
+=back
+
+=cut
+
+##==============================================================================
+## Arguments: TYPE_LIST_FILE
+=pod
+
+=head2 Arguments
+
+All non-option arguments given on the command-line are expected to
+be filenames.  These files are expected to contain lists of word types
+in moot 'rare' format (see L<mootfiles(5)|mootfiles>).  A cache entry
+will be generated for each word type which occurs at least once in
+one of the argument files.
+
+=cut
+
 
 ##======================================================================
 ## Footer
@@ -243,8 +302,6 @@ Not yet written.
 =head1 ACKNOWLEDGEMENTS
 
 Perl by Larry Wall.
-
-RPC::XML by Randy J. Ray.
 
 =head1 AUTHOR
 
@@ -260,8 +317,13 @@ at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
-perl(1),
-DTA::CAB(3pm),
-RPC::XML(3pm).
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
+L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
+L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
 
 =cut

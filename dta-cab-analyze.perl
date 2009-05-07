@@ -16,7 +16,7 @@ use Pod::Usage;
 
 ##-- program identity
 our $prog = basename($0);
-our $VERSION = 0.01;
+our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
 our ($help,$man,$version,$verbose);
@@ -52,11 +52,11 @@ GetOptions(##-- General
 	   'input-option|io|parser-option|po=s'      => \%inputOpts,
 
 	   ##-- I/O: output
-	   'output-file|output|o=s' => \$outfile,
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
 	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
+	   'output-file|output|o=s' => \$outfile,
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
@@ -164,7 +164,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -version                        ##-- show version & exit
 
  Analysis Options
-  -config RCFILE                  ##-- load analyzer config file RCFILE
+  -config PLFILE                  ##-- load analyzer config file PLFILE
   -analysis-option OPT=VALUE      ##-- set analysis option
   -profile , -noprofile           ##-- do/don't report profiling information (default: do)
 
@@ -188,7 +188,9 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
 =head1 DESCRIPTION
 
-Not yet written.
+dta-cab-analyze.perl is a command-line utility for analyzing
+documents with the L<DTA::CAB|DTA::CAB> analysis suite, without the need
+to set up and/or connect to an independent server.
 
 =cut
 
@@ -229,16 +231,87 @@ Display program and module version information and exit.
 ## Options: Other Options
 =pod
 
-=head2 Other Options
+=head2 Analysis Options
 
-Not yet written.
+=over 4
+
+=item -config PLFILE
+
+B<Required>.
+
+Load analyzer configuration from PLFILE,
+which should be a perl source file parseable
+by L<DTA::CAB::Persistent::loadPerlFile()|DTA::CAB::Persistent/item_loadPerlFile>
+as a L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> object.
+Prototypically, this file will just look like:
+
+ our $obj = DTA::CAB->new( opt1=>$val1, ... );
+
+=item -analysis-option OPT=VALUE
+
+Set an arbitrary analysis option C<OPT> to C<VALUE>.
+May be multiply specified.
+
+=item -profile , -noprofile
+
+Do/don't report profiling information (default: do)
+
+=back
 
 =cut
+
+##==============================================================================
+## Options: I/O Options
+=pod
+
+=head2 I/O Options
+
+=over 4
+
+=item -input-class CLASS
+
+Select input parser class (default: Text).
+
+=item -input-encoding ENCODING
+
+Override input encoding (default: UTF-8).
+
+=item -input-option OPT=VALUE
+
+Set arbitrary input parser options.
+May be multiply specified.
+
+
+
+=item -output-class CLASS
+
+Select output formatter class (default: Text)
+
+=item -output-encoding ENCODING
+
+Override output encoding (default: input encoding).
+
+=item -output-option OPT=VALUE
+
+Set arbitrary output formatter option.
+May be multiply specified.
+
+=item -output-level LEVEL
+
+Override output formatter level (default: 1)
+
+=item -output-file FILE
+
+Set output file (default: STDOUT)
+
+=back
+
+=cut
+
 
 ##======================================================================
 ## Footer
 ##======================================================================
-
 =pod
 
 =head1 ACKNOWLEDGEMENTS
@@ -247,7 +320,7 @@ Perl by Larry Wall.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>moocow@bbaw.deE<gt>
+Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
@@ -259,7 +332,13 @@ at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
-perl(1),
-DTA::CAB(3pm),
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
+L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
+L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
 
 =cut

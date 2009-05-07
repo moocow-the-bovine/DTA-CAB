@@ -19,7 +19,7 @@ use Pod::Usage;
 
 ##-- program identity
 our $prog = basename($0);
-our $VERSION = 0.01;
+our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
 our ($help,$man,$version,$verbose);
@@ -114,7 +114,7 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -port   PORT                    ##-- override port to bind
   -encoding ENCODING              ##-- override server encoding
 
- Log4perl Options:                ##-- see Log::Log4perl(3pm), Log::Log4perl::Config(3pm)
+ Logging Options:                 ##-- see Log::Log4perl(3pm), Log::Log4perl::Config(3pm)
   -log-config L4PFILE             ##-- override log4perl config file
   -log-watch , -nowatch           ##-- do/don't watch log4perl config file (default=don't)
 
@@ -127,7 +127,13 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
 
 =head1 DESCRIPTION
 
-Not yet written.
+dta-cab-xmlrpc-server.perl is a command-line utility for starting
+an XML-RPC server to perform L<DTA::CAB|DTA::CAB> token-, sentence-, and/or document-analysis
+using the L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
+module.
+
+See L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl> for a
+command-line client using the L<DTA::CAB::Client::XmlRpc|DTA::CAB::Client::XmlRpc> module.
 
 =cut
 
@@ -165,14 +171,69 @@ Display program and module version information and exit.
 =cut
 
 ##==============================================================================
-## Options: Other Options
+## Options: Server Configuration Options
 =pod
 
-=head2 Other Options
+=head2 Server Configuration Options
 
-Not yet written.
+=over 4
+
+=item -config PLFILE
+
+Load server configuration from PLFILE,
+which should be a perl source file parseable
+by L<DTA::CAB::Persistent::loadPerlFile()|DTA::CAB::Persistent/item_loadPerlFile>
+as a L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> object.
+
+=item -bind HOST
+
+Override host on which to bind server socket.
+Default is to bind on all interfaces of the current host.
+
+=item -port PORT
+
+Override port number to which to bind the server socket.
+Default is whatever
+L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
+defaults to (usually 8000).
+
+=item -encoding ENCODING
+
+Override server encoding.
+Default=UTF-8.
+
+=back
 
 =cut
+
+##==============================================================================
+## Options: Logging Options
+=pod
+
+=head2 Logging Options
+
+The L<DTA::CAB|DTA::CAB> family of modules uses
+the Log::Log4perl logging mechanism.
+See L<Log::Log4perl(3pm)|Log::Log4perl> for details
+on the general logging mechanism.
+
+=over 4
+
+=item -log-config L4PFILE
+
+User log4perl config file L4PFILE.
+Default behavior uses the log configuration
+string in $DTA::CAB::Logger::L4P_CONF_DEFAULT.
+
+=item -log-watch , -nowatch
+
+Do/don't watch log4perl config file (default=don't).
+Only sensible if you also specify L</-log-config>.
+
+=back
+
+=cut
+
 
 ##======================================================================
 ## Footer
@@ -200,8 +261,14 @@ at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
-perl(1),
-DTA::CAB(3pm),
-RPC::XML(3pm).
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
+L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
+L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<RPC::XML(3pm)|RPC::XML>,
+L<perl(1)|perl>,
+...
 
 =cut

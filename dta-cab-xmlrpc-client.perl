@@ -21,7 +21,7 @@ use Pod::Usage;
 
 ##-- program identity
 our $prog = basename($0);
-our $VERSION = 0.01;
+our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
 our ($help,$man,$version,$verbose);
@@ -56,7 +56,7 @@ GetOptions(##-- General
 	   'version|V' => \$version,
 
 	   ##-- Server Options
-	   'server-url|server|url|s|u=s' => \$serverURL,
+	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
 	   'local-encoding|le=s'  => \$localEncoding,
 	   'server-encoding|se=s' => \$serverEncoding,
 	   'timeout|T=i' => \$timeout,
@@ -69,17 +69,18 @@ GetOptions(##-- General
 	   'token|t' => sub { $action='token'; },
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
-	   'raw|r' => sub { $action='raw'; }, ##-- server-side parsing
+	   'raw|r|data|D' => sub { $action='raw'; }, ##-- server-side parsing
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
 	   'input-option|io|parser-option|po=s'     => \%inputOpts,
+
 	   ##-- I/O: output
-	   'output-file|output|o=s' => \$outfile,
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
 	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
+	   'output-file|output|o=s' => \$outfile,
 	  );
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
@@ -263,25 +264,26 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
 
- Server Options
-  -serverURL URL                  ##-- set server URL (default: localhost:8000)
+ Server Options:
+  -server URL                     ##-- set server URL (default: localhost:8000)
   -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
 
- Analysis Options
+ Analysis Options:
+  -list                           ##-- just list registered analyzers (default)
   -analyzer NAME                  ##-- set analyzer name (default: 'dta.cab.default')
   -analyze-option OPT=VALUE       ##-- set analysis option (default: none)
   -profile , -noprofile           ##-- do/don't report profiling information (default: do)
-  -list                           ##-- just query registered analyzers from server (default)
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents
   -raw                            ##-- ARGUMENTS are filenames, server-side parsing & formatting
 
- I/O Options
+ I/O Options:
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-option OPT=VALUE         ##-- set input parser option
+ 
   -output-class CLASS             ##-- select output formatter class (default: Text)
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-encoding ENCODING       ##-- override output encoding (default: -local-encoding)
@@ -297,7 +299,13 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
 
 =head1 DESCRIPTION
 
-Not yet written.
+dta-cab-xmlrpc-client.perl is a command-line client for L<DTA::CAB|DTA::CAB>
+analysis of token(s), sentence(s), and/or document(s) by
+querying a running L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> server
+with the L<DTA::CAB::Client::XmlRpc|DTA::CAB::Client::XmlRpc> module.
+
+See L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl> for a
+corresponding server.
 
 =cut
 
@@ -335,19 +343,137 @@ Display program and module version information and exit.
 =cut
 
 ##==============================================================================
-## Options: Other Options
+## Options: Server Options
 =pod
 
-=head2 Other Options
+=head2 Server Options
 
-Not yet written.
+=over 4
+
+=item -server URL
+
+Set server URL (default: localhost:8000).
+
+=item -server-encoding ENCODING
+
+Set server encoding (default: UTF-8).
+
+=item -local-encoding ENCODING
+
+Set local encoding (default: UTF-8).
+
+=item -timeout SECONDS
+
+Set server timeout in seconds (default: lots).
+
+=back
 
 =cut
+
+##==============================================================================
+## Options: Analysis Options
+=pod
+
+=head2 Analysis Options
+
+=over 4
+
+=item -list
+
+Don't actually perform any analysis;
+rather,
+just print a list of analyzers registered with the server.
+This is the default action.
+
+=item -analyzer NAME
+
+Request analysis by the analyzer registered under name NAME (default: 'dta.cab.default').
+
+=item -analyze-option OPT=VALUE
+
+Set an arbitrary analysis option C<OPT> to C<VALUE>.
+May be multiply specified.
+
+Available options depend on the analyzer class to be called.
+
+=item -profile , -noprofile
+
+Do/don't report profiling information (default: do).
+
+=item -token
+
+Interpret ARGUMENTS as token text.
+
+=item -sentence
+
+Interpret ARGUMENTS as a sentence (list of tokens).
+
+=item -document
+
+Interpret ARGUMENTS as filenames, to be analyzed as documents.
+
+=item -raw
+
+Interpret ARGUMENTS as filenames (as for L</-document>),
+but file contents are passed as raw strings to the server,
+which then becomes responsible for parsing and formatting.
+
+This is the recommended way to analyze large documents,
+because of the large overhead
+involved when the L</-document> option is used
+(slow translations to and from complex XML-RPC structures).
+
+=back
+
+=cut
+
+##==============================================================================
+## Options: I/O Options
+=pod
+
+=head2 I/O Options
+
+=over 4
+
+=item -input-class CLASS
+
+Select input parser class (default: Text)
+
+=item -input-option OPT=VALUE
+
+Set an arbitrary input parser option.
+May be multiply specified.
+
+=item -output-class CLASS
+
+Select output formatter class (default: Text)
+May be multiply specified.
+
+=item -output-option OPT=VALUE
+
+Set an arbitrary output formatter option.
+May be multiply specified.
+
+=item -output-encoding ENCODING
+
+Override output encoding (default: -local-encoding).
+
+=item -output-level LEVEL
+
+Override output formatter level (default: 1).
+
+=item -output-file FILE
+
+Set output file (default: STDOUT).
+
+=back
+
+=cut
+
 
 ##======================================================================
 ## Footer
 ##======================================================================
-
 =pod
 
 =head1 ACKNOWLEDGEMENTS
@@ -370,8 +496,14 @@ at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
-perl(1),
-DTA::CAB(3pm),
-RPC::XML(3pm).
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
+L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
+L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<RPC::XML(3pm)|RPC::XML>,
+L<perl(1)|perl>,
+...
 
 =cut
