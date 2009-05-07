@@ -192,15 +192,7 @@ DTA::CAB::Format::Perl - Datum parser|formatter: perl code via Data::Dumper, eva
 
  use DTA::CAB::Format::Perl;
  
- ##========================================================================
- ## Constructors etc.
- 
  $fmt = DTA::CAB::Format::Perl->new(%args);
- 
- ##========================================================================
- ## Methods: Persistence
- 
- @keys = $fmt->noSaveKeys();
  
  ##========================================================================
  ## Methods: Input
