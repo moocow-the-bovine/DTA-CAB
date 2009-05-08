@@ -38,6 +38,10 @@ our $serverHost = undef;
 our $serverPort = undef;
 our $serverEncoding = undef;
 
+##-- Daemon mode options
+our $daemonMode = 0;       ##-- do a fork() ?
+our $pidFile  = undef;   ##-- save PID to a file?
+
 ##-- Log config
 our $logConfigFile = undef;
 our $logWatch = undef;
@@ -54,6 +58,10 @@ GetOptions(##-- General
 	   'bind|b=s'   => \$serverHost,
 	   'port|p=i'   => \$serverPort,
 	   'encoding|e=s' => \$serverEncoding,
+
+	   ##-- Daemon mode options
+	   'daemon|d!'                 => \$daemonMode,
+	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
 
 	   ##-- Log4perl stuff
 	   'log-config|l=s' => \$logConfigFile,
@@ -72,10 +80,36 @@ if ($version) {
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 
+##==============================================================================
+## Subs
+##==============================================================================
+
+##--------------------------------------------------------------
+## Subs: daemon-mode stuff
+
+## CHLD_REAPER()
+##  + lifted from perlipc(1) manpage
+sub CHLD_REAPER {
+  my $waitedpid = wait();
+  # loathe sysV: it makes us not only reinstate
+  # the handler, but place it after the wait
+  $SIG{CHLD} = \&CHLD_REAPER;
+}
+
+## undef = writePidFile($pidFile, $pid=$$)
+sub writePidFile {
+  my ($file,$pid) = @_;
+  $pid = $$ if (!$pid);
+  open(PID,">$file") or die("${prog}: open failed for PID file '$file': $!");
+  print PID $pid,"\n";
+  close(PID);
+}
 
 ##==============================================================================
 ## MAIN
 ##==============================================================================
+
+##-- check for daemon mode
 
 ##-- log4perl initialization
 DTA::CAB::Logger->logInit($logConfigFile,$logWatch) if (defined($logConfigFile));
@@ -88,11 +122,34 @@ $srv->{xopt}{host} = $serverHost if (defined($serverHost));
 $srv->{xopt}{port} = $serverPort if (defined($serverPort));
 $srv->{encoding}   = $serverEncoding if (defined($serverEncoding));
 
-##-- prepare & run server
-$srv->prepare()
-  or $srv->logdie("prepare() failed!");
-$srv->run();
-$srv->info("exiting");
+
+##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
+sub serverMain {
+  ##-- prepare & run server
+  $srv->prepare()
+    or $srv->logdie("prepare() failed!");
+  $srv->run();
+  $srv->info("exiting");
+}
+
+##-- check for daemon mode
+if ($daemonMode) {
+  $SIG{CHLD} = \&CHLD_REAPER; ##-- set handler
+
+  if ( ($pid=fork()) ) {
+    ##-- parent
+    writePidFile($pidFile,$pid) if ($pidFile);
+    print STDERR "${prog}: spawned daemon subprocess with PID=$pid\n";
+  } else {
+    ##-- daemon-child
+    die("$prog: fork() failed: $!") if (!defined($pid));
+    serverMain();
+  }
+} else {
+  ##-- just run server
+    writePidFile($pidFile,$$) if ($pidFile);
+  serverMain();
+}
 
 __END__
 =pod
@@ -115,6 +172,10 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -bind   HOST                    ##-- override host to bind (default=all)
   -port   PORT                    ##-- override port to bind (default=8000)
   -encoding ENCODING              ##-- override server encoding (default=UTF-8)
+
+ Daemon Mode Options:
+  -daemon , -nodaemon             ##-- do/don't fork() a server subprocess
+  -pidfile FILE                   ##-- save server PID to FILE
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
   -log-config L4PFILE             ##-- override log4perl config file
@@ -203,6 +264,33 @@ defaults to (usually 8000).
 
 Override server encoding.
 Default=UTF-8.
+
+=back
+
+=cut
+
+##==============================================================================
+## Options: Daemon Mode Options
+=pod
+
+=head2 Daemon Mode Options
+
+=over 4
+
+=item -daemon , -nodaemon
+
+Do/don't fork() a server subprocess (default: don't).
+If running in daemon mode, the program should simply spawn
+a single server subprocess and exit, reporting the PID
+of the child process.
+
+Useful for starting persistent servers from system-wide
+init scripts.  See also L</"-pidfile FILE">.
+
+=item -pidfile FILE
+
+Writes PID of the server process to FILE before running the
+server.  Useful for system init scripts.
 
 =back
 

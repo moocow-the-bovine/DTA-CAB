@@ -87,7 +87,7 @@ sub deep_encode {
   my @queue = (\$thingy);
   my ($ar);
   while (defined($ar=shift(@queue))) {
-    if (exists($skiprefs{$ar}) || exists($skipvals{$$ar}) || (ref($$ar) && exists($skippkgs{ref($$ar)}))) {
+    if (exists($skiprefs{$ar}) || !defined($$ar) || exists($skipvals{$$ar}) || (ref($$ar) && exists($skippkgs{ref($$ar)}))) {
       next;
     } elsif (UNIVERSAL::isa($$ar,'ARRAY')) {
       push(@queue, map { \$_ } @{$$ar});
