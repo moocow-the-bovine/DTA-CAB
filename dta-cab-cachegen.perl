@@ -48,6 +48,15 @@ GetOptions(##-- General
 	   'rw-cache|rw-dict|rc|rd|r=s'          => \$rwDictFile,
 	  );
 
+if ($version) {
+  print STDERR
+    ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
+     '  $HeadURL$', "\n",
+     '  $Id$', "\n",
+    );
+  exit(0);
+}
+
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'})
@@ -55,13 +64,6 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'})
 pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file(s) selected!'})
   if (!grep {defined($_)} ($ltsDictFile,$morphDictFile,$rwDictFile));
 
-if ($version) {
-  print STDERR
-    ("${prog} v$VERSION by Bryan Jurish <moocow\@bbaw.de>\n",
-     "  + using DTA::CAB v$DTA::CAB::VERSION\n"
-    );
-  exit(0);
-}
 
 ##==============================================================================
 ## MAIN

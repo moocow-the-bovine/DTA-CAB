@@ -83,16 +83,18 @@ GetOptions(##-- General
 	   'output-file|output|o=s' => \$outfile,
 	  );
 
-pod2usage({-exitval=>0, -verbose=>1}) if ($man);
-pod2usage({-exitval=>0, -verbose=>0}) if ($help);
-
 if ($version) {
   print STDERR
-    ("${prog} v$VERSION by Bryan Jurish <moocow\@bbaw.de>\n",
-     "  + using DTA::CAB v$DTA::CAB::VERSION\n"
+    ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
+     '  $HeadURL$', "\n",
+     '  $Id$', "\n",
     );
   exit(0);
 }
+
+pod2usage({-exitval=>0, -verbose=>1}) if ($man);
+pod2usage({-exitval=>0, -verbose=>0}) if ($help);
+
 
 ##==============================================================================
 ## MAIN
