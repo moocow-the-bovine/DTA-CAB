@@ -23,7 +23,7 @@ our ($help,$man,$version,$verbose);
 ##-- Server Options
 our $do_eval = 0;
 our $do_array = 0;
-our $server = 'http://localhost:80';
+our $server = 'http://localhost:8000';
 
 ##-- I/O
 our $fromfile = undef;
@@ -161,7 +161,7 @@ xmlrpc-call.perl - XML RPC command-line tool
  XML-RPC Options:
   -eval , -noeval                 ##-- do/don't eval command-line args as perl code (default=don't)
   -array , -noarray               ##-- do/don't implicitly create an array of arguments (default=don't)
-  -server  URL                    ##-- set server URL (default: http://localhost:80)
+  -server  URL                    ##-- set server URL (default: http://localhost:8000)
   -from    INPUT_FILE             ##-- read literal query from INPUT_FILE (default=command line)
   -output  OUTPUT_FILE            ##-- XML output (default=-)
   -dump                           ##-- if true, just dump value with Data::Dumper
