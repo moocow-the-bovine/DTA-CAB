@@ -110,15 +110,15 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
 
- Server Configuration
-  -config PLFILE                  ##-- load server configuration from PLFILE (perl code)
-  -bind   HOST                    ##-- override host to bind
-  -port   PORT                    ##-- override port to bind
-  -encoding ENCODING              ##-- override server encoding
+ Server Configuration Options:
+  -config PLFILE                  ##-- load server config from PLFILE
+  -bind   HOST                    ##-- override host to bind (default=all)
+  -port   PORT                    ##-- override port to bind (default=8000)
+  -encoding ENCODING              ##-- override server encoding (default=UTF-8)
 
- Logging Options:                 ##-- see Log::Log4perl(3pm), Log::Log4perl::Config(3pm)
+ Logging Options:                 ##-- see Log::Log4perl(3pm)
   -log-config L4PFILE             ##-- override log4perl config file
-  -log-watch , -nowatch           ##-- do/don't watch log4perl config file (default=don't)
+  -log-watch , -nowatch           ##-- do/don't watch log4perl config file
 
 =cut
 
