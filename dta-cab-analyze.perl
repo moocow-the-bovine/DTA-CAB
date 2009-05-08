@@ -62,7 +62,8 @@ GetOptions(##-- General
 if ($version) {
   print STDERR
     ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
-     '  + $Id$', "\n",
+     '  + SVN $HeadURL$', "\n",
+     '  + SVN $Id$', "\n",
     );
   exit(0);
 }
