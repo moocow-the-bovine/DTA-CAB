@@ -79,7 +79,7 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 
 ##-- log4perl initialization
 DTA::CAB::Logger->logInit($logConfigFile,$logWatch) if (defined($logConfigFile));
-#else {  DTA::CAB::Logger->ensureLog(); } ##-- implicit
+DTA::CAB::Logger->ensureLog(); ##-- implicit (?)
 
 ##-- create / load server object
 our $srv = DTA::CAB::Server::XmlRpc->new();

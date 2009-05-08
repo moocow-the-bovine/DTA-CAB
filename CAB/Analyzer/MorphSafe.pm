@@ -72,37 +72,41 @@ sub getAnalyzeTokenSub {
   return sub {
     ($tok,$opts) = @_;
     $analyses = $tok->{$srcKey};
-    $safe = ($tok->{text} =~ m/^[[:digit:][:punct:]]*$/); ##-- punctuation, digits are always "safe"
+    $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
+	     && $tok->{text} !~ m/\#/                      ##-- unless they contain '#' (placeholder for unrecognized char)
+	    );
     $safe ||=
       (
        $analyses                 ##-- defined & true
        && @$analyses > 0         ##-- non-empty
        && (
 	   grep {                ##-- at least one non-"unsafe" analysis:
-	     $_->[0] !~ m(
-               (?:               ##-- unsafe: regexes
-                   \[_FM\]       ##-- unsafe: tag: FM: foreign material
-                 | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
-                 | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection
-                 | \[_NE\]       ##-- unsafe: tag: NE: proper name
+	     ($_                     ##-- only "unsafe" if defined
+	      && $_->{hi}            ##-- only "unsafe" if upper labels are defined & non-empty
+	      && $_->{hi} !~ m(
+                   (?:               ##-- unsafe: regexes
+                       \[_FM\]       ##-- unsafe: tag: FM: foreign material
+                     | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
+                     | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection
+                     | \[_NE\]       ##-- unsafe: tag: NE: proper name
 
-                 ##-- unsafe: verb roots
-                 | \b te    (?:\/V|\~)
-                 | \b gel   (?:\/V|\~)
-                 | \b öl    (?:\/V|\~)
+                     ##-- unsafe: verb roots
+                     | \b te    (?:\/V|\~)
+                     | \b gel   (?:\/V|\~)
+                     | \b öl    (?:\/V|\~)
 
-                 ##-- unsafe: noun roots
-                 | \b Bus   (?:\/N|\[_NN\])
-                 | \b Ei    (?:\/N|\[_NN\])
-                 | \b Eis   (?:\/N|\[_NN\])
-                 | \b Gel   (?:\/N|\[_NN\])
-                 | \b Gen   (?:\/N|\[_NN\])
-                 | \b Öl    (?:\/N|\[_NN\])
-                 | \b Reh   (?:\/N|\[_NN\])
-                 | \b Tee   (?:\/N|\[_NN\])
-                 | \b Teig  (?:\/N|\[_NN\])
-               )
-             )x
+                     ##-- unsafe: noun roots
+                     | \b Bus   (?:\/N|\[_NN\])
+                     | \b Ei    (?:\/N|\[_NN\])
+                     | \b Eis   (?:\/N|\[_NN\])
+                     | \b Gel   (?:\/N|\[_NN\])
+                     | \b Gen   (?:\/N|\[_NN\])
+                     | \b Öl    (?:\/N|\[_NN\])
+                     | \b Reh   (?:\/N|\[_NN\])
+                     | \b Tee   (?:\/N|\[_NN\])
+                     | \b Teig  (?:\/N|\[_NN\])
+                   )
+                 )x)
 	   } @$analyses
 	  )
       );
