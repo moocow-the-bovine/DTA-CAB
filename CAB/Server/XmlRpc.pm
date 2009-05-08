@@ -120,7 +120,7 @@ sub prepareLocal {
   $RPC::XML::FORCE_STRING_ENCODING = 1;
 
   ##-- register analysis methods
-  my ($aname,$a, $xp);
+  my ($aname,$a, $xp, $proc);
   while (($aname,$a)=each(%{$srv->{as}})) {
     foreach ($a->xmlRpcMethods) {
       if (UNIVERSAL::isa($_,'HASH')) {
@@ -130,7 +130,8 @@ sub prepareLocal {
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});
 	$srv->wrapMethodEncoding($_); ##-- hack encoding?
       }
-      $xp = $xsrv->add_proc($_);
+      $xp = DTA::CAB::Server::XmlRpc::Procedure->new($_);
+      $xp = $xsrv->add_method($xp);
       if (!ref($xp)) {
 	$srv->error("could not register XML-RPC procedure ".(ref($_) ? "$_->{name}()" : "'$_'")." for analyzer '$aname'\n",
 		    " + RPC::XML::Server error: $xp\n",
@@ -143,7 +144,7 @@ sub prepareLocal {
 
   ##-- register 'listAnalyzers' method
   my $listproc = $srv->listAnalyzersProc;
-  $xsrv->add_proc($listproc);
+  $xsrv->add_proc( DTA::CAB::Server::XmlRpc::Procedure->new($listproc) );
   $srv->info("registered XML-RPC listing procedure $listproc->{name}()\n");
 
   return 1;
@@ -158,8 +159,7 @@ sub run {
   $srv->info("server starting on host ", $srv->{xsrv}->host, ", port ", $srv->{xsrv}->port, "\n");
   $srv->{xsrv}->server_loop(%{$srv->{runopt}});
   $srv->info("server exiting\n");
-
-  return 1;
+  return $srv->finish();
 }
 
 ##==============================================================================
@@ -179,6 +179,21 @@ sub listAnalyzersProc {
 	  signature => [ 'array' ],
 	 };
 }
+
+##========================================================================
+## PACKAGE: DTA::CAB::Server::XmlRpc::Procedure
+##  + subclass of RPC::XML::Procedure
+package DTA::CAB::Server::XmlRpc::Procedure;
+use RPC::XML::Procedure;
+use strict;
+our @ISA = ('RPC::XML::Procedure','DTA::CAB::Logger');
+
+## $rv = $proc->call($XML_RPC_SERVER, @PARAMLIST)
+sub call {
+  $_[0]->debug("$_[0]{name}(): called by client $_[1]{peerhost}:$_[1]{peerport}");
+  return $_[0]->SUPER::call(@_[1..$#_]);
+}
+
 
 
 1; ##-- be happy
@@ -226,7 +241,6 @@ DTA::CAB::Server::XmlRpc - DTA::CAB XML-RPC server using RPC::XML
  ## Methods: Additional
  
  \%procSpec = $srv->listAnalyzersProc();
-
 
 =cut
 

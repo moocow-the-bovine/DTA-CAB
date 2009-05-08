@@ -23,7 +23,9 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: HASH ref
 ##    {
-##     as => \%analyzers,  ##-- ($name => $cab_analyzer_obj, ...)
+##     as => \%analyzers,   ##-- ($name => $cab_analyzer_obj, ...)
+##     pidfile => $pidfile, ##-- if defined, process PID will be written to $pidfile on prepare()
+##     pid => $pid,l        ##-- server PID (default=$$) to write to $pidfile
 ##     #...
 ##    }
 sub new {
@@ -31,6 +33,8 @@ sub new {
   my $obj = bless({
 		   ##-- dispatch analyzers
 		   as => {},
+		   #pidfile=>undef,
+		   #pid=>$pid,
 		   ##
 		   ##-- user args
 		   @_
@@ -56,6 +60,14 @@ sub prepare {
 
   ##-- prepare: logger
   DTA::CAB::Logger->ensureLog();
+
+  ##-- prepare: PID file
+  if (defined($srv->{pidfile})) {
+    my $pidfh = IO::File->new(">$srv->{pidfile}")
+      or $srv->logconfess("prepare(): could not write PID file '$srv->{pidfile}': $!");
+    $pidfh->print(($srv->{pid} || $$), "\n");
+    $pidfh->close()
+  }
 
   ##-- prepare: analyzers
   foreach (sort(keys(%{$srv->{as}}))) {
@@ -84,6 +96,7 @@ sub prepareSignalHandlers {
   my $srv = shift;
   my $catcher = sub {
     my $signame = shift;
+    $srv->finish();
     $srv->logdie("caught signal SIG$signame - exiting");
   };
   my ($sig);
@@ -104,6 +117,15 @@ sub prepareLocal { return 1; }
 sub run {
   my $srv = shift;
   $srv->logcroak("run() method not implemented!");
+  $srv->finish(); ##-- cleanup
+}
+
+## $rc = $srv->finish()
+##  + cleanup method; should be called when server dies or after run() has completed
+sub finish {
+  my $srv = shift;
+  unlink($srv->{pidfile}) if ($srv->{pidfile});
+  return 1;
 }
 
 1; ##-- be happy
@@ -141,9 +163,12 @@ DTA::CAB::Server - abstract class for DTA::CAB servers
  ## Methods: Generic Server API
  
  $rc = $srv->prepare();
+ $rc = $srv->run();
+ $rc = $srv->finish();
+ 
+ ##-- low-level methods
  $rc = $srv->prepareSignalHandlers();
  $rc = $srv->prepareLocal(@args_to_prepare);
- $rc = $srv->run();
  
 
 =cut
@@ -190,7 +215,11 @@ L<DTA::CAB::Logger|DTA::CAB::Logger>.
 %args, %$srv:
 
  ##-- supported analyzers
- as => \%analyzers,  ##-- ($name => $cab_analyzer_obj, ...)
+ as => \%analyzers,     ##-- ($name => $cab_analyzer_obj, ...)
+ ##
+ ##-- daemon mode support
+ pidfile => $pidfile,   ##-- write PID to file on prepare()
+ pid     => $pid,       ##-- PID to write to $pidfile (default=$$)
 
 =item initialize
 
@@ -215,7 +244,7 @@ Called to initialize new objects after new()
  $rc = $srv->prepare();
 
 Prepare server $srv to run.
-Default implementation initializes logger & pre-loads all analyzers
+Default implementation initializes logger, writes $pidfile (if defined), and pre-loads all analyzers.
 
 =item prepareSignalHandlers
 
@@ -236,6 +265,13 @@ called by L</prepare>/( after default L</prepare>() guts have run.
 
 Run the server.
 No default implementation.
+
+=item finish
+
+ $rc = $srv->finish();
+
+Cleanup method; should be called when server dies or after L</run>() has completed.
+Default implementation unlinks $pidfile (if defined).
 
 =back
 

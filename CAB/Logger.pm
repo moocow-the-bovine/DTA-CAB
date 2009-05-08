@@ -14,25 +14,32 @@ use strict;
 ## Globals
 ##==============================================================================
 
-## $DEFAULT_LOG_CONF
+## $DEFAULT_LOG_CONF = PACKAGE->defaultLogConf(%opts)
 ##  + default configuration for Log::Log4perl
 ##  + see Log::Log4perl(3pm), Log::Log4perl::Config(3pm) for details
-BEGIN {
-  our $L4P_CONF_DEFAULT = qq{
+##  + %opts:
+##     rootLevel => $LEVEL_OR_UNDEF,
+##     level     => $LEVEL_OR_UNDEF,
+sub defaultLogConf {
+  my ($that,%opts) = @_;
+  $opts{rootLevel} = ($^W ? 'WARN'  : 'FATAL')  if (!exists($opts{rootLevel}));
+  $opts{level}     = ($^W ? 'DEBUG' : 'TRACE')  if (!exists($opts{level}));
+  my $cfg = "
 ##-- Loggers
 log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the same appender
-log4perl.rootLogger     = WARN, AppStderr
-log4perl.logger.DTA.CAB = DEBUG, AppStderr
+".($opts{rootLevel} ? "log4perl.rootLogger = $opts{rootLevel}, AppStderr" : '')."
+".($opts{level} ? "log4perl.logger.DTA.CAB = $opts{level}, AppStderr" : '')."
 
 ##-- Appenders: Utilities
-log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename("$::0"); }
+log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename(\"$::0\"); }
 
 ##-- Appender: AppStderr
 log4perl.appender.AppStderr = Log::Log4perl::Appender::Screen
 log4perl.appender.AppStderr.stderr = 1
 log4perl.appender.AppStderr.layout = Log::Log4perl::Layout::PatternLayout
 log4perl.appender.AppStderr.layout.ConversionPattern = %d{yyyy-MM-dd hh:mm:ss} %G[%P] %p: %c: %m%n
-  };
+";
+  return $cfg;
 }
 
 ##==============================================================================
@@ -40,6 +47,7 @@ log4perl.appender.AppStderr.layout.ConversionPattern = %d{yyyy-MM-dd hh:mm:ss} %
 ##==============================================================================
 
 ## undef = PACKAGE->logInit()             ##-- use default configuration
+## undef = PACKAGE->logInit(undef,%opts)  ##-- use default configuration with %opts
 ## undef = PACKAGE->logInit($file)        ##-- read configuration from a file
 ## undef = PACKAGE->logInit($file,$watch) ##-- watch configuration file
 ##  + all log calls in the DTA::CAB should use a subcategory of 'DTA::CAB'
@@ -47,15 +55,17 @@ log4perl.appender.AppStderr.layout.ConversionPattern = %d{yyyy-MM-dd hh:mm:ss} %
 sub logInit {
   my ($that,$file,$watch) = @_;
   if (!defined($file)) {
-    our ($L4P_CONF_DEFAULT);
-    Log::Log4perl::init(\$L4P_CONF_DEFAULT);
+    my $confstr = $that->defaultLogConf(@_[2..$#_]);
+    Log::Log4perl::init(\$confstr);
   } elsif (defined($watch)) {
-    Log::Log4perl::init_and_watch($file);
+    Log::Log4perl::init_and_watch($file,$watch);
+  } else {
+    Log::Log4perl::init($file);
   }
   #__PACKAGE__->info("initialized logging facility");
 }
 
-## undef = PACKAGE->ensureLog()             ##-- ensure a Log::Log4perl has been initialized
+## undef = PACKAGE->ensureLog(@args)        ##-- ensure a Log::Log4perl has been initialized
 sub ensureLog {
   my $that = shift;
   $that->logInit(@_) if (!Log::Log4perl->initialized);

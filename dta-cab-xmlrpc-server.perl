@@ -22,8 +22,8 @@ our $prog = basename($0);
 our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
-our ($help,$man,$version,$verbose);
-#$verbose = 'default';
+our ($help,$man,$version);
+our $verbose = 'INFO';   ##-- default log level
 
 BEGIN {
   binmode($DB::OUT,':utf8') if (defined($DB::OUT));
@@ -43,6 +43,8 @@ our $daemonMode = 0;       ##-- do a fork() ?
 our $pidFile  = undef;   ##-- save PID to a file?
 
 ##-- Log config
+our $logLevel = 'TRACE';   ##-- default log level for internal configuration
+our $rootLevel = 'WARN';   ##-- root log level internal configuration
 our $logConfigFile = undef;
 our $logWatch = undef;
 
@@ -52,6 +54,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
+	   'verbose|v=s' => \$verbose, ##-- this should be a Log::Log4perl log-level
 
 	   ##-- Server configuration
 	   'config|c=s' => \$serverConfigFile,
@@ -64,8 +67,9 @@ GetOptions(##-- General
 	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
 
 	   ##-- Log4perl stuff
-	   'log-config|l=s' => \$logConfigFile,
-	   'log-watch|watch|w!' => \$logWatch,
+	   'log-level|loglevel|ll|L=s'  => \$logLevel,
+	   'log-config|logconfig|lc|l=s' => \$logConfigFile,
+	   'log-watch|logwatch|watch|lw|w!' => \$logWatch,
 	  );
 
 if ($version) {
@@ -91,18 +95,14 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##  + lifted from perlipc(1) manpage
 sub CHLD_REAPER {
   my $waitedpid = wait();
+
+  ##-- remove pidfile if defined
+  unlink($pidFile) if (defined($pidFile) && -r $pidFile);
+
   # loathe sysV: it makes us not only reinstate
+
   # the handler, but place it after the wait
   $SIG{CHLD} = \&CHLD_REAPER;
-}
-
-## undef = writePidFile($pidFile, $pid=$$)
-sub writePidFile {
-  my ($file,$pid) = @_;
-  $pid = $$ if (!$pid);
-  open(PID,">$file") or die("${prog}: open failed for PID file '$file': $!");
-  print PID $pid,"\n";
-  close(PID);
 }
 
 ##==============================================================================
@@ -112,11 +112,14 @@ sub writePidFile {
 ##-- check for daemon mode
 
 ##-- log4perl initialization
-DTA::CAB::Logger->logInit($logConfigFile,$logWatch) if (defined($logConfigFile));
-DTA::CAB::Logger->ensureLog(); ##-- implicit (?)
+if (defined($logConfigFile)) {
+  DTA::CAB::Logger->logInit($logConfigFile,$logWatch);
+} else {
+  DTA::CAB::Logger->logInit(undef, rootLevel=>$rootLevel, level=>$logLevel);
+}
 
 ##-- create / load server object
-our $srv = DTA::CAB::Server::XmlRpc->new();
+our $srv = DTA::CAB::Server::XmlRpc->new(pidfile=>$pidFile);
 $srv     = $srv->loadPerlFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{xopt}{host} = $serverHost if (defined($serverHost));
 $srv->{xopt}{port} = $serverPort if (defined($serverPort));
@@ -129,6 +132,7 @@ sub serverMain {
   $srv->prepare()
     or $srv->logdie("prepare() failed!");
   $srv->run();
+  $srv->finish();
   $srv->info("exiting");
 }
 
@@ -138,16 +142,14 @@ if ($daemonMode) {
 
   if ( ($pid=fork()) ) {
     ##-- parent
-    writePidFile($pidFile,$pid) if ($pidFile);
-    print STDERR "${prog}: spawned daemon subprocess with PID=$pid\n";
+    DTA::CAB->info("spawned daemon subprocess with PID=$pid\n");
   } else {
     ##-- daemon-child
-    die("$prog: fork() failed: $!") if (!defined($pid));
+    DTA::CAB->logdie("$prog: fork() failed: $!") if (!defined($pid));
     serverMain();
   }
 } else {
   ##-- just run server
-    writePidFile($pidFile,$$) if ($pidFile);
   serverMain();
 }
 
@@ -178,6 +180,7 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -pidfile FILE                   ##-- save server PID to FILE
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
+  -log-level LEVEL                ##-- set minimum log level (internal config only)
   -log-config L4PFILE             ##-- override log4perl config file
   -log-watch , -nowatch           ##-- do/don't watch log4perl config file
 
@@ -309,11 +312,15 @@ on the general logging mechanism.
 
 =over 4
 
+=item -log-level LEVEL
+
+Set minimum log level.  Has no effect if you also specify L</-log-config>.
+
 =item -log-config L4PFILE
 
 User log4perl config file L4PFILE.
 Default behavior uses the log configuration
-string in $DTA::CAB::Logger::L4P_CONF_DEFAULT.
+string returned by L<DTA::CAB::Logger-E<gt>defaultLogConf()|DTA::CAB::Logger/item_defaultLogConf>.
 
 =item -log-watch , -nowatch
 
