@@ -103,6 +103,9 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##-- log4perl initialization
 DTA::CAB::Logger->ensureLog();
 
+##-- sanity checks
+$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]*://|);
+
 ##-- create client object
 our $cli = DTA::CAB::Client::XmlRpc->new(
 					 serverURL=>$serverURL,
