@@ -70,6 +70,7 @@ sub savePerlRef {
 ##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
 sub loadPerlRef {
   my ($that,$ref) = @_;
+  $that = ref($ref) if (UNIVERSAL::isa($ref,$that)); ##-- "virtual load": return subclass for superclass method
   my $obj = ref($that) ? $that : $that->new();
   $obj = bless(unifyClobber($obj,$_[1],undef),ref($obj));
   if (UNIVERSAL::isa($that,'HASH') && UNIVERSAL::isa($obj,'HASH')) {

@@ -361,6 +361,7 @@ sub getAnalyzeTokenSub {
   my ($tok, $w,$opts,$uword,@wlabs, $isdict, $analyses);
   return sub {
     ($tok,$opts) = @_;
+    $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
 
     ##-- set default options
     $opts = $opts ? {%$opts} : {}; ##-- copy / create

@@ -75,7 +75,8 @@ sub getAnalyzeTokenSub {
 
   my ($tok, $w,$uc,$l0,$l, $isLatin1,$isLatinExt);
   return sub {
-    $tok = toToken(shift);
+    $tok = shift;
+    $tok = toToken($tok) if (!ref($tok));
     $w   = $tok->{text};
     $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 

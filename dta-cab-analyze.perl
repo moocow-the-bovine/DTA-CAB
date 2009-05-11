@@ -80,7 +80,7 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if 
 DTA::CAB::Logger->ensureLog();
 
 ##-- analyzer
-our $cab = DTA::CAB->loadPerlFile($rcFile)
+our $cab = DTA::CAB::Analyzer->loadPerlFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
 
 ##======================================================
