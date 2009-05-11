@@ -1,0 +1,34 @@
+wie
+	+[xlit] isLatin1=1 isLatinExt=1 latin1Text=wie
+	+[lts] vi <0>
+	+[eqpho] Wie
+	+[eqpho] wie
+	+[morph] wie[_ADV] <0>
+	+[morph] wie[_KON] <0>
+	+[morph] wie[_KOKOM] <0>
+	+[morph] wie[_KOUS] <0>
+	+[morph/safe] 1
+oede
+	+[xlit] isLatin1=1 isLatinExt=1 latin1Text=oede
+	+[lts] ?2de <0>
+	+[eqpho] Oede
+	+[eqpho] Öde
+	+[eqpho] öde
+	+[morph/safe] 0
+	+[rw] öde <1>
+	+[rw/lts] ?2de <0>
+	+[rw/morph] öde[_ADJD] <0>
+	+[rw/morph] öde[_ADJA][pos][sg][nom]*[weak] <0>
+	+[rw/morph] öde[_ADJA][pos][sg][nom][fem][strong_mixed] <0>
+	+[rw/morph] öde[_ADJA][pos][sg][acc][fem]* <0>
+	+[rw/morph] öde[_ADJA][pos][sg][acc][neut][weak] <0>
+	+[rw/morph] öde[_ADJA][pos][pl][nom_acc]*[strong] <0>
+	+[rw/morph] öd~en[_VVFIN][first][sg][pres][ind] <0>
+	+[rw/morph] öd~en[_VVFIN][first][sg][pres][subjI] <0>
+	+[rw/morph] öd~en[_VVFIN][third][sg][pres][subjI] <0>
+	+[rw/morph] öd~en[_VVIMP][sg] <0>
+!
+	+[xlit] isLatin1=1 isLatinExt=1 latin1Text=!
+	+[lts]  <0>
+	+[morph/safe] 1
+

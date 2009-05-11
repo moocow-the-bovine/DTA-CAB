@@ -214,7 +214,7 @@ sub analyzeDataSub {
 ##  + for raw data analysis
 ##  + returned sub is callable as:
 ##     $base64 = $coderef->($data_str,\%opts);
-sub getAalyzeDataSub {
+sub getAnalyzeDataSub {
   require RPC::XML;
   my $anl = shift;
   my $a_doc = $anl->analyzeDocumentSub();

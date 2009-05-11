@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+  <head>
+    <HASH ref="DTA::CAB::Document"/>
+  </head>
+  <body>
+    <s>
+      <w text="wie">
+        <xlit isLatin1="1" isLatinExt="1" latin1Text="wie"/>
+        <lts>
+          <pho hi="vi" w="0"/>
+        </lts>
+        <eqpho>
+          <w text="Wie"/>
+          <w text="wie"/>
+        </eqpho>
+        <morph>
+          <ma hi="wie[_ADV]" w="0"/>
+          <ma hi="wie[_KON]" w="0"/>
+          <ma hi="wie[_KOKOM]" w="0"/>
+          <ma hi="wie[_KOUS]" w="0"/>
+        </morph>
+        <msafe safe="1"/>
+      </w>
+      <w text="oede">
+        <xlit isLatin1="1" isLatinExt="1" latin1Text="oede"/>
+        <lts>
+          <pho hi="?2de" w="0"/>
+        </lts>
+        <eqpho>
+          <w text="Oede"/>
+          <w text="Öde"/>
+          <w text="öde"/>
+        </eqpho>
+        <morph/>
+        <msafe safe="0"/>
+        <rewrite>
+          <rw hi="öde" w="1">
+            <pho hi="?2de" w="0"/>
+            <ma hi="öde[_ADJD]" w="0"/>
+            <ma hi="öde[_ADJA][pos][sg][nom]*[weak]" w="0"/>
+            <ma hi="öde[_ADJA][pos][sg][nom][fem][strong_mixed]" w="0"/>
+            <ma hi="öde[_ADJA][pos][sg][acc][fem]*" w="0"/>
+            <ma hi="öde[_ADJA][pos][sg][acc][neut][weak]" w="0"/>
+            <ma hi="öde[_ADJA][pos][pl][nom_acc]*[strong]" w="0"/>
+            <ma hi="öd~en[_VVFIN][first][sg][pres][ind]" w="0"/>
+            <ma hi="öd~en[_VVFIN][first][sg][pres][subjI]" w="0"/>
+            <ma hi="öd~en[_VVFIN][third][sg][pres][subjI]" w="0"/>
+            <ma hi="öd~en[_VVIMP][sg]" w="0"/>
+          </rw>
+        </rewrite>
+      </w>
+      <w text="!">
+        <xlit isLatin1="1" isLatinExt="1" latin1Text="!"/>
+        <lts>
+          <pho hi="" w="0"/>
+        </lts>
+        <morph/>
+        <msafe safe="1"/>
+      </w>
+    </s>
+  </body>
+</doc>

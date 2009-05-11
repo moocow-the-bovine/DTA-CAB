@@ -158,41 +158,36 @@ fields, depending on the underlying analyzer and options:
 
 =over 4
 
-=item text
+=item token.text
 
 Raw token text (string)
 
-=item xlit
+=item token.xlit
 
 Transliteration (latin-1 approximation) analysis results,
 a struct with the following fields:
 
 =over 4
 
-=item latin1Text
+=item token.xlit.latin1Text
 
 (string) heuristic latin-1 approximation of input token text
 
-=item isLatin1
+=item token.xlit.isLatin1
 
 (boolean) whether input token text is losslessly encodable in
 the latin-1 (ISO-8859-1) character set.
-If this is true, the token's L<xlit.latin1Text/latin1Text> field should
-be identical to its L</text> field.
+If this is true, the token's L<xlit.latin1Text|/token.xlit.latin1Text> field should
+be identical to its L<text|/token.text> field.
 
-=item isLatinExt
+=item token.xlit.isLatinExt
 
 (boolean) whether input token text is losslessly encodable
 in the Unicode "latin-extended" character set.
 
 =back
 
-=item lts
-
-Letter-to-sound transduction results as an array
-of structs.  See L</morph> for the element format.
-
-=item morph
+=item token.morph
 
 Morphological analyses, an array of structs,
 each element of which represents a single analysis,
@@ -200,25 +195,38 @@ and has fields:
 
 =over 4
 
-=item w
+=item token.morph[].w
 
 Analysis weight (float)
 
-=item hi
+=item token.morph[].hi
 
 Analysis output string
 
 =back
 
-=item msafe
+=item token.msafe
 
 int (boolean) representing heuristic analysis of whether
 morphological analyses are considered "safe" (proper names
 e.g. are not considered "safe" in this sense).
 
-=item rw
+=item token.lts
 
-Array of analysis structs a la L</morph>, where weights
+Letter-to-sound transduction results as an array
+of structs.  See L</token.morph> for the element format.
+
+
+=item token.eqpho
+
+Array of strings representing phonetically equivalent word types.
+Note that the notion of "phonetic equivalence" implicit in this analysis
+may or may not be consistent with actual identity of phonetic strings
+as returned in the L</token.lts> field.
+
+=item token.rw
+
+Array of analysis structs a la L</token.morph>, where weights
 and analyses are determined by a (canonicalizing) rewrite cascade.
 Each analysis struct may additionally have "lts" and/or "morph"
 fields of its own, representing the respective analyses of the
@@ -302,7 +310,7 @@ parsing and formatting.  Perhaps surprisingly, this is the
 fastest method of data exchange with the L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
 server, due to the horrendous overhead associated with the parsing
 and generation of complex XML-RPC data structures required
-by the L</ANALYZER.analyzeDocument>() method.
+by the L</ANALYZER.analyzeDocument>() procedure.
 
 DATA should be a base64 binary string representing the document
 to be analyzed in some format parseable by the DTA::CAB modules

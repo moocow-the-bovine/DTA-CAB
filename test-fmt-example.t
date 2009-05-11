@@ -1,8 +1,5 @@
-Oje
+wie
+oede
 !
 
-Nicht
-schon
-wieder
-!
 

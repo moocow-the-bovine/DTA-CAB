@@ -36,7 +36,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 our @ISA = qw(DTA::CAB::Analyzer);
 
 ##==============================================================================
@@ -144,7 +144,7 @@ sub getAnalyzeTokenSub {
     ##-- analyze: transliterator
     if ($a_xlit && (!defined($opts->{do_xlit}) || $opts->{do_xlit})) {
       $a_xlit->($tok,$opts);
-      $l = $tok->{$xlit->{analysisKey}}[0];
+      $l = $tok->{$xlit->{analysisKey}}{latin1Text};
     } else {
       $l = $tok->{text};
     }
