@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-DTA::CAB:Protocol - XML-RPC protocol for use with DTA::CAB::Server::XmlRpc
+DTA::CAB:XmlRpcProtocol - XML-RPC protocol for use with DTA::CAB::Server::XmlRpc
 
 =cut
 
@@ -264,14 +264,18 @@ Currently, no DTA::CAB analyzers add any additional fields to the document struc
  BASE64 = dta.cab.ANALYZER.analyzeData( DATA, OPTIONS? )
 
 Analyze a raw data string as a document, with server-side
-parsing and formatting.
+parsing and formatting.  Perhaps surprisingly, this is the
+fastest method of data exchange with the L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
+server, due to the horrendous overhead associated with the parsing
+and generation of complex XML-RPC data structures required
+by the L</analyzeDocument>() method.
 
 DATA should be a base64 binary string representing the document
 to be analyzed in some format parseable by the DTA::CAB modules
 (e.g. some sub-class of L<DTA::CAB::Format|DTA::CAB::Format>),
 and
 OPTIONS is an optional struct passed to the underlying perl analyzer's
-C<analyzeData()> method.
+L<analyzeData()|DTA::CAB::Analyzer/item_analyzeData> method.
 
 In particular, OPTIONS may contain the (nested) fields:
 
