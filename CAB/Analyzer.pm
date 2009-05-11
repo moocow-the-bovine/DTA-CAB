@@ -194,9 +194,50 @@ sub getAnalyzeDocumentSub {
   };
 }
 
-##==============================================================================
-## Methods: Output Formatting : OBSOLETE!
-##==============================================================================
+##------------------------------------------------------------------------
+## Methods: Analysis: Raw Data
+
+
+## $data = $anl->analyzeData($data,\%analyzeOptions)
+sub analyzeData { return $_[0]->analyzeDataSub()->(@_[1..$#_]); }
+
+## $coderef = $anl->analyzeDataSub()
+sub analyzeDataSub {
+  my $anl = shift;
+  return $anl->{_analyzeData} if (defined($anl->{_analyzeData}));
+  $anl->ensureLoaded()
+    or die(ref($anl)."::analyzeDataSub(): could not load analysis data: $!");
+  return $anl->{_analyzeData}=$anl->getAnalyzeDataSub(@_);
+}
+
+## $coderef = $anl->getanalyzeDataSub()
+##  + for raw data analysis
+##  + returned sub is callable as:
+##     $base64 = $coderef->($data_str,\%opts);
+sub getAalyzeDataSub {
+  require RPC::XML;
+  my $anl = shift;
+  my $a_doc = $anl->analyzeDocumentSub();
+  my ($opts, $ifmt,$ofmt,$iopts,$oopts, $doc,$str);
+  return sub {
+    $opts = $_[1];
+    $opts = {} if (!defined($opts));
+    $opts->{reader} = {} if (!$opts->{reader});
+    $opts->{writer} = {} if (!$opts->{writer});
+
+    ##-- get format reader,writer
+    $ifmt = DTA::CAB::Format->newReader(%{$opts->{reader}});
+    $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %{$opts->{writer}});
+
+    $doc = $ifmt->parseString($_[0]);
+    #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
+    $doc = $a_doc->($doc,$opts);
+    $str = $ofmt->flush->putDocument($doc)->toString;
+    $ofmt->flush;
+
+    return RPC::XML::base64->new($str);
+  };
+}
 
 
 ##==============================================================================
@@ -277,34 +318,6 @@ sub xmlRpcMethods {
 	 );
 }
 
-## $coderef = $anl->analyzeDataSub
-##  + for raw data analysis
-sub analyzeDataSub {
-  require RPC::XML;
-  my $anl = shift;
-  my $a_doc = $anl->analyzeDocumentSub;
-  my ($opts, $ifmt,$ofmt,$iopts,$oopts, $doc,$str);
-  return sub {
-    $opts = $_[1];
-    $opts = {} if (!defined($opts));
-    $opts->{reader} = {} if (!$opts->{reader});
-    $opts->{writer} = {} if (!$opts->{writer});
-
-    ##-- get format reader,writer
-    $ifmt = DTA::CAB::Format->newReader(%{$opts->{reader}});
-    $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %{$opts->{writer}});
-
-    $doc = $ifmt->parseString($_[0]);
-    #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
-    $doc = $a_doc->($doc,$opts);
-    $str = $ofmt->flush->putDocument($doc)->toString;
-    $ofmt->flush;
-
-    return RPC::XML::base64->new($str);
-  };
-}
-
-
 
 1; ##-- be happy
 
@@ -364,11 +377,14 @@ DTA::CAB::Analyzer - generic analyzer API for DTA::CAB
  $coderef = $anl->analyzeDocumentSub();
  $coderef = $anl->getAnalyzeDocumentSub();
  
+ $base64 = $anl->analyzeData($docdata,\%analyzeOptions);
+ $coderef = $anl->analyzeDataSub();
+ $coderef = $anl->getAnalyzeDataSub();
+ 
  ##========================================================================
  ## Methods: XML-RPC
  
  @procedures = $anl->xmlRpcMethods();
- $coderef = $anl->analyzeDataSub;
 
 =cut
 
@@ -501,7 +517,7 @@ General schema for analysis of thingies belonging to type I<XXX>:
  $coderef = $anl->analyzeXXXSub();               ##-- get cached closure or generate
  $thingy  = $anl->analyzeXXX($thingy,\%options)  ##-- get & apply (cached) closure
 
-Currently, I<XXX> may be one of: 'Token', 'Sentence', or 'Document'.  More to come (maybe).
+Currently, I<XXX> may be one of: 'Token', 'Sentence', 'Document', or 'Data'.  More to come (maybe).
 
 The method C<analyze()> is just an alias for L<analyzeToken()|/analyzeToken>.
 
@@ -559,7 +575,7 @@ Default implementation just calls L</analyzeToken>() on each token of the input 
 
 =item analyzeDocument
 
- $doc = $anl->analyzeDocument($sent,\%analyzeOptions);
+ $doc = $anl->analyzeDocument($doc,\%analyzeOptions);
 
 Analogous to L</analyzeToken>().
 
@@ -576,6 +592,53 @@ Analogous to L</analyzeTokenSub>().
 Analogous to L</getAnalyzeTokenSub>().
 
 Default implementation just calls analyzeSentence() on each sentence of the input document.
+
+
+=item analyzeData
+
+ $base64 = $anl->analyzeData($docstr,\%analyzeOptions);
+
+Like L</analyzeDocument>(), but $docstr is a raw document data string,
+in some format supported by a L<DTA::CAB::Format|DTA::CAB::Format> subclass.
+The following %analyzeOptions are supported by this method:
+
+ reader => \%fmtOpts,  ##-- options for DTA::CAB::Format::newReader()
+ writer => \%fmtOpts,  ##-- options for DTA::CAB::Format::newWriter()
+
+The returned document is encoded as an RPC::XML::base64 binary string
+in the requested format.
+
+This method is primarily useful for passing large amounts of data
+back and forth between a client and a L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
+server, as it avoids slow XML-RPC data conversions.
+
+=item analyzeDataSub
+
+ $coderef = $anl->analyzeDataSub();
+
+Analogous to L</analyzeTokenSub>().
+
+=item getAnalyzeDataSub
+
+ $coderef = $anl->getAnalyzeDataSub();
+
+Analogous to L</getAnalyzeTokenSub>().  Returned sub is called as:
+
+ $base64 = $coderef->($docstr,\%analyzeOptions);
+
+Default implementation instantiates data parser and formatter
+in accordance with the C<reader> and C<writer> options by
+calling
+L<DTA::CAB::Format-E<gt>newReader()|DTA::CAB::Format/newReader>
+rsp.
+L<DTA::CAB::Format-E<gt>newWriter()|DTA::CAB::Format/newWriter>, parses
+the argument string as a document with
+L<$reader-E<gt>parseString($docstr)|DTA::CAB::Format/parseString>,
+analyzes the document with the
+L</analyzeDocumentSub> closure,
+and formats the output string with
+L<$writer-E<gt>putDocument($doc)|DTA::CAB::Format/putDocument>,
+which is then encoded and returned as an RPC::XML::base64 object $base64.
 
 =back
 
@@ -599,14 +662,8 @@ Default implementation defines 'analyzeToken', 'analyzeSentence', 'analyzeDocume
 and 'analyzeData' methods, which call the respective object methods.
 
 Recognizes some additional keys recognized in procedure specs;
-see L<DTA::CAB::Server::XmlRpc::prepareLocal()|DTA::CAB::Server::XmlRpc/item_prepareLocal>
+see L<DTA::CAB::Server::XmlRpc::prepareLocal()|DTA::CAB::Server::XmlRpc/prepareLocal>
 for details.
-
-=item analyzeDataSub
-
- $coderef = $anl->analyzeDataSub;
-
-For raw data analysis via XML-RPC (to avoid slow XML-RPC data conversions).
 
 =back
 

@@ -450,22 +450,21 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
 
 =over 4
 
-=item Variable: @ISA
+=item @ISA
 
 DTA::CAB::Format inherits from
 L<DTA::CAB::Persistent|DTA::CAB::Persistent>
 and
 L<DTA::CAB::Logger|DTA::CAB::Logger>.
 
-=item Variable: $CLASS_DEFAULT
+=item $CLASS_DEFAULT
 
-Default class retuend by L</newFormat>().
+Default class returned by L</newFormat>()
+if no known class is specified.
 
-=item Variable: @classreg
+=item @classreg
 
-@classreg
-
-Registered classes: see L</registerFormat>().
+List of registered subclasses: see L</registerFormat>().
 
 =back
 

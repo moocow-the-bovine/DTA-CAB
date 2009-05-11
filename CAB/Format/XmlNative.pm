@@ -146,11 +146,11 @@ sub parseDocument {
 	$subname = $subnod->nodeName;
 	if ($subname eq 'xlit') {
 	  ##-- token: field: 'xlit'
-	  $tok->{xlit} = [
-			  $subnod->getAttribute('latin1Text'),
-			  $subnod->getAttribute('isLatin1'),
-			  $subnod->getAttribute('isLatinExt'),
-			 ];
+	  $tok->{xlit} = {
+			  latin1Text=>$subnod->getAttribute('latin1Text'),
+			  isLatin1=>$subnod->getAttribute('isLatin1'),
+			  isLatinExt=>$subnod->getAttribute('isLatinExt'),
+			 };
 	}
 	elsif ($subname eq $fmt->{ltsElt}) {
 	  ##-- token: field: 'lts'
@@ -240,9 +240,9 @@ sub tokenNode {
   ##-- Transliterator ('xlit')
   if (defined($tok->{xlit})) {
     my $xnod = $nod->addNewChild(undef, 'xlit');
-    $xnod->setAttribute('isLatin1',   $tok->{xlit}[1]);
-    $xnod->setAttribute('isLatinExt', $tok->{xlit}[2]);
-    $xnod->setAttribute('latin1Text', $tok->{xlit}[0]);
+    $xnod->setAttribute('isLatin1',   $tok->{xlit}{isLatin1});
+    $xnod->setAttribute('isLatinExt', $tok->{xlit}{isLatinExt});
+    $xnod->setAttribute('latin1Text', $tok->{xlit}{latin1Text});
   }
 
   ##-- LTS ('lts')

@@ -125,7 +125,8 @@ sub parseTTString {
       foreach $field (@fields) {
 	if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
 	  ##-- token: field: xlit
-	  $tok->{xlit} = [$3,$1,$2];
+	  #$tok->{xlit} = [$3,$1,$2];
+	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
 	}
 	elsif ($field =~ m/^\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: lts analysis (no lower)
@@ -229,7 +230,7 @@ sub putToken {
   my $out = $tok->{text};
 
   ##-- Transliterator ('xlit')
-  $out .= "\t[xlit] l1=$tok->{xlit}[1] lx=$tok->{xlit}[2] l1s=$tok->{xlit}[0]"
+  $out .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
     if (defined($tok->{xlit}));
 
   ##-- LTS ('lts')

@@ -64,7 +64,7 @@ sub ensureLoaded { return 1; }
 ##  + returned sub is callable as:
 ##      $tok = $coderef->($tok,\%analyzeOptions)
 ##  + sets (for $key=$anl->{analysisKey}):
-##      $tok->{$key} = [ $latin1Text, $isLatin1, $isLatinX]
+##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
 ##    with:
 ##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
 ##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
@@ -124,7 +124,8 @@ sub getAnalyzeTokenSub {
 
     ##-- return
     #return [ $l, $isLatin1, $isLatinExt ];
-    $tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
+    #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
+    $tok->{$akey} = { latin1Text=>$l, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
 
     return $tok;
   };
@@ -183,7 +184,7 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator
 
 =over 4
 
-=item Variable: @ISA
+=item @ISA
 
 DTA::CAB::Analyzer::Transliterator
 inherits from
@@ -241,7 +242,7 @@ Override: ensures analysis data is loaded
 
 =item getAnalyzeTokenSub
 
-Override: see L<DTA::CAB::Analyzer::getAnalyzeTokenSub()|DTA::CAB::Analyzer/item_getAnalyzeTokenSub>.
+Override: see L<DTA::CAB::Analyzer::getAnalyzeTokenSub()|DTA::CAB::Analyzer/getAnalyzeTokenSub>.
 
 =over 4
 
@@ -253,9 +254,9 @@ returned sub is callable as:
 
 =item *
 
-sets (for $key=$anl-E<gt>{analysisKey}):
+sets (for $key=$anl-E<gt>{analysisKey}, by default C<xlit>):
 
- $tok->{$key} = [ $latin1Text, $isLatin1, $isLatinX]
+ $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
 
 with:
 

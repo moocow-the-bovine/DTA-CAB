@@ -42,6 +42,10 @@ L</CAB METHODS> for details on the methods provided by
 the L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> module
 itself.
 
+All data passed to and from the server are assumed to be encoded in UTF-8
+(although the L</ANALYZER.analyzeData> procedure is cabable of handling
+arbitrary encodings by use of the XML-RPC C<base64> type).
+
 =cut
 
 ##========================================================================
@@ -94,7 +98,7 @@ Returns a help string for the method METHOD_NAME (a string).
 
 L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> methods all carry
 an optional prefix characteristic for the server (see {procNamePrefix} in
-L<DTA::CAB::Server::XmlRpc::new()|DTA::CAB::Server::XmlRpc/item_new>);
+L<DTA::CAB::Server::XmlRpc::new()|DTA::CAB::Server::XmlRpc/new>);
 by default this prefix is "dta.cab.".
 If your server is configured to use a different prefix, replace the "dta.cab." prefix
 in the examples below with that used by your server.
@@ -124,8 +128,12 @@ Returns an array of all analyzer names (strings) recognized by the running serve
  STRUCT = dta.cab.ANALYZER.analyzeToken( TOKEN, OPTIONS? )
 
 Analyze a single token TOKEN with the analyzer ANALYZER.
-OPTIONS is an optional struct passed to the underlying perl analyzer's
-C<analyzeToken()> method.
+OPTIONS is an optional struct containing runtime analysis options
+to be passed to
+the closure which implements
+the underlying perl analyzer's
+L<analyzeToken()|DTA::CAB::Analyzer/analyzeToken>
+method.
 
 TOKEN may be of one of the following types:
 
@@ -157,7 +165,27 @@ Raw token text (string)
 =item xlit
 
 Transliteration (latin-1 approximation) analysis results,
-a 3-element array (LATIN1TEXT,ISLATIN1,ISLATINEXT).
+a struct with the following fields:
+
+=over 4
+
+=item latin1Text
+
+(string) heuristic latin-1 approximation of input token text
+
+=item isLatin1
+
+(boolean) whether input token text is losslessly encodable in
+the latin-1 (ISO-8859-1) character set.
+If this is true, the token's L<xlit.latin1Text/latin1Text> field should
+be identical to its L</text> field.
+
+=item isLatinExt
+
+(boolean) whether input token text is losslessly encodable
+in the Unicode "latin-extended" character set.
+
+=back
 
 =item lts
 
@@ -205,8 +233,11 @@ rewrite I<target>.
  STRUCT = dta.cab.ANALYZER.analyzeSentence( SENTENCE, OPTIONS? )
 
 Analyze a sentence SENTENCE with the analyzer ANALYZER.
-OPTIONS is an optional struct passed to the underlying perl analyzer's
-C<analyzeSentence()> method.
+OPTIONS is an optional struct containing runtime analysis options to be passed to
+the closure which implements
+the underlying perl analyzer's
+L<analyzeSentence()|DTA::CAB::Analyzer/analyzeSentence>
+method.
 
 SENTENCE may be of one of the following types:
 
@@ -234,8 +265,11 @@ Currently, no DTA::CAB analyzers add any additional fields to the sentence struc
  STRUCT = dta.cab.ANALYZER.analyzeDocument( DOCUMENT, OPTIONS? )
 
 Analyze a whole document DOCUMENT with the analyzer ANALYZER.
-OPTIONS is an optional struct passed to the underlying perl analyzer's
-C<analyzeDocument()> method.
+OPTIONS is an optional struct containing runtime analysis options to be passed to
+the closure which implements
+the underlying perl analyzer's
+L<analyzeDocument()|DTA::CAB::Analyzer/analyzeDocument>
+method.
 
 DOCUMENT may be of one of the following types:
 
@@ -268,14 +302,19 @@ parsing and formatting.  Perhaps surprisingly, this is the
 fastest method of data exchange with the L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
 server, due to the horrendous overhead associated with the parsing
 and generation of complex XML-RPC data structures required
-by the L</analyzeDocument>() method.
+by the L</ANALYZER.analyzeDocument>() method.
 
 DATA should be a base64 binary string representing the document
 to be analyzed in some format parseable by the DTA::CAB modules
 (e.g. some sub-class of L<DTA::CAB::Format|DTA::CAB::Format>),
 and
-OPTIONS is an optional struct passed to the underlying perl analyzer's
-L<analyzeData()|DTA::CAB::Analyzer/item_analyzeData> method.
+OPTIONS is an optional struct containing runtime analysis options to be passed to
+the closure which implements
+the underlying perl analyzer's
+L<analyzeData()|DTA::CAB::Analyzer/analyzeData>
+and/or
+L<analyzeDocument()|DTA::CAB::Analyzer/analyzeDocument>
+method.
 
 In particular, OPTIONS may contain the (nested) fields:
 
@@ -286,7 +325,8 @@ In particular, OPTIONS may contain the (nested) fields:
 (string) class-name or suffix of the L<DTA::CAB::Format|DTA::CAB::Format>
 subclass to use for parsing input.
 The default reader class is
-'DTA::CAB::Format::TT' (unless you changed C<$DTA::CAB::Format::CLASS_DEFAULT>),
+L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>
+(unless you changed L<$DTA::CAB::Format::CLASS_DEFAULT|DTA::CAB::Format/$CLASS_DEFAULT>),
 which expects
 one word per line TAB-separated data with conventional prefixes
 identifying token analysis fields.

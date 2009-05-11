@@ -121,7 +121,7 @@ sub parseTextString {
     }
     elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
       ##-- token: xlit
-      $tok->{xlit} = [$3,$1,$2];
+      $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
     }
     elsif ($line =~ m/^\t\+\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: lts analysis
@@ -223,7 +223,7 @@ sub putToken {
   my $out = $tok->{text}."\n";
 
   ##-- Transliterator ('xlit')
-  $out .= "\t+[xlit] isLatin1=$tok->{xlit}[1] isLatinExt=$tok->{xlit}[2] latin1Text=$tok->{xlit}[0]\n"
+  $out .= "\t+[xlit] isLatin1=$tok->{xlit}{isLatin1} isLatinExt=$tok->{xlit}{isLatinExt} latin1Text=$tok->{xlit}{latin1Text}\n"
     if (defined($tok->{xlit}));
 
   ##-- LTS ('lts')
