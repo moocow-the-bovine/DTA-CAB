@@ -29,7 +29,7 @@ our ($help,$man,$version,$verbose);
 
 
 ##-- Server Options
-our $serverURL  = 'http://localhost:8000';
+our $serverURL  = 'http://localhost:8088';
 our $serverEncoding = 'UTF-8';
 our $localEncoding  = 'UTF-8';
 our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
@@ -104,7 +104,10 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 DTA::CAB::Logger->ensureLog();
 
 ##-- sanity checks
-$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]*://|);
+$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+://|);
+if ($serverURL =~ m|([^:]+://[^/:]*)(/[^:]*)$|) {
+  $serverURL = "$1:8088$2";
+}
 
 ##-- create client object
 our $cli = DTA::CAB::Client::XmlRpc->new(
@@ -270,7 +273,7 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -version                        ##-- show version & exit
 
  Server Options:
-  -server URL                     ##-- set server URL (default: localhost:8000)
+  -server URL                     ##-- set server URL (default: http://localhost:8088)
   -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)

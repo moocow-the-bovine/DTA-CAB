@@ -172,7 +172,7 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
  Server Configuration Options:
   -config PLFILE                  ##-- load server config from PLFILE
   -bind   HOST                    ##-- override host to bind (default=all)
-  -port   PORT                    ##-- override port to bind (default=8000)
+  -port   PORT                    ##-- override port to bind (default=8088)
   -encoding ENCODING              ##-- override server encoding (default=UTF-8)
 
  Daemon Mode Options:
@@ -261,7 +261,7 @@ Default is to bind on all interfaces of the current host.
 Override port number to which to bind the server socket.
 Default is whatever
 L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
-defaults to (usually 8000).
+defaults to (usually 8088).
 
 =item -encoding ENCODING
 

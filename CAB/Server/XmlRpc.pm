@@ -48,7 +48,7 @@ sub new {
 			   xopt => {
 				    #path => '/',         ##-- URI path for underlying server (HTTP::Daemon)
 				    #host => '0.0.0.0',   ##-- host for underlying server (HTTP::Daemon)
-				    port => 8000,         ##-- port for underlying server (HTTP::Daemon)
+				    port => 8088,         ##-- port for underlying server (HTTP::Daemon)
 				    queue => SOMAXCONN,   ##-- queue size for underlying server (HTTP::Daemon)
 				    #timeout => 10,       ##-- connection timeout (HTTP::Daemon)
 				    ##
