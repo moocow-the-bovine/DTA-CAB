@@ -689,7 +689,7 @@ Default implementation just deletes $fmt-E<gt>{outbuf}.
 =item toString
 
  $str = $fmt->toString();
- $str = $fmt-E<gt>toString($formatLevel)
+ $str = $fmt->toString($formatLevel)
 
 Flush buffered output document to byte-string, and return it.
 Fefault implementation just encodes string in $fmt-E<gt>{outbuf}.
