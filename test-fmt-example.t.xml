@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sentences>
+  <s>
+    <w t="wie">
+      <a src="xlit" latin1Text="wie" isLatin1="1" isLatinExt="1"/>
+      <a src="lts" hi="vi" w="0"/>
+      <a src="eqpho" t="Wie"/>
+      <a src="eqpho" t="wie"/>
+      <a src="morph" hi="wie[_ADV]" w="0"/>
+      <a src="morph" hi="wie[_KON]" w="0"/>
+      <a src="morph" hi="wie[_KOKOM]" w="0"/>
+      <a src="morph" hi="wie[_KOUS]" w="0"/>
+      <a src="msafe" safe="1"/>
+    </w>
+    <w t="oede">
+      <a src="xlit" latin1Text="oede" isLatin1="1" isLatinExt="1"/>
+      <a src="lts" hi="?2de" w="0"/>
+      <a src="eqpho" t="Oede"/>
+      <a src="eqpho" t="Öde"/>
+      <a src="eqpho" t="öde"/>
+      <a src="msafe" safe="0"/>
+      <a src="rw" hi="öde" w="1">
+        <a src="lts" hi="?2de" w="0"/>
+        <a src="morph" hi="öde[_ADJD]" w="0"/>
+        <a src="morph" hi="öde[_ADJA][pos][sg][nom]*[weak]" w="0"/>
+        <a src="morph" hi="öde[_ADJA][pos][sg][nom][fem][strong_mixed]" w="0"/>
+        <a src="morph" hi="öde[_ADJA][pos][sg][acc][fem]*" w="0"/>
+        <a src="morph" hi="öde[_ADJA][pos][sg][acc][neut][weak]" w="0"/>
+        <a src="morph" hi="öde[_ADJA][pos][pl][nom_acc]*[strong]" w="0"/>
+        <a src="morph" hi="öd~en[_VVFIN][first][sg][pres][ind]" w="0"/>
+        <a src="morph" hi="öd~en[_VVFIN][first][sg][pres][subjI]" w="0"/>
+        <a src="morph" hi="öd~en[_VVFIN][third][sg][pres][subjI]" w="0"/>
+        <a src="morph" hi="öd~en[_VVIMP][sg]" w="0"/>
+      </a>
+    </w>
+    <w t="!">
+      <a src="xlit" latin1Text="!" isLatin1="1" isLatinExt="1"/>
+      <a src="lts" hi="" w="0"/>
+      <a src="msafe" safe="1"/>
+    </w>
+  </s>
+</sentences>
