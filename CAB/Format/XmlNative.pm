@@ -39,74 +39,98 @@ BEGIN {
 ##
 ##     ##-- common: XML element & attribute names
 ##     documentElt      => $eltName,    ##-- default: 'doc'
+##     multidocElt      => $eltName,    ##-- default: 'corpus'
 ##     sentenceElt      => $eltName,    ##-- default: 's'
 ##     tokenElt         => $eltName,    ##-- default: 'w'
-##     tokenTextAttr    => $attr,       ##-- default: 'text'
+##     tokenTextAttr    => $attr,       ##-- default: 't'
+##     ##
+##     xlitElt          => $eltName,    ##-- default: 'xlit'
+##     xlitTextAttr     => $attr,       ##-- default: 't'
+##     xlitIsLatin1Attr => $attr,       ##-- default: 'isLatin1'
+##     xlitIsLatinExtAttr=>$attr,       ##-- default: 'isLatinExt'
 ##     ##
 ##     ltsElt           => $eltName,    ##-- default: 'lts'
-##     ltsAnalysisElt   => $eltName,    ##-- default: 'pho'
+##     ltsAnalysisElt   => $eltName,    ##-- default: 'a'
 ##     ltsLoAttr        => $attr,       ##-- default: 'lo'
 ##     ltsHiAttr        => $attr,       ##-- default: 'hi'
 ##     ltsWeightAttr    => $attr,       ##-- default: 'w'
 ##     ##
 ##     eqphoElt         => $eltName,    ##-- default: 'eqpho'
-##     eqphoSubElt      => $eltName,    ##-- default: 'w'
-##     eqphoTextAttr    => $attr,       ##-- default: 'text'
+##     eqphoAnalysisElt => $eltName,    ##-- default: 'a'
+##     eqphoTextAttr    => $attr,       ##-- default: 't'
 ##     ##
 ##     morphElt         => $eltName,    ##-- default: 'morph'
-##     morphAnalysisElt => $eltName,    ##-- default: 'ma'
+##     morphAnalysisElt => $eltName,    ##-- default: 'a'
 ##     morphLoAttr      => $attr,       ##-- default: 'lo'
 ##     morphHiAttr      => $attr,       ##-- default: 'hi'
 ##     morphWeightAttr  => $attr,       ##-- default: 'w'
 ##     ##
+##     msafeElt         => $eltName,    ##-- default: 'msafe'
+##     msafeAttr        => $attrName,   ##-- defualt: 'safe'
+##     ##
 ##     rwElt            => $eltName,    ##-- default: 'rewrite'
-##     rwAnalysisElt    => $eltName,    ##-- default: 'rw'
+##     rwAnalysisElt    => $eltName,    ##-- default: 'a'
 ##     rwLoAttr         => $attr,       ##-- default: 'lo'
 ##     rwHiAttr         => $attr,       ##-- default: 'hi'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
 ##    }
 sub new {
   my $that = shift;
-  return $that->SUPER::new(
+  my $fmt = $that->SUPER::new(
 			   ##-- input
-			   xprs => XML::LibXML->new,
-			   xdoc => undef,
+			      xprs => undef,
+			      xdoc => undef,
 
-			   ##-- output
-			   encoding => 'UTF-8',
-			   level => 0,
+			      ##-- output
+			      encoding => 'UTF-8',
+			      level => 0,
 
-			   ##-- common: XML names
-			   documentElt => 'doc',
-			   sentenceElt => 's',
-			   tokenElt => 'w',
-			   tokenTextAttr => 'text',
-			   ##
-			   ltsElt           => 'lts',
-			   ltsAnalysisElt   => 'pho',
-			   ltsLoAttr        => 'lo',
-			   ltsHiAttr        => 'hi',
-			   ltsWeightAttr    => 'w',
-			   ##
-			   eqphoElt         => 'eqpho',
-			   eqphoSubElt      => 'w',
-			   eqphoTextAttr    => 'text',
-			   ##
-			   morphElt => 'morph',
-			   morphAnalysisElt => 'ma',
-			   morphLoAttr      => 'lo',
-			   morphHiAttr      => 'hi',
-			   morphWeightAttr  => 'w',
-			   ##
-			   rwElt => 'rewrite',
-			   rwAnalysisElt => 'rw',
-			   rwLoAttr      => 'lo',
-			   rwHiAttr      => 'hi',
-			   rwWeightAttr  => 'w',
+			      ##-- common: XML names
+			      documentElt => 'doc',
+			      multidocElt => 'corpus',
+			      sentenceElt => 's',
+			      tokenElt      => 'w',
+			      tokenTextAttr => 't', #'text',
+			      ##
+			      xlitElt          => 'xlit',
+			      xlitTextAttr     => 't', #'latin1Text',
+			      xlitIsLatin1Attr => 'isLatin1',
+			      xlitIsLatinExtAttr=> 'isLatinExt',
+			      ##
+			      ltsElt           => 'lts',
+			      ltsAnalysisElt   => 'a', #'pho',
+			      ltsLoAttr        => 'lo',
+			      ltsHiAttr        => 'hi',
+			      ltsWeightAttr    => 'w',
+			      ##
+			      eqphoElt         => 'eqpho',
+			      eqphoAnalysisElt => 'a', #'w',
+			      eqphoTextAttr    => 't', #'text',
+			      ##
+			      morphElt => 'morph',
+			      morphAnalysisElt => 'a', #'ma',
+			      morphLoAttr      => 'lo',
+			      morphHiAttr      => 'hi',
+			      morphWeightAttr  => 'w',
+			      ##
+			      msafeElt         => 'msafe',
+			      msafeAttr        => 'safe',
+			      ##
+			      rwElt => 'rewrite',
+			      rwAnalysisElt => 'a', #'rw',
+			      rwLoAttr      => 'lo',
+			      rwHiAttr      => 'hi',
+			      rwWeightAttr  => 'w',
 
-			   ##-- user args
-			   @_
-			  );
+			      ##-- user args
+			      @_
+			     );
+
+  if (!$fmt->{xprs}) {
+    $fmt->{xprs} = XML::LibXML->new;
+    $fmt->{xprs}->keep_blanks(0);
+  }
+  return $fmt;
 }
 
 ##==============================================================================
@@ -128,6 +152,13 @@ sub new {
 
 ## $doc = $fmt->parseDocument()
 ##  + parses buffered XML::LibXML::Document
+##  + extra %$doc keys parsed:
+##    _xmldoc => $doc,              ##-- source XML::LibXML::Document
+##    _xmlnod => $node,             ##-- source XML::LibXML::Element
+##  + extra %$sentence keys parsed:
+##    _xmlnod  => $node,            ##-- source XML::LibXML::Element
+##  + extra %$token keys parsed:
+##    _xmlnod => $node,             ##-- source XML::LibXML::Element
 sub parseDocument {
   my $fmt = shift;
   if (!defined($fmt->{xdoc})) {
@@ -136,87 +167,85 @@ sub parseDocument {
   }
   my $root = $fmt->{xdoc}->documentElement;
   my $sents = [];
-  my ($s,$tok, $snod,$toknod, $subnod,$subname, $panod,$manod,$rwnod, $eqanod,$eqatxt, $rw, $fsma);
-  foreach $snod (@{ $root->findnodes("//body//$fmt->{sentenceElt}") }) {
-    push(@$sents, bless({tokens=>($s=[])},'DTA::CAB::Sentence'));
-    foreach $toknod (@{ $snod->findnodes(".//$fmt->{tokenElt}") }) {
-      push(@$s,$tok=bless({},'DTA::CAB::Token'));
-      $tok->{text} = $toknod->getAttribute($fmt->{tokenTextAttr});
-      foreach $subnod (grep {UNIVERSAL::isa($_,'XML::LibXML::Element')} $toknod->childNodes) {
-	$subname = $subnod->nodeName;
-	if ($subname eq 'xlit') {
-	  ##-- token: field: 'xlit'
-	  $tok->{xlit} = {
-			  latin1Text=>$subnod->getAttribute('latin1Text'),
-			  isLatin1=>$subnod->getAttribute('isLatin1'),
-			  isLatinExt=>$subnod->getAttribute('isLatinExt'),
-			 };
+  my $doc   = bless({body=>$sents, _xmldoc=>$fmt->{xdoc}, _xmlnod=>$root, },'DTA::CAB::Document');
+
+  ##-- common variables
+  my ($snod,$s,$stoks, $wnod,$tok, $anod,$a, $rwnod,$rw);
+
+  ##-- loop: sentences
+  foreach $snod (@{ $root->findnodes(".//$fmt->{sentenceElt}") }) {
+    push(@$sents, $s=bless({tokens=>($stoks=[]), _xmlnod=>$snod},'DTA::CAB::Sentence'));
+
+    ##-- loop: sentence/tokens
+    foreach $wnod (@{ $snod->findnodes("./$fmt->{tokenElt}") }) {
+      push(@$stoks, $tok=bless({ _xmlnod=>$wnod },'DTA::CAB::Token'));
+
+      ##-- token: text
+      $tok->{text} = $wnod->getAttribute($fmt->{tokenTextAttr});
+
+      ##-- token: xlit
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{xlitElt}\[last()]") }) {
+	$tok->{xlit} = {};
+	$tok->{xlit}{latin1Text} = $anod->getAttribute($fmt->{xlitTextAttr}) if ($fmt->{xlitTextAttr});
+	$tok->{xlit}{isLatin1}   = $anod->getAttribute($fmt->{xlitIsLatin1Attr}) if ($fmt->{xlitIsLatin1Attr});
+	$tok->{xlit}{isLatinExt} = $anod->getAttribute($fmt->{xlitIsLatinExtAttr}) if ($fmt->{xlitIsLatinExtAttr});
+      }
+
+      ##-- token: lts
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{ltsElt}/$fmt->{ltsAnalysisElt}") }) {
+	#$tok->{lts} = [] if (!$tok->{lts});
+	push(@{$tok->{lts}}, $a={});
+	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
+	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
+      }
+
+      ##-- token: morph
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{morphElt}/$fmt->{morphAnalysisElt}") }) {
+	#$tok->{morph} = [] if (!$tok->{morph});
+	push(@{$tok->{morph}}, $a={});
+	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
+	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
+      }
+
+      ##-- token: eqpho
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{eqphoElt}/$fmt->{eqphoAnalysisElt}") }) {
+	#$tok->{eqpho} = [] if (!$tok->{eqpho});
+	push(@{$tok->{eqpho}}, $anod->getAttribute($fmt->{eqphoTextAttr}));
+      }
+
+      ##-- token: msafe
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{msafeElt}\[last()]") }) {
+	$tok->{msafe} = $anod->getAttribute('safe') ? 1 : 0;
+      }
+
+      ##-- token: rewrite
+      foreach $rwnod (@{ $wnod->findnodes("./$fmt->{rwElt}/$fmt->{rwAnalysisElt}") }) {
+	#$tok->{rw} = [] if (!$tok->{rw});
+	push(@{$tok->{rw}}, $rw={});
+	@$rw{qw(lo hi w)} = map {$rwnod->getAttribute($_)} @$fmt{qw(rwLoAttr rwHiAttr rwWeightAttr)};
+	delete(@$rw{grep {!defined($rw->{$_})} keys(%$rw)});
+
+	##-- token: rewrite: lts
+	foreach $anod (@{ $rwnod->findnodes("./$fmt->{ltsElt}/$fmt->{ltsAnalysisElt}") }) {
+	  #$rw->{lts} = [] if (!$rw->{lts});
+	  push(@{$rw->{lts}}, $a={});
+	  @$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
+	  delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
 	}
-	elsif ($subname eq $fmt->{ltsElt}) {
-	  ##-- token: field: 'lts'
-	  $tok->{lts} = [];
-	  foreach $panod (grep {$_->nodeName eq $fmt->{ltsAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{lts}}, $fsma={});
-	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
-	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
-	  }
-	}
-	elsif ($subname eq $fmt->{eqphoElt}) {
-	  ##-- token: field: 'eqpho'
-	  $tok->{eqpho} = [];
-	  foreach $eqanod (grep {$_->nodeName eq $fmt->{eqphoSubElt}} $subnod->childNodes) {
-	    next if (!defined($eqatxt = $eqanod->getAttribute($fmt->{eqphoTextAttr})));
-	    push(@{$tok->{eqpho}}, $eqatxt);
-	  }
-	}
-	elsif ($subname eq $fmt->{morphElt}) {
-	  ##-- token: field: 'morph'
-	  $tok->{morph} = [];
-	  foreach $manod (grep {$_->nodeName eq $fmt->{morphAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{lts}}, $fsma={});
-	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
-	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
-	  }
-	}
-	elsif ($subname eq 'msafe') {
-	  ##-- token: field: 'msafe'
-	  $tok->{msafe} = $subnod->getAttribute('safe');
-	}
-	elsif ($subname eq $fmt->{rwElt}) {
-	  ##-- token: field: 'rewrite'
-	  $tok->{rw} = [];
-	  foreach $rwnod (grep {$_->nodeName eq $fmt->{rwAnalysisElt}} $subnod->childNodes) {
-	    push(@{$tok->{rw}}, $rw=$fsma={});
-	    @$fsma{qw(lo hi w)} = map {$panod->getAttribute($_)} @$fmt{qw(rwLoAttr rwHiAttr rwWeightAttr)};
-	    delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
-	    ##-- rewrite: sub-analyses
-	    foreach ($rwnod->childNodes) {
-	      if ($_->nodeName eq $fmt->{ltsAnalysisElt}) {
-		##-- rewrite: lts
-		push(@{$rw->{lts}}, $fsma={});
-		@$fsma{qw(lo hi w)} = map {$:->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
-		delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
-	      }
-	      elsif ($_->nodeName eq $fmt->{morphAnalysisElt}) {
-		##-- rewrite: morph
-		push(@{$rw->{morph}}, $fsma={});
-		@$fsma{qw(lo hi w)} = map {$_->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
-		delete(@$fsma{grep {!defined($fsma->{$_})} keys(%$fsma)});
-	      }
-	    }
-	  }
-	}
-	else {
-	  ##-- token: field: ???
-	  $fmt->debug("parseDocument(): unknown token child node '$subname' -- skipping");
-	  ; ##-- just ignore
+
+        ##-- token: rewrite: morph
+	foreach $anod (@{ $rwnod->findnodes("./$fmt->{morphElt}/$fmt->{morphAnalysisElt}") }) {
+	  #$rw->{morph} = [] if (!$rw->{morph});
+	  push(@{$rw->{morph}}, $a={});
+	  @$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
+	  delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
 	}
       }
     }
   }
 
-  ##-- construct & return document
-  return bless({body=>$sents}, 'DTA::CAB::Document');
+  ##-- return document
+  return $doc;
 }
 
 
@@ -229,87 +258,97 @@ sub parseDocument {
 
 ## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
+##  + if $tok has a key '_xmlnod', that node is copied!
 sub tokenNode {
   my ($fmt,$tok) = @_;
   $tok = toToken($tok);
 
-  ##-- node, text
-  my $nod = XML::LibXML::Element->new($fmt->{tokenElt});
+  ##-- token: node, text
+  my $nod = $tok->{_xmlnod} || XML::LibXML::Element->new($fmt->{tokenElt});
   $nod->setAttribute($fmt->{tokenTextAttr},$tok->{text});
 
-  ##-- Transliterator ('xlit')
-  if (defined($tok->{xlit})) {
-    my $xnod = $nod->addNewChild(undef, 'xlit');
-    $xnod->setAttribute('isLatin1',   $tok->{xlit}{isLatin1});
-    $xnod->setAttribute('isLatinExt', $tok->{xlit}{isLatinExt});
-    $xnod->setAttribute('latin1Text', $tok->{xlit}{latin1Text});
+  ##-- common variables
+  my ($anod, $aa,$aanod, $rwnod,$rwanod,$rwa);
+
+  ##-- token: xlit
+  if (defined($tok->{xlit}) && $fmt->{xlitElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{xlitElt}")});
+    $anod = $nod->addNewChild(undef, $fmt->{xlitElt});
+    $anod->setAttribute($fmt->{xlitTextAttr}, $tok->{xlit}{latin1Text}) if ($fmt->{xlitTextAttr});
+    $anod->setAttribute($fmt->{xlitIsLatin1Attr}, $tok->{xlit}{isLatin1}) if ($fmt->{xlitIsLatin1Attr});
+    $anod->setAttribute($fmt->{xlitIsLatinExtAttr}, $tok->{xlit}{isLatinExt}) if ($fmt->{xlitIsLatinExtAttr});
   }
 
-  ##-- LTS ('lts')
-  my ($ltsnod,$panod);
-  if ($tok->{lts}) {
-    $nod->addChild( $ltsnod = XML::LibXML::Element->new($fmt->{ltsElt}) );
-    foreach (@{$tok->{lts}}) {
-      $ltsnod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
-      $panod->setAttribute($fmt->{ltsLoAttr},$_->{lo}) if ($fmt->{ltsLoAttr} && defined($_->{lo}));
-      $panod->setAttribute($fmt->{ltsHiAttr},$_->{hi});
-      $panod->setAttribute($fmt->{ltsWeightAttr},$_->{w});
+  ##-- token: lts
+  if ($tok->{lts} && $fmt->{ltsElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{ltsElt}")});
+    $anod = $nod->addNewChild(undef, $fmt->{ltsElt});
+    foreach $aa (@{$tok->{lts}}) {
+      $aanod = $anod->addNewChild(undef, $fmt->{ltsAnalysisElt});
+      $aanod->setAttribute($fmt->{ltsLoAttr},$aa->{lo})    if ($fmt->{ltsLoAttr} && defined($aa->{lo}));
+      $aanod->setAttribute($fmt->{ltsHiAttr},$aa->{hi})    if ($fmt->{ltsHiAttr} && defined($aa->{hi}));
+      $aanod->setAttribute($fmt->{ltsWeightAttr},$aa->{w}) if ($fmt->{ltsWeightAttr} && defined($aa->{w}));
     }
   }
 
-  ##-- EqPho ('eqpho')
-  my ($eqpnod,$eqpanod);
-  if ($tok->{eqpho}) {
-    $nod->addChild( $eqpnod = XML::LibXML::Element->new($fmt->{eqphoElt}) );
-    foreach (@{$tok->{eqpho}}) {
-      $eqpnod->addChild( $eqpanod = XML::LibXML::Element->new($fmt->{eqphoSubElt}) );
-      $eqpanod->setAttribute($fmt->{eqphoTextAttr},$_) if ($fmt->{eqphoTextAttr} && defined($_));
+  ##-- token: eqpho
+  if ($tok->{eqpho} && $fmt->{eqphoElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{eqphoElt}")});
+    $anod = $nod->addNewChild(undef, $fmt->{eqphoElt});
+    foreach $aa (@{$tok->{eqpho}}) {
+      $aanod = $anod->addNewChild(undef, $fmt->{eqphoAnalysisElt});
+      $aanod->setAttribute($fmt->{eqphoTextAttr},$aa) if ($fmt->{eqphoTextAttr} && defined($aa));
     }
   }
 
-  ##-- Morphology ('morph')
-  my ($mnod,$manod);
-  if ($tok->{morph}) {
-    $nod->addChild( $mnod = XML::LibXML::Element->new($fmt->{morphElt}) );
-    foreach (@{$tok->{morph}}) {
-      $mnod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
-      $manod->setAttribute($fmt->{morphLoAttr},$_->{lo}) if ($fmt->{morphLoAttr} && defined($_->{lo}));
-      $manod->setAttribute($fmt->{morphHiAttr},$_->{hi});
-      $manod->setAttribute($fmt->{morphWeightAttr},$_->{w});
+  ##-- token: morph
+  if ($tok->{morph} && $fmt->{morphElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{morphElt}")});
+    $anod = $nod->addNewChild(undef, $fmt->{morphElt});
+    foreach $aa (@{$tok->{morph}}) {
+      $aanod = $anod->addNewChild(undef, $fmt->{morphAnalysisElt});
+      $aanod->setAttribute($fmt->{morphLoAttr},$aa->{lo})    if ($fmt->{morphLoAttr} && defined($aa->{lo}));
+      $aanod->setAttribute($fmt->{morphHiAttr},$aa->{hi})    if ($fmt->{morphHiAttr} && defined($aa->{hi}));
+      $aanod->setAttribute($fmt->{morphWeightAttr},$aa->{w}) if ($fmt->{morphWeightAttr} && defined($aa->{w}));
     }
   }
 
-  ##-- MorphSafe ('msafe')
-  if (exists($tok->{msafe})) {
-    $mnod = $nod->addNewChild(undef,'msafe');
-    $mnod->setAttribute('safe', $tok->{msafe} ? 1 : 0);
+  ##-- token: msafe
+  if (exists($tok->{msafe}) && $fmt->{msafeElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{msafeElt}")});
+    $anod = $nod->addNewChild(undef,$fmt->{msafeElt});
+    $anod->setAttribute($fmt->{msafeAttr}, $tok->{msafe} ? 1 : 0);
   }
 
-  ##-- Rewrite ('rw')
-  my ($rwnod,$rwanod);
-  if ($tok->{rw}) {
-    $nod->addChild( $rwnod = XML::LibXML::Element->new($fmt->{rwElt}) );
-    foreach (@{$tok->{rw}}) {
-      $rwnod->addChild( $rwanod = XML::LibXML::Element->new($fmt->{rwAnalysisElt}) );
-      $rwanod->setAttribute($fmt->{rwLoAttr},$_->{lo}) if ($fmt->{rwLoAttr} && defined($_->{lo}));
-      $rwanod->setAttribute($fmt->{rwHiAttr},$_->{hi});
-      $rwanod->setAttribute($fmt->{rwWeightAttr},$_->{w});
-      ##-- rewrite: lts
-      if ($_->{lts}) {
-	foreach (@{$_->{lts}}) {
-	  $rwanod->addChild( $panod = XML::LibXML::Element->new($fmt->{ltsAnalysisElt}) );
-	  $panod->setAttribute($fmt->{ltsLoAttr},$_->{lo}) if ($fmt->{ltsLoAttr} && defined($_->{lo}));
-	  $panod->setAttribute($fmt->{ltsHiAttr},$_->{hi});
-	  $panod->setAttribute($fmt->{ltsWeightAttr},$_->{w});
+  ##-- token: rewrites
+  if ($tok->{rw} && $fmt->{rwElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{rwElt}")});
+    $rwnod = $nod->addNewChild(undef,$fmt->{rwElt});
+    foreach $rwa (@{$tok->{rw}}) {
+      $rwanod = $rwnod->addNewChild(undef,$fmt->{rwAnalysisElt});
+      $rwanod->setAttribute($fmt->{rwLoAttr},$rwa->{lo})    if ($fmt->{rwLoAttr} && defined($rwa->{lo}));
+      $rwanod->setAttribute($fmt->{rwHiAttr},$rwa->{hi})    if ($fmt->{rwHiAttr} && defined($rwa->{hi}));
+      $rwanod->setAttribute($fmt->{rwWeightAttr},$rwa->{w}) if ($fmt->{rwWeightAttr} && defined($rwa->{w}));
+
+      ##-- token: rewrite: lts
+      if ($rwa->{lts} && $fmt->{ltsElt}) {
+	$anod = $rwanod->addNewChild(undef, $fmt->{ltsElt});
+	foreach $aa (@{$rwa->{lts}}) {
+	  $aanod = $anod->addNewChild(undef, $fmt->{ltsAnalysisElt});
+	  $aanod->setAttribute($fmt->{ltsLoAttr},$aa->{lo})    if ($fmt->{ltsLoAttr} && defined($aa->{lo}));
+	  $aanod->setAttribute($fmt->{ltsHiAttr},$aa->{hi})    if ($fmt->{ltsHiAttr} && defined($aa->{hi}));
+	  $aanod->setAttribute($fmt->{ltsWeightAttr},$aa->{w}) if ($fmt->{ltsWeightAttr} && defined($aa->{w}));
 	}
       }
-      ##-- rewrite: morph
-      if ($_->{morph}) {
-	foreach (@{$_->{morph}}) {
-	  $rwanod->addChild( $manod = XML::LibXML::Element->new($fmt->{morphAnalysisElt}) );
-	  $manod->setAttribute($fmt->{morphLoAttr},$_->{lo}) if ($fmt->{morphLoAttr} && defined($_->{lo}));
-	  $manod->setAttribute($fmt->{morphHiAttr},$_->{hi});
-	  $manod->setAttribute($fmt->{morphWeightAttr},$_->{w});
+
+      ##-- token: rewrite: morph
+      if ($rwa->{morph} && $fmt->{morphElt}) {
+	$anod = $rwanod->addNewChild(undef, $fmt->{morphElt});
+	foreach $aa (@{$rwa->{morph}}) {
+	  $aanod = $anod->addNewChild(undef, $fmt->{morphAnalysisElt});
+	  $aanod->setAttribute($fmt->{morphLoAttr},$aa->{lo})    if ($fmt->{morphLoAttr} && defined($aa->{lo}));
+	  $aanod->setAttribute($fmt->{morphHiAttr},$aa->{hi})    if ($fmt->{morphHiAttr} && defined($aa->{hi}));
+	  $aanod->setAttribute($fmt->{morphWeightAttr},$aa->{w}) if ($fmt->{morphWeightAttr} && defined($aa->{w}));
 	}
       }
     }
@@ -320,40 +359,43 @@ sub tokenNode {
 }
 
 ## $xmlnod = $fmt->sentenceNode($sent)
+##  + uses $sent->{_xmlnod} if present
 sub sentenceNode {
   my ($fmt,$sent) = @_;
   $sent = toSentence($sent);
-  my $snod = XML::LibXML::Element->new($fmt->{sentenceElt});
-#
-#  ##-- format non-tokens (?)
-#  if (keys(%$sent) > 1 || !exists($sent->{tokens})) {
-#    my $toks = $sent->{tokens};
-#    delete($sent->{tokens});
-#    $snod->addChild($fmt->defaultXmlNode($sent));
-#    $sent->{tokens} = $toks;
-#  }
-#
-  ##-- format sentence 'tokens'
-  $snod->addChild($fmt->tokenNode($_)) foreach (@{$sent->{tokens}});
+
+  my $snod   = $sent->{_xmlnod} || XML::LibXML::Element->new($fmt->{sentenceElt});
+  my $sowner = $snod->getOwner;
+  foreach (@{$sent->{tokens}}) {
+    if ($_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($sowner)) {
+      ##-- in-place
+      $fmt->tokenNode($_);
+    } else {
+      ##-- copy or generate
+      $snod->addChild($fmt->tokenNode($_));
+    }
+  }
+
   return $snod;
 }
 
 ## $xmlnod = $fmt->documentNode($doc)
+##  + uses $doc->{_xmlnod} if present
 sub documentNode {
   my ($fmt,$doc) = @_;
   $doc = toDocument($doc);
-  my $docnod = XML::LibXML::Element->new($fmt->{documentElt});
 
-  ##-- format non-body (?)
-  my $headnod = $docnod->addNewChild(undef, 'head');
-  my $docbody = $doc->{body}; ##-- save
-  delete($doc->{body});
-  $headnod->addChild($fmt->defaultXmlNode($doc));
-  $doc->{body} = $docbody;    ##-- restore
-
-  ##-- format doc 'body'
-  my $bodynod = $docnod->addNewChild(undef, 'body');
-  $bodynod->addChild($fmt->sentenceNode($_)) foreach (@{$doc->{body}});
+  my $docnod   = $doc->{_xmlnod} || XML::LibXML::Element->new($fmt->{documentElt});
+  my $docowner = $docnod->getOwner;
+  foreach (@{$doc->{body}}) {
+    if ($_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($docowner)) {
+      ##-- in-place
+      $fmt->sentenceNode($_);
+    } else {
+      ##-- copy or generate
+      $docnod->addChild($fmt->sentenceNode($_));
+    }
+  }
 
   return $docnod;
 }
@@ -382,7 +424,7 @@ sub xmlBodyNode {
 sub xmlSentenceNode {
   my $fmt = shift;
   my $body = $fmt->xmlBodyNode();
-  my ($snod) = $body->findnodes("./$fmt->{sentenceElt}[last()]");
+  my ($snod) = $body->findnodes("./$fmt->{sentenceElt}\[last()]");
   return $snod if (defined($snod));
   return $body->addNewChild(undef,$fmt->{sentenceElt});
 }
@@ -407,14 +449,28 @@ sub putSentence {
 ## $fmt = $fmt->putDocument($doc)
 sub putDocument {
   my ($fmt,$doc) = @_;
-  my $docnod = $fmt->documentNode($doc);
-  my $xdoc = $fmt->xmlDocument();
-  my ($root);
-  if (!defined($root=$xdoc->documentElement)) {
-    $xdoc->setDocumentElement($docnod);
+  my $docnod = $fmt->documentNode($doc); ##-- respects in-place processing
+  my ($xdoc,$root);
+  if (!defined($xdoc=$fmt->{xdoc}) || !defined($root=$fmt->{xdoc}->documentElement)) {
+    if (defined($doc->{_xmldoc})) {
+      ##-- in-place on document
+      $xdoc = $fmt->{xdoc} = $doc->{_xmldoc};
+    } else {
+      ##-- in-place on doc node
+      $xdoc = $fmt->{xdoc} = $fmt->xmlDocument() if (!$fmt->{xdoc});
+      $xdoc->setDocumentElement($docnod);
+    }
   } else {
-    $root->addChild($_) foreach ($docnod->childNodes);
+    ##-- append-mode for real or converted input
+    if ($root->nodeName ne $fmt->{multidocElt}) {
+      my $oldroot = $root;
+      $root = $xdoc->createElement($fmt->{multidocElt});
+      $root->addChild($oldroot);
+      $xdoc->setDocumentElement($root);
+    }
+    $root->appendChild($docnod); ##-- use appendChild() since we might need to import/copy
   }
+
   return $fmt;
 }
 

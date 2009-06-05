@@ -14,7 +14,6 @@ use DTA::CAB::Format::Text;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlNative; ##-- load first to avoid clobbering '.xml' extension
-use DTA::CAB::Format::XmlTW;
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
 use strict;
