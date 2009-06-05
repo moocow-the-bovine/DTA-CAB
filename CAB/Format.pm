@@ -817,7 +817,9 @@ Datum parser|formatter: XML: abstract base class
 
 =item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
 
-Datum parser|formatter: XML (native)
+Datum parser|formatter: XML (native).
+Should be compatible with C<.t.xml> files
+as created by L<dta-tokwrap.perl(1)|dta-tokwrap.perl>.
 
 =item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
 
