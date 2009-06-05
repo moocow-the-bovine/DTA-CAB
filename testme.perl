@@ -245,7 +245,7 @@ sub test_eqclass {
   $eqc->analyzeToken($x);
   print DTA::CAB::Format::Perl->new(level=>1)->putToken($x)->toString;
 }
-test_eqclass();
+#test_eqclass();
 
 ##==============================================================================
 ## test: parsers
@@ -255,7 +255,7 @@ sub test_parser_doc0 {
 				      bless({
 				       'msafe' => '1',
 				       'text' => 'Dies',
-				       'xlit' => ['Dies','1','1'],
+				       'xlit' => {latin1Text=>'Dies',isLatin1=>'1',isLatinExt=>'1'},
 				       'morph' => [
 						   ['Dies[_NN][abstr_maszgroe][masc][sg]*','0'],
 						   ['diese[_PDS][nom][sg][neut]','2.5'],
@@ -278,7 +278,7 @@ sub test_parser_doc0 {
 				      bless({
 				       'msafe' => '1',
 				       'text' => 'ist',
-				       'xlit' => ['ist','1','1'],
+				       'xlit' => {latin1Text=>'ist',isLatin1=>'1',isLatinExt=>'1'},
 				       'morph' => [
 						   ['sei~n[_VVFIN][third][sg][pres][ind]','0'],
 						   ['sei~n[_VAFIN][third][sg][pres][ind]','0']
@@ -295,7 +295,7 @@ sub test_parser_doc0 {
 				      bless({
 				       'msafe' => '1',
 				       'text' => 'ein',
-				       'xlit' => ['ein','1','1'],
+				       'xlit' => {latin1Text=>'ein',isLatin1=>'1',isLatinExt=>'1'},
 				       'morph' => [
 						   ['eine[_ARTINDEF][sg][nom][masc]','0'],
 						   ['eine[_ARTINDEF][sg][nom][neut]','0'],
@@ -324,7 +324,7 @@ sub test_parser_doc0 {
 				      bless({
 				       'msafe' => '1',
 				       'text' => 'Test',
-				       'xlit' => ['Test','1','1'],
+				       'xlit' => {latin1Text=>'Test',isLatin1=>'1',isLatinExt=>'1'},
 				       'morph' => [
 						   ['Test[_NN][abstr][masc][sg][nom_acc_dat]','0'],
 						   ['Test[_NE][lastname][none][nongen]','0']
@@ -341,7 +341,7 @@ sub test_parser_doc0 {
 				      bless({
 				       'msafe' => '1',
 				       'text' => '.',
-				       'xlit' => ['.','1','1'],
+				       'xlit' => {latin1Text=>'.',isLatin1=>'1',isLatinExt=>'1'},
 				       #'morph' => [],
 				       #'rw' => []
 				      }, 'DTA::CAB::Token')
@@ -351,11 +351,28 @@ sub test_parser_doc0 {
 }
 
 sub test_parsers {
-  our $doc0 = test_parser_doc0();
-  our $pfmt  = DTA::CAB::Formatter::Perl->new(level=>1);
-  $pfmt->{dumper}->Terse(0)->Sortkeys(1);
-  our $pstr0 = $pfmt->flush->putDocument($doc0)->toString;
+  our ($doc0,$pfmt,$pstr0);
+  if (0) {
+    ##-- OLD
+    $doc0 = test_parser_doc0();
+    $pfmt  = DTA::CAB::Format::Perl->new(level=>1);
+    $pfmt->{dumper}->Terse(0)->Sortkeys(1);
+    $pstr0 = $pfmt->flush->putDocument($doc0)->toString;
+  } else {
+    $pfmt = DTA::CAB::Format::Perl->new(level=>1);
+    $pfmt->{dumper}->Terse(0)->Sortkeys(1);
+    $doc0 = $pfmt->parseFile('test-fmt-example.prl');
+    $pstr0 = $pfmt->flush->putDocument($doc0)->toString;
+  }
   our ($fmt,$prs,$str0,$doc1,$pstr);
+
+  ##-- test: fmt + parse: XmlTW
+  $fmt = DTA::CAB::Format::XmlTW->new(level=>1);
+  $prs = DTA::CAB::Format::XmlTW->new;
+  $str0 = $fmt->putDocument($doc0)->toString;
+  $doc1 = $prs->parseString($str0);
+  $pstr = $pfmt->flush->putDocument($doc1)->toString;
+  print(ref($fmt)," + ".ref($prs)," : ", ($pstr0 eq $pstr ? 'ok' : 'NOT ok'), "\n");
 
   ##-- test: fmt + parse: Freeze
   $fmt = DTA::CAB::Format::Freeze->new;
@@ -407,7 +424,7 @@ sub test_parsers {
 
   print "test_parsers(): done\n";
 }
-#test_parsers();
+test_parsers();
 
 ##==============================================================================
 ## test: xml-rpc / storable
@@ -446,7 +463,7 @@ sub test_xmlrpc_storable {
 
   print STDERR "test_xmlrpc_storable: done.\n";
 }
-test_xmlrpc_storable();
+#test_xmlrpc_storable();
 
 
 ##==============================================================================
