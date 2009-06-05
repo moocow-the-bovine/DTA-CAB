@@ -529,6 +529,10 @@ DTA::CAB::Format::XmlNative - Datum parser|formatter: XML (native)
 
 =head1 DESCRIPTION
 
+"Native" XML datum parser|formatter class.
+Should be compatible with C<.t.xml> files
+as created by L<dta-tokwrap.perl(1)|dta-tokwrap.perl>.
+
 =cut
 
 ##----------------------------------------------------------------
