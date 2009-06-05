@@ -258,7 +258,7 @@ sub parseDocument {
 
 ## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
-##  + if $tok has a key '_xmlnod', that node is copied!
+##  + if $tok has a key '_xmlnod', that node is modified in-place!
 sub tokenNode {
   my ($fmt,$tok) = @_;
   $tok = toToken($tok);
@@ -412,22 +412,21 @@ sub documentNode {
 ##  + inherited from XmlCommon
 
 ## $bodynode = $fmt->xmlBodyNode()
+##  + really just a wrapper for $fmt->xmlRootNode($fmt->{documentElement})
 sub xmlBodyNode {
   my $fmt = shift;
-  my $root = $fmt->xmlRootNode($fmt->{documentElt});
-  my ($body) = $root->findnodes("./body[last()]");
-  return $body if (defined($body));
-  return $root->addNewChild(undef,'body');
+  return $fmt->xmlRootNode($fmt->{documentElt});
 }
 
 ## $sentnod = $fmt->xmlSentenceNode()
 sub xmlSentenceNode {
   my $fmt = shift;
   my $body = $fmt->xmlBodyNode();
-  my ($snod) = $body->findnodes("./$fmt->{sentenceElt}\[last()]");
+  my ($snod) = $body->findnodes(".//$fmt->{sentenceElt}\[last()]");
   return $snod if (defined($snod));
   return $body->addNewChild(undef,$fmt->{sentenceElt});
 }
+
 
 ##--------------------------------------------------------------
 ## Methods: Output: API
@@ -435,14 +434,14 @@ sub xmlSentenceNode {
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
   my ($fmt,$tok) = @_;
-  $fmt->sentenceNode->addChild($fmt->tokenNode($tok));
+  $fmt->xmlSentenceNode->addChild($fmt->tokenNode($tok));
   return $fmt;
 }
 
 ## $fmt = $fmt->putSentence($sent)
 sub putSentence {
   my ($fmt,$sent) = @_;
-  $fmt->bodyNode->addChild($fmt->sentenceNode($sent));
+  $fmt->xmlBodyNode->addChild($fmt->sentenceNode($sent));
   return $fmt;
 }
 
@@ -516,7 +515,6 @@ DTA::CAB::Format::XmlNative - Datum parser|formatter: XML (native)
  $xmlnod = $fmt->tokenNode($tok);
  $xmlnod = $fmt->sentenceNode($sent);
  $xmlnod = $fmt->documentNode($doc);
- $bodynode = $fmt->xmlBodyNode();
  $sentnod = $fmt->xmlSentenceNode();
  $fmt = $fmt->putToken($tok);
  $fmt = $fmt->putSentence($sent);
@@ -585,28 +583,37 @@ Constructor.
  ##
  ##-- common: XML element & attribute names
  documentElt      => $eltName,    ##-- default: 'doc'
+ multidocElt      => $eltName,    ##-- default: 'corpus'
  sentenceElt      => $eltName,    ##-- default: 's'
  tokenElt         => $eltName,    ##-- default: 'w'
- tokenTextAttr    => $attr,       ##-- default: 'text'
+ tokenTextAttr    => $attr,       ##-- default: 't'
+ ##
+ xlitElt          => $eltName,    ##-- default: 'xlit'
+ xlitTextAttr     => $attr,       ##-- default: 't'
+ xlitIsLatin1Attr => $attr,       ##-- default: 'isLatin1'
+ xlitIsLatinExtAttr=>$attr,       ##-- default: 'isLatinExt'
  ##
  ltsElt           => $eltName,    ##-- default: 'lts'
- ltsAnalysisElt   => $eltName,    ##-- default: 'pho'
+ ltsAnalysisElt   => $eltName,    ##-- default: 'a'
  ltsLoAttr        => $attr,       ##-- default: 'lo'
  ltsHiAttr        => $attr,       ##-- default: 'hi'
  ltsWeightAttr    => $attr,       ##-- default: 'w'
  ##
  eqphoElt         => $eltName,    ##-- default: 'eqpho'
- eqphoSubElt      => $eltName,    ##-- default: 'w'
- eqphoTextAttr    => $attr,       ##-- default: 'text'
+ eqphoAnalysisElt => $eltName,    ##-- default: 'a'
+ eqphoTextAttr    => $attr,       ##-- default: 't'
  ##
  morphElt         => $eltName,    ##-- default: 'morph'
- morphAnalysisElt => $eltName,    ##-- default: 'ma'
+ morphAnalysisElt => $eltName,    ##-- default: 'a'
  morphLoAttr      => $attr,       ##-- default: 'lo'
  morphHiAttr      => $attr,       ##-- default: 'hi'
  morphWeightAttr  => $attr,       ##-- default: 'w'
  ##
+ msafeElt         => $eltName,    ##-- default: 'msafe'
+ msafeAttr        => $attrName,   ##-- defualt: 'safe'
+ ##
  rwElt            => $eltName,    ##-- default: 'rewrite'
- rwAnalysisElt    => $eltName,    ##-- default: 'rw'
+ rwAnalysisElt    => $eltName,    ##-- default: 'a'
  rwLoAttr         => $attr,       ##-- default: 'lo'
  rwHiAttr         => $attr,       ##-- default: 'hi'
  rwWeightAttr     => $attr,       ##-- default: 'w'
@@ -629,6 +636,23 @@ Constructor.
 
 Parses buffered XML::LibXML::Document in $fmt-E<gt>{xdoc}.
 
+Extra %$doc keys parsed:
+
+ _xmldoc => $doc,              ##-- source XML::LibXML::Document
+ _xmlnod => $node,             ##-- source XML::LibXML::Element
+
+Extra %$sentence keys parsed:
+
+ _xmlnod  => $node,            ##-- source XML::LibXML::Element
+
+Extra %$token keys parsed:
+
+ _xmlnod => $node,             ##-- source XML::LibXML::Element
+
+These keys are handy for in-place processing of XML::LibXML::Document objects.
+See the L<tokenNode()|/tokenNode>, L<sentenceNode()|/sentenceNode>, and L<documentNode|/documentNode()>
+methods for more details.
+
 =back
 
 =cut
@@ -646,26 +670,35 @@ Parses buffered XML::LibXML::Document in $fmt-E<gt>{xdoc}.
  $xmlnod = $fmt->tokenNode($tok);
 
 Returns an XML::LibXML::Node object representing the DTA::CAB::Token $tok.
+If $tok has a key C<_xmlnod>, it is expected to contain an XML::LibXML::Element
+object, which is modified in-place and returned by this method.
+This is handy for passing through structure other than that explicitly handled by the DTA::CAB utilities.
 
 =item sentenceNode
 
  $xmlnod = $fmt->sentenceNode($sent);
 
 Returns an XML::LibXML::Node object representing the DTA::CAB::Sentence $sent.
+If $sent has a key C<_xmlnod>, it is expected to contain an XML::LibXML::Element
+object, which is modified in-place and returned by this method.
 
 =item documentNode
 
  $xmlnod = $fmt->documentNode($doc);
 
 Returns an XML::LibXML::Node object representing the DTA::CAB::Document $doc.
+If $doc has a key C<_xmlnod>, it is expected to contain an XML::LibXML::Element
+object, which B<may be> modified in-place and returned by this method.  Sometimes
+$doc-E<gt>{_xmlnod} will be copied even if it is present, e.g.
+if you're concatenating multiple source documents into a single output document,
+mixing output APIs, or doing something else creative.
 
 =item xmlBodyNode
 
  $bodynode = $fmt->xmlBodyNode();
 
-Returns an XML::LibXML::Element object representing the
-final 'body' element in the output document buffer, creating
-one if not yet defined.
+Currently just an alias for
+L<$fmt-E<gt>xmlRootNode($fmt-E<gt>{documentElt}))|DTA::CAB::Format::XmlCommon/xmlRootNode>.
 
 =item xmlSentenceNode
 
@@ -711,66 +744,63 @@ An example file in the format accepted/generated by this module is:
 
  <?xml version="1.0" encoding="UTF-8"?>
  <doc>
-  <head>
-    <HASH ref="DTA::CAB::Document"/>
-  </head>
-  <body>
-    <s>
-      <w text="wie">
-        <xlit isLatin1="1" isLatinExt="1" latin1Text="wie"/>
-        <lts>
-          <pho hi="vi" w="0"/>
-        </lts>
-        <eqpho>
-          <w text="Wie"/>
-          <w text="wie"/>
-        </eqpho>
-        <morph>
-          <ma hi="wie[_ADV]" w="0"/>
-          <ma hi="wie[_KON]" w="0"/>
-          <ma hi="wie[_KOKOM]" w="0"/>
-          <ma hi="wie[_KOUS]" w="0"/>
-        </morph>
-        <msafe safe="1"/>
-      </w>
-      <w text="oede">
-        <xlit isLatin1="1" isLatinExt="1" latin1Text="oede"/>
-        <lts>
-          <pho hi="?2de" w="0"/>
-        </lts>
-        <eqpho>
-          <w text="Oede"/>
-          <w text="Öde"/>
-          <w text="öde"/>
-        </eqpho>
-        <morph/>
-        <msafe safe="0"/>
-        <rewrite>
-          <rw hi="öde" w="1">
-            <pho hi="?2de" w="0"/>
-            <ma hi="öde[_ADJD]" w="0"/>
-            <ma hi="öde[_ADJA][pos][sg][nom]*[weak]" w="0"/>
-            <ma hi="öde[_ADJA][pos][sg][nom][fem][strong_mixed]" w="0"/>
-            <ma hi="öde[_ADJA][pos][sg][acc][fem]*" w="0"/>
-            <ma hi="öde[_ADJA][pos][sg][acc][neut][weak]" w="0"/>
-            <ma hi="öde[_ADJA][pos][pl][nom_acc]*[strong]" w="0"/>
-            <ma hi="öd~en[_VVFIN][first][sg][pres][ind]" w="0"/>
-            <ma hi="öd~en[_VVFIN][first][sg][pres][subjI]" w="0"/>
-            <ma hi="öd~en[_VVFIN][third][sg][pres][subjI]" w="0"/>
-            <ma hi="öd~en[_VVIMP][sg]" w="0"/>
-          </rw>
-        </rewrite>
-      </w>
-      <w text="!">
-        <xlit isLatin1="1" isLatinExt="1" latin1Text="!"/>
-        <lts>
-          <pho hi="" w="0"/>
-        </lts>
-        <morph/>
-        <msafe safe="1"/>
-      </w>
-    </s>
-  </body>
+  <s>
+    <w t="wie">
+      <xlit t="wie" isLatin1="1" isLatinExt="1"/>
+      <lts>
+        <a hi="vi" w="0"/>
+      </lts>
+      <eqpho>
+        <a t="Wie"/>
+        <a t="wie"/>
+      </eqpho>
+      <morph>
+        <a hi="wie[_ADV]" w="0"/>
+        <a hi="wie[_KON]" w="0"/>
+        <a hi="wie[_KOKOM]" w="0"/>
+        <a hi="wie[_KOUS]" w="0"/>
+      </morph>
+      <msafe safe="1"/>
+    </w>
+    <w t="oede">
+      <xlit t="oede" isLatin1="1" isLatinExt="1"/>
+      <lts>
+        <a hi="?2de" w="0"/>
+      </lts>
+      <eqpho>
+        <a t="Oede"/>
+        <a t="Öde"/>
+        <a t="öde"/>
+      </eqpho>
+      <msafe safe="0"/>
+      <rewrite>
+        <a hi="öde" w="1">
+          <lts>
+            <a hi="?2de" w="0"/>
+          </lts>
+          <morph>
+            <a hi="öde[_ADJD]" w="0"/>
+            <a hi="öde[_ADJA][pos][sg][nom]*[weak]" w="0"/>
+            <a hi="öde[_ADJA][pos][sg][nom][fem][strong_mixed]" w="0"/>
+            <a hi="öde[_ADJA][pos][sg][acc][fem]*" w="0"/>
+            <a hi="öde[_ADJA][pos][sg][acc][neut][weak]" w="0"/>
+            <a hi="öde[_ADJA][pos][pl][nom_acc]*[strong]" w="0"/>
+            <a hi="öd~en[_VVFIN][first][sg][pres][ind]" w="0"/>
+            <a hi="öd~en[_VVFIN][first][sg][pres][subjI]" w="0"/>
+            <a hi="öd~en[_VVFIN][third][sg][pres][subjI]" w="0"/>
+            <a hi="öd~en[_VVIMP][sg]" w="0"/>
+          </morph>
+        </a>
+      </rewrite>
+    </w>
+    <w t="!">
+      <xlit t="!" isLatin1="1" isLatinExt="1"/>
+      <lts>
+        <a hi="" w="0"/>
+      </lts>
+      <msafe safe="1"/>
+    </w>
+  </s>
  </doc>
 
 =cut
