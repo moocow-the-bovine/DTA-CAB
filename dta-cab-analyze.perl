@@ -22,6 +22,9 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
+##-- Log options
+our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
+
 ##-- Analysis Options
 our $rcFile      = undef;
 our %analyzeOpts = qw();
@@ -40,6 +43,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|M'     => \$man,
 	   'version|V' => \$version,
+	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
 
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
@@ -77,7 +81,7 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if 
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog();
+DTA::CAB::Logger->ensureLog(undef,%logOpts);
 
 ##-- analyzer
 our $cab = DTA::CAB::Analyzer->loadPerlFile($rcFile)
@@ -163,6 +167,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
+  -verbose LEVEL                  ##-- set default log level
 
  Analysis Options
   -config PLFILE                  ##-- load analyzer config file PLFILE
@@ -223,6 +228,10 @@ Display a longer help message and exit.
 =item -version
 
 Display program and module version information and exit.
+
+=item -verbose
+
+Set default log level (trace|debug|info|warn|error|fatal).
 
 =back
 

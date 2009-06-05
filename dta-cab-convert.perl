@@ -29,6 +29,9 @@ our ($help,$man,$version,$verbose);
 #  binmode(STDERR,':utf8');
 #}
 
+##-- Log options
+our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
+
 ##-- Formats
 our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
@@ -43,6 +46,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
+	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
@@ -75,7 +79,7 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog();
+DTA::CAB::Logger->ensureLog(undef,%logOpts);
 
 ##======================================================
 ## Input & Output Formats
@@ -118,6 +122,7 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
+  -verbose LEVEL                  ##-- set default log level
 
  I/O Options
   -input-class CLASS              ##-- select input parser class (default: Text)
@@ -172,6 +177,10 @@ Display a longer help message and exit.
 =item -version
 
 Display program and module version information and exit.
+
+=item -verbose
+
+Set default log level (trace|debug|info|warn|error|fatal).
 
 =back
 

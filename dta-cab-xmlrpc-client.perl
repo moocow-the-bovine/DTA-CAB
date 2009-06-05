@@ -27,6 +27,8 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
+##-- Log options
+our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
 
 ##-- Server Options
 our $serverURL  = 'http://localhost:8088';
@@ -54,6 +56,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
+	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
 
 	   ##-- Server Options
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
@@ -101,7 +104,7 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog();
+DTA::CAB::Logger->ensureLog(undef,%logOpts);
 
 ##-- sanity checks
 $serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+://|);
@@ -271,6 +274,7 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
+  -verbose LEVEL                  ##-- set default log level
 
  Server Options:
   -server URL                     ##-- set server URL (default: http://localhost:8088)
@@ -345,6 +349,10 @@ Display a longer help message and exit.
 =item -version
 
 Display program and module version information and exit.
+
+=item -verbose
+
+Set default log level (trace|debug|info|warn|error|fatal).
 
 =back
 

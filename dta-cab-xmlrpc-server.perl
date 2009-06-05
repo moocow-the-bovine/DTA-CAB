@@ -54,7 +54,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
-	   'verbose|v=s' => \$verbose, ##-- this should be a Log::Log4perl log-level
+	   #'verbose|v=s' => \$verbose, ##-- see '-log-level' option
 
 	   ##-- Server configuration
 	   'config|c=s' => \$serverConfigFile,
@@ -67,7 +67,7 @@ GetOptions(##-- General
 	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
 
 	   ##-- Log4perl stuff
-	   'log-level|loglevel|ll|L=s'  => \$logLevel,
+	   'verbose|v|log-level|loglevel|ll|L=s'  => sub { $logLevel=uc($_[1]); },
 	   'log-config|logconfig|lc|l=s' => \$logConfigFile,
 	   'log-watch|logwatch|watch|lw|w!' => \$logWatch,
 	  );
@@ -168,6 +168,7 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
+  -verbose LEVEL                  ##-- really just an alias for -log-level=LEVEL
 
  Server Configuration Options:
   -config PLFILE                  ##-- load server config from PLFILE
@@ -231,6 +232,10 @@ Display a longer help message and exit.
 =item -version
 
 Display program and module version information and exit.
+
+=item -verbose LEVEL
+
+Alias for L<-log-level LEVEL>.
 
 =back
 
@@ -315,6 +320,7 @@ on the general logging mechanism.
 =item -log-level LEVEL
 
 Set minimum log level.  Has no effect if you also specify L</-log-config>.
+Known levels: (trace|debug|info|warn|error|fatal).
 
 =item -log-config L4PFILE
 
