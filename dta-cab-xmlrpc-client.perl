@@ -295,7 +295,6 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
  I/O Options:
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-option OPT=VALUE         ##-- set input parser option
- 
   -output-class CLASS             ##-- select output formatter class (default: Text)
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-encoding ENCODING       ##-- override output encoding (default: -local-encoding)
