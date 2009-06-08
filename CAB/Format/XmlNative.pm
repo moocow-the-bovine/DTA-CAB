@@ -122,6 +122,10 @@ sub new {
 			      rwLoAttr      => 'lo',
 			      rwHiAttr      => 'hi',
 			      rwWeightAttr  => 'w',
+			      ##
+			      otherElt => 'a',
+			      otherNameAttr => 'src',
+			      otherNameDefault => '',
 
 			      ##-- user args
 			      @_
@@ -246,6 +250,14 @@ sub parseDocument {
 	  delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
 	}
       }
+
+      ##-- token: unparsed analyses
+      if ($fmt->{otherElt} && $fmt->{otherNameAttr}) {
+	foreach $anod (@{ $wnod->findnodes("./$fmt->{otherElt}") }) {
+	  $a = $anod->getAttribute($fmt->{otherNameAttr}) || $fmt->{otherNameDefault};
+	  push(@{$tok->{other}{$a}}, $anod->textContent);
+	}
+      }
     }
   }
 
@@ -360,6 +372,19 @@ sub tokenNode {
 	  $aanod->setAttribute($fmt->{morphHiAttr},$aa->{hi})    if ($fmt->{morphHiAttr} && defined($aa->{hi}));
 	  $aanod->setAttribute($fmt->{morphWeightAttr},$aa->{w}) if ($fmt->{morphWeightAttr} && defined($aa->{w}));
 	}
+      }
+    }
+  }
+
+  ##-- token: unparsed analyses
+  if ($tok->{other} && $fmt->{otherElt}) {
+    my ($name);
+    foreach $name (sort keys %{$tok->{other}}) {
+      $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{otherElt}\[\@name='$name']")});
+      foreach $aa (@{$tok->{other}{$name}}) {
+	$aanod = $nod->addNewChild(undef, $fmt->{otherElt});
+	$aanod->setAttribute($fmt->{otherNameAttr}, $name) if ($name ne $fmt->{otherNameDefault});
+	$aanod->appendText($aa);
       }
     }
   }
