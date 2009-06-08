@@ -28,6 +28,7 @@ our @ISA = qw(DTA::CAB::Datum);
 ##     text => $raw_text,      ##-- raw token text
 ##     ##
 ##     ##-- Post-Analysis Attributes (?)
+##     #loc   => {off=>$offset, len=>$len}, ##-- parsed & passed through by some formats
 ##     #xlit  => $a_xlit,     ##-- analysis output by DTA::CAB::Analyzer::Transliterator
 ##     #morph => $a_morph,    ##-- analysis output by DTA::CAB::Analyzer::Morph subclass for literal morphology lookup
 ##     #safe  => $a_safe,     ##-- analysis output by DTA::CAB::Analyzer::MorphSafe (?)

@@ -38,6 +38,7 @@ BEGIN {
 ##
 ##     ##-- Common
 ##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
+##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
 sub new {
   my $that = shift;
@@ -50,6 +51,7 @@ sub new {
 
 		   ##-- common
 		   encoding => 'UTF-8',
+		   defaultFieldName => '',
 
 		   ##-- user args
 		   @_
@@ -105,7 +107,7 @@ sub parseTTString {
   $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
 
   my (@sents,$tok,$rw,$line);
-  my ($text,@fields,$field);
+  my ($text,@fields,$fieldi,$field);
   my $s = [];
   while ($src =~ m/^(.*)$/mg) {
     $line = $1;
@@ -122,10 +124,14 @@ sub parseTTString {
       ##-- token
       ($text,@fields) = split(/\t/,$line);
       push(@$s, $tok=bless({text=>$text},'DTA::CAB::Token'));
-      foreach $field (@fields) {
-	if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
+      foreach $fieldi (0..$#fields) {
+	$field = $fields[$fieldi];
+	if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] off=(\d+) len=(\d+)$/)) {
+	  ##-- token: field: loc
+	  $tok->{loc} = { off=>$1,len=>$2 };
+	}
+	elsif ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
 	  ##-- token: field: xlit
-	  #$tok->{xlit} = [$3,$1,$2];
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
 	}
 	elsif ($field =~ m/^\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
@@ -166,9 +172,14 @@ sub parseTTString {
 	  $rw->{morph} = [] if (!$rw->{morph});
 	  push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
+	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
+	  ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
+	  push(@{$tok->{other}{$1}}, $2);
+	}
 	else {
-	  ##-- unknown
-	  $fmt->warn("parseTTString(): could not parse token field '$field' for token '$text'");
+	  ##-- token: field: unnamed field
+	  #$fmt->warn("parseTTString(): could not parse token field '$field' for token '$text'");
+	  push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $field);
 	}
       }
     }
@@ -229,6 +240,9 @@ sub putToken {
   my ($fmt,$tok) = @_;
   my $out = $tok->{text};
 
+  ##-- Location ('loc'), moot compatibile
+  $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
+
   ##-- Transliterator ('xlit')
   $out .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
     if (defined($tok->{xlit}));
@@ -263,6 +277,21 @@ sub putToken {
 		 )
 	       } @{$tok->{rw}})
     if ($tok->{rw});
+
+  ##-- unparsed fields (pass-through)
+  if ($tok->{other}) {
+    my ($name);
+    $out .= ("\t"
+	     .join("\t",
+		   (map { $name=$_; map { "[$name] $_" } @{$tok->{other}{$name}} }
+		    sort grep {$_ ne $fmt->{defaultFieldName}} keys %{$tok->{other}}
+		   ),
+		   ($tok->{other}{$fmt->{defaultFieldName}}
+		    ? @{$tok->{other}{$fmt->{defaultFieldName}}}
+		    : qw()
+		   ))
+	    );
+  }
 
   ##-- ... ???
   $fmt->{outbuf} .= $out."\n";

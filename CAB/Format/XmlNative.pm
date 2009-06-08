@@ -91,6 +91,7 @@ sub new {
 			      sentenceElt => 's',
 			      tokenElt      => 'w',
 			      tokenTextAttr => 't', #'text',
+			      tokenLocAttr  => 'b', #'loc',
 			      ##
 			      xlitElt          => 'xlit',
 			      xlitTextAttr     => 't', #'latin1Text',
@@ -183,6 +184,10 @@ sub parseDocument {
       ##-- token: text
       $tok->{text} = $wnod->getAttribute($fmt->{tokenTextAttr});
 
+      ##-- token: location
+      @{$tok->{loc}}{qw(off len)} = split(/\s+/, $wnod->getAttribute($fmt->{tokenLocAttr}))
+	if (defined($fmt->{tokenLocAttr}) && $wnod->hasAttribute($fmt->{tokenLocAttr}));
+
       ##-- token: xlit
       foreach $anod (@{ $wnod->findnodes("./$fmt->{xlitElt}\[last()]") }) {
 	$tok->{xlit} = {};
@@ -269,6 +274,11 @@ sub tokenNode {
 
   ##-- common variables
   my ($anod, $aa,$aanod, $rwnod,$rwanod,$rwa);
+
+  ##-- token: loc
+  if (defined($tok->{loc}) && $fmt->{tokenLocAttr}) {
+    $nod->setAttribute($fmt->{tokenLocAttr}, "$tok->{loc}{off} $tok->{loc}{len}");
+  }
 
   ##-- token: xlit
   if (defined($tok->{xlit}) && $fmt->{xlitElt}) {
@@ -472,6 +482,12 @@ sub putDocument {
 
   return $fmt;
 }
+
+##========================================================================
+## package DTA::CAB::Format::Xml : alias for 'XmlNative'
+package DTA::CAB::Format::Xml;
+use strict;
+use base qw(DTA::CAB::Format::XmlNative);
 
 
 1; ##-- be happy

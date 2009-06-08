@@ -38,6 +38,7 @@ BEGIN {
 ##
 ##     ##---- Common
 ##     encoding  => $encoding,         ##-- default: 'UTF-8'
+##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    )
 sub new {
   my $that = shift;
@@ -50,6 +51,7 @@ sub new {
 
 		   ##-- common
 		   encoding => 'UTF-8',
+		   defaultFieldName => '',
 
 		   ##-- user args
 		   @_
@@ -119,6 +121,10 @@ sub parseTextString {
       ##-- new token: text
       push(@$s, $tok=bless({text=>$1},'DTA::CAB::Token'));
     }
+    elsif ($line =~ /^^\t\+\[loc\] off=(\d+) len=(\d+)$/) {
+      ##-- token: location
+      $tok->{loc} = { off=>$1, len=>$2 };
+    }
     elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
       ##-- token: xlit
       $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
@@ -161,9 +167,15 @@ sub parseTextString {
       $rw->{morph} = [] if (!$rw->{morph});
       push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
     }
+    elsif ($line =~ m/^\t\+\[([^\]]*)\]\s?(.*)$/) {
+      ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
+      push(@{$tok->{other}{$1}}, $2);
+    }
     else {
-      ##-- unknown
-      $fmt->warn("parseTextString(): could not parse line '$line'");
+      ##-- token: field: unnamed field
+      #$fmt->warn("parseTextString(): could not parse line '$line'");
+      $line =~ s/^\t//;
+      push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $line);
     }
   }
   push(@sents,$s) if (@$s); ##-- final sentence
@@ -222,6 +234,10 @@ sub putToken {
   my ($fmt,$tok) = @_;
   my $out = $tok->{text}."\n";
 
+  ##-- Location ('loc')
+  $out .= "\t+[loc] off=$tok->{loc}{off} len=$tok->{loc}{len}\n"
+    if (defined($tok->{loc}));
+
   ##-- Transliterator ('xlit')
   $out .= "\t+[xlit] isLatin1=$tok->{xlit}{isLatin1} isLatinExt=$tok->{xlit}{isLatinExt} latin1Text=$tok->{xlit}{latin1Text}\n"
     if (defined($tok->{xlit}));
@@ -256,6 +272,21 @@ sub putToken {
 		 )
 	       } @{$tok->{rw}})
     if ($tok->{rw});
+
+  ##-- unparsed fields
+  if ($tok->{other}) {
+    my ($name);
+    $out .= ("\t"
+	     .join("\n\t",
+		   (map { $name=$_; map { "+[$name] $_" } @{$tok->{other}{$name}} }
+		    sort grep {$_ ne $fmt->{defaultFieldName}} keys %{$tok->{other}}
+		   ),
+		   ($tok->{other}{$fmt->{defaultFieldName}}
+		    ? @{$tok->{other}{$fmt->{defaultFieldName}}}
+		    : qw()
+		   ))
+	     ."\n");
+  }
 
   $fmt->{outbuf} .= $out;
   return $fmt;
