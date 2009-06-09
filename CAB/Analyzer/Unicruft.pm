@@ -1,15 +1,16 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Transliterator.pm
+## File: DTA::CAB::Analyzer::Unicruft.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: latin-1 approximator (old)
+## Description: latin-1 approximator
 
-package DTA::CAB::Analyzer::Transliterator;
+package DTA::CAB::Analyzer::Unicruft;
 
 use DTA::CAB::Analyzer;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 
+use Unicruft;
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
 use Unicode::UCD;       ##-- unicode character names, info, etc.
 use Unicode::CharName;  ##-- ... faster access to character name, block
@@ -73,60 +74,36 @@ sub getAnalyzeTokenSub {
   my $xlit = shift;
   my $akey = $xlit->{analysisKey};
 
-  my ($tok, $w,$uc,$l0,$l, $isLatin1,$isLatinExt);
+  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
   return sub {
     $tok = shift;
     $tok = toToken($tok) if (!ref($tok));
     $w   = $tok->{text};
     $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 
-    ##-- construct latin-1 approximation
+    ##-- construct latin-1/de approximation
+    $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
     if (
-	#$uc =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
-	$uc  =~ m([^\x{00}-\x{ff}]) #)
+	#$uc !~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	$uc  =~ m(^[\x{00}-\x{ff}]*$) #)
        )
       {
-	$l0 = $uc;
-
-	##-- special handling for some character sequences
-	$l0 =~ s/\x{0363}/a/g;	##-- COMBINING LATIN SMALL LETTER A
-	$l0 =~ s/\x{0364}/e/g;	##-- COMBINING LATIN SMALL LETTER E
-	$l0 =~ s/\x{0365}/i/g;	##-- COMBINING LATIN SMALL LETTER I
-	$l0 =~ s/\x{0366}/o/g;	##-- COMBINING LATIN SMALL LETTER O
-
-	##-- default: copy plain latin-1 characters, transliterate rest with Text::Unidecode::unidecode()
-	$l  = join('',
-		   map {
-		     (
-		      #$_ =~ m(\p{inBasicLatin}|\p{InLatin1Supplement}) #)
-		      $_  =~ m([\x{00}-\x{ff}]) #)
-		      ? $_	##-- Latin-1 character: just copy
-		      : Text::Unidecode::unidecode($_) ##-- Non-Latin-1: transliterate
-		     )
-		   } split(//,$l0)
-		  );
-	$l = decode('latin1',$l);
-
-	if (
-	    #$l =~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
-	    $l  =~ m([^\x{00}-\x{ff}]) #)
-	   ) {
-	  ##-- sanity check
-	  $xlit->logwarn("analyzeToken(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
-	}
-
-	##-- set properties
-	$isLatin1 = 0;
-	$isLatinExt = ($uc =~ m([^\p{Latin}]) ? 0 : 1);
-      } else {
-	$l = $uc;
 	$isLatin1 = $isLatinExt = 1;
+      }
+    elsif ($uc =~ m(^[\p{Latin}]*$))
+      {
+	$isLatin1 = 0;
+	$isLatinExt = 1;
+      }
+    else
+      {
+	$isLatin1 = $isLatinExt = 0;
       }
 
     ##-- return
     #return [ $l, $isLatin1, $isLatinExt ];
     #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
-    $tok->{$akey} = { latin1Text=>$l, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
+    $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
 
     return $tok;
   };
@@ -149,7 +126,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implementation)
+DTA::CAB::Analyzer::Unicruft - latin-1 approximator using libunicruft
 
 =cut
 
@@ -159,9 +136,9 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Transliterator;
+ use DTA::CAB::Analyzer::Unicruft;
  
- $xl = DTA::CAB::Analyzer::Transliterator->new(%args);
+ $xl = DTA::CAB::Analyzer::Unicruft->new(%args);
   
  $bool = $xl->ensureLoaded();
  
@@ -175,10 +152,12 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 
 =head1 DESCRIPTION
 
+This module replaces the (now obsolete) DTA::CAB::Analyzer::Transliterator module.
+
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Unicruft: Globals
 =pod
 
 =head2 Globals
@@ -187,7 +166,7 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 
 =item @ISA
 
-DTA::CAB::Analyzer::Transliterator
+DTA::CAB::Analyzer::Unicruft
 inherits from
 L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
@@ -196,7 +175,7 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Unicruft: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -216,7 +195,7 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Methods: I/O
+## DESCRIPTION: DTA::CAB::Analyzer::Unicruft: Methods: I/O
 =pod
 
 =head2 Methods: I/O
@@ -234,7 +213,7 @@ Override: ensures analysis data is loaded
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Methods: Analysis
+## DESCRIPTION: DTA::CAB::Analyzer::Unicruft: Methods: Analysis
 =pod
 
 =head2 Methods: Analysis
