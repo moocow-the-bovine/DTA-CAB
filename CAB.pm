@@ -12,7 +12,8 @@ use DTA::CAB::Analyzer;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
-use DTA::CAB::Analyzer::Transliterator;
+#use DTA::CAB::Analyzer::Transliterator;
+use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::EqClass;
 use DTA::CAB::Analyzer::Morph;
@@ -36,7 +37,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 our @ISA = qw(DTA::CAB::Analyzer);
 
 ##==============================================================================
@@ -49,7 +50,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- analyzers
-			   xlit  => DTA::CAB::Analyzer::Transliterator->new(),
+			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   eqpho => DTA::CAB::Analyzer::EqClass->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
@@ -118,7 +119,7 @@ sub savePerlRef {
 ##     $tok = $coderef->($tok,\%opts)
 ##  + performs all known & selected analyses on $tok
 ##  + known \%opts:
-##     do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
+##     do_xlit  => $bool,    ##-- enable/disable unicruft transliterator (default: enabled)
 ##     do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
 ##     do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
 ##     do_eqpho => $bool,    ##-- enable/disable phonetic-equivalence-class analysis (default: enabled)
@@ -175,7 +176,7 @@ sub getAnalyzeTokenSub {
       $a_rw->($tok, $opts);
       ##
       ##-- analyze: rewrite: sub-morphology
-      if ($a_morph && (!defined($opts->{do_rw_morph}) || $opts->{do_rw_morph})) {
+      if ($tok->{rw} && $a_morph && (!defined($opts->{do_rw_morph}) || $opts->{do_rw_morph})) {
 	foreach (@{ $tok->{rw} }) {
 	  $opts->{src} = $_->{hi};
 	  $opts->{src} =~ s/\\(.)/$1/g;
@@ -185,7 +186,7 @@ sub getAnalyzeTokenSub {
       }
       ##
       ##-- analyze: rewrite: sub-LTS
-      if ($a_lts && (!defined($opts->{do_rw_lts}) || $opts->{do_rw_lts})) {
+      if ($tok->{rw} && $a_lts && (!defined($opts->{do_rw_lts}) || $opts->{do_rw_lts})) {
 	foreach (@{ $tok->{rw} }) {
 	  $opts->{src} = $_->{hi};
 	  $opts->{src} =~ s/\\(.)/$1/g;
@@ -287,7 +288,7 @@ and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> analysis API.
 %args, %$cab:
 
  ##-- analyzers
- xlit  => $xlit,  ##-- DTA::CAB::Analyzer::Transliterator object
+ xlit  => $xlit,  ##-- DTA::CAB::Analyzer::Unicruft object
  lts   => $lts,   ##-- DTA::CAB::Analyzer::LTS object
  eqpho => $eqpho, ##-- DTA::CAB::Analyzer::EqClass object
  morph => $morph, ##-- DTA::CAB::Analyzer::Morph object
@@ -358,7 +359,7 @@ Returned sub is callable as:
 Performs all defined & selected analyses on $tok.
 Known \%opts:
 
- do_xlit  => $bool,    ##-- enable/disable transliterator (default: enabled)
+ do_xlit  => $bool,    ##-- enable/disable unicruft transliterator (default: enabled)
  do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
  do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
  do_eqpho => $bool,    ##-- enable/disable phonetic-equivalence-class analysis (default: enabled)

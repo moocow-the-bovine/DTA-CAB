@@ -218,7 +218,10 @@ elsif ($action eq 'raw') {
 
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
-    $s_in = join('',<DOC>);
+    {
+      local $/=undef;
+      $s_in = <DOC>;
+    }
     $s_in = decode($ifmt->{encoding}, $s_in)
       if (0 && $ifmt->{encoding} && defined($ifmt->new->{encoding}));
     close(DOC);

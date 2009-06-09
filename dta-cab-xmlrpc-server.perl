@@ -25,12 +25,13 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version);
 our $verbose = 'INFO';   ##-- default log level
 
-BEGIN {
-  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-  binmode(STDIN, ':utf8');
-  binmode(STDOUT,':utf8');
-  binmode(STDERR,':utf8');
-}
+#BEGIN {
+#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
+#  binmode(STDIN, ':utf8');
+#  binmode(STDOUT,':utf8');
+#  binmode(STDERR,':utf8');
+#}
+no warnings 'utf8';
 
 ##-- Server config
 our $serverConfigFile = undef;
@@ -40,7 +41,7 @@ our $serverEncoding = undef;
 
 ##-- Daemon mode options
 our $daemonMode = 0;       ##-- do a fork() ?
-our $pidFile  = undef;   ##-- save PID to a file?
+our $pidFile  = undef;     ##-- save PID to a file?
 
 ##-- Log config
 our $logLevel = 'TRACE';   ##-- default log level for internal configuration
