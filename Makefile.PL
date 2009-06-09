@@ -13,6 +13,7 @@ WriteMakefile
    PREREQ_PM    => {
 		    'Gfsm'    =>0.0216,
 		    'Gfsm::XL'=>0.02,
+		    'Unicruft' => 0.02,
 		    ##--
 		    'Encode'=>undef,
 		    'Tie::Cache'=>undef,
