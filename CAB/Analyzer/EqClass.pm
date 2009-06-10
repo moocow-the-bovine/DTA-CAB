@@ -32,11 +32,12 @@ our $FREQ_VEC_BITS = 16;
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
 ##
-##    ##-- Analysis I/O
+##    ##-- Analysis Options
 ##    analysisKey => $key,     ##-- token analysis key (default='eqpho')
 ##    inputKey    => $key,     ##-- token input key (default='lts')
 ##                             ##   : $tok->{$key} should be ARRAY-ref as returned by Analyzer::Automaton
-##    ignoreNonAlpha => $bool, ##-- if true (default), non-alphabetics will be ignored
+##    allowRegex  => $re,      ##-- if defined, only tokens with matching text will be analyzed
+##                             ##   : default=/(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
 ##
 ##    ##-- Files
 ##    dictFile => $filename, ##-- dictionary filename (as for Automaton dictionaries, but "weights" are source frequencies)
@@ -60,7 +61,7 @@ sub new {
 			   ##-- options
 			   analysisKey => 'eqpho',
 			   inputKey    => 'lts',
-			   ignoreNonAlpha => 1,
+			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			   ##-- Files
 			   dictFile => undef,
@@ -186,7 +187,7 @@ sub getAnalyzeTokenSub {
   my $tid2pho  = $eqc->{tid2pho};
   my $pho2tids = $eqc->{pho2tids};
 
-  my $ignoreNonAlpha = $eqc->{ignoreNonAlpha};
+  my $allowRegex = defined($eqc->{allowRegex}) ? qr($eqc->{allowRegex}) : undef;
 
   my ($tok,$txt,$args,$p,$tid, $p_tids);
   return sub {
@@ -203,7 +204,7 @@ sub getAnalyzeTokenSub {
     }
 
     ##-- maybe ignore this token
-    return $tok if ($ignoreNonAlpha && $txt =~ m/[^[:alpha:]]/);
+    return $tok if (defined($allowRegex) && $txt !~ $allowRegex);
 
     ##-- get source phonetic string
     if (defined($args->{phoSrc})) {

@@ -424,7 +424,7 @@ sub test_parsers {
 
   print "test_parsers(): done\n";
 }
-test_parsers();
+#test_parsers();
 
 ##==============================================================================
 ## test: xml-rpc / storable
@@ -494,6 +494,38 @@ sub test_cab_server {
 }
 #test_cab_server();
 
+
+##==============================================================================
+## debug: unicruft
+
+sub argh_unicruft_0 {
+  my $ifmt = DTA::CAB::Format::TT->new;
+  my $ofmt = $ifmt->clone;
+  my $doc = $ifmt->parseFile('test-kant-1k.tt');
+  my %ul = (
+	    map { ($_->{text} => $_->{xlit}{latin1Text}) }
+	    grep { $_->{xlit}{isLatin1} && $_->{text} ne $_->{xlit}{latin1Text} }
+	    map { @{$_->{tokens}} }
+	    @{$doc->{body}}
+	   );
+  print STDOUT map { "$_\t$ul{$_}\n" } sort(keys(%ul));
+}
+#argh_unicruft_0();
+
+sub argh_unicruft_1 {
+  my $ifmt = DTA::CAB::Format::TT->new;
+  my $xlit = DTA::CAB::Analyzer::Unicruft->new();
+  my $doc = $ifmt->parseFile('test-kant-1k.t');
+  $xlit->analyzeDocument($doc);
+  my %ul = (
+	    map { ($_->{text} => $_->{xlit}{latin1Text}) }
+	    grep { $_->{xlit}{isLatin1} && $_->{text} ne $_->{xlit}{latin1Text} }
+	    map { @{$_->{tokens}} }
+	    @{$doc->{body}}
+	   );
+  print STDOUT map { "$_\t$ul{$_}\n" } sort(keys(%ul));
+}
+argh_unicruft_1();
 
 
 ##==============================================================================

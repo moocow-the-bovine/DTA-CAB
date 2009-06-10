@@ -11,9 +11,9 @@ WriteMakefile
    VERSION_FROM	=> 'CAB.pm',
 
    PREREQ_PM    => {
-		    'Gfsm'    =>0.0216,
-		    'Gfsm::XL'=>0.02,
-		    'Unicruft' => 0.02,
+		    'Gfsm'     => 0.0216,
+		    'Gfsm::XL' => 0.02,
+		    'Unicruft' => 0.03,
 		    ##--
 		    'Encode'=>undef,
 		    'Tie::Cache'=>undef,
