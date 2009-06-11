@@ -23,7 +23,7 @@ our ($help,$man,$version,$verbose);
 ##-- Server Options
 our $do_eval = 0;
 our $do_array = 0;
-our $server = 'http://localhost:8000';
+our $server = 'http://localhost:8088';
 
 ##-- I/O
 our $fromfile = undef;
@@ -66,7 +66,8 @@ if ($version) {
 ##==============================================================================
 ## MAIN
 
-$server = 'http://'.$server if ($server !~ m|//|);
+$server  = 'http://'.$server if ($server !~ m|//|);
+$server  =~ s{^([^/]*//[^/:]*)/}{$1:8088/};
 
 ##-- setup RPC::XML hacks
 $RPC::XML::ENCODING = $server_encoding if (defined($server_encoding));

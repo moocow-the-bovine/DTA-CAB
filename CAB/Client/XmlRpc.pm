@@ -62,7 +62,15 @@ sub new {
 ##==============================================================================
 
 ## $bool = $cli->connected()
-sub connected { return $_[0]{xcli} ? 1 : 0; }
+sub connected {
+  my $cli = shift;
+  return 0 if (!$cli->{xcli});
+
+  ##-- send a test query (system.identity())
+  my $req = $cli->newRequest('system.identity');
+  my $rsp = $cli->{xcli}->send_request( $req );
+  return ref($rsp) ? 1 : 0;
+}
 
 ## $bool = $cli->connect()
 ##  + establish connection
@@ -74,7 +82,7 @@ sub connect {
     if (defined($cli->{xargs}{message_file_thresh}) && !$cli->{xargs}{message_file_thresh});
   $cli->{xcli}->useragent->timeout($cli->{timeout})
     if (defined($cli->{timeout}));
-  return 1;
+  return $cli->connected();
 }
 
 ## $bool = $cli->disconnect()
