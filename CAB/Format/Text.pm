@@ -125,6 +125,10 @@ sub parseTextString {
       ##-- token: location
       $tok->{loc} = { off=>$1, len=>$2 };
     }
+#    elsif ($line =~ /^^\t\+\[(xmlid|chars)\] (.*)$/) {
+#      ##-- token: field: DTA::TokWrap special field
+#      $tok->{$1} = $2;
+#    }
     elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
       ##-- token: xlit
       $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };

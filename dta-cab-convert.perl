@@ -21,6 +21,7 @@ our $VERSION = $DTA::CAB::VERSION;
 ##-- General Options
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
+our $doprofile = 0; ##-- compatibility only; has no other effect
 
 #BEGIN {
 #  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
@@ -47,6 +48,7 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
+	   'profile|prof!' => \$doprofile, ##-- compatibility only
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,

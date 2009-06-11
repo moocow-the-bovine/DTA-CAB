@@ -73,6 +73,13 @@ BEGIN {
 ##     rwLoAttr         => $attr,       ##-- default: 'lo'
 ##     rwHiAttr         => $attr,       ##-- default: 'hi'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
+##     ##
+##     otherElt         => $eltName,    ##-- default: 'a'
+##     otherNameAttr    => $attr,       ##-- default: 'src'
+##     otherNameDefault => $val,        ##-- default: ''
+##     ##
+##     tokenIdAttr      => $attr,       ##-- default: 'xml:id'
+##     tokenCharsAttr   => $attr,       ##-- default: 'c'
 ##    }
 sub new {
   my $that = shift;
@@ -126,6 +133,9 @@ sub new {
 			      otherElt => 'a',
 			      otherNameAttr => 'src',
 			      otherNameDefault => '',
+			      ##
+			      tokenIdAttr => 'xml:id',
+			      tokenCharsAttr => 'c',
 
 			      ##-- user args
 			      @_
@@ -191,6 +201,14 @@ sub parseDocument {
       ##-- token: location
       @{$tok->{loc}}{qw(off len)} = split(/\s+/, $wnod->getAttribute($fmt->{tokenLocAttr}))
 	if (defined($fmt->{tokenLocAttr}) && $wnod->hasAttribute($fmt->{tokenLocAttr}));
+
+      ##-- token: dta-tokwrap attributes: xml:id
+      $tok->{other}{xmlid} = [$wnod->getAttribute($fmt->{tokenIdAttr})]
+	if (defined($fmt->{tokenIdAttr}) && $wnod->hasAttribute($fmt->{tokenIdAttr}));
+
+      ##-- token: dta-tokwrap attributes: character list
+      $tok->{other}{chars} = [$wnod->getAttribute($fmt->{tokenCharsAttr})]
+	if (defined($fmt->{tokenCharsAttr}) && $wnod->hasAttribute($fmt->{tokenCharsAttr}));
 
       ##-- token: xlit
       foreach $anod (@{ $wnod->findnodes("./$fmt->{xlitElt}\[last()]") }) {
@@ -276,21 +294,35 @@ sub parseDocument {
 ## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
 ##  + if $tok has a key '_xmlnod', that node is modified in-place!
+our (%ignoreOtherNames);
+BEGIN {
+  our %ignoreOtherNames = (xmlid=>undef, chars=>undef);
+}
+
 sub tokenNode {
   my ($fmt,$tok) = @_;
   $tok = toToken($tok);
 
-  ##-- token: node, text
+  ##-- token: node
   my $nod = $tok->{_xmlnod} || XML::LibXML::Element->new($fmt->{tokenElt});
-  $nod->setAttribute($fmt->{tokenTextAttr},$tok->{text});
 
   ##-- common variables
   my ($anod, $aa,$aanod, $rwnod,$rwanod,$rwa);
 
+  ##-- token: dta-tokwrap attribute: xmlid
+  $nod->setAttribute($fmt->{tokenIdAttr}, $tok->{other}{xmlid}[0])
+    if ($tok->{other} && $tok->{other}{xmlid} && $fmt->{tokenIdAttr});
+
+  ##-- token: text
+  $nod->setAttribute($fmt->{tokenTextAttr},$tok->{text});
+
   ##-- token: loc
-  if (defined($tok->{loc}) && $fmt->{tokenLocAttr}) {
-    $nod->setAttribute($fmt->{tokenLocAttr}, "$tok->{loc}{off} $tok->{loc}{len}");
-  }
+  $nod->setAttribute($fmt->{tokenLocAttr}, "$tok->{loc}{off} $tok->{loc}{len}")
+    if (defined($tok->{loc}) && $fmt->{tokenLocAttr});
+
+  ##-- token: dta-tokwrap attribute: chars
+  $nod->setAttribute($fmt->{tokenCharsAttr}, $tok->{other}{chars}[0])
+    if ($tok->{other}{chars} && $fmt->{tokenCharsAttr});
 
   ##-- token: xlit
   if (defined($tok->{xlit}) && $fmt->{xlitElt}) {
@@ -379,7 +411,7 @@ sub tokenNode {
   ##-- token: unparsed analyses
   if ($tok->{other} && $fmt->{otherElt}) {
     my ($name);
-    foreach $name (sort keys %{$tok->{other}}) {
+    foreach $name (sort grep {!exists($ignoreOtherNames{$_})} keys %{$tok->{other}}) {
       $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{otherElt}\[\@name='$name']")});
       foreach $aa (@{$tok->{other}{$name}}) {
 	$aanod = $nod->addNewChild(undef, $fmt->{otherElt});

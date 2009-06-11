@@ -130,6 +130,10 @@ sub parseTTString {
 	  ##-- token: field: loc
 	  $tok->{loc} = { off=>$1,len=>$2 };
 	}
+#	elsif ($field =~ m/^\[(xmlid|chars)\] (.*)$/) {
+#	  ##-- token: field: DTA::TokWrap special field
+#	  $tok->{$1} = $2;
+#	}
 	elsif ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
 	  ##-- token: field: xlit
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
@@ -242,6 +246,12 @@ sub putToken {
 
   ##-- Location ('loc'), moot compatibile
   $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
+
+  ##-- xml-id
+  #$out .= "\t[xmlid] $tok->{xmlid}" if (defined($tok->{xmlid}));
+
+  ##-- character list
+  #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
 
   ##-- Transliterator ('xlit')
   $out .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
