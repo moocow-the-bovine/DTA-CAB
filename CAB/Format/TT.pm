@@ -40,6 +40,7 @@ BEGIN {
 ##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
+
 sub new {
   my $that = shift;
   my $fmt = bless({
@@ -106,19 +107,31 @@ sub parseTTString {
   my ($fmt,$src) = @_;
   $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
 
-  my (@sents,$tok,$rw,$line);
+  my ($tok,$rw,$line);
   my ($text,@fields,$fieldi,$field);
-  my $s = [];
+  my $sents  = [];
+  my $s      = [];
+  my %sa     = qw(); ##-- sentence attributes
+  my %doca   = qw(); ##-- document attributes
   while ($src =~ m/^(.*)$/mg) {
     $line = $1;
-    if ($line =~ /^\%\%/) {
-      ##-- comment line; skip
+    if ($line =~ /^\%\% xml\:base=(.*)$/) {
+      ##-- special comment: document attribute: xml:base
+      $doca{xmlbase} = $1;
+    }
+    elsif ($line =~ /^\%\% Sentence (.*)$/) {
+      ##-- special comment: sentence attribute: xml:id
+      $sa{xmlid} = $1;
+    }
+    elsif ($line =~ /^\%\%/) {
+      ##-- comment line: skip
       next;
     }
     elsif ($line eq '') {
       ##-- blank line: eos
-      push(@sents,$s) if (@$s);
-      $s = [];
+      push(@$sents, { %sa, tokens=>$s }) if (@$s || %sa);
+      $s   = [];
+      %sa = qw();
     }
     else {
       ##-- token
@@ -188,10 +201,11 @@ sub parseTTString {
       }
     }
   }
-  push(@sents,$s) if (@$s); ##-- final sentence
+  push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa); ##-- final sentence
 
   ##-- construct & buffer document
-  $fmt->{doc} = bless({body=>[ map { bless({tokens=>$_},'DTA::CAB::Sentence') } @sents ]}, 'DTA::CAB::Document');
+  $_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
+  $fmt->{doc} = bless({%doca,body=>$sents}, 'DTA::CAB::Document');
   return $fmt;
 }
 
@@ -309,18 +323,20 @@ sub putToken {
 }
 
 ## $fmt = $fmt->putSentence($sent)
-##  + default version just concatenates formatted tokens
+##  + concatenates formatted tokens, adding sentence-id comment if available
 sub putSentence {
   my ($fmt,$sent) = @_;
+  $fmt->{outbuf} .= "%% Sentence $sent->{xmlid}\n" if (defined($sent->{xmlid}));
   $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{outbuf} .= "\n";
   return $fmt;
 }
 
 ## $fmt = $fmt->putDocument($doc)
-##  + default version just concatenates formatted sentences
+##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
 sub putDocument {
   my ($fmt,$doc) = @_;
+  $fmt->{outbuf} .= "%% xml:base=$doc->{xmlbase}\n\n" if (defined($doc->{xmlbase}));
   $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
   return $fmt;
 }
@@ -480,7 +496,8 @@ Override: select input from string $string.
 
  $fmt = $fmt->parseTTString($str)
 
-Guts for fromString(): parse string $str into local document buffer.
+Guts for fromString(): parse string $str into local document buffer
+$fmt-E<gt>{doc}.
 
 =item parseDocument
 

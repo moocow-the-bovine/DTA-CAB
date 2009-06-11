@@ -6,6 +6,7 @@
 
 package DTA::CAB::Format::Text;
 use DTA::CAB::Format;
+use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
 use IO::File;
 use Encode qw(encode decode);
@@ -16,7 +17,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Format);
+our @ISA = qw(DTA::CAB::Format::TT);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text)$/);
@@ -40,35 +41,15 @@ BEGIN {
 ##     encoding  => $encoding,         ##-- default: 'UTF-8'
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    )
-sub new {
-  my $that = shift;
-  my $fmt = bless({
-		   ##-- input
-		   doc => undef,
-
-		   ##-- output
-		   outbuf  => '',
-
-		   ##-- common
-		   encoding => 'UTF-8',
-		   defaultFieldName => '',
-
-		   ##-- user args
-		   @_
-		  }, ref($that)||$that);
-  return $fmt;
-}
+## + inherited from DTA::CAB::Format::TT
 
 ##==============================================================================
 ## Methods: Persistence
 ##==============================================================================
 
 ## @keys = $class_or_obj->noSaveKeys()
-##  + returns list of keys not to be saved
-##  + default just returns empty list
-sub noSaveKeys {
-  return qw(doc outbuf);
-}
+##  + returns list of keys not to be saved: qw(doc outbuf)
+##  + inherited from DTA::CAB::Format::TT
 
 ##==============================================================================
 ## Methods: Input
@@ -78,10 +59,7 @@ sub noSaveKeys {
 ## Methods: Input: Input selection
 
 ## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
-}
+##  + inherited from DTA::CAB::Format::TT
 
 ## $fmt = $fmt->fromFile($filename_or_handle)
 ##  + default calls $fmt->fromFh()
@@ -90,32 +68,42 @@ sub close {
 ##  + default calls $fmt->fromString() on file contents
 
 ## $fmt = $fmt->fromString($string)
-sub fromString {
-  my $fmt = shift;
-  $fmt->close();
-  return $fmt->parseTextString($_[0]);
-}
+##  + wrapper for: $fmt->close->parseTTString($_[0])
+##  + inherited from DTA::CAB::Format::TT
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
 ## $fmt = $fmt->parseTextString($string)
+BEGIN { *parseTTString = \&parseTextString; }
 sub parseTextString {
   my ($fmt,$src) = @_;
   $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
 
-  my (@sents,$tok,$rw,$line);
-  my $s = [];
+  my ($tok,$rw,$line);
+  my $sents  = [];   ##-- doc body
+  my $s      = [];   ##-- current sentence
+  my %sa     = qw(); ##-- sentence attributes
+  my %doca   = qw(); ##-- document attributes
   while ($src =~ m/^(.*)$/mg) {
     $line = $1;
-    if ($line =~ /^\%\%/) {
-      ##-- comment line; skip
+    if ($line =~ /^\%\% xml\:base=(.*)$/) {
+      ##-- special comment: document attribute: xml:base
+      $doca{xmlbase} = $1;
+    }
+    elsif ($line =~ /^\%\% Sentence (.*)$/) {
+      ##-- special comment: sentence attribute: xml:id
+      $sa{xmlid} = $1;
+    }
+    elsif ($line =~ /^\%\%/) {
+      ##-- comment line: skip
       next;
     }
     elsif ($line eq '') {
       ##-- blank line: eos
-      push(@sents,$s) if (@$s);
-      $s = [];
+      push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa);
+      $s  = [];
+      %sa = qw();
     }
     elsif ($line =~ /^(\S.*)/) {
       ##-- new token: text
@@ -182,10 +170,11 @@ sub parseTextString {
       push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $line);
     }
   }
-  push(@sents,$s) if (@$s); ##-- final sentence
+  push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa); ##-- final sentence
 
   ##-- construct & buffer document
-  $fmt->{doc} = bless({body=>[ map { bless({tokens=>$_},'DTA::CAB::Sentence') } @sents ]}, 'DTA::CAB::Document');
+  $_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
+  $fmt->{doc} = bless({%doca,body=>$sents}, 'DTA::CAB::Document');
 
   return $fmt;
 }
@@ -194,7 +183,8 @@ sub parseTextString {
 ## Methods: Input: Generic API
 
 ## $doc = $fmt->parseDocument()
-sub parseDocument { return $_[0]{doc}; }
+##  + just returns $fmt->{doc}
+##  + inherited from DTA::CAB::Format::TT
 
 
 ##==============================================================================
@@ -206,20 +196,13 @@ sub parseDocument { return $_[0]{doc}; }
 
 ## $fmt = $fmt->flush()
 ##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
-}
+##  + inherited from DTA::CAB::Format::TT
 
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
 ##  + default implementation just encodes string in $fmt->{outbuf}
-sub toString {
-  return encode($_[0]{encoding},$_[0]{outbuf})
-    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
-  return $_[0]{outbuf};
-}
+##  + inherited from DTA::CAB::Format::TT
 
 ## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
@@ -297,21 +280,12 @@ sub putToken {
 }
 
 ## $fmt = $fmt->putSentence($sent)
-##  + default version just concatenates formatted tokens
-sub putSentence {
-  my ($fmt,$sent) = @_;
-  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
-  $fmt->{outbuf} .= "\n";
-  return $fmt;
-}
+##  + concatenates formatted tokens, adding sentence-id comment if available
+##  + inherited from DTA::CAB::Format::TT
 
 ## $out = $fmt->formatDocument($doc)
-##  + default version just concatenates formatted sentences
-sub putDocument {
-  my ($fmt,$doc) = @_;
-  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
-  return $fmt;
-}
+##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
+##  + inherited from DTA::CAB::Format::TT
 
 1; ##-- be happy
 
@@ -344,23 +318,14 @@ DTA::CAB::Format::Text - Datum parser: verbose human-readable text
  $fmt = DTA::CAB::Format::Text->new(%args);
  
  ##========================================================================
- ## Methods: Persistence
- 
- @keys = $class_or_obj->noSaveKeys();
- 
- ##========================================================================
  ## Methods: Input
  
- $fmt = $fmt->close();
- $doc = $fmt->parseDocument();
+ $doc = $fmt->parseTextString();
  
  ##========================================================================
  ## Methods: Output
  
- $fmt = $fmt->flush();
- $str = $fmt->toString();
  $fmt = $fmt->putToken($tok);
- $fmt = $fmt->putSentence($sent);
 
 =cut
 
@@ -384,7 +349,7 @@ DTA::CAB::Format::Text - Datum parser: verbose human-readable text
 
 DTA::CAB::Format::Text
 inherits from
-L<DTA::CAB::Format|DTA::CAB::Format>.
+L<DTA::CAB::Format|DTA::CAB::Format> via L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>.
 
 =item Filenames
 
@@ -411,6 +376,7 @@ with L<DTA::CAB::Format|DTA::CAB::Format>.
  $fmt = CLASS_OR_OBJ->new(%args);
 
 Constructor.
+Inherited from L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>.
 
 %args, %$fmt:
 
@@ -429,25 +395,6 @@ Constructor.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format::Text: Methods: Persistence
-=pod
-
-=head2 Methods: Persistence
-
-=over 4
-
-=item noSaveKeys
-
- @keys = $class_or_obj->noSaveKeys();
-
-Override: returns list of keys not to be saved.
-Just returns C<qw(doc)>.
-
-=back
-
-=cut
-
-##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Format::Text: Methods: Input
 =pod
 
@@ -455,34 +402,17 @@ Just returns C<qw(doc)>.
 
 =over 4
 
-=item close
-
- $fmt = $fmt->close();
-
-Override: close current input source.
-Deletes $fmt-E<gt>{doc}.
-
-=item fromString
-
- $fmt = $fmt->fromString( $string)
-
-Select input from string $string.
-Calls L</parseTextString>().
-
 =item parseTextString
 
- $fmt = $fmt->parseTextString($string)
+ $fmt = $fmt->parseTextString($str);
 
-Low-level document parsing routine.
-Populates
-document buffer $fmt-E<gt>{doc}
-with parsed data from $string.
+Guts for document parsing: parse string $str into local document buffer $fmt-E<gt>{doc}.
 
-=item parseDocument
+=item parseTTString
 
- $doc = $fmt->parseDocument();
+ $fmt = $fmt->parseTTString($str);
 
-Just returns document buffer $fmt-E<gt>{doc}.
+Alias for parseTextString().
 
 =back
 
@@ -496,35 +426,11 @@ Just returns document buffer $fmt-E<gt>{doc}.
 
 =over 4
 
-=item flush
-
- $fmt = $fmt->flush();
-
-Override: flush accumulated output
-
-=item toString
-
- $str = $fmt->toString();
- $str = $fmt->toString($formatLevel)
-
-Override: flush buffered output document to byte-string.
-Just encodes string in $fmt-E<gt>{outbuf}
-
 =item putToken
 
  $fmt = $fmt->putToken($tok);
 
 Override: append formatted token $tok to output buffer.
-
-=item putSentence
-
- $fmt = $fmt->putSentence($sent);
-
-Override: append formatted sentence to output buffer.
-
-=item putDocument
-
-Override: append formatted document to output buffer.
 
 =back
 

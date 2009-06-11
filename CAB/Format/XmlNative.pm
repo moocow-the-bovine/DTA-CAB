@@ -40,7 +40,11 @@ BEGIN {
 ##     ##-- common: XML element & attribute names
 ##     documentElt      => $eltName,    ##-- default: 'doc'
 ##     multidocElt      => $eltName,    ##-- default: 'corpus'
+##     docBaseAttr      => $attr,       ##-- default: 'xml:base'
+##     ##
 ##     sentenceElt      => $eltName,    ##-- default: 's'
+##     sentIdAttr       => $attr,       ##-- default: 'xml:id'
+##     ##
 ##     tokenElt         => $eltName,    ##-- default: 'w'
 ##     tokenTextAttr    => $attr,       ##-- default: 't'
 ##     ##
@@ -95,7 +99,11 @@ sub new {
 			      ##-- common: XML names
 			      documentElt => 'doc',
 			      multidocElt => 'corpus',
+			      docBaseAttr => 'xml:base',
+			      ##
 			      sentenceElt => 's',
+			      sentIdAttr  => 'xml:id',
+			      ##
 			      tokenElt      => 'w',
 			      tokenTextAttr => 't', #'text',
 			      tokenLocAttr  => 'b', #'loc',
@@ -187,9 +195,15 @@ sub parseDocument {
   ##-- common variables
   my ($snod,$s,$stoks, $wnod,$tok, $anod,$a, $rwnod,$rw);
 
+  ##-- doc attributes: xmlbase
+  $doc->{xmlbase} = $root->getAttribute($fmt->{docBaseAttr}) if ($fmt->{docBaseAttr});
+
   ##-- loop: sentences
   foreach $snod (@{ $root->findnodes(".//$fmt->{sentenceElt}") }) {
     push(@$sents, $s=bless({tokens=>($stoks=[]), _xmlnod=>$snod},'DTA::CAB::Sentence'));
+
+    ##-- sentence attributes: xmlid
+    $s->{xmlid} = $root->getAttribute($fmt->{sentIdAttr}) if ($fmt->{sentIdAttr});
 
     ##-- loop: sentence/tokens
     foreach $wnod (@{ $snod->findnodes("./$fmt->{tokenElt}") }) {
@@ -443,6 +457,10 @@ sub sentenceNode {
     }
   }
 
+  ##-- sentence: attributes
+  $snod->setAttribute($fmt->{sentIdAttr}, $sent->{xmlid})
+    if (defined($sent->{xmlid}) && $fmt->{sentIdAttr});
+
   return $snod;
 }
 
@@ -463,6 +481,10 @@ sub documentNode {
       $docnod->addChild($fmt->sentenceNode($_));
     }
   }
+
+  ##-- document: attributes
+  $docnod->setAttribute($fmt->{docBaseAttr}, $doc->{xmlbase})
+    if (defined($doc->{xmlbase}) && $fmt->{docBaseAttr});
 
   return $docnod;
 }
