@@ -25,6 +25,9 @@ our @ISA = qw(DTA::CAB::Datum);
 ##  + object structure: HASH
 ##    {
 ##     tokens => \@tokens,   ##-- DTA::CAB::Token objects
+##     ##
+##     ##-- dta-tokwrap attributes
+##     xmlid => $id,
 ##    }
 sub new {
   return bless({

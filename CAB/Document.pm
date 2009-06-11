@@ -23,6 +23,9 @@ our @ISA = qw(DTA::CAB::Datum);
 ##  + object structure: HASH
 ##    {
 ##     body => \@sentences,  ##-- DTA::CAB::Sentence objects
+##     ##
+##     ##-- dta-tokwrap attributes
+##     xmlbase => $base,
 ##    }
 sub new {
   return bless({
