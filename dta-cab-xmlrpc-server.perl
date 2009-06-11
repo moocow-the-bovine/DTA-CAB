@@ -130,6 +130,8 @@ $srv->{encoding}   = $serverEncoding if (defined($serverEncoding));
 ##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
 sub serverMain {
   ##-- prepare & run server
+  $srv->info("serverMain(): initializing server");
+  $srv->info("serverMain(): using DTA::CAB version $DTA::CAB::VERSION");
   $srv->prepare()
     or $srv->logdie("prepare() failed!");
   $srv->run();
