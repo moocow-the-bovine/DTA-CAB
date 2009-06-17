@@ -1,0 +1,4 @@
+esse
+est
+percipi
+.

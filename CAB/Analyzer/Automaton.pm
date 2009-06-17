@@ -273,10 +273,10 @@ sub loadDict {
     chomp($line);
     next if ($line =~ /^\s*$/ || $line =~ /^\s*%/);
     $line = decode($aut->{labenc}, $line) if ($aut->{labenc});
+    ($word,@analyses) = split(/\t+/,$line);
     if    ($aut->{tolower})   { $word = lc($word); }
     elsif ($aut->{tolowerNI}) { $word =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($aut->{toupperI})  { $word = ucfirst($word); }
-    ($word,@analyses) = split(/\t+/,$line);
     $dict->{$word} = $entry = [];
     foreach $aw (@analyses) {
       $a = $aw;

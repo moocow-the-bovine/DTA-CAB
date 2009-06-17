@@ -136,6 +136,10 @@ sub parseTextString {
       $tok->{morph} = [] if (!$tok->{morph});
       push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
+    elsif ($line =~ m/^\t\+\[latin\] (.*)$/) {
+      ##-- token: field: latin-language analysis
+      $tok->{latin} = $1;
+    }
     elsif ($line =~ m/^\t\+\[morph\/safe] (\d)$/) {
       ##-- token: field: morph-safety check
       $tok->{msafe} = $1;
@@ -240,6 +244,9 @@ sub putToken {
   ##-- Morph ('morph')
   $out .= join('', map { "\t+[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{morph}})
     if ($tok->{morph});
+
+  ##-- Latin ('latin')
+  $out .= "\t+[latin] $tok->{latin}\n" if (defined($tok->{latin}));
 
   ##-- MorphSafe ('morph.safe')
   $out .= "\t+[morph/safe] ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));

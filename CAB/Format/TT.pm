@@ -166,6 +166,10 @@ sub parseTTString {
 	  $tok->{morph} = [] if (!$tok->{morph});
 	  push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
+	elsif ($field =~ m/^\[latin\] (.*)$/) {
+	  ##-- token: field: latin-language analysis
+	  $tok->{latin} = $1;
+	}
 	elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
 	  ##-- token: field: morph-safety check (morph/safe)
 	  $tok->{msafe} = $1;
@@ -282,6 +286,9 @@ sub putToken {
   ##-- Morph ('morph')
   $out .= join('', map { "\t[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{morph}})
     if ($tok->{morph});
+
+  ##-- Latin ('latin')
+  $out .= "\t[latin] $tok->{latin}" if (defined($tok->{latin}));
 
   ##-- MorphSafe ('morph/safe')
   $out .= "\t[morph/safe] ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));
