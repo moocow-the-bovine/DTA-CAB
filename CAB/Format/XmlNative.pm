@@ -69,6 +69,8 @@ BEGIN {
 ##     morphHiAttr      => $attr,       ##-- default: 'hi'
 ##     morphWeightAttr  => $attr,       ##-- default: 'w'
 ##     ##
+##     mlatinElt        => $eltName,    ##-- default: 'mlatin'
+##     ##
 ##     msafeElt         => $eltName,    ##-- default: 'msafe'
 ##     msafeAttr        => $attrName,   ##-- defualt: 'safe'
 ##     ##
@@ -128,6 +130,8 @@ sub new {
 			      morphLoAttr      => 'lo',
 			      morphHiAttr      => 'hi',
 			      morphWeightAttr  => 'w',
+			      ##
+			      mlatinElt        => 'mlatin',
 			      ##
 			      msafeElt         => 'msafe',
 			      msafeAttr        => 'safe',
@@ -234,7 +238,6 @@ sub parseDocument {
 
       ##-- token: lts
       foreach $anod (@{ $wnod->findnodes("./$fmt->{ltsElt}/$fmt->{ltsAnalysisElt}") }) {
-	#$tok->{lts} = [] if (!$tok->{lts});
 	push(@{$tok->{lts}}, $a={});
 	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
 	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
@@ -242,15 +245,20 @@ sub parseDocument {
 
       ##-- token: morph
       foreach $anod (@{ $wnod->findnodes("./$fmt->{morphElt}/$fmt->{morphAnalysisElt}") }) {
-	#$tok->{morph} = [] if (!$tok->{morph});
 	push(@{$tok->{morph}}, $a={});
+	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
+	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
+      }
+
+      ##-- token: mlatin
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{mlatinElt}/$fmt->{morphAnalysisElt}") }) {
+	push(@{$tok->{mlatin}}, $a={});
 	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
 	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
       }
 
       ##-- token: eqpho
       foreach $anod (@{ $wnod->findnodes("./$fmt->{eqphoElt}/$fmt->{eqphoAnalysisElt}") }) {
-	#$tok->{eqpho} = [] if (!$tok->{eqpho});
 	push(@{$tok->{eqpho}}, $anod->getAttribute($fmt->{eqphoTextAttr}));
       }
 
@@ -261,14 +269,12 @@ sub parseDocument {
 
       ##-- token: rewrite
       foreach $rwnod (@{ $wnod->findnodes("./$fmt->{rwElt}/$fmt->{rwAnalysisElt}") }) {
-	#$tok->{rw} = [] if (!$tok->{rw});
 	push(@{$tok->{rw}}, $rw={});
 	@$rw{qw(lo hi w)} = map {$rwnod->getAttribute($_)} @$fmt{qw(rwLoAttr rwHiAttr rwWeightAttr)};
 	delete(@$rw{grep {!defined($rw->{$_})} keys(%$rw)});
 
 	##-- token: rewrite: lts
 	foreach $anod (@{ $rwnod->findnodes("./$fmt->{ltsElt}/$fmt->{ltsAnalysisElt}") }) {
-	  #$rw->{lts} = [] if (!$rw->{lts});
 	  push(@{$rw->{lts}}, $a={});
 	  @$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(ltsLoAttr ltsHiAttr ltsWeightAttr)};
 	  delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
@@ -276,7 +282,6 @@ sub parseDocument {
 
         ##-- token: rewrite: morph
 	foreach $anod (@{ $rwnod->findnodes("./$fmt->{morphElt}/$fmt->{morphAnalysisElt}") }) {
-	  #$rw->{morph} = [] if (!$rw->{morph});
 	  push(@{$rw->{morph}}, $a={});
 	  @$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(morphLoAttr morphHiAttr morphWeightAttr)};
 	  delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
@@ -374,6 +379,18 @@ sub tokenNode {
     $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{morphElt}")});
     $anod = $nod->addNewChild(undef, $fmt->{morphElt});
     foreach $aa (@{$tok->{morph}}) {
+      $aanod = $anod->addNewChild(undef, $fmt->{morphAnalysisElt});
+      $aanod->setAttribute($fmt->{morphLoAttr},$aa->{lo})    if ($fmt->{morphLoAttr} && defined($aa->{lo}));
+      $aanod->setAttribute($fmt->{morphHiAttr},$aa->{hi})    if ($fmt->{morphHiAttr} && defined($aa->{hi}));
+      $aanod->setAttribute($fmt->{morphWeightAttr},$aa->{w}) if ($fmt->{morphWeightAttr} && defined($aa->{w}));
+    }
+  }
+
+  ##-- token: mlatin
+  if ($tok->{mlatin} && $fmt->{mlatinElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{mlatinElt}")});
+    $anod = $nod->addNewChild(undef, $fmt->{mlatinElt});
+    foreach $aa (@{$tok->{mlatin}}) {
       $aanod = $anod->addNewChild(undef, $fmt->{morphAnalysisElt});
       $aanod->setAttribute($fmt->{morphLoAttr},$aa->{lo})    if ($fmt->{morphLoAttr} && defined($aa->{lo}));
       $aanod->setAttribute($fmt->{morphHiAttr},$aa->{hi})    if ($fmt->{morphHiAttr} && defined($aa->{hi}));

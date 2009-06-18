@@ -113,32 +113,25 @@ sub parseTextString {
       ##-- token: location
       $tok->{loc} = { off=>$1, len=>$2 };
     }
-#    elsif ($line =~ /^^\t\+\[(xmlid|chars)\] (.*)$/) {
-#      ##-- token: field: DTA::TokWrap special field
-#      $tok->{$1} = $2;
-#    }
     elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
       ##-- token: xlit
       $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
     }
     elsif ($line =~ m/^\t\+\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: lts analysis
-      $tok->{lts} = [] if (!$tok->{lts});
       push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
     elsif ($line =~ m/^\t\+\[eqpho\] (.*)$/) {
       ##-- token: field: phonetic equivalent
-      $tok->{eqpho} = [] if (!$tok->{eqpho});
       push(@{$tok->{eqpho}}, $1);
     }
     elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: morph analysis
-      $tok->{morph} = [] if (!$tok->{morph});
       push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
-    elsif ($line =~ m/^\t\+\[latin\] (.*)$/) {
-      ##-- token: field: latin-language analysis
-      $tok->{latin} = $1;
+    elsif ($line =~ m/^\t\+\[morph\/la\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: morph analysis
+      push(@{$tok->{mlatin}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
     elsif ($line =~ m/^\t\+\[morph\/safe] (\d)$/) {
       ##-- token: field: morph-safety check
@@ -146,21 +139,18 @@ sub parseTextString {
     }
     elsif ($line =~ m/^\t\+\[rw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: rewrite target
-      $tok->{rw} = [] if (!$tok->{rw});
       push(@{$tok->{rw}}, $rw={(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
     elsif ($line =~ m/^\t+\+\[rw\/lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: LTS analysis of rewrite target
       $tok->{rw} = [ {} ] if (!$tok->{rw});
       $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      $rw->{lts} = [] if (!$rw->{lts});
       push(@{$rw->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
     }
     elsif ($line =~ m/^\t+\+\[rw\/morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: morph analysis of rewrite target
       $tok->{rw}   = [ {} ] if (!$tok->{rw});
       $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      $rw->{morph} = [] if (!$rw->{morph});
       push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
     }
     elsif ($line =~ m/^\t\+\[([^\]]*)\]\s?(.*)$/) {
@@ -245,10 +235,11 @@ sub putToken {
   $out .= join('', map { "\t+[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{morph}})
     if ($tok->{morph});
 
-  ##-- Latin ('latin')
-  $out .= "\t+[latin] $tok->{latin}\n" if (defined($tok->{latin}));
+  ##-- Morph::Latin ('morph/la')
+  $out .= join('', map { "\t+[morph/la] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{mlatin}})
+    if ($tok->{mlatin});
 
-  ##-- MorphSafe ('morph.safe')
+  ##-- MorphSafe ('morph/safe')
   $out .= "\t+[morph/safe] ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
 
   ##-- Rewrites + analyses

@@ -153,22 +153,19 @@ sub parseTTString {
 	}
 	elsif ($field =~ m/^\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: lts analysis (no lower)
-	  $tok->{lts} = [] if (!$tok->{lts});
 	  push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
 	elsif ($field =~ m/^\[eqpho\] (.*)$/) {
 	  ##-- token: field: phonetic equivalent
-	  $tok->{eqpho} = [] if (!$tok->{eqpho});
 	  push(@{$tok->{eqpho}}, $1);
 	}
 	elsif ($field =~ m/^\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: morph analysis
-	  $tok->{morph} = [] if (!$tok->{morph});
 	  push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
-	elsif ($field =~ m/^\[latin\] (.*)$/) {
+	elsif ($field =~ m/^\[morph\/la\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: latin-language analysis
-	  $tok->{latin} = $1;
+	  push(@{$tok->{mlatin}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
 	elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
 	  ##-- token: field: morph-safety check (morph/safe)
@@ -176,21 +173,18 @@ sub parseTTString {
 	}
 	elsif ($field =~ m/^\[rw\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
 	  ##-- token: field: rewrite target
-	  $tok->{rw} = [] if (!$tok->{rw});
 	  push(@{$tok->{rw}}, $rw={(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
 	elsif ($field =~ m/^\[rw\/lts\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
 	  ##-- token: LTS analysis of rewrite target
 	  $tok->{rw} = [ {} ] if (!$tok->{rw});
 	  $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-	  $rw->{lts} = [] if (!$rw->{lts});
 	  push(@{$rw->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
 	elsif ($field =~ m/^\[rw\/morph\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
 	  ##-- token: morph analysis of rewrite target
 	  $tok->{rw}   = [ {} ] if (!$tok->{rw});
 	  $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-	  $rw->{morph} = [] if (!$rw->{morph});
 	  push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
@@ -287,8 +281,9 @@ sub putToken {
   $out .= join('', map { "\t[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{morph}})
     if ($tok->{morph});
 
-  ##-- Latin ('latin')
-  $out .= "\t[latin] $tok->{latin}" if (defined($tok->{latin}));
+  ##-- Morph::Latin ('morph/la')
+  $out .= join('', map { "\t[morph/la] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
+    if ($tok->{mlatin});
 
   ##-- MorphSafe ('morph/safe')
   $out .= "\t[morph/safe] ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));

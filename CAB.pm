@@ -17,7 +17,7 @@ use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::EqClass;
 use DTA::CAB::Analyzer::Morph;
-use DTA::CAB::Analyzer::Latin;
+use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
 
@@ -38,7 +38,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.05;
+our $VERSION = 0.06;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -56,7 +56,7 @@ sub new {
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   eqpho => DTA::CAB::Analyzer::EqClass->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
-			   latin => DTA::CAB::Analyzer::Latin->new(),
+			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
 
@@ -82,7 +82,7 @@ sub ensureLoaded {
   $rc &&= $cab->{lts}->ensureLoaded()   if ($cab->{lts});
   $rc &&= $cab->{eqpho}->ensureLoaded() if ($cab->{eqpho});
   $rc &&= $cab->{morph}->ensureLoaded() if ($cab->{morph});
-  $rc &&= $cab->{latin}->ensureLoaded() if ($cab->{latin});
+  $rc &&= $cab->{mlatin}->ensureLoaded() if ($cab->{mlatin});
   $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
   #$cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph}); ##-- OBSOLETE!
@@ -125,7 +125,7 @@ sub savePerlRef {
 ##  + known \%opts:
 ##     do_xlit  => $bool,    ##-- enable/disable unicruft transliterator (default: enabled)
 ##     do_morph => $bool,    ##-- enable/disable morphological analysis (default: enabled)
-##     do_latin => $bool,    ##-- enable/disable latin-language analysis (default: enabled)
+##     do_mlatin=> $bool,    ##-- enable/disable latin-language analysis (default: enabled)
 ##     do_lts   => $bool,    ##-- enable/disable LTS analysis (default: enabled)
 ##     do_eqpho => $bool,    ##-- enable/disable phonetic-equivalence-class analysis (default: enabled)
 ##     do_msafe => $bool,    ##-- enable/disable morphSafe analysis (default: enabled)
@@ -135,14 +135,14 @@ sub savePerlRef {
 ##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
-  my ($xlit,$lts,$eqpho,$morph,$latin,$msafe,$rw) = @$cab{qw(xlit lts eqpho morph latin msafe rw)};
-  my $a_xlit  = $xlit->getAnalyzeTokenSub()  if ($xlit);
-  my $a_lts   = $lts->getAnalyzeTokenSub()   if ($lts);
-  my $a_eqpho = $eqpho->getAnalyzeTokenSub() if ($eqpho);
-  my $a_morph = $morph->getAnalyzeTokenSub() if ($morph);
-  my $a_latin = $latin->getAnalyzeTokenSub() if ($latin);
-  my $a_msafe = $msafe->getAnalyzeTokenSub() if ($msafe);
-  my $a_rw    = $rw->getAnalyzeTokenSub()    if ($rw);
+  my ($xlit,$lts,$eqpho,$morph,$mlatin,$msafe,$rw) = @$cab{qw(xlit lts eqpho morph mlatin msafe rw)};
+  my $a_xlit   = $xlit->getAnalyzeTokenSub()   if ($xlit);
+  my $a_lts    = $lts->getAnalyzeTokenSub()    if ($lts);
+  my $a_eqpho  = $eqpho->getAnalyzeTokenSub()  if ($eqpho);
+  my $a_morph  = $morph->getAnalyzeTokenSub()  if ($morph);
+  my $a_mlatin = $mlatin->getAnalyzeTokenSub() if ($mlatin);
+  my $a_msafe  = $msafe->getAnalyzeTokenSub()  if ($msafe);
+  my $a_rw     = $rw->getAnalyzeTokenSub()     if ($rw);
   my ($tok, $w,$opts,$l);
   return sub {
     ($tok,$opts) = @_;
@@ -172,9 +172,9 @@ sub getAnalyzeTokenSub {
       $a_morph->($tok, $opts);
     }
 
-    ##-- analyze: latin
-    if ($a_latin && (!defined($opts->{do_latin}) || $opts->{do_latin})) {
-      $a_latin->($tok, $opts);
+    ##-- analyze: mlatin
+    if ($a_mlatin && (!defined($opts->{do_mlatin}) || $opts->{do_mlatin})) {
+      $a_mlatin->($tok, $opts);
     }
 
     ##-- analyze: morph: safe?
@@ -236,7 +236,6 @@ DTA::CAB - "Cascaded Analysis Broker" for robust morphological analysis, etc.
  $tok = $cab->analyzeToken($tok,\%analyzeOptions)
  $sent = $cab->analyzeSentence($sent,\%analyzeOptions)
  $doc = $anl->analyzeDocument($sent,\%analyzeOptions)
-
 
 =cut
 

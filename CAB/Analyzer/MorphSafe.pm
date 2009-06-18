@@ -30,12 +30,15 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##    analysisSrcKey => $srcKey,    ##-- input token key   (default: 'morph')
 ##    analysisKey    => $key,       ##-- output key        (default: 'msafe')
 ##
+##    auxSrcKey      => $srcKey,    ##-- auxilliary token key (e.g. 'mlatin'); always "safe" if present & true; default=none
+##
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
 			   analysisSrcKey => 'morph',
 			   analysisKey    => 'msafe',
+			   #auxSrcKey      => 'mlatin',
 
 			   ##-- user args
 			   @_
@@ -68,6 +71,7 @@ sub getAnalyzeTokenSub {
 
   my $srcKey = $ms->{analysisSrcKey};
   my $akey   = $ms->{analysisKey};
+  my $auxkey = $ms->{auxSrcKey};
   my ($tok,$opts,$analyses,$safe);
   return sub {
     ($tok,$opts) = @_;
@@ -75,6 +79,7 @@ sub getAnalyzeTokenSub {
     $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
 	     && $tok->{text} !~ m/\#/                      ##-- unless they contain '#' (placeholder for unrecognized char)
 	    );
+    $safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
     $safe ||=
       (
        $analyses                 ##-- defined & true
