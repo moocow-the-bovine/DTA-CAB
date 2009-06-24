@@ -163,7 +163,7 @@ sub parseTTString {
 	  ##-- token: field: morph analysis
 	  push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
-	elsif ($field =~ m/^\[morph\/la\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+	elsif ($field =~ m/^\[morph\/lat?\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: latin-language analysis
 	  push(@{$tok->{mlatin}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
@@ -281,8 +281,8 @@ sub putToken {
   $out .= join('', map { "\t[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{morph}})
     if ($tok->{morph});
 
-  ##-- Morph::Latin ('morph/la')
-  $out .= join('', map { "\t[morph/la] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
+  ##-- Morph::Latin ('morph/lat')
+  $out .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
     if ($tok->{mlatin});
 
   ##-- MorphSafe ('morph/safe')
