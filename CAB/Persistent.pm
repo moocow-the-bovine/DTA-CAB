@@ -136,8 +136,8 @@ sub savePerlString {
 
 ## $obj = $CLASS_OR_OBJ->loadPerlString($str,%args)
 ##  + %args:
-##     var=>$perl_var_name, ##-- default='$index'
-##     src=>$src_name,      ##-- default=(substr($str,0,42).'...')
+##     var=>$perl_var_name, ##-- default='$index'                 ; local var: $VAR
+##     src=>$src_name,      ##-- default=(substr($str,0,42).'...'); local var: $SRC
 ##     %more_obj_args,      ##-- literally inserted into $obj
 ##  + load from perl code string
 sub loadPerlString {
@@ -148,6 +148,8 @@ sub loadPerlString {
 	     : (length($str) <= 42
 		? $str
 		: (substr($str,0,42).'...')));
+  my $VAR = $var;
+  my $SRC = (defined($args{src}) ? $args{src} : '/dev/null');
   delete(@args{qw(var src)});
 
   my $loaded = eval("no strict; $str; $var");

@@ -6,6 +6,7 @@ use DTA::CAB::Server::XmlRpc;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
+use Cwd qw(getcwd abs_path);
 use Pod::Usage;
 
 ##==============================================================================
@@ -132,6 +133,7 @@ sub serverMain {
   ##-- prepare & run server
   $srv->info("serverMain(): initializing server");
   $srv->info("serverMain(): using DTA::CAB version $DTA::CAB::VERSION");
+  $srv->info("serverMain(): CWD ", abs_path(getcwd));
   $srv->prepare()
     or $srv->logdie("prepare() failed!");
   $srv->run();
