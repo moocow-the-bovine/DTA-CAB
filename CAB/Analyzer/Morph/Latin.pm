@@ -24,6 +24,7 @@ sub new {
 			      ##-- analysis selection
 			      analyzeDst => 'mlatin',
 			      wantAnalysisLo => 0,
+                              tolower => 1,
 
 			      ##-- user args
 			      @_
@@ -81,6 +82,7 @@ which sets the following default options:
 
  ##-- analysis selection
  analyzeDst => 'mlatin',   ##-- analysis output property
+ tolower    => 1,          ##-- bash input words to lower-case
 
 =cut
 
