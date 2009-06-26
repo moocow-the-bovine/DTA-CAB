@@ -47,6 +47,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
 ##     tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
 ##     toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
+##     bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -88,6 +89,7 @@ sub new {
 			      tolower        => 0,
 			      tolowerNI      => 0,
 			      toupperI       => 0,
+			      bashWS         => '_',
 
 			      ##-- profiling
 			      profile => 0,
@@ -355,7 +357,10 @@ sub getAnalyzeTokenSub {
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
   ##-- ananalysis options
-  my @analyzeOptionKeys = qw(check_symbols auto_connect tolower tolowerNI toupperI wantAnalysisLo max_paths max_weight max_ops); #)
+  my @analyzeOptionKeys = (qw(check_symbols auto_connect),
+			   qw(tolower tolowerNI toupperI bashWS),
+			   qw(wantAnalysisLo max_paths max_weight max_ops),
+			  );
   my $doprofile = $aut->{profile};
 
   my ($tok, $w,$opts,$uword,@wlabs, $isdict, $analyses);
@@ -376,6 +381,7 @@ sub getAnalyzeTokenSub {
     if    ($opts->{tolower})   { $uword = lc($uword); }
     elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
+    if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
 
     ##-- check for (normalized) word in dict
     if ($dict && exists($dict->{$uword})) {
@@ -582,6 +588,7 @@ Constuctor.
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
  toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
+ bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
  ##
  ##-- Analysis objects
  fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)

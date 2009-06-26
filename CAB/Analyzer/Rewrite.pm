@@ -25,6 +25,7 @@ sub new {
 			      ##-- analysis selection
 			      analyzeDst => 'rw',
 			      wantAnalysisLo => 0,
+			      tolowerNI => 1,
 
 			      ##-- user args
 			      @_
@@ -41,7 +42,7 @@ __END__
 
 ##========================================================================
 ## NAME
-=pod
+pod
 
 =head1 NAME
 
@@ -77,6 +78,7 @@ which sets the following default options:
  ##-- analysis selection
  analyzeDst     => 'rw',  ##-- output token property
  wantAnalysisLo => 0,     ##-- don't output lower lower labels
+ tolowerNI      => 1,     ##-- bash non-initial input characters to lower-case
 
 =cut
 
