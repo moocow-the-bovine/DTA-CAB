@@ -28,7 +28,7 @@ our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
 ##-- Log options
-our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
+our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Logger::ensureLog()
 
 ##-- Server Options
 our $serverURL  = 'http://localhost:8088';
@@ -40,7 +40,7 @@ our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hour
 our $analyzer = 'dta.cab.default';
 our $action = 'list';
 our %analyzeOpts = qw();    ##-- currently unused
-our $doProfile = 1;
+our $doProfile = undef;
 
 ##-- I/O Options
 our $inputClass  = undef;  ##-- default parser class
@@ -179,6 +179,7 @@ if ($action eq 'list') {
 }
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
+  $doProfile = 0;
   foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     $ofmt->putTokenRaw($tokout);
@@ -187,6 +188,7 @@ elsif ($action eq 'token') {
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
+  $doProfile = 0;
   our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   $ofmt->putSentenceRaw($s_out);

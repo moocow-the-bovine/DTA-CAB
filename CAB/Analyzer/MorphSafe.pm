@@ -92,13 +92,20 @@ sub getAnalyzeTokenSub {
                    (?:               ##-- unsafe: regexes
                        \[_FM\]       ##-- unsafe: tag: FM: foreign material
                      | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
-                     | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection
+                    #| \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
                      | \[_NE\]       ##-- unsafe: tag: NE: proper name
+
+		     ##-- unsafe: composita
+                     #| \/NE          ##-- unsafe: composita with NE
 
                      ##-- unsafe: verb roots
                      | \b te    (?:\/V|\~)
                      | \b gel   (?:\/V|\~)
+                     | \b gell  (?:\/V|\~)
                      | \b öl    (?:\/V|\~)
+                     | \b penn  (?:\/V|\~)
+                     | \b dau   (?:\/V|\~)
+		     | \b äs    (?:\/V|\~)
 
                      ##-- unsafe: noun roots
                      | \b Bus   (?:\/N|\[_NN\])
@@ -110,7 +117,10 @@ sub getAnalyzeTokenSub {
                      | \b Reh   (?:\/N|\[_NN\])
                      | \b Tee   (?:\/N|\[_NN\])
                      | \b Teig  (?:\/N|\[_NN\])
-                   )
+                     | \b Zen   (?:\/N|\[_NN\])
+                     | \b Heu   (?:\/N|\[_NN\])
+                     | \b Szene (?:\/N|\[_NN\])
+		   )
                  )x)
 	   } @$analyses
 	  )
