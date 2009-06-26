@@ -92,7 +92,7 @@ sub getAnalyzeTokenSub {
                    (?:               ##-- unsafe: regexes
                        \[_FM\]       ##-- unsafe: tag: FM: foreign material
                      | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
-                    #| \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
+                     | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
                      | \[_NE\]       ##-- unsafe: tag: NE: proper name
 
 		     ##-- unsafe: composita
