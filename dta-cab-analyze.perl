@@ -24,6 +24,7 @@ our ($help,$man,$version,$verbose);
 
 ##-- Log options
 our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
+our $logConfigFile = undef;
 
 ##-- Analysis Options
 our $rcFile      = undef;
@@ -43,7 +44,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|M'     => \$man,
 	   'version|V' => \$version,
-	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
+	   #'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); }, ##-- see log-level
 
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
@@ -61,6 +62,10 @@ GetOptions(##-- General
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
+
+	   ##-- Log4perl stuff
+	   'verbose|v|log-level|loglevel|ll|L=s'  => sub { $logOpts{level}=uc($_[1]); },
+	   'log-config|logconfig|lc|l=s' => \$logConfigFile,
 	  );
 
 if ($version) {
@@ -81,7 +86,11 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if 
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog(undef,%logOpts);
+if (defined($logConfigFile)) {
+  DTA::CAB::Logger->logInit($logConfigFile,0); ##-- don't watch the file
+} else {
+  DTA::CAB::Logger->logInit(undef, %logOpts);
+}
 
 ##-- analyzer
 our $cab = DTA::CAB::Analyzer->loadPerlFile($rcFile)
@@ -167,7 +176,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
-  -verbose LEVEL                  ##-- set default log level
+  -verbose LEVEL                  ##-- alias for -log-level=LEVEL
 
  Analysis Options
   -config PLFILE                  ##-- load analyzer config file PLFILE
@@ -184,6 +193,10 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
+
+ Logging Options                  ##-- see Log::Log4perl(3pm)
+  -log-level LEVEL                ##-- set minimum log level (internal config only)
+  -log-config L4PFILE             ##-- use external log4perl config file (default=internal)
 
 =cut
 
