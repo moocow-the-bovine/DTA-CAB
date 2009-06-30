@@ -60,7 +60,7 @@ GetOptions(##-- General
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
 	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
-	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
+	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
 
 	   ##-- Log4perl stuff
