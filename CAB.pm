@@ -38,7 +38,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.0602;
+our $VERSION = 0.07;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
