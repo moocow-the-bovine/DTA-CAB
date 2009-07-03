@@ -103,7 +103,8 @@ sub _unify_guts {
       push(@eqr, $$x,$$y);
     }
     else { ##-- Case: ?
-      carp( __PACKAGE__ . "::_unify_guts(): don't know how to unify (x=$x, y=$y); skipping");
+      #carp( __PACKAGE__ . "::_unify_guts(): don't know how to unify (x=$x, y=$y): treating as scalars");
+      $$x = $uscalar->($$x,$$y); ##-- default: treat as scalars
     }
   }
   return $x0;

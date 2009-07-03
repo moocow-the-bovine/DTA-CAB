@@ -27,6 +27,11 @@ sub new {
 			      wantAnalysisLo => 0,
 			      tolowerNI => 1,
 
+			      ##-- analysis parameters
+			      #max_weight => 1e38,
+			      max_paths  => 1,
+			      max_ops    => -1,
+
 			      ##-- user args
 			      @_
 			     );
