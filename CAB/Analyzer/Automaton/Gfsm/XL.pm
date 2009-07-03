@@ -31,9 +31,13 @@ our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 ##     fst  => $cl,       ##-- a Gfsm::XL::Cascade::Lookup object (default=new)
 ##
 ##     ##-- Lookup options (new)
-##     max_paths  => $max_paths,  ##-- sets $cl->max_paths()
-##     max_weight => $max_weight, ##-- sets $cl->max_weight()
-##     max_ops    => $max_ops,    ##-- sets $cl->max_ops()
+##     max_paths  => $max_paths,           ##-- sets $cl->max_paths()
+##     max_ops    => $max_ops,             ##-- sets $cl->max_ops()
+##     max_weight => $max_weight_or_array, ##-- sets $cl->max_weight()
+##                                         ##   + may also be specified as an ARRAY-ref [$a,$b]
+##                                         ##     to compute max-weight parameter on-the-fly as
+##                                         ##     the linear function:
+##                                         ##       $max_weight = $a * length($input_word) + $b
 ##    )
 sub new {
   my $that = shift;
@@ -42,9 +46,9 @@ sub new {
 			      fst=>undef, #Gfsm::XL::Cascade::Lookup->new(undef),
 
 			      ##-- lookup options
-			      max_weight => 3e38,
-			      max_paths  => 1,
-			      max_ops    => -1,
+			      #max_weight => 3e38,
+			      #max_paths  => 1,
+			      #max_ops    => -1,
 
 			      ##-- user args
 			      @_
@@ -77,9 +81,15 @@ sub clear {
 ##   max_ops    => $n_ops,
 sub setLookupOptions {
   my ($aut,$opts) = @_;
-  my $cl   = $aut->{fst};
+  my $cl = $aut->{fst};
   return if (!defined($cl));
-  $cl->max_weight($opts->{max_weight}) if (defined($opts->{max_weight}));
+  if (UNIVERSAL::isa($opts->{max_weight},'ARRAY')) {
+    ##-- max weight: linear function of length
+    $cl->max_weight($opts->{max_weight}[0] * length(($opts->{src}||'1')) + $opts->{max_weight}[1]);
+  } elsif (defined($opts->{max_weight})) {
+    ##-- max weight: simple scalar
+    $cl->max_weight($opts->{max_weight});
+  }
   $cl->max_paths ($opts->{max_paths})  if (defined($opts->{max_paths}));
   $cl->max_ops   ($opts->{max_ops})    if (defined($opts->{max_ops}));
   return $aut;
@@ -252,9 +262,14 @@ new and/or changed %args, %$aut:
  fst  => $cl,               ##-- a Gfsm::XL::Cascade::Lookup object (default=new)
  ##
  ##-- Lookup options (new)
- max_paths  => $max_paths,  ##-- sets $cl->max_paths()
- max_weight => $max_weight, ##-- sets $cl->max_weight()
- max_ops    => $max_ops,    ##-- sets $cl->max_ops()
+ max_paths  => $max_paths,           ##-- sets $cl->max_paths()
+ max_ops    => $max_ops,             ##-- sets $cl->max_ops()
+ max_weight => $max_weight_or_array, ##-- sets $cl->max_weight()
+                                     ##   + may also be specified as an ARRAY-ref [$a,$b]
+                                     ##     to compute max-weight parameter on-the-fly as
+                                     ##     the linear function:
+                                     ##       $max_weight = $a * length($input_word) + $b
+
 
 =item clear
 
@@ -268,6 +283,7 @@ Override: clear automaton.
 
 Sets lookup-local options %opts:
 
+ src        => $input_text,
  max_weight => $w,
  max_paths  => $n_paths,
  max_ops    => $n_ops,

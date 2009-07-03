@@ -368,13 +368,15 @@ sub getAnalyzeTokenSub {
     ($tok,$opts) = @_;
     $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
 
-    ##-- set default options
+    ##-- ensure $opts hash exists
     $opts = $opts ? {%$opts} : {}; ##-- copy / create
+
+    ##-- get source text ($w), ensure $opts->{src} is defined
+    $w = defined($opts->{src}) ? $opts->{src} : ($opts->{src}=$tok->{text});
+
+    ##-- set default options
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
-
-    ##-- get source text ($w)
-    $w = defined($opts->{src}) ? $opts->{src} : $tok->{text};
 
     ##-- normalize word
     $uword = $w;
