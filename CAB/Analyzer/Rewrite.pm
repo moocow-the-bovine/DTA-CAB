@@ -28,7 +28,8 @@ sub new {
 			      tolowerNI => 1,
 
 			      ##-- analysis parameters
-			      #max_weight => 1e38,
+			      max_weight => 1e38,
+			      #max_weight => [2,0],
 			      max_paths  => 1,
 			      max_ops    => -1,
 

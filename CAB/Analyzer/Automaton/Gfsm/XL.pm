@@ -85,7 +85,7 @@ sub setLookupOptions {
   return if (!defined($cl));
   if (UNIVERSAL::isa($opts->{max_weight},'ARRAY')) {
     ##-- max weight: linear function of length
-    $cl->max_weight($opts->{max_weight}[0] * length($opts->{src}) + $opts->{max_weight}[1]);
+    $cl->max_weight($opts->{max_weight}[0] * length(($opts->{src}||'1')) + $opts->{max_weight}[1]);
   } elsif (defined($opts->{max_weight})) {
     ##-- max weight: simple scalar
     $cl->max_weight($opts->{max_weight});
