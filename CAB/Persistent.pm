@@ -72,7 +72,7 @@ sub loadPerlRef {
   my ($that,$ref) = @_;
   $that = ref($ref) if (UNIVERSAL::isa($ref,$that)); ##-- "virtual load": return subclass for superclass method
   my $obj = ref($that) ? $that : $that->new();
-  $obj = bless(unifyClobber($obj,$_[1],undef),ref($obj));
+  $obj = bless(unifyClobber($obj,$ref,undef),ref($obj));
   if (UNIVERSAL::isa($that,'HASH') && UNIVERSAL::isa($obj,'HASH')) {
     %$that = %$obj; ##-- hack in case someone does "$obj->load()" and expects $obj to be destructively altered...
     return $that;

@@ -48,12 +48,12 @@ our $FREQ_VEC_BITS = 16;
 ##    ##-- Analysis Objects
 ##    txt2tid  => \%txt2tid,    ##-- map (known) token text to numeric text-ID (1:1)
 ##    tid2pho  => \@tid2pho,    ##-- map text-IDs to phonetic strings (n:1)
-##    tid2fc   => $tid2f,       ##-- map text-IDs to raw frequencies (n:1)
-##                              ##   : access with $f=vec($id2f, $id, $FREQ_VEC_BITS)
-##    #id2fc   => $tid2fc,       ##-- map text-IDs to frequency classes; access with $fc=vec($id2f, $id, 8)
+##    tid2f    => $tid2f,       ##-- map text-IDs to raw frequencies (n:1)
+##                              ##   : $f = vec($tid2f, $id, $FREQ_VEC_BITS)
+##    #id2f    => $tid2fc,       ##-- map text-IDs to frequency classes; access with $fc=vec($tid2fc, $id, 8)
 ##    #                          ##   : $fc = int(log2($f))
 ##    pho2tids => \%pho2tids,   ##-- back-map phonetic strings to text IDs (1:n)
-##                              ##   : access with @txtids = unpack('L*',$phoStr)
+##                              ##   : @txtids = unpack('L*',$pho2tids{$phoStr})
 ##
 sub new {
   my $that = shift;
@@ -186,6 +186,7 @@ sub getAnalyzeTokenSub {
   my $tid2txt  = $eqc->{tid2txt};
   my $tid2pho  = $eqc->{tid2pho};
   my $pho2tids = $eqc->{pho2tids};
+  my $tid2fr   = \$eqc->{tid2f};
 
   my $allowRegex = defined($eqc->{allowRegex}) ? qr($eqc->{allowRegex}) : undef;
 
@@ -222,7 +223,7 @@ sub getAnalyzeTokenSub {
 
     ##-- tweak $tok
     if (defined($p_tids)) {
-      $tok->{$akey} = [ @$tid2txt[unpack('L*', $p_tids)] ];
+      $tok->{$akey} = [ map { {hi=>$tid2txt->[$_],w=>vec($$tid2fr, $_, $FREQ_VEC_BITS)} } unpack('L*', $p_tids) ];
     }
 
     return $tok;

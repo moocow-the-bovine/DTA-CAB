@@ -1,13 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Rewrite.pm
+## File: DTA::CAB::Analyzer::EqPho.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: rewrite analysis via Gfsm::XL cascade
+## Description: phonetic equivalence via Gfsm::XL cascade
 
 ##==============================================================================
 ## Package: Analyzer::Rewrite
 ##==============================================================================
-package DTA::CAB::Analyzer::Rewrite;
+package DTA::CAB::Analyzer::EqPho;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use Carp;
 use strict;
@@ -22,14 +22,13 @@ sub new {
 			      #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
 
 			      ##-- analysis selection
-			      analyzeDst => 'rw',
+			      analyzeDst => 'eqpho',
 			      wantAnalysisLo => 0,
-			      tolowerNI => 1,
+			      tolower => 1,
 
 			      ##-- analysis parameters
 			      max_weight => 1e38,
-			      #max_weight => [2,0],
-			      max_paths  => 1,
+			      max_paths  => 32,
 			      max_ops    => -1,
 
 			      ##-- user args
@@ -51,7 +50,7 @@ pod
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Rewrite - rewrite analysis via Gfsm::XL cascade
+DTA::CAB::Analyzer::EqPho - phonetic equivalence class extraction via Gfsm::XL cascade
 
 =cut
 
@@ -61,9 +60,9 @@ DTA::CAB::Analyzer::Rewrite - rewrite analysis via Gfsm::XL cascade
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Rewrite;
+ use DTA::CAB::Analyzer::EqPho;
  
- $rw = DTA::CAB::Analyzer::Rewrite->new(%args);
+ $rw = DTA::CAB::Analyzer::EqPho->new(%args);
  
  $rw->analyzeToken($tok);
 
@@ -75,15 +74,15 @@ DTA::CAB::Analyzer::Rewrite - rewrite analysis via Gfsm::XL cascade
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Rewrite
+DTA::CAB::Analyzer::EqPho
 is a just a simplified wrapper for
 L<DTA::CAB::Analyzer::Automaton::Gfsm::XL|DTA::CAB::Analyzer::Automaton::Gfsm::XL>
 which sets the following default options:
 
  ##-- analysis selection
- analyzeDst     => 'rw',  ##-- output token property
- wantAnalysisLo => 0,     ##-- don't output lower lower labels
- tolowerNI      => 1,     ##-- bash non-initial input characters to lower-case
+ analyzeDst     => 'eqpho',  ##-- output token property
+ wantAnalysisLo => 0,        ##-- don't output lower lower labels
+ tolower        => 1,        ##-- bash input characters to lower-case
 
 =cut
 

@@ -82,6 +82,7 @@ sub _unify_guts {
     elsif (!defined($$y)) { next; }                  ##-- Case: ($x,undef) -> $x
     elsif (isa($$x,'HASH') && isa($$y,'HASH')) {     ##-- Case: (\%x,\%y)
       push(@eqr, map { (\$$x->{$_},\$$y->{$_}) } keys(%$$y));
+      bless($$x,ref($$y)) if (ref($$y) ne 'HASH');
     }
     elsif (isa($$x,'ARRAY') && isa($$x,'ARRAY')) { ##-- Case: (\@x,\@y)
       push(@eqr,
@@ -89,18 +90,22 @@ sub _unify_guts {
 	   grep { exists($$x->[$_]) || exists($$y->[$_]) }
 	   (0..($#$$x > $#$$y ? $#$$x : $#$$y))
 	  );
+      bless($$x,ref($$y)) if (ref($$y) ne 'ARRAY');
     }
     elsif (!ref($$x) && !ref($$y)) {                 ##-- Case: ($x,$y)
       $$x = $uscalar->($$x,$$y);
     }
     elsif (UNIVERSAL::isa($$x,'Regexp') || UNIVERSAL::isa($$y,'Regexp')) { ##-- Case: (qr//,qr//)
       $$x = $uscalar->($$x,$$y);
+      bless($$x,ref($$y)) if (ref($$y) ne 'Regexp');
     }
     elsif (isa($$x,'REF') && isa($$y,'REF')) {      ##-- Case: (\\?x,\\?y)
       push(@eqr, $$x,$$y);
+      bless($$x,ref($$y)) if (ref($$y) ne 'REF');
     }
     elsif (isa($$x,'SCALAR') && isa($$y,'SCALAR')) { ##-- Case: (\$x,\$y)
       push(@eqr, $$x,$$y);
+      bless($$x,ref($$y)) if (ref($$y) ne 'SCALAR');
     }
     else { ##-- Case: ?
       #carp( __PACKAGE__ . "::_unify_guts(): don't know how to unify (x=$x, y=$y): treating as scalars");

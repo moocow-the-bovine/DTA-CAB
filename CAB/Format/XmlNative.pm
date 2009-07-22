@@ -61,7 +61,9 @@ BEGIN {
 ##     ##
 ##     eqphoElt         => $eltName,    ##-- default: 'eqpho'
 ##     eqphoAnalysisElt => $eltName,    ##-- default: 'a'
-##     eqphoTextAttr    => $attr,       ##-- default: 't'
+##     eqphoLoAttr      => $attr,       ##-- default: 'lo'  ##-- this is 'hi' otherwise
+##     eqphoHiAttr      => $attr,       ##-- default: 't'   ##-- this is 'hi' otherwise
+##     eqphoWeightAttr  => $attr,       ##-- default: 'w'
 ##     ##
 ##     morphElt         => $eltName,    ##-- default: 'morph'
 ##     morphAnalysisElt => $eltName,    ##-- default: 'a'
@@ -123,7 +125,9 @@ sub new {
 			      ##
 			      eqphoElt         => 'eqpho',
 			      eqphoAnalysisElt => 'a', #'w',
-			      eqphoTextAttr    => 't', #'text',
+			      eqphoLoAttr      => 'lo',
+			      eqphoHiAttr      => 't', #'text',
+			      eqphoWeightAttr  => 'w',
 			      ##
 			      morphElt => 'morph',
 			      morphAnalysisElt => 'a', #'ma',
@@ -259,7 +263,9 @@ sub parseDocument {
 
       ##-- token: eqpho
       foreach $anod (@{ $wnod->findnodes("./$fmt->{eqphoElt}/$fmt->{eqphoAnalysisElt}") }) {
-	push(@{$tok->{eqpho}}, $anod->getAttribute($fmt->{eqphoTextAttr}));
+	push(@{$tok->{eqpho}}, $a={});
+	@$a{qw(lo hi w)} = map {$anod->getAttribute($_)} @$fmt{qw(eqphoLoAttr eqphoHiAttr eqphoWeightAttr)};
+	delete(@$a{grep {!defined($a->{$_})} keys(%$a)});
       }
 
       ##-- token: msafe
@@ -370,7 +376,15 @@ sub tokenNode {
     $anod = $nod->addNewChild(undef, $fmt->{eqphoElt});
     foreach $aa (@{$tok->{eqpho}}) {
       $aanod = $anod->addNewChild(undef, $fmt->{eqphoAnalysisElt});
-      $aanod->setAttribute($fmt->{eqphoTextAttr},$aa) if ($fmt->{eqphoTextAttr} && defined($aa));
+      if (ref($aa)) {
+	$aanod->setAttribute($fmt->{eqphoLoAttr},$aa->{lo})    if ($fmt->{eqphoLoAttr} && defined($aa->{lo}));
+	$aanod->setAttribute($fmt->{eqphoHiAttr},$aa->{hi})    if ($fmt->{eqphoHiAttr} && defined($aa->{hi}));
+	$aanod->setAttribute($fmt->{eqphoWeightAttr},$aa->{w}) if ($fmt->{eqhoWeightAttr} && defined($aa->{w}));
+      }
+      else {
+	##-- backwards-compatible to pre-v0.08
+	$aanod->setAttribute($fmt->{eqphoHiAttr},$aa) if ($fmt->{eqphoHiAttr} && defined($aa));
+      }
     }
   }
 
@@ -717,7 +731,9 @@ Constructor.
  ##
  eqphoElt         => $eltName,    ##-- default: 'eqpho'
  eqphoAnalysisElt => $eltName,    ##-- default: 'a'
- eqphoTextAttr    => $attr,       ##-- default: 't'
+ eqphoLoAttr      => $attr,       ##-- default: 'lo'
+ eqphoHiAttr      => $attr,       ##-- default: 't'  ##-- ought to be 'hi', but for compatibility reasons is not
+ eqphoWeightAttr  => $attr,       ##-- default: 'w'
  ##
  morphElt         => $eltName,    ##-- default: 'morph'
  morphAnalysisElt => $eltName,    ##-- default: 'a'

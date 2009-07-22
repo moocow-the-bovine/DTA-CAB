@@ -16,6 +16,7 @@ use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::EqClass;
+use DTA::CAB::Analyzer::EqPho;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
@@ -38,7 +39,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.07;
+our $VERSION = 0.08;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -55,6 +56,7 @@ sub new {
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   eqpho => DTA::CAB::Analyzer::EqClass->new(),
+			   #eqpho => DTA::CAB::Analyzer::EqPho->new(),
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),

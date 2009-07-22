@@ -121,9 +121,13 @@ sub parseTextString {
       ##-- token: field: lts analysis
       push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
+    elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: phonetic equivalent
+      push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
+    }
     elsif ($line =~ m/^\t\+\[eqpho\] (.*)$/) {
       ##-- token: field: phonetic equivalent
-      push(@{$tok->{eqpho}}, $1);
+      push(@{$tok->{eqpho}}, {hi=>$1});
     }
     elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: morph analysis
@@ -228,7 +232,7 @@ sub putToken {
     if ($tok->{lts});
 
   ##-- Phonetic Equivalents ('eqpho')
-  $out .= join('', map { "\t+[eqpho] $_\n" } grep {defined($_)} @{$tok->{eqpho}})
+  $out .= join('', map { "\t+[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
 
   ##-- Morph ('morph')
