@@ -39,6 +39,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
+# v0.08: added EqPho (using Gfsm::XL cascade: loads quicker, runtime slower, ...)
 our $VERSION = 0.08;
 
 our @ISA = qw(DTA::CAB::Analyzer);
