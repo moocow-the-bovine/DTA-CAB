@@ -1,13 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Latin.pm
+## File: DTA::CAB::Analyzer::Dict::Latin.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: auxiliary latin-language analysis via Gfsm automata
+## Description: auxilliary latin-language analysis, dictionary-based
 
 ##==============================================================================
-## Package: Analyzer::Latin
+## Package: Analyzer::Dict::Latin
 ##==============================================================================
-package DTA::CAB::Analyzer::Latin;
+package DTA::CAB::Analyzer::Dict::Latin;
 use DTA::CAB::Analyzer::Dict;
 use Carp;
 use strict;
@@ -48,7 +48,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Latin - auxilliary latin word recognizer via external dictionary
+DTA::CAB::Analyzer::Dict::Latin - auxilliary latin word recognizer via external full-form dictionary
 
 =cut
 
@@ -58,9 +58,9 @@ DTA::CAB::Analyzer::Latin - auxilliary latin word recognizer via external dictio
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Latin;
+ use DTA::CAB::Analyzer::Dict::Latin;
  
- $latin = DTA::CAB::Analyzer::Latin->new(%args);
+ $latin = DTA::CAB::Analyzer::Dict::Latin->new(%args);
  $latin->analyze($tok);
 
 =cut
@@ -71,13 +71,14 @@ DTA::CAB::Analyzer::Latin - auxilliary latin word recognizer via external dictio
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Latin
+DTA::CAB::Analyzer::Dict::Latin
 is a just a simplified wrapper for
 L<DTA::CAB::Analyzer::Dict|DTA::CAB::Analyzer::Dict>
 which sets the following default options:
 
  ##-- analysis selection
  analyzeDst => 'latin',   ##-- analysis output property
+ tolower    => 1,         ##-- case-insensitive lookup
 
 =cut
 

@@ -7,11 +7,8 @@
 package DTA::CAB::Analyzer::Dict;
 
 use DTA::CAB::Analyzer;
-
-#use Gfsm;
-use Encode qw(encode decode);
+use DTA::CAB::Format;
 use IO::File;
-#use File::Basename qw();
 use Carp;
 
 use strict;
@@ -34,6 +31,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Output
 ##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
+##     analyzeSrc     => $key,   ##-- source analysis key (default: $obj->{analyzeDst})
 ##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
@@ -47,7 +45,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##    )
 sub new {
   my $that = shift;
-  my $aut = $that->SUPER::new(
+  my $dic = $that->SUPER::new(
 			      ##-- filenames
 			      dictFile => undef,
 
@@ -63,24 +61,25 @@ sub new {
 			      ##-- analysis output
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
 			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
+			      analyzeSrc => undef, ##-- default: $obj->{analyzeDst}
 
 			      ##-- user args
 			      @_
 			     );
-  return $aut;
+  return $dic;
 }
 
-## $aut = $aut->clear()
+## $dic = $dic->clear()
 sub clear {
-  my $aut = shift;
+  my $dic = shift;
 
   ##-- analysis sub(s)
-  $aut->dropClosures();
+  $dic->dropClosures();
 
   ##-- analysis objects
-  %{$aut->{dict}} = qw();
+  %{$dic->{dict}} = qw();
 
-  return $aut;
+  return $dic;
 }
 
 
@@ -88,7 +87,7 @@ sub clear {
 ## Methods: Generic
 ##==============================================================================
 
-## $bool = $aut->dictOk()
+## $bool = $dic->dictOk()
 ##  + should return false iff dict is undefined or "empty"
 sub dictOk { return defined($_[0]{dict}) && scalar(%{$_[0]{dict}}); }
 
@@ -99,53 +98,58 @@ sub dictOk { return defined($_[0]{dict}) && scalar(%{$_[0]{dict}}); }
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: all
 
-## $bool = $aut->ensureLoaded()
-##  + ensures automaton data is loaded from default files
+## $bool = $dic->ensureLoaded()
+##  + ensures analyzer data is loaded from default files
 sub ensureLoaded {
-  my $aut = shift;
+  my $dic = shift;
   my $rc  = 1;
   ##-- ensure: dict
-  if ( defined($aut->{dictFile}) && !$aut->dictOk ) {
-    $rc &&= $aut->loadDict($aut->{dictFile});
+  if ( defined($dic->{dictFile}) && !$dic->dictOk ) {
+    $rc &&= $dic->loadDict($dic->{dictFile});
   }
   return $rc;
 }
 
-## $aut = $aut->load(fst=>$fstFile, lab=>$labFile)
+## $dic = $dic->load(fst=>$fstFile, lab=>$labFile)
 sub load {
-  my ($aut,%args) = @_;
+  my ($dic,%args) = @_;
   return 0 if (!grep {defined($_)} @args{qw(dict)});
-  my $rc = $aut;
-  $rc &&= $aut->loadDict($args{dict}) if (defined($args{dict}));
+  my $rc = $dic;
+  $rc &&= $dic->loadDict($args{dict}) if (defined($args{dict}));
   return $rc;
 }
 
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: Dictionary
 
-## $aut = $aut->loadDict($dictfile)
+## $dic = $dic->loadDict($dictfile,%opts)
+##  + %opts are passed to DTA::CAB::Format->newReader()
 sub loadDict {
-  my ($aut,$dictfile) = @_;
-  $aut->info("loading dictionary file '$dictfile'");
-  my $dictfh = IO::File->new("<$dictfile")
-    or $aut->logconfess("::loadDict() open failed for dictionary file '$dictfile': $!");
+  my ($dic,$dictfile,%opts) = @_;
 
-  my $dict = $aut->{dict};
-  my ($line,$word,$entry,$aw,$a,$w);
-  while (defined($line=<$dictfh>)) {
-    chomp($line);
-    next if ($line =~ /^\s*$/ || $line =~ /^\s*%/);
-    $line = decode($aut->{labenc}, $line) if ($aut->{labenc});
-    ($word,$entry) = split(/\t/,$line,2);
-    if    ($aut->{tolower})   { $word = lc($word); }
-    elsif ($aut->{tolowerNI}) { $word =~ s/^(.)(.*)$/$1\L$2\E/; }
-    if    ($aut->{toupperI})  { $word = ucfirst($word); }
-    $dict->{$word} = $entry;
+  ##-- delegate load to DTA::CAB::Format & subclasses
+  my $ifmt = DTA::CAB::Format->newReader(encoding=>$dic->{encoding},file=>$dictfile,%opts)
+    or $dic->die("could not create input parser for dictionary file '$dictfile'");
+  $dic->info("loading dictionary file '$dictfile'");
+  $dic->debug("using format class ".ref($ifmt));
+  my $ddoc = $ifmt->parseFile($dictfile)
+    or $dic->die(ref($ifmt)."::parseFile() failed for dictionary file '$dictfile'");
+
+  ##-- parse loaded tokens into dictionary hash
+  my $dict = $dic->{dict};
+  my $akey = defined($dic->{analyzeSrc}) ? $dic->{analyzeSrc} : $dic->{analyzeDst};
+  my ($w,$text);
+  foreach $w (map {@{$_->{tokens}}} @{$ddoc->{body}}) {
+    next if (!defined($w->{$akey}));
+    $text = $w->{text};
+    if    ($dic->{tolower})   { $text = lc($text); }
+    elsif ($dic->{tolowerNI}) { $text =~ s/^(.)(.*)$/$1\L$2\E/; }
+    if    ($dic->{toupperI})  { $text = ucfirst($text); }
+    $dict->{$text} = $w->{$akey};
   }
-  $dictfh->close;
 
-  $aut->dropClosures();
-  return $aut;
+  $dic->dropClosures();
+  return $dic;
 }
 
 ##==============================================================================
@@ -193,11 +197,11 @@ sub loadPerlRef {
 ##  + if $anl->analysisClass() returned defined, $out is blessed into it
 ##  + implicitly loads analysis data (automaton and labels)
 sub getAnalyzeTokenSub {
-  my $aut = shift;
+  my $dic = shift;
 
   ##-- setup common variables
-  my $adst   = $aut->{analyzeDst};
-  my $dict   = $aut->{dict};
+  my $adst   = $dic->{analyzeDst};
+  my $dict   = $dic->{dict};
 
   ##-- ananalysis options
   my @analyzeOptionKeys = qw(tolower tolowerNI toupperI); #)
@@ -209,7 +213,7 @@ sub getAnalyzeTokenSub {
 
     ##-- set default options
     $opts = $opts ? {%$opts} : {}; ##-- copy / create
-    $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
+    $opts->{$_} = $dic->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
 
     ##-- get source text ($w)
     $w = defined($opts->{src}) ? $opts->{src} : $tok->{text};

@@ -1,12 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqClass.pm
+## File: DTA::CAB::Analyzer::Dict::EqClass.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: equivalence-class expander
+## Description: dictionary-based equivalence-class expander
 
-package DTA::CAB::Analyzer::EqClass;
+package DTA::CAB::Analyzer::Dict::EqClass;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Dict;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 
@@ -20,7 +21,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer);
+our @ISA = qw(DTA::CAB::Analyzer); #::Dict
 
 our $FREQ_VEC_BITS = 16;
 
@@ -247,7 +248,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqClass - equivalence-class expander
+DTA::CAB::Analyzer::Dict::EqClass - equivalence-class expander
 
 =cut
 
@@ -257,12 +258,12 @@ DTA::CAB::Analyzer::EqClass - equivalence-class expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqClass;
+ use DTA::CAB::Analyzer::Dict::EqClass;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqc = DTA::CAB::Analyzer::EqClass->new(%args);
+ $eqc = DTA::CAB::Analyzer::Dict::EqClass->new(%args);
  
  ##========================================================================
  ## Methods: I/O
@@ -284,12 +285,13 @@ DTA::CAB::Analyzer::EqClass - equivalence-class expander
 
 =head1 DESCRIPTION
 
+Dictionary-based equivalence-class expander.
 Work in progress!
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqClass: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Globals
 =pod
 
 =head2 Globals
@@ -298,7 +300,7 @@ Work in progress!
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqClass inherits from
+DTA::CAB::Analyzer::Dict::EqClass inherits from
 L<DTA::CAB::Analyzer::Automaton>.
 
 =back
@@ -306,7 +308,7 @@ L<DTA::CAB::Analyzer::Automaton>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqClass: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -348,7 +350,7 @@ Constructor.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqClass: Methods: I/O
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Methods: I/O
 =pod
 
 =head2 Methods: I/O
@@ -378,7 +380,7 @@ Override: load dictionary from $dictfile.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqClass: Methods: Analysis
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Methods: Analysis
 =pod
 
 =head2 Methods: Analysis
