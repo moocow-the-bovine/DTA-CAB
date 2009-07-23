@@ -525,7 +525,42 @@ sub argh_unicruft_1 {
 	   );
   print STDOUT map { "$_\t$ul{$_}\n" } sort(keys(%ul));
 }
-argh_unicruft_1();
+#argh_unicruft_1();
+
+##==============================================================================
+## test: dict
+
+sub tok2str {
+  my ($tok,%opts) = @_;
+  my $fmt = DTA::CAB::Format->newWriter(class=>'Text',encoding=>'latin1',%opts);
+  return $fmt->putToken($tok)->toString;
+}
+
+sub test_dict {
+  my $tt_dictfile = 'test1.full.dict';
+  my $dic = DTA::CAB::Analyzer::Dict->new(analyzeDst=>'morph',dictFile=>$tt_dictfile);
+  #$dic->ensureLoaded();
+  $dic->loadDict($tt_dictfile);
+
+  my ($w);
+  $w = $dic->analyzeToken('Hilfe');
+  $w = $dic->analyzeToken('der');
+  $w = $dic->analyzeToken('Bär');
+
+  my $bin_dictfile = "${tt_dictfile}.bin";
+  $dic = ref($dic)->new(analyzeDst=>'morph', dictFile=>$bin_dictfile);
+  $dic->ensureLoaded;
+  $w = $dic->analyzeToken('Hilfe');
+  $w = $dic->analyzeToken('der');
+  $w = $dic->analyzeToken('Bär');
+
+  my $old_dictfile = "mootm-tagh.dict.new"; ##-- requires prefix-insertion, e.g. with 'dta-cab-dict-convert.perl' hack
+  $dic = ref($dic)->new(analyzeDst=>'morph', dictFile=>$old_dictfile);
+
+  print tok2str($w);
+  print STDERR "$0: test_dict() completed.\n";
+}
+test_dict();
 
 
 ##==============================================================================

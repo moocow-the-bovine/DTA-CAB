@@ -120,20 +120,30 @@ sub load {
 }
 
 ##--------------------------------------------------------------
-## Methods: I/O: Input: Dictionary
+## Methods: I/O: Input: Dictionary File
 
 ## $dic = $dic->loadDict($dictfile,%opts)
 ##  + %opts are passed to DTA::CAB::Format->newReader()
+##  + really just a wrapper for $dic->loadDoc( newReader(%opts)->parseFile($dictFile) )
 sub loadDict {
   my ($dic,$dictfile,%opts) = @_;
 
   ##-- delegate load to DTA::CAB::Format & subclasses
   my $ifmt = DTA::CAB::Format->newReader(encoding=>$dic->{encoding},file=>$dictfile,%opts)
-    or $dic->die("could not create input parser for dictionary file '$dictfile'");
+    or $dic->confess("could not create input parser for dictionary file '$dictfile'");
   $dic->info("loading dictionary file '$dictfile'");
   $dic->debug("using format class ".ref($ifmt));
   my $ddoc = $ifmt->parseFile($dictfile)
-    or $dic->die(ref($ifmt)."::parseFile() failed for dictionary file '$dictfile'");
+    or $dic->confess(ref($ifmt)."::parseFile() failed for dictionary file '$dictfile'");
+
+  ##-- parse loaded document
+  return $dic->loadDictDoc($ddoc,%opts);
+}
+
+## $dic = $dic->loadDictDoc($dictDoc)
+##  + loads dictionary data from an in-memory DTA::CAB::Document
+sub loadDictDoc {
+  my ($dic,$ddoc) = @_;
 
   ##-- parse loaded tokens into dictionary hash
   my $dict = $dic->{dict};
@@ -151,6 +161,25 @@ sub loadDict {
   $dic->dropClosures();
   return $dic;
 }
+
+##--------------------------------------------------------------
+## Methods: I/O: Output: Dictionary File (as document)
+
+## $doc = $dic->asDocument()
+##  + coerces $dic->{dict} into a DTA::CAB::Document, e.g. for saving with
+##    one of the DTA::CAB::Format subclasses
+##  + may be used by dta-cab-cachegen.perl
+sub asDocument {
+  my $dic = shift;
+
+  my $dict  = $dic->{dict};
+  my $a_dst = $dic->{analyzeDst};
+  my $a_src = defined($dic->{analyzeSrc}) ? $dic->{analyzeSrc} : $dic->{analyzeDst};
+  my $toks  = [map { bless({text=>$_, $a_src=>$dict->{$_}}, 'DTA::CAB::Token') } sort(keys(%$dict))];
+
+  return toDocument( [toSentence($toks)] );
+}
+
 
 ##==============================================================================
 ## Methods: Persistence
@@ -276,6 +305,9 @@ DTA::CAB::Analyzer::Dict - simple dictionary lookup analyzer
  $bool = $dict->ensureLoaded();
  $dict = $dict->load(dict=>$dictFile);
  $dict = $dict->loadDict($dictfile);
+ $dict = $dict->loadDictDoc($doc);
+ 
+ $doc = $dict->asDocument();
  
  ##========================================================================
  ## Methods: Persistence: Perl
@@ -397,9 +429,26 @@ Loads specified file(s).
 
 =item loadDict
 
- $dict = $dict->loadDict($dictfile);
+ $dict = $dict->loadDict($dictfile,%opts);
 
 Loads dictionary from $dictfile.
+%opts are passed to DTA::CAB::Format
+L<DTA::CAB::Format-E<gt>newReader()|DTA::CAB::Format/item_newReader>.
+Really just a wrapper for the L<loadDictDoc> method (see below).
+
+=item loadDictDoc
+
+ $dict = $dict->loadDictDoc($doc);
+
+Loads dictionary from an in-memory L<DTA::CAB::Document|DTA::CAB::Document> object $doc.
+
+=item asDocument
+
+ $doc = $dict->asDocument();
+
+Coerces $dict-E<gt>{dict} into a DTA::CAB::Document, e.g. for saving with
+one of the L<DTA::CAB::Format|DTA::CAB::Format> subclasses
+May be used by dta-cab-cachegen.perl
 
 =back
 

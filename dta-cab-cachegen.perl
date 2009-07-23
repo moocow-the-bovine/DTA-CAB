@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
+use DTA::CAB::Datum ':all';
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
@@ -76,13 +77,13 @@ DTA::CAB::Logger->ensureLog();
 our $cab = DTA::CAB->loadPerlFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
 
-##-- we need analysis 'lo' elements here
-$cab->{lts}{wantAnalysisLo} = 1;
-$cab->{morph}{wantAnalysisLo} = 1;
-$cab->{rw}{wantAnalysisLo} = 1;
+##-- we need analysis 'lo' elements here (not anymore --moocow, Thu, 23 Jul 2009 13:08:23 +0200)
+#$cab->{lts}{wantAnalysisLo} = 1;
+#$cab->{morph}{wantAnalysisLo} = 1;
+#$cab->{rw}{wantAnalysisLo} = 1;
 
 ##-- delete unneccessary analyzers
-our %aopts = (do_msafe=>0, do_rw_morph=>0, do_rw_lts=>0); ##-- analysis options
+our %aopts = (map {("do_$_"=>0)} qw(msafe eqpho rw_morph rw_lts)); ##-- analysis options
 
 if (!defined($ltsDictFile)) {
   delete($cab->{lts});
@@ -118,42 +119,20 @@ while (defined($line=<>)) {
 ##===================
 ## Generate dictionary file(s)
 
-if (defined($ltsDictFile)) {
-  $cab->info("generating LTS cache '$ltsDictFile'");
-  open(DICT,">$ltsDictFile")
-    or die("$0: open failed for LTS cache '$ltsDictFile': $!");
-  my ($txt,$pa,%didpho);
-  foreach $tok (grep {defined($_->{lts})} @toks) {
-    foreach $pa (@{$tok->{lts}}) {
-      next if (!defined($pa->{lo}) || $pa->{lo} eq '' || exists($didpho{$pa->{lo}}));
-      print DICT encode($outputEncoding, "$pa->{lo}\t$pa->{hi} <$pa->{w}>\n");
-      $didpho{$pa->{lo}}=undef;
-    }
-  }
-  close(DICT);
+sub genDictFile {
+  my ($dkey,$dfile) = @_;
+  $cab->info("generating '$dkey' cache file '$dfile'");
+
+  my @dtoks = map { {text=>$_->{text},$dkey=>$_->{$dkey}} } grep {defined($_->{$dkey}) && @{$_->{$dkey}}} @toks;
+  my $ddoc  = toDocument([ toSentence(\@dtoks) ]);
+  my $ofmt = DTA::CAB::Format->newWriter(file=>$dfile);
+  $ofmt->putDocument($ddoc)->toFile($dfile)->flush
+    or die("$0: putDocument() failed for '$dkey' cache file '$dfile': $!");
 }
 
-if (defined($morphDictFile)) {
-  $cab->info("generating morph cache '$morphDictFile'");
-  open(DICT,">$morphDictFile")
-    or die("$0: open failed for morph cache '$morphDictFile': $!");
-  foreach $tok (grep {defined($_->{morph})} @toks) {
-    $txt = @{$tok->{morph}} && $tok->{morph}[0]{lo} ? $tok->{morph}[0]{lo} : $tok->{text};
-    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->{hi} <$_->{w}>"} @{$tok->{morph}})."\n");
-  }
-  close(DICT);
-}
-
-if (defined($rwDictFile)) {
-  $cab->info("generating rewrite cache '$rwDictFile'");
-  open(DICT,">$rwDictFile")
-    or die("$0: open failed for rewrite cache '$rwDictFile': $!");
-  foreach $tok (grep {defined($_->{rw})} @toks) {
-    $txt = @{$tok->{rw}} && $tok->{rw}[0]{lo} ? $tok->{rw}[0]{lo} : $tok->{text};
-    print DICT encode($outputEncoding, join("\t", $txt, map {"$_->{hi} <$_->{w}>"} @{$tok->{rw}})."\n");
-  }
-  close(DICT);
-}
+genDictFile('lts',  $ltsDictFile)   if (defined($ltsDictFile));
+genDictFile('morph',$morphDictFile) if (defined($morphDictFile));
+genDictFile('rw',   $rwDictFile)    if (defined($rwDictFile));
 
 
 __END__
@@ -176,7 +155,7 @@ dta-cab-cachegen.perl - Cache generator for DTA::CAB analyzers
  Analysis Options
   -config          RCFILE         ##-- load analyzer config file RCFILE (required)
   -input-encoding  ENCODING       ##-- override input encoding (default: UTF-8)
-  -output-encoding ENCODING       ##-- override output encoding (default: UTF-8)
+  #-output-encoding ENCODING       ##-- override output encoding (default: UTF-8) [OBSOLETE]
 
  Cache Selection Options
   -lts-dict   DICT_FILE           ##-- generate LTS cache file DICT_FILE
@@ -195,6 +174,10 @@ dta-cab-cachegen.perl - Cache generator for DTA::CAB analyzers
 dta-cab-cachegen.perl is a quick and dirty hack to generate
 analysis cache files for L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
 subclasses which support them.
+
+NEW in v0.09:
+now uses L<DTA::CAB::Format|DTA::CAB::Format> for formatting output files,
+allowing for example direct generation of binary caches for faster loading.
 
 =cut
 

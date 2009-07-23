@@ -15,12 +15,15 @@ use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 #use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
-use DTA::CAB::Analyzer::EqClass;
 use DTA::CAB::Analyzer::EqPho;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+
+use DTA::CAB::Analyzer::Dict;
+use DTA::CAB::Analyzer::Dict::EqClass;
+#use DTA::CAB::Analyzer::Dict::Latin;
 
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
@@ -39,8 +42,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-# v0.08: added EqPho (using Gfsm::XL cascade: loads quicker, runtime slower, ...)
-our $VERSION = 0.08;
+our $VERSION = 0.09;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -56,8 +58,10 @@ sub new {
 			   ##-- analyzers
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
-			   eqpho => DTA::CAB::Analyzer::EqClass->new(),
+			   ##
+			   eqpho => DTA::CAB::Analyzer::Dict::EqClass->new(),
 			   #eqpho => DTA::CAB::Analyzer::EqPho->new(),
+			   ##
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),

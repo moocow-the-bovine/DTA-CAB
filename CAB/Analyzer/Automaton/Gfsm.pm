@@ -29,9 +29,9 @@ sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- analysis objects
-			      fst=>Gfsm::Automaton->new,
-			      lab=>Gfsm::Alphabet->new,
-			      result=>Gfsm::Automaton->new,
+			      fst=>undef, #Gfsm::Automaton->new,
+			      lab=>undef, #Gfsm::Alphabet->new,
+			      result=>undef, #Gfsm::Automaton->new,
 
 			      ##-- user args
 			      @_

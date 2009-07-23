@@ -21,7 +21,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer); #::Dict
+our @ISA = qw(DTA::CAB::Analyzer::Dict);
 
 our $FREQ_VEC_BITS = 16;
 
@@ -41,10 +41,9 @@ our $FREQ_VEC_BITS = 16;
 ##                             ##   : default=/(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
 ##
 ##    ##-- Files
-##    dictFile => $filename, ##-- dictionary filename (as for Automaton dictionaries, but "weights" are source frequencies)
-##    dictEncoding => $enc,  ##-- encoding for dictionary file (default: perl native)
-##    #fstFile => ...
-##    #labFile => ...
+##    dictClass => $class,      ##-- class of underlying ECID (LTS) dictionary
+##    dictOpts  => \%opts,      ##-- if defined, options for (temporary) ECID dict (default: 'DTA::CAB::Analyzer::Dict')
+##    dictFile  => $filename,   ##-- dictionary filename (loaded with DTA::CAB::Analyzer::Dict->loadDict())
 ##
 ##    ##-- Analysis Objects
 ##    txt2tid  => \%txt2tid,    ##-- map (known) token text to numeric text-ID (1:1)
@@ -65,8 +64,9 @@ sub new {
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			   ##-- Files
-			   dictFile => undef,
-			   dictEncoding => 'UTF-8',
+			   dictClass   => 'DTA::CAB::Analyzer::Dict',
+			   dictOpts    => undef,
+			   dictFile    => undef,
 
 			   ##-- Analysis Objects
 			   txt2tid => {},  ##-- $textStr => $textId
@@ -86,15 +86,7 @@ sub new {
 
 ## $bool = $eqc->ensureLoaded()
 ##  + ensures analysis data is loaded
-sub ensureLoaded {
-  my $eqc = shift;
-  my $rc = 1;
-  ##-- ensure: dict
-  if ( defined($eqc->{dictFile}) && !$eqc->dictOk ) {
-    $rc &&= $eqc->loadDict($eqc->{dictFile});
-  }
-  return $rc;
-}
+##  + inherited from DTA::CAB::Analyzer::Dict
 
 ##------------------------------------------------------------------------
 ## Methods: I/O: Input: Dictionary
@@ -103,33 +95,35 @@ sub ensureLoaded {
 ##  + should return false iff dict is undefined or "empty"
 sub dictOk { return scalar(@{$_[0]{tid2txt}}); }
 
-## $eqc = $eqc->loadDict($dictfile)
+## $eqc = $eqc->loadDict($ltsDictFile,%opts)
+##  + %opts are as passed to $ecid_dict->loadDict()
 sub loadDict {
-  my ($eqc,$dictfile) = @_;
-  $eqc->info("loading dictionary file '$dictfile'");
-  my $dictfh = IO::File->new("<$dictfile")
-    or $eqc->logconfess("::loadDict() open failed for dictionary file '$dictfile': $!");
+  my ($eqc,$dictfile,%opts) = @_;
 
+  ##-- load base data: $ltsd->{dict} = ($word=>\@pho_analyses)
+  $eqc->info("loading base dictionary via $eqc->{dictClass}");
+  my $ikey       = $eqc->{inputKey};
+  my $ltsd_opts  = $eqc->{dictOpts}||{};
+  my $ltsd_class = $eqc->{dictClass}||'DTA::CAB::Analyzer::Dict';
+  my $ltsd = $ltsd_class->new(analyzeSrc=>$ikey, analyzeDst=>$ikey, %$ltsd_opts);
+  $ltsd->loadDict($dictfile,%opts)
+    or $eqc->confess("inherited loadDict() method failed for '$dictfile'");
+  my $dict = $ltsd->{dict};
+  $eqc->debug("building indices from base dictionary");
+
+  ##-- common variables
   my $txt2tid  = $eqc->{txt2tid};
   my $tid2txt  = $eqc->{tid2txt};
   my $tid2pho  = $eqc->{tid2pho};
   my $tid2f_r  = \$eqc->{tid2f};
   my $pho2tids = $eqc->{pho2tids};
 
-  my ($line,$word,@rest,$pf,$p,$f);
-  my ($tid);
-  while (defined($line=<$dictfh>)) {
-    chomp($line);
-    next if ($line =~ /^\s*$/ || $line =~ /^\s*%/);
-    $line = decode($eqc->{dictEncoding}, $line) if ($eqc->{dictEncoding});
-    ($word,$pf,@rest) = split(/\t+/,$line);
-    if ($pf =~ /\<([\deE\+\-\.]+)\>\s*$/) {
-      $f = $1;
-      ($p=$pf) =~ s/\s*\<[\deE\+\-\.]+\>\s*$//;
-    } else {
-      $p = $pf;
-      $f = 0;
-    }
+  ##-- parse base data (txt2tid,tid2txt,tid2pho,tid2f,pho2tids)
+  my ($word,$entry,$p,$f,$tid);
+  while (($word,$entry)=each(%$dict)) {
+    next if (!$entry || !$entry->[0]);
+    ($p,$f) = @{$entry->[0]}{qw(hi w)};
+    $f ||= 0;
 
     ##-- expand: txt2tid, tid2txt
     if (!defined($tid=$txt2tid->{$word})) {
@@ -146,7 +140,7 @@ sub loadDict {
     ##-- expand: pho2ids
     $pho2tids->{$p} .= pack('L',$tid);
   }
-  $dictfh->close;
+
 
   ##-- sort dictionary by descending frequency
   foreach $p (keys(%$pho2tids)) {
@@ -248,7 +242,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Dict::EqClass - equivalence-class expander
+DTA::CAB::Analyzer::Dict::EqClass - canonical-form-dictionary-based equivalence-class expander
 
 =cut
 
@@ -285,8 +279,15 @@ DTA::CAB::Analyzer::Dict::EqClass - equivalence-class expander
 
 =head1 DESCRIPTION
 
+B<WORK IN PROGRESS>
+
 Dictionary-based equivalence-class expander.
-Work in progress!
+Reads a full-form dictionary mapping words to equivalence class identifiers (ECIDs aka "canonical forms";
+each dictionary word should have at most 1 ECID),
+builds some internal indices, and at runtime maps input words to a disjunction of
+all known dictionary words mapped to the same ECID.
+
+Concrete test case: ECIDs are just phonetic forms as returned by (some instance of) DTA::CAB::Analyzer::LTS.
 
 =cut
 
@@ -325,15 +326,13 @@ Constructor.
 
  ##-- Analysis I/O
  analysisKey => $key,     ##-- token analysis key (default='eqpho')
- inputKey    => $key,     ##-- token input key (default='lts')
- ##                       ##   : $tok->{$key} should be ARRAY-ref as returned by Analyzer::Automaton
- ignoreNonAlpha => $bool, ##-- if true (default), non-alphabetics will be ignored
+ allowRegex  => $re,      ##-- if defined, only tokens with matching text will be analyzed
+                          ##   : default=/(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
  ##
  ##-- Files
- dictFile => $filename, ##-- dictionary filename (as for Automaton dictionaries, but "weights" are source frequencies)
- dictEncoding => $enc,  ##-- encoding for dictionary file (default: perl native)
- #fstFile => ...
- #labFile => ...
+ dictClass => $class,      ##-- class of underlying ECID (LTS) dictionary
+ dictOpts  => \%opts,      ##-- if defined, options for (temporary) ECID dict (default: 'DTA::CAB::Analyzer::Dict')
+ dictFile  => $filename,   ##-- dictionary filename (loaded with DTA::CAB::Analyzer::Dict->loadDict())
  ##
  ##-- Analysis Objects
  txt2tid  => \%txt2tid,    ##-- map (known) token text to numeric text-ID (1:1)
