@@ -12,7 +12,7 @@ WriteMakefile
 
    PREREQ_PM    => {
 		    'Gfsm'     => 0.0216,
-		    'Gfsm::XL' => 0.02,
+		    'Gfsm::XL' => 0.03, ##-- 0.02 works too, but doesn't support binary storage of analyzer configs
 		    'Unicruft' => 0.03,
 		    ##--
 		    'Encode'=>undef,
@@ -32,6 +32,8 @@ WriteMakefile
 		   'dta-cab-analyze.perl',
 		   'dta-cab-cachegen.perl',
 		   'dta-cab-convert.perl',
+		   'dta-cab-compile.perl',
+		   'dta-cab-dict-convert.perl',
 		   'dta-cab-xmlrpc-server.perl',
 		   'dta-cab-xmlrpc-client.perl',
 		  ],

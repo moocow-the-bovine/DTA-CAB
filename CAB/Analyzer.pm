@@ -18,7 +18,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
+our @ISA = qw(DTA::CAB::Persistent);
 
 ##==============================================================================
 ## Constructors etc.
@@ -86,6 +86,25 @@ sub loadPerlRef {
   $obj->dropClosures();
   return $obj;
 }
+
+##======================================================================
+## Methods: Persistence: Bin
+
+## @keys = $class_or_obj->noSaveBinKeys()
+##  + returns list of keys not to be saved for binary mode
+##  + default just returns list of known '_analyze' keys
+sub noSaveBinKeys {
+  return ('_analyzeToken','_analyzeSentence','_analyzeDocument');
+}
+
+## $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref)
+##  + drops closures
+sub loadBinRef {
+  my $that = shift;
+  $that->dropClosures() if (ref($that));
+  return $that->SUPER::loadBinRef(@_);
+}
+
 
 ##==============================================================================
 ## Methods: Analysis Closures: Generic

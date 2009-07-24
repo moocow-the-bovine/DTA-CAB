@@ -122,14 +122,6 @@ sub parseTextString {
       push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
     elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: phonetic equivalent
-      push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[eqpho\] (.*)$/) {
-      ##-- token: field: phonetic equivalent
-      push(@{$tok->{eqpho}}, {hi=>$1});
-    }
-    elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: morph analysis
       push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
     }
@@ -156,6 +148,22 @@ sub parseTextString {
       $tok->{rw}   = [ {} ] if (!$tok->{rw});
       $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
       push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+    }
+    elsif ($line =~ m/^\t\+\[eqpho\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: phonetic equivalent, full-fst version
+      push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+    }
+    elsif ($line =~ m/^\t\+\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+      ##-- token: field: phonetic equivalent, optional weight
+      push(@{$tok->{eqpho}}, {hi=>$1,w=>$2});
+    }
+    elsif ($line =~ m/^\t\+\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: rewrite equivalent, full-fst version
+      push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+    }
+    elsif ($line =~ m/^\t\+\[eqrw\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+      ##-- token: field: rewrite equivalent, optional weight
+      push(@{$tok->{eqrw}}, {hi=>$1,w=>$2});
     }
     elsif ($line =~ m/^\t\+\[([^\]]*)\]\s?(.*)$/) {
       ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
@@ -234,6 +242,10 @@ sub putToken {
   ##-- Phonetic Equivalents ('eqpho')
   $out .= join('', map { "\t+[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
+
+  ##-- Rewrite Equivalents ('eqrw')
+  $out .= join('', map { "\t+[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqrw}})
+    if ($tok->{eqrw});
 
   ##-- Morph ('morph')
   $out .= join('', map { "\t+[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{morph}})

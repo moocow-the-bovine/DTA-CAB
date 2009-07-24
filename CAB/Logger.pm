@@ -14,6 +14,8 @@ use strict;
 ## Globals
 ##==============================================================================
 
+our @ISA = qw();
+
 ## $DEFAULT_LOG_CONF = PACKAGE->defaultLogConf(%opts)
 ##  + default configuration for Log::Log4perl
 ##  + see Log::Log4perl(3pm), Log::Log4perl::Config(3pm) for details

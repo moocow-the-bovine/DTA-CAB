@@ -122,7 +122,7 @@ if (defined($logConfigFile)) {
 
 ##-- create / load server object
 our $srv = DTA::CAB::Server::XmlRpc->new(pidfile=>$pidFile);
-$srv     = $srv->loadPerlFile($serverConfigFile) if (defined($serverConfigFile));
+$srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{xopt}{host} = $serverHost if (defined($serverHost));
 $srv->{xopt}{port} = $serverPort if (defined($serverPort));
 $srv->{encoding}   = $serverEncoding if (defined($serverEncoding));
@@ -258,7 +258,7 @@ Alias for L<-log-level LEVEL>.
 
 Load server configuration from PLFILE,
 which should be a perl source file parseable
-by L<DTA::CAB::Persistent::loadPerlFile()|DTA::CAB::Persistent/item_loadPerlFile>
+by L<DTA::CAB::Persistent::loadFile()|DTA::CAB::Persistent/item_loadFile>
 as a L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> object.
 
 =item -bind HOST

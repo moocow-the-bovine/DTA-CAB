@@ -31,6 +31,8 @@ our $ltsDictFile = undef;
 our $morphDictFile = undef;
 our $rwDictFile = undef;
 
+our %aopts = qw(); ##-- analysis options
+
 ##==============================================================================
 ## Command-line
 GetOptions(##-- General
@@ -42,6 +44,7 @@ GetOptions(##-- General
 	   'configuration|c=s'    => \$rcFile,
 	   'input-encoding|ie=s'  => \$inputEncoding,
 	   'output-encoding|oe=s' => \$outputEncoding,
+	   'analysis-option|ao|O=s' => \%aopts,
 
 	   ##-- Cache Selection Options
 	   'lts-cache|lts-dict|lc|ld|l=s'        => \$ltsDictFile,
@@ -74,7 +77,7 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file(s) selected
 DTA::CAB::Logger->ensureLog();
 
 ##-- analyzer
-our $cab = DTA::CAB->loadPerlFile($rcFile)
+our $cab = DTA::CAB->loadFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
 
 ##-- we need analysis 'lo' elements here (not anymore --moocow, Thu, 23 Jul 2009 13:08:23 +0200)
@@ -83,19 +86,22 @@ our $cab = DTA::CAB->loadPerlFile($rcFile)
 #$cab->{rw}{wantAnalysisLo} = 1;
 
 ##-- delete unneccessary analyzers
-our %aopts = (map {("do_$_"=>0)} qw(msafe eqpho rw_morph rw_lts)); ##-- analysis options
+foreach (qw(eqpho rw_morph rw_lts)) {
+  my $aopt = "do_$_";
+  $aopts{$aopt} = 0 if (!exists($aopts{$aopt}));
+}
 
-if (!defined($ltsDictFile)) {
+if (!defined($ltsDictFile) && !$aopts{do_lts}) {
   delete($cab->{lts});
   $aopts{do_lts} = 0;
 }
 
-if (!defined($morphDictFile)) {
+if (!defined($morphDictFile) && !$aopts{do_morph}) {
   delete($cab->{morph});
   $aopts{do_morph} = 0;
 }
 
-if (!defined($rwDictFile)) {
+if (!defined($rwDictFile) && !$aopts{do_rw}) {
   delete($cab->{rw});
   $aopts{do_rw} = 0;
 }

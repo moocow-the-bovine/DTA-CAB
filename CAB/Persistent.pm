@@ -5,6 +5,7 @@
 ## Description: abstract class for persistent & configurable objects
 
 package DTA::CAB::Persistent;
+use DTA::CAB::Logger;
 use DTA::CAB::Unify;
 use Data::Dumper;
 use Storable;
@@ -16,7 +17,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw();
+our @ISA = qw(DTA::CAB::Logger);
 
 ##==============================================================================
 ## Constructors etc.
@@ -25,7 +26,10 @@ our @ISA = qw();
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: (assumed to be HASH ref, other references should be OK
 ##    with appropritate method overrides
-
+sub new {
+  my $that = shift;
+  return bless {@_}, ref($that)||$that;
+}
 
 ## $obj = $obj->clone()
 ##  + deep clone
@@ -39,7 +43,7 @@ sub clone { return Storable::dclone($_[0]); }
 ## Methods: Persistence: Perl
 
 ## @keys = $class_or_obj->noSaveKeys()
-##  + returns list of keys not to be saved
+##  + returns list of keys not to be saved for perl-mode I/O
 ##  + default just returns empty list
 sub noSaveKeys { return qw(); }
 
@@ -50,17 +54,19 @@ sub savePerlRef {
   my $obj = shift;
   my %noSave = map {($_=>undef)} $obj->noSaveKeys;
   return {
-	  map { ($_=>(UNIVERSAL::can($obj->{$_},'savePerlRef') ? $obj->{$_}->savePerlRef : $obj->{$_})) }
+	  map { ($_=>(ref($obj->{$_}) && UNIVERSAL::can($obj->{$_},'savePerlRef') ? $obj->{$_}->savePerlRef : $obj->{$_})) }
 	  grep {
 	    (!exists($noSave{$_})
-	     && !UNIVERSAL::isa($obj->{$_},'CODE')
-	     && !UNIVERSAL::isa($obj->{$_},'GLOB')
-	     && !UNIVERSAL::isa($obj->{$_},'IO::Handle')
-	     && !UNIVERSAL::isa($obj->{$_},'Gfsm::Automaton')
-	     && !UNIVERSAL::isa($obj->{$_},'Gfsm::Alphabet')
-	     && !UNIVERSAL::isa($obj->{$_},'Gfsm::Semiring')
-	     && !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade')
-	     && !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade::Lookup')
+	     && (!ref($obj->{$_})
+		 || !UNIVERSAL::isa($obj->{$_},'CODE')
+		 || !UNIVERSAL::isa($obj->{$_},'GLOB')
+		 || !UNIVERSAL::isa($obj->{$_},'IO::Handle')
+		 || !UNIVERSAL::isa($obj->{$_},'Gfsm::Automaton')
+		 || !UNIVERSAL::isa($obj->{$_},'Gfsm::Alphabet')
+		 || !UNIVERSAL::isa($obj->{$_},'Gfsm::Semiring')
+		 || !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade')
+		 || !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade::Lookup')
+		)
 	    )}
 	  keys(%$obj)
 	 };
@@ -159,6 +165,223 @@ sub loadPerlString {
   return $that->loadPerlRef($loaded);
 }
 
+##======================================================================
+## Methods: Persistence: Binary
+
+## @keys = $class_or_obj->noSaveBinKeys()
+##  + returns list of keys not to be saved for binary mode I/O
+##  + default just returns empty $obj->noSaveKeys()
+sub noSaveBinKeys { return $_[0]->noSaveKeys(); }
+
+## $binRef = $obj->saveBinRef()
+##  + return reference to be saved in binary mode
+##  + default implementation assumes $obj is HASH-ref
+sub saveBinRef {
+  my $obj = shift;
+  my %noSave = map {($_=>undef)} $obj->noSaveBinKeys;
+  return
+    bless({
+	   map { ($_=>(ref($obj->{$_}) && UNIVERSAL::can($obj->{$_},'saveBinRef') ? $obj->{$_}->saveBinRef() : $obj->{$_})) }
+	   grep {
+	     (!exists($noSave{$_})
+	      && (!ref($obj->{$_})
+		  || !UNIVERSAL::isa($obj->{$_},'CODE')
+		  || !UNIVERSAL::isa($obj->{$_},'GLOB')
+		  || !UNIVERSAL::isa($obj->{$_},'IO::Handle')
+		  #|| !UNIVERSAL::isa($obj->{$_},'Gfsm::Automaton')
+		  #|| !UNIVERSAL::isa($obj->{$_},'Gfsm::Alphabet')
+		  #|| !UNIVERSAL::isa($obj->{$_},'Gfsm::Semiring')
+		  #|| !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade')
+		  #|| !UNIVERSAL::isa($obj->{$_},'Gfsm::XL::Cascade::Lookup')
+		 )
+	     )}
+	   keys(%$obj)
+	  },
+	  ref($obj));
+}
+
+## $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref)
+##  + default implementation just duplicates default loadPerlRef($ref)
+sub loadBinRef {
+  return DTA::CAB::Persistent::loadPerlRef(@_);
+}
+
+##----------------------------------------------------
+## Methods: Persistence: Bin: File (delegate to FH)
+
+## $rc = $obj->saveBinFile($filename_or_fh, %args)
+##  + save $obj as binary data to a file or filehandle
+##  + calls $obj->saveBinFh($fh,%args)
+sub saveBinFile {
+  my ($obj,$file,%args) = @_;
+  my $fh = ref($file) ? $file : IO::File->new(">$file");
+  $obj->logconfess("saveBinFile(): open failed for '$file': $!") if (!$fh);
+  my $rc = $obj->saveBinFh($fh,%args,dst=>$file);
+  $fh->close() if (!ref($file));
+  return $rc;
+}
+
+## $obj = $CLASS_OR_OBJ->loadBinFile($filename_or_fh, %args)
+##  + load $obj as binary data from a file or filehandle
+##  + calls $obj->loadBinFh($fh,%args)
+sub loadBinFile {
+  my ($that,$file,%args) = @_;
+  my $fh = ref($file) ? $file : IO::File->new("<$file");
+  $that->logconfess("loadBinFile(): open failed for '$file': $!") if (!$fh);
+  my $rc = $that->loadBinFh($fh,%args,src=>$file);
+  $fh->close() if (!ref($file));
+  return $rc;
+}
+
+##----------------------------------------------------
+## Methods: Persistence: Bin: String (delegate to FH)
+
+## $str = $obj->saveBinString(%args)
+##  + save $obj as binary data using Storable module
+##  + calls $obj->saveBinFh($fh,%args)
+sub saveBinString {
+  my ($obj,%args) = @_;
+  my $str = '';
+  my $fh  = IO::Handle->new();
+  CORE::open($fh,'>',\$str)
+      or $obj->logconfess("saveBinString(): could not open() filehandle for string ref");
+  my $rc = $obj->saveBinFh($fh);
+  $fh->close();
+  return $rc ? $str : undef;
+}
+
+## $obj = $CLASS_OR_OBJ->loadBinString( $str, %args)
+## $obj = $CLASS_OR_OBJ->loadBinString(\$str, %args)
+##  + load $obj from Storable binary data string
+##  + calls $obj->loadBinFh($fh,%args)
+##  + %args:
+##     src=>$src_name,      ##-- default=(substr($str,0,42).'...')
+sub loadBinString {
+  my ($that,$str,%args) = @_;
+  my $src = (defined($args{src})
+	     ? $args{src}
+	     : (length($str) <= 42
+		? $str
+		: (substr($str,0,42).'...')));
+
+  my $fh = IO::Handle->new();
+  CORE::open($fh,'<',(ref($str) ? $str : \$str))
+      or $that->logconfess("loadBinString(): could not open() filehandle for string ref");
+  my $rc = $that->loadBinFh($fh,src=>$src,%args);
+  $fh->close;
+  return $rc;
+}
+
+##----------------------------------------------------
+## Methods: Persistence: Bin: FH (guts)
+
+## $obj_or_undef = $obj->saveBinFh($fh,%args)
+##  + save $obj to binary Storable data handle
+##  + calls $obj->saveBinRef()
+##  + %args:
+##     netorder => $bool,    ##-- if true (default), save in network order
+sub saveBinFh {
+  my ($obj,$fh,%args) = @_;
+  my $ref = $obj->saveBinRef();
+  if ($args{netorder} || !exists($args{netorder})) {
+    return Storable::nstore_fd($ref,$fh) ? $obj : undef;
+  }
+  return Storable::store_fd($ref,$fh) ? $obj : undef;
+}
+
+## $obj = $CLASS_OR_OBJ->loadBinFh($fh, %args)
+##  + load $obj from Storable binary data handle
+##  + calls $obj->loadBinFh($fh,%args)
+##  + %args:
+##     src=>$src_name,      ##-- default=(substr($str,0,42).'...')
+sub loadBinFh {
+  my ($that,$fh,%args) = @_;
+  my $loaded = Storable::retrieve_fd($fh);
+  return $that->loadBinRef($loaded);
+}
+
+##======================================================================
+## Methods: Persistence: Generic
+
+##----------------------------------------------------
+## Methods: Persistence: Generic: utils
+
+## $mode = $CLASS_OR_OBJ->guessFileMode($filename)
+sub guessFileMode {
+  my ($that,$filename) = @_;
+  return 'bin' if ($filename =~ /\.(?:sto|bin)$/);
+  return 'perl';
+}
+
+## $rc = $CLASS_OR_OBJ->_io_generic(%args)
+##  + generic I/O wrapper
+##  + %args:
+##     which => $which, ##-- one of: 'load' or 'save' (default)
+##     mode  => $mode,  ##-- one of: 'bin' or 'perl' (default: guessFileMode($file))
+##     type  => $type,  ##-- one of: 'file', 'fh', or 'string' (default)
+##     file  => $file,  ##-- any filename, used to guess mode
+##     arg0  => $arg0,  ##-- first arg to pass to the underlying I/O method (default=none)
+sub _io_generic {
+  my ($that,%args) = @_;
+  $args{mode} = $that->guessFileMode($args{file}) if ($args{file} && !$args{mode});
+  $args{which} = 'save' if (!$args{which});
+  $args{type} = 'string' if (!$args{type});
+  my $subname = $args{which}.ucfirst(lc($args{mode})).ucfirst(lc($args{type}));
+  my $sub = $that->can($subname)
+    or $that->logconfess("_io_generic(): no method for '$subname'");
+  return $sub->($that, (exists($args{arg0}) ? $args{arg0} : qw()), %args);
+}
+
+##----------------------------------------------------
+## Methods: Persistence: Generic: save
+
+## $obj_or_undef = $CLASS_OR_OBJ->save(%args)
+##  + %args: see _io_generic()
+sub save {
+  my ($that,%args) = @_;
+  return $that->_io_generic(%args,which=>'save');
+}
+
+## $obj_or_undef = $CLASS_OR_OBJ->saveFile($filename_or_fh,%args)
+##  + %args: see _io_generic()
+sub saveFile {
+  my ($that,$file,%args) = @_;
+  return $that->_io_generic(file=>$file,%args,which=>'save',type=>'file',arg0=>$file);
+}
+BEGIN { *saveFh = \&saveFile; }
+
+## $obj_or_undef = $CLASS_OR_OBJ->saveString(%args)
+##  + %args: see _io_generic()
+sub saveString {
+  my ($that,%args) = @_;
+  return $that->_io_generic(%args,which=>'save',type=>'string');
+}
+
+##----------------------------------------------------
+## Methods: Persistence: Generic: load
+
+## $obj_or_undef = $CLASS_OR_OBJ->load(%args)
+##  + %args: see _io_generic()
+sub load {
+  my ($that,%args) = @_;
+  return $that->_io_generic(%args,which=>'load');
+}
+
+## $obj_or_undef = $CLASS_OR_OBJ->loadFile($filename_or_fh,%args)
+##  + %args: see _io_generic()
+sub loadFile {
+  my ($that,$file,%args) = @_;
+  return $that->_io_generic(file=>$file,%args,which=>'load',type=>'file',arg0=>$file);
+}
+BEGIN { *loadFh = \&loadFile; }
+
+## $obj_or_undef = $CLASS_OR_OBJ->loadString($string,%args)
+##  + %args: see _io_generic()
+sub loadString {
+  my ($that,$str,%args) = @_;
+  return $that->_io_generic(%args,which=>'load',type=>'string');
+}
+
 
 1; ##-- be happy
 
@@ -194,7 +417,6 @@ DTA::CAB::Persistent - abstract class for persistent & configurable objects
  
  @keys = $class_or_obj->noSaveKeys();
  $saveRef = $obj->savePerlRef();
- 
  $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref);
  
  $rc = $obj->savePerlFile($filename_or_fh, @args);
@@ -202,6 +424,30 @@ DTA::CAB::Persistent - abstract class for persistent & configurable objects
  
  $str = $obj->savePerlString(%args);
  $obj = $CLASS_OR_OBJ->loadPerlString($str,%args);
+ 
+ ##========================================================================
+ ## Methods: Persistence: Binary
+ 
+ @keys = $class_or_obj->noSaveBinKeys();
+ $saveRef = $obj->saveBinRef();
+ $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref);
+ 
+ $rc = $obj->saveBinFile($filename_or_fh, @args);
+ $obj = $CLASS_OR_OBJ->loadBinFile($filename_or_fh, %args);
+ 
+ $str = $obj->saveBinString(%args);
+ $obj = $CLASS_OR_OBJ->loadBinString($str,%args);
+ 
+ ##========================================================================
+ ## Methods: Persistence: Generic
+ 
+ $mode = $CLASS_OR_OBJ->guessFileMode($filename);
+ 
+ $rc = $obj->saveFile($filename_or_fh, %args);
+ $obj = $CLASS_OR_OBJ->loadFile($filename_or_fh, %args);
+ 
+ $str = $obj->saveString(%args);
+ $obj = $CLASS_OR_OBJ->loadString($str,%args);
 
 =cut
 
@@ -243,7 +489,7 @@ Deep clone using Storable::dclone().
 
  @keys = $class_or_obj->noSaveKeys();
 
-Should returns list of object keys not to be saved on L</saveBinRef>()
+Should returns list of object keys not to be saved on L</savePerlRef>()
 (e.g. CODE-refs and anything else which L<Data::Dumper|Data::Dumper>
 and/or L<Storable::Storable> can't handle).
 
@@ -299,6 +545,134 @@ Known %args:
  var=>$perl_var_name, ##-- default='$index'
  src=>$src_name,      ##-- default=(substr($str,0,42).'...')
  %more_obj_args,      ##-- literally inserted into $obj
+
+=back
+
+=cut
+
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Persistent: Methods: Persistence: Binary
+=pod
+
+=head2 Methods: Persistence: Binary
+
+=over 4
+
+=item noSaveBinKeys
+
+ @keys = $class_or_obj->noSaveKeys();
+
+Should returns list of object keys not to be saved on L</saveBinRef>()
+(e.g. CODE-refs and anything else which
+L<Storable|Storable> can't handle).
+
+Default implementation just returns an empty list.
+
+=item saveBinRef
+
+ $saveRef = $obj->saveBinRef();
+
+Return a reference to be saved in binary mode.
+Default implementation assumes $obj is HASH-ref
+
+=item loadBinRef
+
+ $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref);
+
+Just a wrapper for the local L</loadPerlRef> method,
+used for binary loading (in case sub-classes override loadPerlRef()).
+
+=item saveBinFile
+
+ $rc = $obj->saveBinFile($filename_or_fh, %args);
+
+Save binary $obj to $filename_or_fh using L<Storable|Storable> module
+Calls L<$obj-E<gt>saveBinFh(%args)|/saveBinFh>
+
+=item loadBinFile
+
+ $obj = $CLASS_OR_OBJ->loadBinFile($filename_or_fh, %args);
+
+Load a (new) object from binary file or handle $filename_or_fh.
+Calls L<$CLASS_OR_OBJ-E<gt>loadBinFh($fh,%args)|/loadBinFh>.
+
+=item saveBinString
+
+ $str = $obj->saveBinString(%args);
+
+Returns binary byte-string representing $obj.
+Calls L<$CLASS_OR_OBJ-E<gt>saveBinFh($fh,%args)|/loadBinFh>.
+
+=item loadBinString
+
+ $obj = $CLASS_OR_OBJ->loadBinString($str,%args);
+
+Load an object from a binary string $str.  Returns new object.
+
+=item saveBinFh
+
+ $str = $obj->saveBinFh($fh,%args);
+
+Save binary format $obj to filehandle $fh.
+
+Known %args:
+
+ netorder => $bool,  ##-- if true (default), save data in "network" order where possible
+
+=item loadBinFh
+
+ $obj = $CLASS_OR_OBJ->loadBinFh($fh,%args);
+
+Load an object from a binary filehandle $fh.  Returns new object.
+
+=back
+
+=cut
+
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Persistent: Methods: Persistence: Generic
+=pod
+
+=head2 Methods: Persistence: Generic
+
+The I/O methods documented in this section recognize the following keyword %args:
+
+ mode  => $mode,  ##-- one of: 'bin' or 'perl' (default: guessFileMode($file))
+ file  => $file,  ##-- any filename, used to guess mode
+
+=over 4
+
+=item guessFileMode
+
+ $mode = $CLASS_OR_OBJ->guessFileMode($filename)
+
+Guess I/O mode ('bin' or 'perl') from a filename.
+
+=item saveFile
+
+ $obj_or_undef = $obj->saveFile($filename_or_fh,%args)
+
+Save to a generic filename or handle $filename_or_fh.
+
+=item loadFile
+
+ $loaded_obj = $CLASS_OR_OBJ->loadFile($filename_or_fh,%args)
+
+Load from a generic filename or handle $filename_or_fh.
+
+=item saveString
+
+ $str = $obj->saveString(%args)
+
+Save to a generic string.
+
+=item loadString
+
+ $loaded_obj = $CLASS_OR_OBJ->loadString($str,%args)
+
+Load from a generic string $str.
 
 =back
 

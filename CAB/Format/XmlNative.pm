@@ -379,7 +379,7 @@ sub tokenNode {
       if (ref($aa)) {
 	$aanod->setAttribute($fmt->{eqphoLoAttr},$aa->{lo})    if ($fmt->{eqphoLoAttr} && defined($aa->{lo}));
 	$aanod->setAttribute($fmt->{eqphoHiAttr},$aa->{hi})    if ($fmt->{eqphoHiAttr} && defined($aa->{hi}));
-	$aanod->setAttribute($fmt->{eqphoWeightAttr},$aa->{w}) if ($fmt->{eqhoWeightAttr} && defined($aa->{w}));
+	$aanod->setAttribute($fmt->{eqphoWeightAttr},$aa->{w}) if ($fmt->{eqphoWeightAttr} && defined($aa->{w}));
       }
       else {
 	##-- backwards-compatible to pre-v0.08

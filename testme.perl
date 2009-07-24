@@ -238,14 +238,42 @@ sub test_formatters {
 ## test: eq class
 use DTA::CAB::Analyzer::EqClass;
 sub test_eqclass {
-  our $eqc = DTA::CAB::Analyzer::EqClass->new( dictFile=>'eqc-test.dict', dictFileNope=>'dta-china.lts.dict' );
+  our $eqc = DTA::CAB::Analyzer::Dict::EqClass->new(
+						    dictFile=>'system/resources/dta-eqpho.dict.bin',
+						    dictFile1=>'eqc-test.dict',
+						    dictFile0=>'dta-china.lts.dict',
+						   );
   $eqc->ensureLoaded();
   #our $x = DTA::CAB::Token->new(text=>'OEDE', lts=>[{hi=>'?2de',w=>0}]);
-  our $x = DTA::CAB::Token->new(text=>'Oede');
+  #our $x = DTA::CAB::Token->new(text=>'Oede');
+  our $x = DTA::CAB::Token->new(text=>'snaffle');
   $eqc->analyzeToken($x);
   print DTA::CAB::Format::Perl->new(level=>1)->putToken($x)->toString;
+
+  my $odoc = toDocument([ toSentence([$x]) ]);
+  my $ofmt = DTA::CAB::Format::Xml->new(level=>1);
+  $ofmt->putDocument($odoc);
+  print $ofmt->toString;
 }
 #test_eqclass();
+
+sub test_eqrw {
+  our $eqc = DTA::CAB::Analyzer::Dict::EqClass->new(
+						    dictFile=>'system/resources/dta-eqrw.dict.bin',
+						    analysisKey=>'eqrw',
+						    inputKey=>'rw',
+						   );
+  $eqc->ensureLoaded();
+  our $x = DTA::CAB::Token->new(text=>'der');
+  $eqc->analyzeToken($x);
+  print DTA::CAB::Format::Perl->new(level=>1)->putToken($x)->toString;
+
+  my $odoc = toDocument([ toSentence([$x]) ]);
+  my $ofmt = DTA::CAB::Format::Xml->new(level=>1);
+  $ofmt->putDocument($odoc);
+  print $ofmt->toString;
+}
+test_eqrw();
 
 ##==============================================================================
 ## test: parsers
@@ -560,7 +588,35 @@ sub test_dict {
   print tok2str($w);
   print STDERR "$0: test_dict() completed.\n";
 }
-test_dict();
+#test_dict();
+
+##==============================================================================
+## test: binary object i/o
+
+sub test_binio {
+  my $dic = DTA::CAB::Analyzer::Dict->new(analyzeDst=>'morph',dictFile=>'test1.full.dict');
+  $dic->ensureLoaded();
+  my $str = $dic->saveBinString();
+  my $dic2 = ref($dic)->loadBinString($str); #-ok
+  $dic->saveBinFile('cab-test.bin');
+  $dic2 = ref($dic)->loadBinFile('cab-test.bin');
+  $dic2 = ref($dic)->loadFile('cab-test.bin'); ##--ok
+  $dic2 = DTA::CAB::Persistent->loadFile('cab-test.bin');
+
+  ##-- we'll see: looks good
+  my $cab = DTA::CAB->new();
+  #$cab->loadPerlFile('system/cab.plm');
+  $cab->loadPerlFile('cab-lts.plm');
+  $cab->ensureLoaded;
+  $cab->saveBinFile('cab-test.bin');
+  undef($cab);
+  my $cab2 = DTA::CAB->loadBinFile('cab-test.bin');
+  $cab2->ensureLoaded();
+  undef($cab2);
+
+  print STDERR "$0: test_binio() completed\n";
+}
+#test_binio();
 
 
 ##==============================================================================

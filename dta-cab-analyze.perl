@@ -93,7 +93,7 @@ if (defined($logConfigFile)) {
 }
 
 ##-- analyzer
-our $cab = DTA::CAB::Analyzer->loadPerlFile($rcFile)
+our $cab = DTA::CAB::Analyzer->loadFile($rcFile)
   or die("$0: load failed for analyzer from '$rcFile': $!");
 
 ##======================================================
@@ -264,7 +264,7 @@ B<Required>.
 
 Load analyzer configuration from PLFILE,
 which should be a perl source file parseable
-by L<DTA::CAB::Persistent::loadPerlFile()|DTA::CAB::Persistent/item_loadPerlFile>
+by L<DTA::CAB::Persistent::loadFile()|DTA::CAB::Persistent/item_loadFile>
 as a L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> object.
 Prototypically, this file will just look like:
 

@@ -23,9 +23,6 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer::Dict);
 
-our $FREQ_VEC_BITS = 16;
-
-
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -47,13 +44,15 @@ our $FREQ_VEC_BITS = 16;
 ##
 ##    ##-- Analysis Objects
 ##    txt2tid  => \%txt2tid,    ##-- map (known) token text to numeric text-ID (1:1)
-##    tid2pho  => \@tid2pho,    ##-- map text-IDs to phonetic strings (n:1)
-##    tid2f    => $tid2f,       ##-- map text-IDs to raw frequencies (n:1)
-##                              ##   : $f = vec($tid2f, $id, $FREQ_VEC_BITS)
-##    #id2f    => $tid2fc,       ##-- map text-IDs to frequency classes; access with $fc=vec($tid2fc, $id, 8)
-##    #                          ##   : $fc = int(log2($f))
-##    pho2tids => \%pho2tids,   ##-- back-map phonetic strings to text IDs (1:n)
-##                              ##   : @txtids = unpack('L*',$pho2tids{$phoStr})
+##    tid2txt  => \@tid2txt,    ##-- map text-IDs to token text
+##    ##
+##    pho2pid  => \%pho2pid,    ##-- map (known) phonetic string to pho-ID (1:1)
+##    pid2pho  => \@pid2pho,    ##-- map pho-IDs to phonetic strings
+##    ##
+##    tid2pws  => \@tid2pws,    ##-- map text-IDs to (pho-id,weight) pairs (1:n)
+##                              ##   : @pid_w_pairs = unpack('(Lf)*', $tid2pws[$tid])
+##    pid2tws => \@pid2tids,    ##-- map pho-IDs to (text-id,weight) pairs (1:n)
+##                              ##   : @tid_w_pairs = unpack('(Lf)*', $pid2tws[$pid])
 ##
 sub new {
   my $that = shift;
@@ -71,9 +70,12 @@ sub new {
 			   ##-- Analysis Objects
 			   txt2tid => {},  ##-- $textStr => $textId
 			   tid2txt => [],  ##-- $textId  => $textStr
-			   tid2pho => [],  ##-- $textId  => $phoStr,
-			   tid2f   => '',  ##-- vec($id2f, $textId, 16) => $textFreq
-			   pho2tids => {},  ##-- $phoStr  => pack('L*',@textIds)
+			   ##
+			   pho2pid => {},  ##-- $phoStr => $phoId
+			   pid2pho => [],  ##-- $phoId  => $phoStr
+			   ##
+			   tid2pws => [],  ##-- $textId => pack('(Lf)*', $pid1=>$w1, $pid2=>$w2, ...)
+			   pid2tws => [],  ##-- $phoId  => pack('(Lf)*', $tid1=>$w1, $tid2=>$w2, ...)
 
 			   ##-- user args
 			   @_
@@ -114,16 +116,17 @@ sub loadDict {
   ##-- common variables
   my $txt2tid  = $eqc->{txt2tid};
   my $tid2txt  = $eqc->{tid2txt};
-  my $tid2pho  = $eqc->{tid2pho};
-  my $tid2f_r  = \$eqc->{tid2f};
-  my $pho2tids = $eqc->{pho2tids};
+  ##
+  my $pho2pid = $eqc->{pho2pid};
+  my $pid2pho = $eqc->{pid2pho};
+  ##
+  my $tid2pws = $eqc->{tid2pws};
+  my $pid2tws = $eqc->{pid2tws};
 
-  ##-- parse base data (txt2tid,tid2txt,tid2pho,tid2f,pho2tids)
-  my ($word,$entry,$p,$f,$tid);
-  while (($word,$entry)=each(%$dict)) {
-    next if (!$entry || !$entry->[0]);
-    ($p,$f) = @{$entry->[0]}{qw(hi w)};
-    $f ||= 0;
+  ##-- parse base data (txt2tid,tid2txt, pho2pid,pid2pho, tid2pws,pid2tws)
+  my ($word,$pas,$pa, $p,$w, $pid,$tid);
+  while (($word,$pas)=each(%$dict)) {
+    next if (!$pas || !@$pas);
 
     ##-- expand: txt2tid, tid2txt
     if (!defined($tid=$txt2tid->{$word})) {
@@ -131,27 +134,23 @@ sub loadDict {
       $tid=$txt2tid->{$word} = $#$tid2txt;
     }
 
-    ##-- expand: tid2pho
-    $tid2pho->[$tid] = $p;
+    ##-- loop over analyses
+    foreach $pa (@$pas) {
+      ($p,$w) = @$pa{qw(hi w)};
+      $w ||= 0;
 
-    ##-- expand: $$id2f_r (frequency)
-    vec($$tid2f_r, $tid, $FREQ_VEC_BITS) = int($f);
+      ##-- expand: pho2pid,pid2pho
+      if (!defined($pid=$pho2pid->{$p})) {
+	push(@$pid2pho,$p);
+	$pid=$pho2pid->{$p} = $#$pid2pho;
+      }
 
-    ##-- expand: pho2ids
-    $pho2tids->{$p} .= pack('L',$tid);
-  }
+      ##-- expand: tid2pws
+      $tid2pws->[$tid] .= pack('Lf', $pid,$w);
 
-
-  ##-- sort dictionary by descending frequency
-  foreach $p (keys(%$pho2tids)) {
-    $pho2tids->{$p} = pack('L*',
-			   sort {
-			     (vec($$tid2f_r,$b,$FREQ_VEC_BITS) <=> vec($$tid2f_r,$a,$FREQ_VEC_BITS)
-			      ||
-			      $tid2txt->[$a] cmp $tid2txt->[$b])
-			   }
-			   unpack('L*', $pho2tids->{$p})
-			  );
+      ##-- expand: pid2tws
+      $pid2tws->[$pid] .= pack('Lf', $tid,$w);
+    }
   }
 
   $eqc->dropClosures();
@@ -177,15 +176,16 @@ sub getAnalyzeTokenSub {
   my $akey = $eqc->{analysisKey};
   my $ikey = $eqc->{inputKey};
 
-  my $txt2tid  = $eqc->{txt2tid};
-  my $tid2txt  = $eqc->{tid2txt};
-  my $tid2pho  = $eqc->{tid2pho};
-  my $pho2tids = $eqc->{pho2tids};
-  my $tid2fr   = \$eqc->{tid2f};
+  my $txt2tid = $eqc->{txt2tid};
+  my $tid2txt = $eqc->{tid2txt};
+  my $pho2pid = $eqc->{pho2pid};
+  my $pid2pho = $eqc->{pid2pho};
+  my $tid2pws = $eqc->{tid2pws};
+  my $pid2tws = $eqc->{pid2tws};
 
   my $allowRegex = defined($eqc->{allowRegex}) ? qr($eqc->{allowRegex}) : undef;
 
-  my ($tok,$txt,$args,$p,$tid, $p_tids);
+  my ($tok,$txt,$args, $p,$pid, $tid, %pws,%p2tw,%t2tw, $w0,$w1);
   return sub {
     ($tok,$args) = @_;
     $tok  = toToken($tok) if (!UNIVERSAL::isa($tok,'DTA::CAB::Token'));
@@ -202,23 +202,46 @@ sub getAnalyzeTokenSub {
     ##-- maybe ignore this token
     return $tok if (defined($allowRegex) && $txt !~ $allowRegex);
 
-    ##-- get source phonetic string
+    ##-- get source phonetic (ID,weight) pairs: %pws: $pid=>$weight, ...
     if (defined($args->{phoSrc})) {
-      $p = $args->{phoSrc};
-    } elsif (defined($tok->{$ikey}) && defined($tok->{$ikey}[0]) && defined($tok->{$ikey}[0]{hi})) {
-      $p = $tok->{$ikey}[0]{hi};
+      %pws = ($args->{phoSrc},0);
+    } elsif (defined($tok->{$ikey}) && @{$tok->{$ikey}}) {
+      %pws = map {
+	$pid = $pho2pid->{$_->{hi}};
+	(defined($pid) ? ($pid=>$_->{w}) : qw())
+      } @{$tok->{$ikey}};
     } elsif (defined($tid=$txt2tid->{$txt})) {
-      $p = $tid2pho->[$tid];
+      %pws = unpack('(Lf)*', $tid2pws->[$tid]);
     } else {
       return $tok; ##-- no phonetic source: cannot analyze
     }
 
-    ##-- expand source phonetic strings
-    $p_tids = $pho2tids->{$p};
+    ##-- build equivalence class:
+    ## %t2tw: $equiv_txt => [$pho, $w2p_weight, $p2t_weight]
+    %t2tw = map {
+      ($pid,$w0,$p) = ($_,$pws{$_},$pid2pho->[$_]);
+      %p2tw = unpack('(Lf)*', $pid2tws->[$pid]);
+      map {
+	($tid,$w1) = ($_,$p2tw{$_});
+	($tid2txt->[$tid] => [$p,$w0,$w1])
+      } keys(%p2tw)
+    } keys(%pws);
 
     ##-- tweak $tok
-    if (defined($p_tids)) {
-      $tok->{$akey} = [ map { {hi=>$tid2txt->[$_],w=>vec($$tid2fr, $_, $FREQ_VEC_BITS)} } unpack('L*', $p_tids) ];
+    if (%t2tw) {
+      $tok->{$akey} = [
+		       map {
+			 ($p,$w0,$w1) = @{$t2tw{$_}};
+			 {hi=>$_, w=>"$w0+$w1" } #pho=>$p, w0=>$w0, w1=>$w1,
+		       }
+		       sort {
+			 ($t2tw{$a}[1] <=> $t2tw{$b}[1]
+			  || $t2tw{$a}[2] <=> $t2tw{$b}[2]
+			  || $t2tw{$a}[0] cmp $t2tw{$b}[0]
+			  || $a cmp $b)
+		       }
+			 keys(%t2tw)
+		      ];
     }
 
     return $tok;
