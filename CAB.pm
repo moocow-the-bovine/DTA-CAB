@@ -15,11 +15,13 @@ use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 #use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
-use DTA::CAB::Analyzer::EqPho;
+use DTA::CAB::Analyzer::Dict::EqPho;     ##-- via dictionary
+use DTA::CAB::Analyzer::EqPho;           ##-- via Gfsm::XL (unused)
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+use DTA::CAB::Analyzer::Dict::EqRW;      ##-- via dictionary
 
 use DTA::CAB::Analyzer::Dict;
 use DTA::CAB::Analyzer::Dict::EqClass;
@@ -42,7 +44,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.10;
+our $VERSION = 0.11;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -59,13 +61,14 @@ sub new {
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   ##
-			   eqpho => DTA::CAB::Analyzer::Dict::EqClass->new(),
-			   #eqpho => DTA::CAB::Analyzer::EqPho->new(),
+			   #eqpho => DTA::CAB::Analyzer::EqPho->new(),        ##-- via Gfsm::XL
+			   eqpho => DTA::CAB::Analyzer::Dict::EqPho->new(),  ##-- via dictionary
 			   ##
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
+			   eqrw  => DTA::CAB::Analyzer::Dict::EqRW->new(),  ##-- via dictionary
 
 			   ##-- formatting: XML
 			   #xmlTokenElt => 'token', ##-- token element
@@ -92,7 +95,7 @@ sub ensureLoaded {
   $rc &&= $cab->{mlatin}->ensureLoaded() if ($cab->{mlatin});
   $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
-  #$cab->{rw}{subanalysisFormatter} = $cab->{morph} if ($cab->{rw} && $cab->{morph}); ##-- OBSOLETE!
+  $rc &&= $cab->{eqrw}->ensureLoaded()  if ($cab->{eqrw});
   return $rc;
 }
 
@@ -139,20 +142,27 @@ sub savePerlRef {
 ##     do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
 ##     do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
 ##     do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
+##     do_eqrw  => $bool,    ##-- enable/disable rewrite-equivalence-class analysis analysis (default: enabled)
 ##     ...
 sub getAnalyzeTokenSub {
   my $cab = shift;
-  my ($xlit,$lts,$eqpho,$morph,$mlatin,$msafe,$rw) = @$cab{qw(xlit lts eqpho morph mlatin msafe rw)};
-  my $a_xlit   = $xlit->getAnalyzeTokenSub()   if ($xlit);
-  my $a_lts    = $lts->getAnalyzeTokenSub()    if ($lts);
-  my $a_eqpho  = $eqpho->getAnalyzeTokenSub()  if ($eqpho);
-  my $a_morph  = $morph->getAnalyzeTokenSub()  if ($morph);
-  my $a_mlatin = $mlatin->getAnalyzeTokenSub() if ($mlatin);
-  my $a_msafe  = $msafe->getAnalyzeTokenSub()  if ($msafe);
-  my $a_rw     = $rw->getAnalyzeTokenSub()     if ($rw);
-  my ($tok, $w,$opts,$l);
+  my ($xlit,$lts,$eqpho,$morph,$mlatin,$msafe,$rw,$eqrw) = @$cab{qw(xlit lts eqpho morph mlatin msafe rw eqrw)};
+  my $a_xlit   = $xlit->getAnalyzeTokenSub()   if ($xlit && $xlit->canAnalyze);
+  my $a_lts    = $lts->getAnalyzeTokenSub()    if ($lts && $lts->canAnalyze);
+  my $a_eqpho  = $eqpho->getAnalyzeTokenSub()  if ($eqpho && $eqpho->canAnalyze);
+  my $a_morph  = $morph->getAnalyzeTokenSub()  if ($morph && $morph->canAnalyze);
+  my $a_mlatin = $mlatin->getAnalyzeTokenSub() if ($mlatin && $mlatin->canAnalyze);
+  my $a_msafe  = $msafe->getAnalyzeTokenSub()  if ($msafe && $msafe->canAnalyze);
+  my $a_rw     = $rw->getAnalyzeTokenSub()     if ($rw && $rw->canAnalyze);
+  my $a_eqrw   = $eqrw->getAnalyzeTokenSub()   if ($eqrw && $eqrw->canAnalyze);
+
+  my @optkeys  = map {"do_$_"} qw(xlit lts eqpho morph mlatin msafe rw rw_morph rw_lts eqrw);
+  my %aopts    = map {$_=>$cab->{$_}} @optkeys;
+
+  my ($tok, $w,$uopts,$opts,$l);
   return sub {
-    ($tok,$opts) = @_;
+    ($tok,$uopts) = @_;
+    $opts = { %aopts, (defined($uopts) ? %$uopts : qw()) };
     $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
 
     ##-- analyze: transliterator
@@ -213,7 +223,13 @@ sub getAnalyzeTokenSub {
 	}
       }
     }
-    delete(@$opts{qw(src dst)}); ##-- hack
+
+    ##-- analyze: eqrw
+    if ($a_eqrw && (!defined($opts->{do_eqrw}) || $opts->{do_eqrw})) {
+      $a_eqrw->($tok, $opts);
+    }
+
+    #delete(@$opts{qw(src dst)}); ##-- hack
     return $tok;
   };
 }
@@ -307,11 +323,12 @@ and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> analysis API.
  ##-- analyzers
  xlit  => $xlit,  ##-- DTA::CAB::Analyzer::Unicruft object
  lts   => $lts,   ##-- DTA::CAB::Analyzer::LTS object
- eqpho => $eqpho, ##-- DTA::CAB::Analyzer::EqClass object
+ eqpho => $eqpho, ##-- DTA::CAB::Analyzer::Dict::EqPho object
  morph => $morph, ##-- DTA::CAB::Analyzer::Morph object
  latin => $latin, ##-- DTA::CAB::Analyzer::Latin object
  msafe => $msafe, ##-- DTA::CAB::Analyzer::MorphSafe object
  rw    => $rw,    ##-- DTA::CAB::Analyzer::Rewrite object
+ eqrw  => $eqrw,  ##--DTA::CAB::Analyzer::Dict::EqRW object
 
 =back
 
@@ -386,6 +403,7 @@ Known \%opts:
  do_rw    => $bool,    ##-- enable/disable rewrite analysis (default: enabled; depending on morph, msafe)
  do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
  do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
+ do_eqrw     => $bool, ##-- enable/disable rewrite-equivalence-class analysis analysis (default: enabled)
  ...                   ##-- ... and maybe more
 
 =back

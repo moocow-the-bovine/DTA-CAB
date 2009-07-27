@@ -69,7 +69,7 @@ GetOptions(##-- General
 	   'analysis-option|analyze-option|ao|O=s' => \%analyzeOpts,
 	   'profile|p!' => \$doProfile,
 	   'list|l'   => sub { $action='list'; },
-	   'token|t' => sub { $action='token'; },
+	   'token|t|word|w' => sub { $action='token'; },
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'raw|r|data|D' => sub { $action='raw'; }, ##-- server-side parsing

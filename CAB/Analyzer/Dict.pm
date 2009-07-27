@@ -212,6 +212,17 @@ sub loadPerlRef {
 ##==============================================================================
 
 ##------------------------------------------------------------------------
+## Methods: Analysis: Generic
+
+## $bool = $anl->canAnalyze()
+##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+##  + default method always returns true
+sub canAnalyze {
+  return $_[0]->dictOk();
+}
+
+
+##------------------------------------------------------------------------
 ## Methods: Analysis: Token
 
 ## $coderef = $anl->getAnalyzeTokenSub()
@@ -318,6 +329,7 @@ DTA::CAB::Analyzer::Dict - simple dictionary lookup analyzer
  ##========================================================================
  ## Methods: Analysis
  
+ $bool = $anl->canAnalyze();
  $coderef = $anl->getAnalyzeTokenSub();
 
 =cut
@@ -490,6 +502,11 @@ Implicitly calls $obj-E<gt>clear()
 =head2 Methods: Analysis
 
 =over 4
+
+ $bool = $anl->canAnalyze();
+
+Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+Default implementation just wraps $anl-E<gt>dictOk().
 
 =item getAnalyzeTokenSub
 

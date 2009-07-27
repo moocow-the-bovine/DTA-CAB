@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
+use DTA::CAB::Datum ':all';
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
@@ -34,6 +35,7 @@ our $doProfile = 1;
 ##-- I/O Options
 our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
+our $inputWords  = 0;      ##-- inputs are words, not filenames
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
@@ -55,6 +57,7 @@ GetOptions(##-- General
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
 	   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
 	   'input-option|io|parser-option|po=s'      => \%inputOpts,
+	   'tokens|t|words|w!'                       => \$inputWords,
 
 	   ##-- I/O: output
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
@@ -124,19 +127,45 @@ our $nchrs = 0;
 ## Analyze
 
 our ($file,$doc);
-push(@ARGV,'-') if (!@ARGV);
-foreach $file (@ARGV) {
-  $cab->info("processing file '$file'");
-  $doc = $ifmt->parseFile($file)
-    or die("$0: parse failed for input file '$file': $!");
+if ($inputWords) {
+  ##-- word input mode
+  my @words = map { $inputOpts{encoding} ? decode($inputOpts{encoding},$_) : $_ } @ARGV;
+  $doc = toDocument([ toSentence([ @words ]) ]);
+
+  $cab->trace("analyzeDocument($words[0], ...)");
   $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
+
+  $ofmt->trace("putDocumentRaw($words[0], ...)");
   $ofmt->putDocumentRaw($doc);
+
   if ($doProfile) {
     $ntoks += $doc->nTokens;
-    $nchrs += (-s $file) if ($file ne '-');
+    $nchrs += length($_) foreach (@words);
+  }
+} else {
+  ##-- file input mode
+  push(@ARGV,'-') if (!@ARGV);
+  foreach $file (@ARGV) {
+    $cab->info("processing file '$file'");
+
+    $ifmt->trace("parseFile($file)");
+    $doc = $ifmt->parseFile($file)
+      or die("$0: parse failed for input file '$file': $!");
+
+    $cab->trace("analyzeDocument($file)");
+    $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
+
+    $ofmt->trace("putDocumentRaw($file)");
+    $ofmt->putDocumentRaw($doc);
+
+    if ($doProfile) {
+      $ntoks += $doc->nTokens;
+      $nchrs += (-s $file) if ($file ne '-');
+    }
   }
 }
 
+$ofmt->trace("toFile($outfile)");
 $ofmt->toFile($outfile);
 
 ##======================================================

@@ -38,7 +38,8 @@ our @ISA = qw(DTA::CAB::Server);
 ##     encoding => $enc,   ##-- sets $RPC::XML::ENCODING on prepare(), used by underlying server
 ##     ##
 ##     ##-- (inherited from DTA::CAB::Server)
-##     as => \%analyzers,  ##-- ($name => $cab_analyzer_obj, ...)
+##     as  => \%analyzers,    ##-- ($name=>$cab_analyzer_obj, ...)
+##     aos => \%anlOptions,   ##-- ($name=>\%analyzeOptions, ...) : %opts passed to $anl->analyzeXYZ($xyz,%opts)
 ##    }
 sub new {
   my $that = shift;
@@ -120,14 +121,17 @@ sub prepareLocal {
   $RPC::XML::FORCE_STRING_ENCODING = 1;
 
   ##-- register analysis methods
-  my ($aname,$a, $xp, $proc);
+  my ($aname,$a,$aopts, $xp, $proc);
   while (($aname,$a)=each(%{$srv->{as}})) {
+    $aopts = $srv->{aos}{$aname};
+    $aopts = RPC::XML::struct->new($aopts) if ($aopts);
     foreach ($a->xmlRpcMethods) {
       if (UNIVERSAL::isa($_,'HASH')) {
 	##-- hack method 'name'
 	$_->{name} = 'analyze' if (!defined($_->{name}));
 	$_->{name} = $aname.'.'.$_->{name} if ($aname);
 	$_->{name} = $srv->{procNamePrefix}.$_->{name} if ($srv->{procNamePrefix});
+	$_->{opts} = $aopts;
 	$srv->wrapMethodEncoding($_); ##-- hack encoding?
       }
       $xp = DTA::CAB::Server::XmlRpc::Procedure->new($_);
@@ -188,10 +192,27 @@ use RPC::XML::Procedure;
 use strict;
 our @ISA = ('RPC::XML::Procedure','DTA::CAB::Logger');
 
+## $proc = CLASS->new(\%methodHash)
+
 ## $rv = $proc->call($XML_RPC_SERVER, @PARAMLIST)
 sub call {
   $_[0]->debug("$_[0]{name}(): client=$_[1]{peerhost}"); #:$_[1]{peerport}
-  return $_[0]->SUPER::call(@_[1..$#_]);
+  if (@_ > 3) {
+    return $_[0]->SUPER::call(@_[1..($#_-1)],
+			      bless({
+				     ($_[0]{opts} ? (%{$_[0]{opts}}) : qw()),
+				     ($_[$#_]     ? (%{$_[$#_]})     : qw()),
+				    },'RPC::XML::struct'),
+			     );
+  }
+  elsif ($_[0]{opts}) {
+    return $_[0]->SUPER::call(@_[1..$#_],
+			      bless( { %{$_[0]{opts}} },'RPC::XML::struct'),
+			     );
+  }
+  else {
+    return $_[0]->SUPER::call(@_[1..$#_]);
+  }
 }
 
 

@@ -325,7 +325,7 @@ Concrete test case: ECIDs are just phonetic forms as returned by (some instance 
 =item Variable: @ISA
 
 DTA::CAB::Analyzer::Dict::EqClass inherits from
-L<DTA::CAB::Analyzer::Automaton>.
+L<DTA::CAB::Analyzer::Dict>.
 
 =back
 

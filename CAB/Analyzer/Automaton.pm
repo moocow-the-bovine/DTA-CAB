@@ -43,6 +43,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
 ##     check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
 ##     labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+##     dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8')
 ##     auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
 ##     tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
 ##     tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
@@ -85,6 +86,7 @@ sub new {
 			      eow            =>'',
 			      check_symbols  => 1,
 			      labenc         => 'latin1',
+			      dictenc        => 'utf8',
 			      auto_connect   => 0,
 			      tolower        => 0,
 			      tolowerNI      => 0,
@@ -269,12 +271,16 @@ sub loadDict {
   my $dictfh = IO::File->new("<$dictfile")
     or $aut->logconfess("::loadDict() open failed for dictionary file '$dictfile': $!");
 
+  my $enc  = $aut->{dictenc};
+  $enc     = $aut->{labenc} if (!defined($enc));
+  #$enc     = 'UTF-8' if (!defined($enc));  ##-- default encoding (use perl native if commented out)
+
   my $dict = $aut->{dict};
   my ($line,$word,@analyses,$entry,$aw,$a,$w);
   while (defined($line=<$dictfh>)) {
     chomp($line);
     next if ($line =~ /^\s*$/ || $line =~ /^\s*%/);
-    $line = decode($aut->{labenc}, $line) if ($aut->{labenc});
+    $line = decode($enc, $line) if ($enc);
     ($word,@analyses) = split(/\t+/,$line);
     if    ($aut->{tolower})   { $word = lc($word); }
     elsif ($aut->{tolowerNI}) { $word =~ s/^(.)(.*)$/$1\L$2\E/; }
@@ -327,6 +333,15 @@ sub loadPerlRef {
 ##==============================================================================
 ## Methods: Analysis
 ##==============================================================================
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Generic
+
+## $bool = $anl->canAnalyze()
+##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+sub canAnalyze {
+  return $_[0]->dictOk || ($_[0]->labOk && $_[0]->fstOk);
+}
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Token
@@ -526,6 +541,7 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  ##========================================================================
  ## Methods: Analysis
  
+ $bool = $anl->canAnalyze();
  $coderef = $anl->getAnalyzeTokenSub();
 
 =cut
@@ -586,6 +602,7 @@ Constuctor.
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
  labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+ dictenc        => $enc,  ##-- dictionary encoding (default='utf8')
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
@@ -764,6 +781,15 @@ Implicitly calls $obj-E<gt>clear()
 =head2 Methods: Analysis
 
 =over 4
+
+=item canAnalyze
+
+ $bool = $anl->canAnalyze();
+
+Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+This implementation just returns:
+
+ $anl->dictOk || ($anl->labOk && $anl->fstOk)
 
 =item getAnalyzeTokenSub
 

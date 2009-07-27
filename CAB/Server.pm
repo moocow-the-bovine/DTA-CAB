@@ -23,9 +23,10 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: HASH ref
 ##    {
-##     as => \%analyzers,   ##-- ($name => $cab_analyzer_obj, ...)
-##     pidfile => $pidfile, ##-- if defined, process PID will be written to $pidfile on prepare()
-##     pid => $pid,l        ##-- server PID (default=$$) to write to $pidfile
+##     as  => \%analyzers,   ##-- ($name => $cab_analyzer_obj, ...)
+##     aos => \%anlOptions,  ##-- ($name=>\%analyzeOptions, ...) : %opts passed to $anl->analyzeXYZ($xyz,%opts)
+##     pidfile => $pidfile,  ##-- if defined, process PID will be written to $pidfile on prepare()
+##     pid => $pid,          ##-- server PID (default=$$) to write to $pidfile
 ##     #...
 ##    }
 sub new {
@@ -33,6 +34,7 @@ sub new {
   my $obj = bless({
 		   ##-- dispatch analyzers
 		   as => {},
+		   aos => {},
 		   #pidfile=>undef,
 		   #pid=>$pid,
 		   ##

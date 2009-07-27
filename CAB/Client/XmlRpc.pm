@@ -95,7 +95,7 @@ sub disconnect {
 ## @analyzers = $cli->analyzers()
 sub analyzers {
   my $rsp = $_[0]->request( RPC::XML::request->new('dta.cab.listAnalyzers') );
-  return ref($rsp) && !$rsp->is_fault ? @{ $rsp->value } : $rsp;
+  return ref($rsp) && !$rsp->is_fault ? sort(@{ $rsp->value }) : $rsp;
 }
 
 ##==============================================================================

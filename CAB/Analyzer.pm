@@ -124,6 +124,16 @@ BEGIN {
 }
 
 ##------------------------------------------------------------------------
+## Methods: Analysis: Generic
+
+## $bool = $anl->canAnalyze()
+##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+##  + default method always returns true
+sub canAnalyze {
+  return 1;
+}
+
+##------------------------------------------------------------------------
 ## Methods: Analysis: Token
 
 ## $tok = $anl->analyzeToken($tok,\%analyzeOptions)
@@ -384,6 +394,8 @@ DTA::CAB::Analyzer - generic analyzer API for DTA::CAB
  ##========================================================================
  ## Methods: Analysis Closures: Generic
  
+ $bool = $anl->canAnalyze();
+ 
  $tok = $anl->analyzeToken($tok,\%analyzeOptions);
  $coderef = $anl->analyzeTokenSub();
  $coderef = $anl->getAnalyzeTokenSub();
@@ -541,6 +553,13 @@ Currently, I<XXX> may be one of: 'Token', 'Sentence', 'Document', or 'Data'.  Mo
 The method C<analyze()> is just an alias for L<analyzeToken()|/analyzeToken>.
 
 =over 4
+
+=item canAnalyze
+
+ $bool = $anl->canAnalyze();
+
+Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+Default implementation always returns true.
 
 =item analyzeToken
 
