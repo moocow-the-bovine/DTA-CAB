@@ -15,8 +15,10 @@ use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 #use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
-use DTA::CAB::Analyzer::Dict::EqPho;     ##-- via dictionary
-use DTA::CAB::Analyzer::EqPho;           ##-- via Gfsm::XL (unused)
+use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
+use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict::EqClass (unused)
+use DTA::CAB::Analyzer::EqPho::Cascade;  ##-- via Gfsm::XL (unused)
+use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
@@ -44,7 +46,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.11;
+our $VERSION = 0.12;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -61,8 +63,10 @@ sub new {
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   ##
-			   #eqpho => DTA::CAB::Analyzer::EqPho->new(),        ##-- via Gfsm::XL
-			   eqpho => DTA::CAB::Analyzer::Dict::EqPho->new(),  ##-- via dictionary
+			   #eqpho => DTA::CAB::Analyzer::EqPho::Cascade->new(), ##-- via Gfsm::XL
+			   #eqpho => DTA::CAB::Analyzer::EqPho::Dict->new(),    ##-- via dictionary (requires 'lts')
+			   #eqpho => DTA::CAB::Analyzer::EqPho::FST->new(),     ##-- via Gfsm::Automaton (requires 'lts')
+			   eqpho => DTA::CAB::Analyzer::EqPho->new(),           ##-- default (FST)
 			   ##
 			   morph => DTA::CAB::Analyzer::Morph->new(),
 			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
@@ -179,11 +183,6 @@ sub getAnalyzeTokenSub {
       $a_lts->($tok, $opts);
     }
 
-    ##-- analyze: eqpho
-    if ($a_eqpho && (!defined($opts->{do_eqpho}) || $opts->{do_eqpho})) {
-      $a_eqpho->($tok, $opts);
-    }
-
     ##-- analyze: morph
     if ($a_morph && (!defined($opts->{do_morph}) || $opts->{do_morph})) {
       $a_morph->($tok, $opts);
@@ -222,6 +221,13 @@ sub getAnalyzeTokenSub {
 	  $a_lts->($tok, $opts);
 	}
       }
+    }
+
+    delete(@$opts{qw(src dst)}); ##-- hack
+
+    ##-- analyze: eqpho
+    if ($a_eqpho && (!defined($opts->{do_eqpho}) || $opts->{do_eqpho})) {
+      $a_eqpho->($tok, $opts);
     }
 
     ##-- analyze: eqrw
@@ -323,7 +329,7 @@ and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> analysis API.
  ##-- analyzers
  xlit  => $xlit,  ##-- DTA::CAB::Analyzer::Unicruft object
  lts   => $lts,   ##-- DTA::CAB::Analyzer::LTS object
- eqpho => $eqpho, ##-- DTA::CAB::Analyzer::Dict::EqPho object
+ eqpho => $eqpho, ##-- DTA::CAB::Analyzer::EqPho object
  morph => $morph, ##-- DTA::CAB::Analyzer::Morph object
  latin => $latin, ##-- DTA::CAB::Analyzer::Latin object
  msafe => $msafe, ##-- DTA::CAB::Analyzer::MorphSafe object

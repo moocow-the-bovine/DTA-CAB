@@ -273,7 +273,7 @@ sub test_eqrw {
   $ofmt->putDocument($odoc);
   print $ofmt->toString;
 }
-test_eqrw();
+#test_eqrw();
 
 ##==============================================================================
 ## test: parsers
@@ -617,6 +617,54 @@ sub test_binio {
   print STDERR "$0: test_binio() completed\n";
 }
 #test_binio();
+
+##==============================================================================
+## bench: string->label, label->string conversions
+
+sub bench_lab2str {
+  my $labfile = "system/resources/dta-lts.lab";
+  my $abet    = Gfsm::Alphabet->new();
+  $abet->load($labfile) or die("$0: load failed for '$labfile': $!");
+
+  my $asize = $abet->size();
+  my $laba  = $abet->asArray();
+  my $labh  = $abet->asHash();
+  my @csyms = grep {defined($_) && length($_)==1} @$laba;
+  my $labc  = [];
+  @$labc[map {ord($_)} @csyms] = @$labh{@csyms}
+  my $str_in   = decode('latin1','Abänderungsvorschläge');
+  ##--
+  #my $labs_in_len = 32;
+  #my @labs_in  = map {int(rand($asize))} (1..$lablen);
+  ##--
+  my @labs_in  = @$labc[unpack('U0U*',$str_in)];
+
+  ##-- bench: labels->string
+  my ($str_out);
+  my $lab2str_perl = sub { $str_out = join('', map {length($laba->[$_]) > 1 ? "[$laba->[$_]]" : $laba->[$_]} @labs_in); };
+  my $lab2str_gfsm = sub { $str_out = $abet->labels_to_string(\@labs_in,0,1); };
+  cmpthese(-3, {lab2str_perl=>$lab2str_perl, lab2str_gfsm=>$lab2str_gfsm});
+  ##
+  ##                 Rate lab2str_perl lab2str_gfsm
+  ## lab2str_perl 46961/s           --         -11%
+  ## lab2str_gfsm 52971/s          13%           --
+
+
+  ##-- bench: string->labels
+  my ($str_in_l,$labs_out);
+  my $str2lab_perl_c = sub { $labs_out = [@$labc[unpack('U0U*',$str_in)]]; };
+  my $str2lab_perl_h = sub { $labs_out = [@$labh{split(//,$str_in)}]; };
+  my $str2lab_gfsm   = sub { $str_in_l=$str_l; utf8::downgrade($str_in_l); $labs_out = $abet->string_to_labels($str_in_l,0,1); };
+  cmpthese(-3, {str2lab_perl_c=>$str2lab_perl_c, str2lab_perl_h=>$str2lab_perl_h, str2lab_gfsm=>$str2lab_gfsm});
+  ##
+  ##                    Rate   str2lab_gfsm str2lab_perl_h str2lab_perl_c
+  ## str2lab_gfsm    28889/s             --           -59%           -81%
+  ## str2lab_perl_h  70486/s           144%             --           -53%
+  ## str2lab_perl_c 150651/s           421%           114%             --
+  
+  print STDERR "$0: bench_lab2str(): done\n";
+}
+bench_lab2str();
 
 
 ##==============================================================================

@@ -156,6 +156,7 @@ sub loadPerlString {
 		: (substr($str,0,42).'...')));
   my $VAR = $var;
   my $SRC = (defined($args{src}) ? $args{src} : '/dev/null');
+  my $TOP = $DTA::CAB::Unify::TOP;
   delete(@args{qw(var src)});
 
   my $loaded = eval("no strict; $str; $var");

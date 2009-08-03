@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Analyzer::EqPho::FST.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: letter-to-sound analysis via Gfsm automata
+## Description: phonetic equivalence class expansion via Gfsm::Automaton
 
 ##==============================================================================
 ## Package: Analyzer::Morph
@@ -69,8 +69,8 @@ DTA::CAB::Analyzer::EqPho::FST - FST-based phonetic form expander
 
  use DTA::CAB::Analyzer::EqPho::FST;
  
- $lts = DTA::CAB::Analyzer::EqPho::FST->new(%args);
- $lts->analyze($tok);
+ $eqp = DTA::CAB::Analyzer::EqPho::FST->new(%args);
+ $eqp->analyze($tok);
 
 =cut
 
