@@ -36,6 +36,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Output
 ##     analysisClass  => $class, ##-- default: none (ARRAY)
+##     analyzeSrc     => $key,   ##-- source key for analysis (default: 'text')
 ##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
 ##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
 ##
@@ -49,6 +50,9 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
 ##     toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
 ##     bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
+##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
+##     allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
+##                              ##   : useful: /(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -58,12 +62,6 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
 ##     result=>$resultfst, ##-- (child classes only) e.g. result fst
 ##     dict => \%dict,     ##-- exception lexicon / static cache of analyses
-##
-##     ##-- Profiling data
-##     profile => $bool,     ##-- track profiling data? (default=0)
-##     ntoks   => $ntokens,  ##-- #/tokens processed
-##     ndict  = > $ndict,    ##-- #/known tokens (dict-analyzed)
-##     nknown  => $nknown,   ##-- #/known tokens (dict- or fst-analyzed)
 ##    )
 sub new {
   my $that = shift;
@@ -92,22 +90,12 @@ sub new {
 			      tolowerNI      => 0,
 			      toupperI       => 0,
 			      bashWS         => '_',
+			      attInput       => 0,
+			      allowTextRegex => undef, #'(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
-			      ##-- profiling
-			      profile => 0,
-
-			      ntoks   => 0,
-			      ndict   => 0,
-			      nknown  => 0,
-			      #ncache  => 0,
-
-			      ntoksa  => 0,
-			      ndicta  => 0,
-			      nknowna => 0,
-			      #ncachea  => 0,
-
-			      ##-- analysis output
+			      ##-- analysis I/O
 			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
+			      analyzeSrc => 'text',
 			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
 			      wantAnalysisLo => 1,
 
@@ -133,10 +121,13 @@ sub clear {
   @{$aut->{labc}} = qw();
 
   ##-- profiling
-  return $aut->resetProfilingData();
+  #$aut->resetProfilingData();
+
+  return $aut;
 }
 
 ## $aut = $aut->resetProfilingData()
+##  + OBSOLETE
 sub resetProfilingData {
   my $aut = shift;
   $aut->{profile} = 0;
@@ -362,112 +353,108 @@ sub getAnalyzeTokenSub {
 
   ##-- setup common variables
   my $aclass = $aut->{analysisClass};
+  my $asrc   = $aut->{analyzeSrc};
   my $adst   = $aut->{analyzeDst};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
   my $result = $aut->{result};
+  my $lab    = $aut->{lab};
   my $labc   = $aut->{labc};
   my $laba   = $aut->{laba};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
+  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
+
   ##-- ananalysis options
   my @analyzeOptionKeys = (qw(check_symbols auto_connect),
-			   qw(tolower tolowerNI toupperI bashWS),
+			   qw(tolower tolowerNI toupperI bashWS attInput),
 			   qw(wantAnalysisLo max_paths max_weight max_ops),
 			  );
   my $doprofile = $aut->{profile};
 
-  my ($tok, $w,$opts,$uword,@wlabs, $isdict, $analyses);
+  my ($tok,$src, $w,$opts,$uword,$ulword,@wlabs, $isdict, $analyses);
   return sub {
     ($tok,$opts) = @_;
     $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
+
+    ##-- maybe ignore this token
+    return $tok if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex);
 
     ##-- ensure $opts hash exists
     $opts = $opts ? {%$opts} : {}; ##-- copy / create
 
     ##-- get source text ($w), ensure $opts->{src} is defined
-    $w = defined($opts->{src}) ? $opts->{src} : ($opts->{src}=$tok->{text});
+    $src = defined($opts->{src}) ? $opts->{src} : ($opts->{src}=$tok->{$asrc});
 
     ##-- set default options
     $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
+    $analyses = [];
 
-    ##-- normalize word
-    $uword = $w;
-    if    ($opts->{tolower})   { $uword = lc($uword); }
-    elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
-    if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
-    if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
+    ##-- maybe ignore this token
 
-    ##-- check for (normalized) word in dict
-    if ($dict && exists($dict->{$uword})) {
-      $analyses = $dict->{$uword};
-      $isdict   = 1;
-    }
-    elsif ($fst_ok) {
-      ##-- not in dict: fst lookup (if fst is kosher)
+    foreach (ref($src) && UNIVERSAL::isa($src,'ARRAY') ? @$src : $src) {
+      $w = (ref($_) && UNIVERSAL::isa($_,'HASH') ? $_->{hi} : $_); ##-- hack
 
-      ##-- get labels
-      if ($opts->{check_symbols}) {
-	##-- verbosely
-	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
-	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	  $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+      ##-- normalize word
+      $uword = $w;
+      if    ($opts->{tolower})   { $uword = lc($uword); }
+      elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
+      if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
+      if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
+
+      ##-- check for (normalized) word in dict
+      if ($dict && exists($dict->{$uword})) {
+	push(@$analyses, @{$dict->{$uword}});
+      }
+      elsif ($fst_ok) {
+	##-- not in dict: fst lookup (if fst is kosher)
+
+	##-- get labels
+	if ($opts->{attInput}) {
+	  ##-- get labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
+	  $ulword = $uword;
+	  utf8::downgrade($ulword);
+	  @wlabs = (@{$lab->string_to_labels($ulword, $opts->{check_symbols}, 1)}, @eowlab);
 	}
-	@wlabs = grep {defined($_)} @wlabs;
-      } else {
-	##-- quietly
-	@wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
+	elsif ($opts->{check_symbols}) {
+	  ##-- get labels: by character: verbose
+	  @wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
+	  foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
+	    $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+	  }
+	  @wlabs = grep {defined($_)} @wlabs;
+	}
+	else {
+	  ##-- get labels: by character: quiet
+	  @wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
+	}
+
+	##-- fst lookup
+	$aut->{fst}->lookup(\@wlabs, $result);
+	$result->_connect() if ($opts->{auto_connect});
+	#$result->_rmepsilon() if ($opts->{auto_rmeps});
+
+	##-- parse analyses
+	push(@$analyses,
+	     map {
+	       {(
+		 ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
+		 'hi'=> $lab->labels_to_string($_->{hi},0,1),
+		 'w' => $_->{w},
+		)}
+	     } @{$result->paths($Gfsm::LSUpper)}
+	    );
       }
-
-      ##-- fst lookup
-      $aut->{fst}->lookup(\@wlabs, $result);
-      $result->_connect() if ($opts->{auto_connect});
-      #$result->_rmepsilon() if ($opts->{auto_rmeps});
-
-      ##-- parse analyses
-      $analyses =
-	[
-	 map {
-	   {(
-	     'hi'=>join('',
-			map {
-			  (length($laba->[$_]) > 1
-			   ? "[$laba->[$_]]"
-			   : $laba->[$_]
-			   #: ($laba->[$_] =~ m/[\\\[\]\*\+\^\?\!\|\&\:\@\-]/ ##-- escape AT&T regex operators
-			   #   ? "\\$laba->[$_]"
-			   #   : $laba->[$_])
-			  )
-			} @{$_->{hi}}
-		       ),
-	     'w'=>$_->{w},
-	    )}
-	 } @{$result->paths($Gfsm::LSUpper)}
-	];
-    } else {
-      ##-- no dictionary entry and no FST: empty analysis list
-      #$analyses = [];
-      $analyses = undef;
+      #else { ; } ##-- no dictionary entry and no FST: do nothing
     }
 
-    ##-- profiling
-    if ($doprofile) {
-      ++$aut->{ntoks};
-      if (@$analyses) {
-	++$aut->{nknown};
-	++$aut->{ndict} if ($isdict);
-      }
-    }
-
-    ##-- bless analyses
-    $analyses = bless($analyses,$aclass) if (defined($analyses) && defined($aclass));
-
-    ##-- add 'lo' key to analyses ?
-    if ($analyses && $opts->{wantAnalysisLo}) {
-      #$uword =~ s/([\\\[\]\*\+\^\?\!\|\&\:\@\-])/\\$1/g; ##-- escape AT&T-style regexes
-      $_->{lo} = $uword foreach (@$analyses);
+    ##-- wipe or bless analyses
+    if (!@$analyses) {
+      undef($analyses);
+    } elsif (defined($aclass)) {
+      $analyses = bless($analyses,$aclass);
     }
 
     ##-- set token properties: analyses
@@ -511,7 +498,6 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  
  $obj = CLASS_OR_OBJ->new(%args);
  $aut = $aut->clear();
- $aut = $aut->resetProfilingData();
  
  ##========================================================================
  ## Methods: Generic
@@ -595,6 +581,7 @@ Constuctor.
  ##
  ##-- Analysis Output
  analysisClass  => $class, ##-- default: none (ARRAY)
+ analyzeSrc     => $key,   ##-- source key for analysis (default: 'text')
  analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
  wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
  ##
@@ -608,6 +595,8 @@ Constuctor.
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
  toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
  bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
+ attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
+ allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
  ##
  ##-- Analysis objects
  fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -617,24 +606,12 @@ Constuctor.
  labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
  result=>$resultfst, ##-- (child classes only) e.g. result fst
  dict => \%dict,     ##-- exception lexicon / static cache of analyses
- ##
- ##-- Profiling data
- profile => $bool,     ##-- track profiling data? (default=0)
- ntoks   => $ntokens,  ##-- #/tokens processed
- ndict  = > $ndict,    ##-- #/known tokens (dict-analyzed)
- nknown  => $nknown,   ##-- #/known tokens (dict- or fst-analyzed)
 
 =item clear
 
  $aut = $aut->clear();
 
 Clears the object.
-
-=item resetProfilingData
-
- $aut = $aut->resetProfilingData();
-
-Resets profiling data.
 
 =back
 

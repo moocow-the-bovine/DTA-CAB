@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Dict::EqPho.pm
+## File: DTA::CAB::Analyzer::EqPho::Dict.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: dictionary-based equivalence-class expander, phonetic variant
 
-package DTA::CAB::Analyzer::Dict::EqPho;
+package DTA::CAB::Analyzer::EqPho::Dict;
 use DTA::CAB::Analyzer::Dict::EqClass;
 use strict;
 
@@ -46,7 +46,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Dict::EqPho - dictionary-based phonetic form expander
+DTA::CAB::Analyzer::EqPho::Dict - dictionary-based phonetic form expander
 
 =cut
 
@@ -56,12 +56,12 @@ DTA::CAB::Analyzer::Dict::EqPho - dictionary-based phonetic form expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Dict::EqPho;
+ use DTA::CAB::Analyzer::EqPho::Dict;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqp = DTA::CAB::Analyzer::Dict::EqPho->new(%args);
+ $eqp = DTA::CAB::Analyzer::EqPho::Dict->new(%args);
  
 
 =cut
@@ -75,6 +75,7 @@ DTA::CAB::Analyzer::Dict::EqPho - dictionary-based phonetic form expander
 B<WORK IN PROGRESS>
 
 Dictionary-based phonetic equivalence-class expander.
+Composite analyzers should also include an 'lts' phonetic analyzer.
 
 =cut
 
@@ -88,7 +89,7 @@ Dictionary-based phonetic equivalence-class expander.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::Dict::EqPho inherits from
+DTA::CAB::Analyzer::EqPho::Dict inherits from
 L<DTA::CAB::Analyzer::Dict::EqClass>.
 
 =back

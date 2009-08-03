@@ -1,13 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqPho.pm
+## File: DTA::CAB::Analyzer::EqPho::Cascade.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: phonetic equivalence via Gfsm::XL cascade
 
 ##==============================================================================
 ## Package: Analyzer::Rewrite
 ##==============================================================================
-package DTA::CAB::Analyzer::EqPho;
+package DTA::CAB::Analyzer::EqPho::Cascade;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use Carp;
 use strict;
@@ -50,7 +50,7 @@ pod
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqPho - phonetic equivalence class extraction via Gfsm::XL cascade
+DTA::CAB::Analyzer::EqPho::Cascade - phonetic equivalence class extraction via Gfsm::XL cascade
 
 =cut
 
@@ -60,9 +60,9 @@ DTA::CAB::Analyzer::EqPho - phonetic equivalence class extraction via Gfsm::XL c
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqPho;
+ use DTA::CAB::Analyzer::EqPho::Cascade;
  
- $rw = DTA::CAB::Analyzer::EqPho->new(%args);
+ $rw = DTA::CAB::Analyzer::EqPho::Cascade->new(%args);
  
  $rw->analyzeToken($tok);
 
@@ -74,7 +74,7 @@ DTA::CAB::Analyzer::EqPho - phonetic equivalence class extraction via Gfsm::XL c
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::EqPho
+DTA::CAB::Analyzer::EqPho::Cascade
 is a just a simplified wrapper for
 L<DTA::CAB::Analyzer::Automaton::Gfsm::XL|DTA::CAB::Analyzer::Automaton::Gfsm::XL>
 which sets the following default options:
