@@ -362,6 +362,7 @@ sub getAnalyzeTokenSub {
   my $lab    = $aut->{lab};
   my $labc   = $aut->{labc};
   my $laba   = $aut->{laba};
+  my $labenc = $aut->{labenc};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
   my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
@@ -441,7 +442,9 @@ sub getAnalyzeTokenSub {
 	     map {
 	       {(
 		 ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
-		 'hi'=> $lab->labels_to_string($_->{hi},0,1),
+		 'hi'=> (defined($labenc)
+			 ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
+			 : $lab->labels_to_string($_->{hi},0,1)),
 		 'w' => $_->{w},
 		)}
 	     } @{$result->paths($Gfsm::LSUpper)}
