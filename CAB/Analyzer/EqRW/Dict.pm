@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Dict::EqRW.pm
+## File: DTA::CAB::Analyzer::EqRW::Dict.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: dictionary-based equivalence-class expander, rewrite variant
 
-package DTA::CAB::Analyzer::Dict::EqRW;
+package DTA::CAB::Analyzer::EqRW::Dict;
 use DTA::CAB::Analyzer::Dict::EqClass;
 use strict;
 
@@ -46,7 +46,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Dict::EqRW - dictionary-based rewrite-form expander
+DTA::CAB::Analyzer::EqRW::Dict - dictionary-based rewrite-form expander
 
 =cut
 
@@ -56,12 +56,12 @@ DTA::CAB::Analyzer::Dict::EqRW - dictionary-based rewrite-form expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Dict::EqRW;
+ use DTA::CAB::Analyzer::EqRW::Dict;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqrw = DTA::CAB::Analyzer::Dict::EqRW->new(%args);
+ $eqrw = DTA::CAB::Analyzer::EqRW::Dict->new(%args);
  
 
 =cut
@@ -88,7 +88,7 @@ Dictionary-based phonetic equivalence-class expander.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::Dict::EqRW inherits from
+DTA::CAB::Analyzer::EqRW::Dict inherits from
 L<DTA::CAB::Analyzer::Dict::EqClass>.
 
 =back
