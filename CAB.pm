@@ -23,11 +23,15 @@ use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
-use DTA::CAB::Analyzer::Dict::EqRW;      ##-- via dictionary
 
-use DTA::CAB::Analyzer::Dict;
-use DTA::CAB::Analyzer::Dict::EqClass;
-#use DTA::CAB::Analyzer::Dict::Latin;
+use DTA::CAB::Analyzer::EqRW;            ##-- default eqrw-expander
+use DTA::CAB::Analyzer::EqRW::Dict;      ##-- via Dict::EqClass (unused)
+#use DTA::CAB::Analyzer::EqRW::Cascade;   ##-- via Gfsm::XL (unimplemented, unused)
+use DTA::CAB::Analyzer::EqRW::FST;       ##-- via Gfsm::Automaton (default)
+
+use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer (base class)
+use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander
+#use DTA::CAB::Analyzer::Dict::Latin;    ##-- full-form latin lexicon
 
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
@@ -46,7 +50,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.13;
+our $VERSION = 0.14;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
@@ -72,7 +76,10 @@ sub new {
 			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
 			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
-			   eqrw  => DTA::CAB::Analyzer::Dict::EqRW->new(),  ##-- via dictionary
+			   ##
+			   #eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- via FST (requires 'rw')
+			   #eqrw  => DTA::CAB::Analyzer::EqRW::Dict->new(),  ##-- via dictionary
+			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- default (FST)
 
 			   ##-- formatting: XML
 			   #xmlTokenElt => 'token', ##-- token element
@@ -227,15 +234,16 @@ sub getAnalyzeTokenSub {
 
     ##-- analyze: eqpho
     if ($a_eqpho && (!defined($opts->{do_eqpho}) || $opts->{do_eqpho})) {
+      $opts->{src} = defined($tok->{lts}) ? undef : $l;
       $a_eqpho->($tok, $opts);
     }
 
     ##-- analyze: eqrw
     if ($a_eqrw && (!defined($opts->{do_eqrw}) || $opts->{do_eqrw})) {
+      $opts->{src} = defined($tok->{rw}) ? undef : $l;
       $a_eqrw->($tok, $opts);
     }
 
-    #delete(@$opts{qw(src dst)}); ##-- hack
     return $tok;
   };
 }

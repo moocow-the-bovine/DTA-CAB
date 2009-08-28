@@ -393,8 +393,7 @@ sub getAnalyzeTokenSub {
     $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
     $analyses = [];
 
-    ##-- maybe ignore this token
-
+    ##-- loop & analyze (accept FST-style list input)
     foreach (ref($src) && UNIVERSAL::isa($src,'ARRAY') ? @$src : $src) {
       $w = (ref($_) && UNIVERSAL::isa($_,'HASH') ? $_->{hi} : $_); ##-- hack
 
