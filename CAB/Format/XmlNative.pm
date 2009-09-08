@@ -82,6 +82,10 @@ BEGIN {
 ##     rwHiAttr         => $attr,       ##-- default: 'hi'
 ##     rwWeightAttr     => $attr,       ##-- default: 'w'
 ##     ##
+##     mootElt          => $eltName,    ##-- default: 'moot'
+##     mootTagAttr      => $attr,       ##-- default: 'tag'
+##     mootAnalysisElt  => $eltName,    ##-- default: 'a'
+##     ##
 ##     otherElt         => $eltName,    ##-- default: 'a'
 ##     otherNameAttr    => $attr,       ##-- default: 'src'
 ##     otherNameDefault => $val,        ##-- default: ''
@@ -294,6 +298,14 @@ sub parseDocument {
 	}
       }
 
+      ##-- token: moot
+      foreach $anod (@{ $wnod->findnodes("./$fmt->{mootElt}\[last()]") }) {
+	$tok->{moot}{tag} = $anod->getAttribute($fmt->{mootTagAttr});
+	foreach (@{ $anod->findnodes("./$fmt->{mootAnalysisElt}") }) {
+	  push(@{$tok->{moot}{analyses}}, {tag=>$_->getAttribute('tag'), details=>$_->getAttribute('details')});
+	}
+      }
+
       ##-- token: unparsed analyses
       if ($fmt->{otherElt} && $fmt->{otherNameAttr}) {
 	foreach $anod (@{ $wnod->findnodes("./$fmt->{otherElt}") }) {
@@ -450,6 +462,18 @@ sub tokenNode {
 	  $aanod->setAttribute($fmt->{morphWeightAttr},$aa->{w}) if ($fmt->{morphWeightAttr} && defined($aa->{w}));
 	}
       }
+    }
+  }
+
+  ##-- token: moot
+  if ($tok->{moot} && $fmt->{mootElt}) {
+    $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{mootElt}")});
+    $anod = $nod->addNewChild(undef,$fmt->{mootElt});
+    $anod->setAttribute($fmt->{mootTagAttr}, $tok->{moot}{tag});
+    foreach ($tok->{moot}{analyses} ? @{$tok->{moot}{analyses}} : qw()) {
+      $aanod = $anod->addNewChild(undef,$fmt->{mootAnalysisElt});
+      $aanod->setAttribute('tag',$_->{tag}) if (defined($_->{tag}));
+      $aanod->setAttribute('details',$_->{details}) if (defined($_->{details}));
     }
   }
 

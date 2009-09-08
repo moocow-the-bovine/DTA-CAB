@@ -191,6 +191,14 @@ sub parseTTString {
 	  $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
 	  push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
+	elsif ($field =~ m/^\[(moot\/tag)\]\s?(.*)$/) {
+	  ##-- token: field: moot/tag
+	  $tok->{moot}{tag} = $1;
+	}
+	elsif ($field =~ m/^\[(moot\/analysis)\]\s?(\S+)\s(.*)$/) {
+	  ##-- token: field: moot/analysis
+	  push(@{$tok->{moot}{analyses}}, {tag=>$1,details=>$2});
+	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
 	  ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
 	  push(@{$tok->{other}{$1}}, $2);
@@ -307,6 +315,13 @@ sub putToken {
 		 )
 	       } @{$tok->{rw}})
     if ($tok->{rw});
+
+  ##-- moot
+  if ($tok->{moot}) {
+    $out .= "\t[moot/tag] $tok->{moot}{tag}";
+    $out .= join('', map {"\t[moot/analysis] $_->{tag} $_->{details}"} @{$tok->{moot}{analyses}})
+      if ($tok->{moot}{analyses});
+  }
 
   ##-- unparsed fields (pass-through)
   if ($tok->{other}) {

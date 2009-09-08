@@ -161,7 +161,7 @@ sub loadPerlString {
 
   my $loaded = eval("no strict; $str; $var");
   confess((ref($that)||$that), "::loadString(): eval() failed for '$src': ", $@ ? $@ : $!)
-    if ($@ || $! || !defined($loaded));
+    if ($@ || !defined($loaded)); #|| $!
 
   return $that->loadPerlRef($loaded);
 }
