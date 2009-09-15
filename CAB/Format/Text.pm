@@ -165,13 +165,13 @@ sub parseTextString {
       ##-- token: field: rewrite equivalent, optional weight
       push(@{$tok->{eqrw}}, {hi=>$1,w=>$2});
     }
-    elsif ($line =~ m/^\t\+\[(moot\/tag)\]\s?(.*)$/) {
-      ##-- token: field: moot/tag
-      $tok->{moot}{tag} = $1;
+    elsif ($line =~ m/^\t\+\[(.*?moot)\/tag\]\s?(.*)$/) {
+      ##-- token: field: ?moot/tag
+      $tok->{$1}{tag} = $2;
     }
-    elsif ($line =~ m/^\t\+\[(moot\/analysis)\]\s?(\S+)\s(.*)$/) {
-      ##-- token: field: moot/analysis
-      push(@{$tok->{moot}{analyses}}, {tag=>$1,details=>$2});
+    elsif ($line =~ m/^\t\+\[(.*moot)\/analysis\]\s?(\S+)\s(.*)$/) {
+      ##-- token: field: ?moot/analysis
+      push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3});
     }
     elsif ($line =~ m/^\t\+\[([^\]]*)\]\s?(.*)$/) {
       ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
@@ -287,6 +287,13 @@ sub putToken {
     $out .= "\t+[moot/tag] $tok->{moot}{tag}\n";
     $out .= join('', map {"\t+[moot/analysis] $_->{tag} $_->{details}\n"} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
+  }
+
+  ##-- dmoot
+  if ($tok->{dmoot}) {
+    $out .= "\t+[dmoot/tag] $tok->{dmoot}{tag}\n";
+    $out .= join('', map {"\t+[dmoot/analysis] $_->{tag} $_->{details}\n"} @{$tok->{dmoot}{analyses}})
+      if ($tok->{dmoot}{analyses});
   }
 
   ##-- unparsed fields

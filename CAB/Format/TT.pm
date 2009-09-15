@@ -191,13 +191,13 @@ sub parseTTString {
 	  $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
 	  push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
-	elsif ($field =~ m/^\[(moot\/tag)\]\s?(.*)$/) {
+	elsif ($field =~ m/^\[(.*?moot)\/tag\]\s?(.*)$/) {
 	  ##-- token: field: moot/tag
-	  $tok->{moot}{tag} = $1;
+	  $tok->{$1}{tag} = $2;
 	}
-	elsif ($field =~ m/^\[(moot\/analysis)\]\s?(\S+)\s(.*)$/) {
+	elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(.*)$/) {
 	  ##-- token: field: moot/analysis
-	  push(@{$tok->{moot}{analyses}}, {tag=>$1,details=>$2});
+	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3});
 	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
 	  ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
@@ -321,6 +321,13 @@ sub putToken {
     $out .= "\t[moot/tag] $tok->{moot}{tag}";
     $out .= join('', map {"\t[moot/analysis] $_->{tag} $_->{details}"} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
+  }
+
+  ##-- dmoot
+  if ($tok->{dmoot}) {
+    $out .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
+    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} $_->{details}"} @{$tok->{dmoot}{analyses}})
+      if ($tok->{dmoot}{analyses});
   }
 
   ##-- unparsed fields (pass-through)

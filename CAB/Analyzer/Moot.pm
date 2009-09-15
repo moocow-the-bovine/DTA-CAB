@@ -34,7 +34,9 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     hmmargs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
 ##     modelenc       => $enc,   ##-- encoding of model file (default='latin1')
 ##     analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
-##     analyzeTagSrc  => $src,   ##-- source token 'analyses' key (default='morph', undef for none)
+##     analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
+##     analyzeProbFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
+##                               ##   %fnc = ($akey=>
 ##     analyzeDst     => $dst,   ##-- destination key (default='moot')
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##
@@ -57,7 +59,7 @@ sub new {
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
 			       analyzeTextSrc => 'text',
-			       analyzeTagSrc => 'morph',
+			       analyzeTagSrcs => ['morph'],
 			       analyzeDst => 'moot',
 
 			       ##-- analysis objects
@@ -93,6 +95,11 @@ sub hmmOk {
   return defined($_[0]{hmm}) && $_[0]{hmm}{n_tags}>1 && $_[0]{hmm}{lexprobs}->size > 1;
 }
 
+## $class = $moot->hmmClass()
+##  + returns class for $moot->{hmm} object
+##  + default just returns 'moot::HMM'
+sub hmmClass { return 'moot::HMM'; }
+
 ##==============================================================================
 ## Methods: I/O
 ##==============================================================================
@@ -101,14 +108,14 @@ sub hmmOk {
 ## Methods: I/O: Input: all
 
 ## $bool = $moot->ensureLoaded()
-##  + ensures model data is loaded from default files
+##  + ensures model data is loaded from default files (if available)
 sub ensureLoaded {
   my $moot = shift;
   ##-- ensure: hmm
   if ( defined($moot->{modelFile}) && !$moot->hmmOk ) {
     return $moot->loadHMM($moot->{modelFile});
   }
-  return $moot->hmmOk;
+  return 1; ##-- allow empty models
 }
 
 ##--------------------------------------------------------------
@@ -118,9 +125,11 @@ sub ensureLoaded {
 BEGIN { *loadHMM = *loadHmm = \&loadHMM; }
 sub loadHMM {
   my ($moot,$model) = @_;
-  $moot->info("loading HMM model file '$model'");
+  my $hmmClass = $moot->hmmClass;
+  $moot->info("loading HMM model file '$model' using HMM class '$hmmClass'");
   if (!defined($moot->{hmm})) {
-    $moot->{hmm} = moot::HMM->new();
+    $moot->{hmm} = $hmmClass->new()
+      or $moot->logconfess("could not create HMM object of class '$hmmClass': $!");
     @{$moot->{hmm}}{keys(%{$moot->{hmmargs}})} = values(%{$moot->{hmmargs}});
   }
   $moot->{hmm}->load_model($model)
@@ -198,7 +207,7 @@ sub getAnalyzeSentenceSub {
   ##-- setup common variables
   my $aclass = $moot->{analysisClass};
   my $atxt   = $moot->{analyzeTextSrc};
-  my $atags  = $moot->{analyzeTagSrc};
+  my $atag_srcs  = $moot->{analyzeTagSrcs};
   my $adst   = $moot->{analyzeDst};
   my $prune  = $moot->{prune};
   my $hmm    = $moot->{hmm};
@@ -208,10 +217,10 @@ sub getAnalyzeSentenceSub {
   ##-- common moot variables
   my $toktyp_vanilla = $moot::TokTypeVanilla;
 
-  my ($sent,$opts, $i,$src,$tok,$text, $mtok, $ta,$tag,$details, $tmoot,$mtas,$mta);
+  my ($sent,$opts,$atags, $i,$src,$tok,$text, $mtok, $ta,$tag,$details,$cost, $tmoot,$mtas,$mta);
   return sub {
     ($sent,$opts) = @_;
-    $sent = DTA::CAB::Datum::toSentence($sent) if (!UNIVERSAL::isa($_,'DTA::CAB::Sentence'));
+    $sent = DTA::CAB::Datum::toSentence($sent) if (!UNIVERSAL::isa($sent,'DTA::CAB::Sentence'));
 
     ##-- ensure $opts hash exists
     $opts = $opts ? {%$opts} : {}; ##-- copy / create
@@ -233,22 +242,29 @@ sub getAnalyzeSentenceSub {
       $mtok->{text} = encode($modelenc,$text);
 
       ##-- insert analyses
-      if (defined($atags) && ref($tok->{$atags}) && @{$tok->{$atags}}) {
-	foreach $ta (@{$tok->{$atags}}) {
-	  if (UNIVERSAL::isa($ta,'HASH')) {
-	    ($tag,$details)=(@$ta{qw(tag details)});
-	    if (!defined($tag) && defined($ta->{hi})) {
-	      $details = $ta->{hi}.(defined($ta->{w}) ? " <$ta->{w}>" : '');
-	      if ($details =~ /\[\_?([^\s\]]*)/) {
-		$tag = $1;
-	      } else {
-		($tag,$details) = ($details,'');
+      foreach $atags (defined($atag_srcs) ? @$atag_srcs : qw()) {
+	if (defined($atags) && ref($tok->{$atags}) && @{$tok->{$atags}}) {
+	  foreach $ta (@{$tok->{$atags}}) {
+	    if (UNIVERSAL::isa($ta,'HASH')) {
+	      ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
+	      if (!defined($tag) && defined($ta->{hi})) {
+		$details = $ta->{hi};
+		if (defined($ta->{w})) {
+		  $details .= " <$ta->{w}>";
+		  $cost     = $ta->{w};
+		}
+		if ($details =~ /\[\_?([^\s\]]*)/) {
+		  $tag = $1;
+		} else {
+		  ($tag,$details,$cost) = ($details,'',0);
+		}
 	      }
+	    } else {
+	      ($tag,$details,$cost) = ($ta,'',0);
 	    }
-	  } else {
-	    ($tag,$details) = ($ta,'');
+	    $mta = moot::TokenAnalysis->new(encode($modelenc,$tag),encode($modelenc,$details),$cost);
+	    $mtok->insert($mta);
 	  }
-	  $mtok->insert(encode($modelenc,$tag),encode($modelenc,$details));
 	}
       }
     }
@@ -271,9 +287,10 @@ sub getAnalyzeSentenceSub {
       $mtas = $mtok->{analyses};
       foreach (0..($mtas->size-1)) {
 	$mta = $mtas->front;
-	($tag,$details) = map {decode($modelenc,$_)} @$mta{qw(tag details)};
-	next if ($prune && $tag ne $tmoot->{tag});
-	push(@{$tmoot->{analyses}}, { tag=>$tag, details=>$details });
+	($tag,$details,$cost) = ((map {decode($modelenc,$_)} @$mta{qw(tag details)}), $mta->{prob});
+	if (!$prune || $tag eq $tmoot->{tag}) {
+	  push(@{$tmoot->{analyses}}, { tag=>$tag, details=>$details, cost=>$cost });
+	}
 	$mtas->rotate(1);
       }
 
@@ -293,6 +310,7 @@ sub getAnalyzeSentenceSub {
     return $sent;
   };
 }
+
 
 ##==============================================================================
 ## Methods: Output Formatting: OBSOLETE
@@ -394,13 +412,7 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
  $obj = CLASS_OR_OBJ->new(%args);
 
-
-=over 4
-
-
-=item *
-
-object structure:
+Object structure, %args:
 
     (
      ##-- Filename Options
@@ -417,8 +429,6 @@ object structure:
      ##-- Analysis Objects
      hmm            => $hmm,   ##-- a moot::HMM object
     )
-
-=back
 
 =item clear
 
@@ -557,9 +567,8 @@ L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<RPC::XML(3pm)|RPC::XML>,
 L<perl(1)|perl>,
+L<mootutils(1)|mootutils>,
+L<moot(1)|moot>,
 ...
-
-=cut
-
 
 =cut

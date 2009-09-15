@@ -23,6 +23,8 @@ use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+use DTA::CAB::Analyzer::Moot;
+use DTA::CAB::Analyzer::Moot::DynLex;
 
 use DTA::CAB::Analyzer::EqRW;            ##-- default eqrw-expander
 use DTA::CAB::Analyzer::EqRW::Dict;      ##-- via Dict::EqClass (unused)
@@ -80,6 +82,10 @@ sub new {
 			   #eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- via FST (requires 'rw')
 			   #eqrw  => DTA::CAB::Analyzer::EqRW::Dict->new(),  ##-- via dictionary
 			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- default (FST)
+			   ##
+			   ##
+			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
+			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger
 
 			   ##-- formatting: XML
 			   #xmlTokenElt => 'token', ##-- token element
@@ -107,6 +113,8 @@ sub ensureLoaded {
   $rc &&= $cab->{msafe}->ensureLoaded() if ($cab->{msafe});
   $rc &&= $cab->{rw}->ensureLoaded()    if ($cab->{rw});
   $rc &&= $cab->{eqrw}->ensureLoaded()  if ($cab->{eqrw});
+  $rc &&= $cab->{dmoot}->ensureLoaded()  if ($cab->{dmoot});
+  $rc &&= $cab->{moot}->ensureLoaded()  if ($cab->{moot});
   return $rc;
 }
 
@@ -174,7 +182,7 @@ sub getAnalyzeTokenSub {
   return sub {
     ($tok,$uopts) = @_;
     $opts = { %aopts, (defined($uopts) ? %$uopts : qw()) };
-    $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
+    $tok = DTA::CAB::Datum::toToken($tok) if (!ref($tok));
 
     ##-- analyze: transliterator
     if ($a_xlit && (!defined($opts->{do_xlit}) || $opts->{do_xlit})) {
@@ -247,6 +255,60 @@ sub getAnalyzeTokenSub {
     return $tok;
   };
 }
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Sentence
+
+## $coderef = $anl->getAnalyzeSentenceSub()
+##  + guts for $anl->analyzeSentenceSub()
+##  + returned sub is callable as:
+##     $sent = $coderef->($sent,\%opts)
+##  + performs all known & selected sentence-level analyses on $tok
+##  + known \%opts:
+##     do_sentence => $bool, ##-- enable/disable sentence-level analysis (default: enabled)
+##     do_dmoot => $bool,    ##-- enable/disable moot n-gram disambiguator analysis (default: enabled)
+##     do_moot  => $bool,    ##-- enable/disable moot tagger analysis (default: enabled)
+##     ...                   ##-- ... and maybe more
+##
+sub getAnalyzeSentenceSub {
+  my $cab = shift;
+
+  ##-- setup common variables
+  my ($dmoot,$moot) = @$cab{qw(dmoot moot)};
+  my $a_token = $cab->analyzeTokenSub();
+  my $a_dmoot = $dmoot->getAnalyzeSentenceSub() if ($dmoot && $dmoot->canAnalyze);
+  my $a_moot  = $moot->getAnalyzeSentenceSub() if ($moot && $moot->canAnalyze);
+
+  my @optkeys  = map {"do_$_"} qw(dmoot moot sentence);
+  my %aopts = map {$_=>$cab->{$_}} @optkeys;
+
+  my ($sent,$uopts,$opts);
+  return sub {
+    ($sent,$uopts) = @_;
+    $opts = { %aopts, (defined($uopts) ? %$uopts : qw()) };
+    $sent = DTA::CAB::Datum::toSentence($sent) if (!UNIVERSAL::isa($sent,'DTA::CAB::Sentence'));
+
+    ##-- token-level analysis
+    @{$sent->{tokens}} = map {$a_token->($_,$uopts)} @{$sent->{tokens}};
+
+    ##-- maybe ignore sentence-level analysis
+    return $sent if (!$opts->{do_sentence});
+
+    ##-- analyze: dmoot
+    if ($a_dmoot && (!defined($opts->{do_dmoot}) || $opts->{do_dmoot})) {
+      $a_dmoot->($sent,$uopts);
+    }
+
+    ##-- analyze: moot
+    if ($a_moot && (!defined($opts->{do_moot}) || $opts->{do_moot})) {
+      $a_moot->($sent,$uopts);
+    }
+
+    ##-- return
+    return $sent;
+  };
+}
+
 
 ##==============================================================================
 ## Methods: Output Formatting: OBSOLETE
@@ -342,7 +404,9 @@ and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> analysis API.
  latin => $latin, ##-- DTA::CAB::Analyzer::Latin object
  msafe => $msafe, ##-- DTA::CAB::Analyzer::MorphSafe object
  rw    => $rw,    ##-- DTA::CAB::Analyzer::Rewrite object
- eqrw  => $eqrw,  ##--DTA::CAB::Analyzer::Dict::EqRW object
+ eqrw  => $eqrw,  ##-- DTA::CAB::Analyzer::Dict::EqRW object
+ dmoot => $dmoot, ##-- DTA::CAB::Analyzer::Moot::DynLex object
+ moot => $moot,   ##-- DTA::CAB::Analyzer::Moot object
 
 =back
 
@@ -418,6 +482,23 @@ Known \%opts:
  do_rw_morph => $bool, ##-- enable/disable morph/rewrite analysis (default: enabled)
  do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
  do_eqrw     => $bool, ##-- enable/disable rewrite-equivalence-class analysis analysis (default: enabled)
+ ...                   ##-- ... and maybe more
+
+=item getAnalyzeSentenceSub
+
+ $coderef = $anl->getAnalyzeSentenceSub();
+
+Implements L<DTA::CAB::Analyzer::getAnalyzeSentenceSub()|DTA::CAB::Analyzer/item_getAnalyzeSentenceSub>.
+Returned sub is callable as:
+
+ $sent = $coderef->($sent,\%opts)
+
+Performs all defined & selected sentence-level analyses on $sent.
+Known \%opts:
+
+ do_sentence => $bool, ##-- enable/disable sentence-level analysis (default: enabled)
+ do_dmoot => $bool,    ##-- enable/disable moot n-gram disambiguator analysis (default: enabled)
+ do_moot  => $bool,    ##-- enable/disable moot tagger analysis (default: enabled)
  ...                   ##-- ... and maybe more
 
 =back
