@@ -292,7 +292,7 @@ sub getAnalyzeSentenceSub {
     @{$sent->{tokens}} = map {$a_token->($_,$uopts)} @{$sent->{tokens}};
 
     ##-- maybe ignore sentence-level analysis
-    return $sent if (!$opts->{do_sentence});
+    return $sent if (defined($opts->{do_sentence}) && !$opts->{do_sentence});
 
     ##-- analyze: dmoot
     if ($a_dmoot && (!defined($opts->{do_dmoot}) || $opts->{do_dmoot})) {

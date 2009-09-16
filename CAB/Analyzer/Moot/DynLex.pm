@@ -32,18 +32,30 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ##
 ##     ##==== Inherited from Analyzer::Moot
 ##     ##-- Filename Options
-##     modelFile => $filename,  ##-- default: none
+##     hmmFile => $filename,     ##-- default: none (REQUIRED)
 ##
 ##     ##-- Analysis Options
-##     hmmargs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
-##     modelenc       => $enc,   ##-- encoding of model file (default='latin1')
+##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
+##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='latin1')
 ##     analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
 ##     analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
-##     analyzeDst     => $dst,   ##-- destination key (default='dmoot')
+##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
+##                               ##     %fnc = ($akey=>$perlcode_str, ...)
+##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
+##                               ##     'weights' from source-key weights
+##                               ##   + $perlcode_str may use variables:
+##                               ##       $moot    ##-- current Analyzer::Moot object
+##                               ##       $tag     ##-- source analysis tag
+##                               ##       $details ##-- source analysis 'details' "$hi <$w>"
+##                               ##       $cost    ##-- source analysis weight
+##                               ##       $text    ##-- source token text
+##                               ##   + Default just returns $cost (identity function)
+##     analyzeDst     => $dst,   ##-- destination key (default='moot')
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
+##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
 ##
 ##     ##-- Analysis Objects
-##     hmm            => $hmm,   ##-- a moot::DynLexHMM_Boltzmann object
+##     hmm            => $hmm,   ##-- a moot::HMM object
 ##    )
 sub new {
   my $that = shift;
@@ -56,12 +68,13 @@ sub new {
 					     dynlex_base=>2,
 					     dynlex_beta=>1,
 					    },
+			       uniqueAnalyses=>1,
 
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
 			       analyzeTextSrc => 'text',
 			       #analyzeTagSrcs => [qw(eqpho rewrite)],
-			       analyzeTagSrcs => [qw(eqpho)],
+			       analyzeTagSrcs => [qw(text xlit eqpho rewrite)],
 			       analyzeDst => 'dmoot',
 
 			       ##-- analysis objects
