@@ -47,6 +47,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
 ##     analyzeDst     => $dst,   ##-- destination key (default='moot')
+##     analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default=undef(=none))
+##     analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='text')
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
@@ -75,6 +77,8 @@ sub new {
 			       analyzeTagSrcs => ['morph'],
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
+			       analyzeLiteralFlag=>undef,
+			       analyzeLiteralSrc=>'text',
 
 			       ##-- analysis objects
 			       #hmm => undef,
@@ -228,6 +232,8 @@ sub getAnalyzeSentenceSub {
   my $hmm    = $moot->{hmm};
   my $hmmEnc = $moot->{hmmEnc};
   my $requireAnalyses = $moot->{requireAnalyses};
+  my $alitFlag = $moot->{analyzeLiteralFlag};
+  my $alitSrc  = $moot->{analyzeLiteralSrc};
   my $msent  = moot::Sentence->new();
 
   ##-- common variables: moot constants
@@ -271,10 +277,14 @@ sub getAnalyzeSentenceSub {
 
       ##-- parse analyses into %mtah: ( $tag=>[[$details1,$cost1], ...], ... )
       %mtah = qw();
-      foreach $atags (defined($atag_srcs) ? @$atag_srcs : qw()) {
-	next if (!defined($atags) || !defined($tok->{$atags}));
-	foreach $ta ( UNIVERSAL::isa($tok->{$atags},'ARRAY') ? @{$tok->{$atags}} : $tok->{$atags} )
-	  {
+      foreach $atags (
+		      (defined($alitFlag) && $tok->{$alitFlag}
+		       ? $alitSrc
+		       : (defined($atag_srcs) ? @$atag_srcs : qw()))
+		     )
+	{
+	  next if (!defined($atags) || !defined($tok->{$atags}));
+	  foreach $ta ( UNIVERSAL::isa($tok->{$atags},'ARRAY') ? @{$tok->{$atags}} : $tok->{$atags} ) {
 	    $cost=undef;
 	    if (UNIVERSAL::isa($ta,'HASH')) {
 	      ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
@@ -286,8 +296,7 @@ sub getAnalyzeSentenceSub {
 		} else {
 		  $tag = $details;
 		}
-	      }
-	      elsif (defined($tag=$ta->{latin1Text})) {
+	      } elsif (defined($tag=$ta->{latin1Text})) {
 		##-- case 'xlit'
 		$details=''
 	      }
@@ -308,7 +317,8 @@ sub getAnalyzeSentenceSub {
 	      @{$mtah{$tag}[0]} = ($details,$cost);
 	    }
 	  }
-      }
+	}
+      ##--/foreach $atags ...
 
       ##-- sanity check: require analyses?
       if ($requireAnalyses && !scalar(keys(%mtah))) {
