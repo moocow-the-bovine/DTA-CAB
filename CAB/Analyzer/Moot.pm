@@ -258,9 +258,10 @@ sub getAnalyzeSentenceSub {
 
     ##-- ensure $opts hash exists
     $opts = $opts ? {%$opts} : {}; ##-- copy / create
-    
-    $moot->{dynlex_beta} = $opts->{dynlex_beta} if (defined($opts->{dynlex_beta}));
-    $moot->{dynlex_base} = $opts->{dynlex_base} if (defined($opts->{dynlex_base}));
+
+    ##-- debug options
+    $hmm->{dynlex_beta} = $opts->{dynlex_beta} if (defined($opts->{dynlex_beta}));
+    $hmm->{dynlex_base} = $opts->{dynlex_base} if (defined($opts->{dynlex_base}));
 
     ##-- get source text-array ([$w1,...,$wN]), ensure $opts->{src} is defined
     $src = defined($opts->{src}) ? $opts->{src} : $sent->{tokens};
