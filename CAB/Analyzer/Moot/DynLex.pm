@@ -51,6 +51,7 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
 ##     analyzeDst     => $dst,   ##-- destination key (default='moot')
+##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=0)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
 ##
@@ -63,6 +64,10 @@ sub new {
 			       ##-- options (override)
 			       hmmargs   => {
 					     verbose=>$moot::HMMvlWarnings,
+					     newtag_str=>'@NEW',
+					     newtag_f=>0.5,
+					     Ftw_eps =>0.01,
+					     invert_lexp=>1,
 					     hash_ngrams=>1,
 					     relax=>0,
 					     dynlex_base=>2,
@@ -73,9 +78,10 @@ sub new {
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
 			       analyzeTextSrc => 'text',
-			       #analyzeTagSrcs => [qw(eqpho rewrite)],
-			       analyzeTagSrcs => [qw(text xlit eqpho rewrite)],
+			       #analyzeTagSrcs => [qw(eqpho rw)],
+			       analyzeTagSrcs => [qw(text xlit eqpho rw)],
 			       analyzeDst => 'dmoot',
+			       requireAnalyses => 1,
 
 			       ##-- analysis objects
 			       #hmm => undef,

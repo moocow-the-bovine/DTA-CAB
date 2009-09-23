@@ -47,6 +47,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
 ##     analyzeDst     => $dst,   ##-- destination key (default='moot')
+##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
 ##
@@ -73,6 +74,7 @@ sub new {
 			       analyzeTextSrc => 'text',
 			       analyzeTagSrcs => ['morph'],
 			       analyzeCostFuncs => {},
+			       requireAnalyses => 0,
 
 			       ##-- analysis objects
 			       #hmm => undef,
@@ -225,6 +227,7 @@ sub getAnalyzeSentenceSub {
   my $uniqa  = $moot->{uniqueAnalyses};
   my $hmm    = $moot->{hmm};
   my $hmmEnc = $moot->{hmmEnc};
+  my $requireAnalyses = $moot->{requireAnalyses};
   my $msent  = moot::Sentence->new();
 
   ##-- common variables: moot constants
@@ -270,24 +273,23 @@ sub getAnalyzeSentenceSub {
       %mtah = qw();
       foreach $atags (defined($atag_srcs) ? @$atag_srcs : qw()) {
 	next if (!defined($atags) || !defined($tok->{$atags}));
-	foreach $ta (
-		     (!ref($tok->{$atags})
-		      ? $tok->{$atags}
-		      : (UNIVERSAL::isa($tok->{$atags},'ARRAY')
-			 ? @{$tok->{$atags}}
-			 : qw()))
-		    )
+	foreach $ta ( UNIVERSAL::isa($tok->{$atags},'ARRAY') ? @{$tok->{$atags}} : $tok->{$atags} )
 	  {
 	    $cost=undef;
 	    if (UNIVERSAL::isa($ta,'HASH')) {
 	      ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
 	      if (!defined($tag) && defined($ta->{hi})) {
+		##-- case automaton
 		$details = $ta->{hi};
 		if ($details =~ /\[\_?([^\s\]]*)/) {
 		  $tag = $1;
 		} else {
 		  $tag = $details;
 		}
+	      }
+	      elsif (defined($tag=$ta->{latin1Text})) {
+		##-- case 'xlit'
+		$details=''
 	      }
 	      $cost = $ta->{w} if (!defined($cost) && defined($ta->{w}));
 	    } else {
@@ -307,6 +309,13 @@ sub getAnalyzeSentenceSub {
 	    }
 	  }
       }
+
+      ##-- sanity check: require analyses?
+      if ($requireAnalyses && !scalar(keys(%mtah))) {
+	$moot->logwarn("no analyses generated for token text '$text' -- skipping sentence!");
+	return $sent;
+      }
+
       ##-- add parsed analyses to moot::Token $mtok
       while (($tag,$dcs) = each(%mtah)) {
 	$tag = encode($hmmEnc,$tag);
