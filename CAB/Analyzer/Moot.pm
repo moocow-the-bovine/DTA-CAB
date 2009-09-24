@@ -299,6 +299,8 @@ sub getAnalyzeSentenceSub {
 		  $tag = $1;
 		} else {
 		  $tag = $details;
+		  $tag =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape brackets (for DynLex)
+		  $tag =~ s/\\(.)/$1/g;
 		}
 	      } elsif (defined($tag=$ta->{latin1Text})) {
 		##-- case 'xlit'
