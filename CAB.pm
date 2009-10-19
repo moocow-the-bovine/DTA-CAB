@@ -35,6 +35,8 @@ use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer 
 use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander
 #use DTA::CAB::Analyzer::Dict::Latin;    ##-- full-form latin lexicon
 
+use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
+
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 use DTA::CAB::Sentence;
@@ -52,7 +54,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.15;
+our $VERSION = 0.16;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 

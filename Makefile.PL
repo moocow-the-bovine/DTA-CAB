@@ -14,6 +14,8 @@ WriteMakefile
 		    'Gfsm'     => 0.0216,
 		    'Gfsm::XL' => 0.03, ##-- 0.02 works too, but doesn't support binary storage of analyzer configs
 		    'Unicruft' => 0.03,
+		    'moot' => 0.02,
+		    'Lingua::LangId' => 0.01,
 		    ##--
 		    'Encode'=>undef,
 		    'Tie::Cache'=>undef,
