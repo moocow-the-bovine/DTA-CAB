@@ -201,7 +201,7 @@ sub getAnalyzeDocumentSub {
     %$dcsig = qw();
     foreach $s (@{$doc->{body}}) {
       foreach $w (@{$s->{tokens}}) {
-	$wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%w));
+	$wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%$w));
 	$sig_tf->{$wkey}++;
 	$$sig_Nr++;
       }
