@@ -1,13 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::LangId.pm
+## File: DTA::CAB::Analyzer::DocClassify.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: Lingua::LangId::Map wrapper
+## Description: DocClassify::Mapper wrapper
 
-package DTA::CAB::Analyzer::LangId;
+package DTA::CAB::Analyzer::DocClassify;
 use DTA::CAB::Analyzer;
 use DTA::CAB::Datum ':all';
-use Lingua::LangId::Map;
+use DocClassify;
 
 use Encode qw(encode decode);
 use IO::File;
@@ -29,56 +29,56 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##  + object structure:
 ##    (
 ##     ##-- Filename Options
-##     mapFile => $filename,     ##-- default: none (REQUIRED)
+##     mapFile => $filename,     ##-- binary source file for 'map' (default: none) : REQUIRED
 ##
 ##     ##-- Analysis Options
-##     analyzeWhich     => $which, ##-- one of 'token', 'sentence', 'document'; default='document'
-##     analyzeDst       => $dst,   ##-- destination key (default='langid')
+##     analyzeDst       => $dst,   ##-- document destination key (default='classified')
+##     analyzeClearBody => $bool,  ##-- if true, document analysis routine will wipe $doc->{body} (defualt=false)
 ##
 ##     ##-- Analysis Objects
-##     map            => $map,   ##-- a Lingua::LangId::Map object
+##     map            => $map,   ##-- a DocClassify::Mapper object
 ##    )
 sub new {
   my $that = shift;
-  my $lid = $that->SUPER::new(
-			       ##-- filenames
-			       mapFile => undef,
+  my $dc = $that->SUPER::new(
+			      ##-- filenames
+			      mapFile => undef,
 
-			       ##-- options
-			       analyzeWhich => 'document',
-			       analyzeDst   => 'langid',
+			      ##-- options
+			      analyzeDst => 'classified',
+			      analyzeClearBody => 0,
 
-			       ##-- analysis objects
-			       #map => undef,
+			      ##-- analysis objects
+			      #map => undef,
 
-			       ##-- user args
-			       @_
-			      );
-  return $lid;
+			      ##-- user args
+			      @_
+	     );
+  return $dc;
 }
 
-## $lid = $lid->clear()
+## $dc = $dc->clear()
 sub clear {
-  my $lid = shift;
+  my $dc = shift;
 
   ##-- analysis sub(s)
-  $lid->dropClosures();
+  $dc->dropClosures();
 
   ##-- analysis objects
-  delete($lid->{map});
+  delete($dc->{map});
 
-  return $lid;
+  return $dc;
 }
 
 ##==============================================================================
 ## Methods: Generic
 ##==============================================================================
 
-## $bool = $lid->mapOk()
+## $bool = $dc->mapOk()
 ##  + should return false iff map is undefined or "empty"
-##  + default version checks for non-empty 'map' and 'sigs'
+##  + default version checks for non-empty 'map'
 sub mapOk {
-  return defined($_[0]{map}) && %{$_[0]{map}{sigs}};
+  return defined($_[0]{map});
 }
 
 ##==============================================================================
@@ -88,13 +88,13 @@ sub mapOk {
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: all
 
-## $bool = $lid->ensureLoaded()
+## $bool = $dc->ensureLoaded()
 ##  + ensures model data is loaded from default files (if available)
 sub ensureLoaded {
-  my $lid = shift;
+  my $dc = shift;
   ##-- ensure: map
-  if ( defined($lid->{mapFile}) && !$lid->mapOk ) {
-    return $lid->loadMap($lid->{mapFile});
+  if ( defined($dc->{mapFile}) && !$dc->mapOk ) {
+    return $dc->loadMap($dc->{mapFile});
   }
   return 1; ##-- allow empty models
 }
@@ -102,18 +102,15 @@ sub ensureLoaded {
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: Map
 
-## $lid = $lid->loadMap($map_file)
+## $dc = $dc->loadMap($map_file)
 sub loadMap {
-  my ($lid,$mapfile) = @_;
-  $lid->info("loading map file '$mapfile'");
-  if (!defined($lid->{map})) {
-    $lid->{map} = Lingua::LangId::Map->new()
-      or $lid->logconfess("could not create map object: $!");
-  }
-  $lid->{map}->loadBinFile($mapfile)
-    or $lid->logconfess("loadMap(): load failed for '$mapfile': $!");
-  $lid->dropClosures();
-  return $lid;
+  my ($dc,$mapfile) = @_;
+  $dc->info("loading map file '$mapfile'");
+  $dc->{map} = 'DocClassify::Mapper' if (!defined($dc->{map}));
+  $dc->{map} = $dc->{map}->loadFile($mapfile)
+    or $dc->logconfess("loadFile(): load failed for '$mapfile': $!");
+  $dc->dropClosures();
+  return $dc;
 }
 
 ##==============================================================================
@@ -156,32 +153,13 @@ sub canAnalyze {
 }
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Generic
-
-## $thingy = $lid->analyzeThingy($thingy, \$str, \%opts)
-sub analyzeThingy {
-  my ($lid,$thingy,$ref,$opts) = @_;
-  $thingy->{$lid->{analyzeDst}} = $lid->{map}->applyString($ref);
-  return $thingy;
-}
-
-##------------------------------------------------------------------------
 ## Methods: Analysis: Token
 
 ## $coderef = $anl->getAnalyzeTokenSub()
 ##  + returned sub is callable as:
 ##     $tok = $coderef->($tok,\%opts)
-##  + only used if $map->{analyzeWhich} = 'token'
-sub getAnalyzeTokenSub {
-  my $lid = shift;
-  return sub { $_[0] } if ($lid->{analyzeWhich} !~ /^tok/);
-  my ($tok,$str);
-  return sub {
-    $tok = toToken(shift);
-    $str = $tok->{text};
-    return $lid->analyzeThingy($tok,\$str,@_);
-  };
-}
+##  + dummy implementation, does nothing
+sub getAnalyzeTokenSub { return sub { $_[0] }; }
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Sentence
@@ -190,17 +168,8 @@ sub getAnalyzeTokenSub {
 ##  + guts for $anl->analyzeSentenceSub()
 ##  + returned sub is callable as:
 ##     $sent = $coderef->($sent,\%opts)
-##  + only used if $map->{analyzeWhich} = 'sentence'
-sub getAnalyzeSentenceSub {
-  my $lid = shift;
-  return $lid->SUPER::getAnalyzeSentenceSub(@_) if ($lid->{analyzeWhich} !~ /^sent/);
-  my ($sent,$str);
-  return sub {
-    $sent = toSentence(shift);
-    $str = join(' ', map {toToken($_)->{text}} @{$sent->{tokens}});
-    return $lid->analyzeThingy($sent,\$str,@_);
-  };
-}
+##  + dummy implementation, does nothing
+sub getAnalyzeSentenceSub { return sub { $_[0] }; }
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Document
@@ -209,22 +178,49 @@ sub getAnalyzeSentenceSub {
 ##  + guts for $anl->analyzeDocumentSub()
 ##  + returned sub is callable as:
 ##     $doc = $coderef->($doc,\%opts)
-##  + only used if $map->{analyzeWhich} = 'document'
 sub getAnalyzeDocumentSub {
-  my $lid = shift;
-  return $lid->SUPER::getAnalyzeDocumentSub(@_) if ($lid->{analyzeWhich} !~ /^doc/);
-  my ($doc,$str);
+  my $dc = shift;
+
+  ##-- vars
+  my $adst = $dc->{analyzeDst};
+  my $aclear = $dc->{analyzeClearBody};
+
+  my $map = $dc->{map};
+  my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<?xml?>\n<dummy src=\"".ref($dc)."\" obj=\"$dc\"/>\n");
+  my $dccats = $dcdoc->{cats} = [];
+  my $dcsig = $dcdoc->{sig} = DocClassify::Signature->new();
+  my $sig_tf = $dcsig->{tf};
+  my $sig_Nr = \$dcsig->{N};
+
+  my ($doc,$opts, $s,$w, $wkey);
   return sub {
-    $doc = toDocument(shift);
-    $str = join(' ', map {toToken($_)->{text}} map {@{toSentence($_)->{tokens} }} @{$doc->{body}});
-    return $lid->analyzeThingy($doc,\$str,@_);
+    ($doc,$opts) = @_;
+    $doc = toDocument($doc);
+
+    ##-- populate signature from non-refs in tokens
+    %$dcsig = qw();
+    foreach $s (@{$doc->{body}}) {
+      foreach $w (@{$s->{tokens}}) {
+	$wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%w));
+	$sig_tf->{$wkey}++;
+	$$sig_Nr++;
+      }
+    }
+
+    ##-- map & annotate
+    $map->mapDocument($dcdoc);
+    $doc->{$adst} = [ $dcdoc->cats() ];
+    @{$doc->{body}} = qw() if ($aclear);
+
+    ##-- cleanup
+    @{$doc->{cats}} = qw();
+    $dcsig->clear();
+
+    ##-- return
+    return $doc;
   };
 }
 
-
-##==============================================================================
-## Methods: Output Formatting: OBSOLETE
-##==============================================================================
 
 1; ##-- be happy
 
