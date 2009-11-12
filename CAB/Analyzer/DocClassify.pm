@@ -186,9 +186,8 @@ sub getAnalyzeDocumentSub {
   my $aclear = $dc->{analyzeClearBody};
 
   my $map = $dc->{map};
-  my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<?xml?>\n<dummy src=\"$dc\"/>\n",label=>(ref($dc)." dummy document"));
-  my $dccats = $dcdoc->{cats} = [];
-  my $dcsig = $dcdoc->{sig} = DocClassify::Signature->new();
+  my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<doc type=\"dummy\" src=\"$dc\"/>\n",label=>(ref($dc)." dummy document"));
+  my $dcsig  = DocClassify::Signature->new();
   my $sig_tf = $dcsig->{tf};
   my $sig_Nr = \$dcsig->{N};
 
@@ -198,7 +197,8 @@ sub getAnalyzeDocumentSub {
     $doc = toDocument($doc);
 
     ##-- populate signature from non-refs in tokens
-    %$dcsig = qw();
+    %$sig_tf = qw();
+    $$sig_Nr = 0;
     foreach $s (@{$doc->{body}}) {
       foreach $w (@{$s->{tokens}}) {
 	$wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%$w));
@@ -208,12 +208,14 @@ sub getAnalyzeDocumentSub {
     }
 
     ##-- map & annotate
+    $dcdoc->{sig} = $dcsig;
     $map->mapDocument($dcdoc);
     $doc->{$adst} = [ $dcdoc->cats() ];
     @{$doc->{body}} = qw() if ($aclear);
 
     ##-- cleanup
-    @{$doc->{cats}} = qw();
+    @{$dcdoc->{cats}} = qw();
+    $dcdoc->clearCache();
     $dcsig->clear();
 
     ##-- return

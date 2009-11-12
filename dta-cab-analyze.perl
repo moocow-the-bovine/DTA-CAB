@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use lib qw(.);
+use lib '.', 'MUDL';
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
 use DTA::CAB::Datum ':all';
