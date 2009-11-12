@@ -33,7 +33,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Options
 ##     analyzeDst       => $dst,   ##-- document destination key (default='classified')
-##     analyzeClearBody => $bool,  ##-- if true, document analysis routine will wipe $doc->{body} (defualt=false)
+##     analyzeClearBody => $bool,  ##-- if true, document analysis routine will wipe $doc->{body} (default=false)
 ##
 ##     ##-- Analysis Objects
 ##     map            => $map,   ##-- a DocClassify::Mapper object

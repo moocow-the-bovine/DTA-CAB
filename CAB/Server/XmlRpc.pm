@@ -196,7 +196,7 @@ our @ISA = ('RPC::XML::Procedure','DTA::CAB::Logger');
 
 ## $rv = $proc->call($XML_RPC_SERVER, @PARAMLIST)
 sub call {
-  $_[0]->debug("$_[0]{name}(): client=$_[1]{peerhost}"); #:$_[1]{peerport}
+  $_[0]->debug("$_[0]{name}(): client=".($_[1]{peerhost}||'(unavailable)').")"); #:$_[1]{peerport}
   if (@_ > 3) {
     return $_[0]->SUPER::call(@_[1..($#_-1)],
 			      bless({
