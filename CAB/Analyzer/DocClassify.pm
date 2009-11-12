@@ -186,7 +186,7 @@ sub getAnalyzeDocumentSub {
   my $aclear = $dc->{analyzeClearBody};
 
   my $map = $dc->{map};
-  my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<?xml?>\n<dummy src=\"".ref($dc)."\" obj=\"$dc\"/>\n");
+  my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<?xml?>\n<dummy src=\"$dc\"/>\n",label=>(ref($dc)." dummy document"));
   my $dccats = $dcdoc->{cats} = [];
   my $dcsig = $dcdoc->{sig} = DocClassify::Signature->new();
   my $sig_tf = $dcsig->{tf};
