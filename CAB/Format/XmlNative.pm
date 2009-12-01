@@ -37,6 +37,9 @@ BEGIN {
 ##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##
+##     ##-- common: safety
+##     safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
+##
 ##     ##-- common: XML element & attribute names
 ##     documentElt      => $eltName,    ##-- default: 'doc'
 ##     multidocElt      => $eltName,    ##-- default: 'corpus'
@@ -96,13 +99,16 @@ BEGIN {
 sub new {
   my $that = shift;
   my $fmt = $that->SUPER::new(
-			   ##-- input
+			      ##-- input
 			      xprs => undef,
 			      xdoc => undef,
 
 			      ##-- output
 			      encoding => 'UTF-8',
 			      level => 0,
+
+			      ##-- common: safety
+			      safe => 1,
 
 			      ##-- common: XML names
 			      documentElt => 'doc',
@@ -150,6 +156,10 @@ sub new {
 			      rwHiAttr      => 'hi',
 			      rwWeightAttr  => 'w',
 			      ##
+			      mootElt          => 'moot',
+			      mootTagAttr      => 'tag',
+			      mootAnalysisElt  => 'a',
+			      ##
 			      otherElt => 'a',
 			      otherNameAttr => 'src',
 			      otherNameDefault => '',
@@ -187,12 +197,12 @@ sub new {
 
 ## $doc = $fmt->parseDocument()
 ##  + parses buffered XML::LibXML::Document
-##  + extra %$doc keys parsed:
+##  + extra %$doc keys parsed (only if !$fmt->{safe})
 ##    _xmldoc => $doc,              ##-- source XML::LibXML::Document
 ##    _xmlnod => $node,             ##-- source XML::LibXML::Element
-##  + extra %$sentence keys parsed:
+##  + extra %$sentence keys parsed (only if !$fmt->{safe})
 ##    _xmlnod  => $node,            ##-- source XML::LibXML::Element
-##  + extra %$token keys parsed:
+##  + extra %$token keys parsed (only if !$fmt->{safe})
 ##    _xmlnod => $node,             ##-- source XML::LibXML::Element
 sub parseDocument {
   my $fmt = shift;
@@ -202,7 +212,8 @@ sub parseDocument {
   }
   my $root = $fmt->{xdoc}->documentElement;
   my $sents = [];
-  my $doc   = bless({body=>$sents, _xmldoc=>$fmt->{xdoc}, _xmlnod=>$root, },'DTA::CAB::Document');
+  my $doc   = bless({body=>$sents},'DTA::CAB::Document');
+  @$doc{qw(_xmldoc _xmlnod)} = ($fmt->{xdoc},$root) if (!$fmt->{safe});
 
   ##-- common variables
   my ($snod,$s,$stoks, $wnod,$tok, $anod,$a, $rwnod,$rw);
@@ -212,14 +223,16 @@ sub parseDocument {
 
   ##-- loop: sentences
   foreach $snod (@{ $root->findnodes(".//$fmt->{sentenceElt}") }) {
-    push(@$sents, $s=bless({tokens=>($stoks=[]), _xmlnod=>$snod},'DTA::CAB::Sentence'));
+    push(@$sents, $s=bless({tokens=>($stoks=[])},'DTA::CAB::Sentence'));
+    $s->{_xmlnod} = $snod if (!$fmt->{safe});
 
     ##-- sentence attributes: xmlid
     $s->{xmlid} = $root->getAttribute($fmt->{sentIdAttr}) if ($fmt->{sentIdAttr});
 
     ##-- loop: sentence/tokens
     foreach $wnod (@{ $snod->findnodes("./$fmt->{tokenElt}") }) {
-      push(@$stoks, $tok=bless({ _xmlnod=>$wnod },'DTA::CAB::Token'));
+      push(@$stoks, $tok=bless({},'DTA::CAB::Token'));
+      $tok->{_xmlnod} = $wnod if (!$fmt->{safe});
 
       ##-- token: text
       $tok->{text} = $wnod->getAttribute($fmt->{tokenTextAttr});
@@ -299,9 +312,9 @@ sub parseDocument {
       }
 
       ##-- token: moot
-      foreach $anod (@{ $wnod->findnodes("./$fmt->{mootElt}\[last()]") }) {
-	$tok->{moot}{tag} = $anod->getAttribute($fmt->{mootTagAttr});
-	foreach (@{ $anod->findnodes("./$fmt->{mootAnalysisElt}") }) {
+      foreach $anod ($fmt->{mootElt} ? @{ $wnod->findnodes("./$fmt->{mootElt}\[last()]") } : qw()) {
+	$tok->{moot}{tag} = $anod->getAttribute($fmt->{mootTagAttr}) if ($fmt->{mootTagAttr});
+	foreach ($fmt->{mootAnalysisElt} ? @{ $anod->findnodes("./$fmt->{mootAnalysisElt}") } : qw()) {
 	  push(@{$tok->{moot}{analyses}}, {tag=>$_->getAttribute('tag'), details=>$_->getAttribute('details')});
 	}
       }
@@ -330,7 +343,7 @@ sub parseDocument {
 
 ## $xmlnod = $fmt->tokenNode($tok)
 ##  + returns formatted token $tok as an XML node
-##  + if $tok has a key '_xmlnod', that node is modified in-place!
+##  + if $tok has a key '_xmlnod' (and !$fmt->{safe}), that node is modified in-place!
 our (%ignoreOtherNames);
 BEGIN {
   our %ignoreOtherNames = (xmlid=>undef, chars=>undef);
@@ -341,7 +354,7 @@ sub tokenNode {
   $tok = toToken($tok);
 
   ##-- token: node
-  my $nod = $tok->{_xmlnod} || XML::LibXML::Element->new($fmt->{tokenElt});
+  my $nod = ($fmt->{safe} ? undef : $tok->{_xmlnod}) || XML::LibXML::Element->new($fmt->{tokenElt});
 
   ##-- common variables
   my ($anod, $aa,$aanod, $rwnod,$rwanod,$rwa);
@@ -495,15 +508,15 @@ sub tokenNode {
 }
 
 ## $xmlnod = $fmt->sentenceNode($sent)
-##  + uses $sent->{_xmlnod} if present
+##  + uses $sent->{_xmlnod} if present && $fmt->{safe}
 sub sentenceNode {
   my ($fmt,$sent) = @_;
   $sent = toSentence($sent);
 
-  my $snod   = $sent->{_xmlnod} || XML::LibXML::Element->new($fmt->{sentenceElt});
+  my $snod   = ($fmt->{safe} ? undef : $sent->{_xmlnod}) || XML::LibXML::Element->new($fmt->{sentenceElt});
   my $sowner = $snod->getOwner;
   foreach (@{$sent->{tokens}}) {
-    if ($_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($sowner)) {
+    if (!$fmt->{safe} && $_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($sowner)) {
       ##-- in-place
       $fmt->tokenNode($_);
     } else {
@@ -520,15 +533,15 @@ sub sentenceNode {
 }
 
 ## $xmlnod = $fmt->documentNode($doc)
-##  + uses $doc->{_xmlnod} if present
+##  + uses $doc->{_xmlnod} if present && $fmt->{safe}
 sub documentNode {
   my ($fmt,$doc) = @_;
   $doc = toDocument($doc);
 
-  my $docnod   = $doc->{_xmlnod} || XML::LibXML::Element->new($fmt->{documentElt});
+  my $docnod   = ($fmt->{safe} ? undef : $doc->{_xmlnod}) || XML::LibXML::Element->new($fmt->{documentElt});
   my $docowner = $docnod->getOwner;
   foreach (@{$doc->{body}}) {
-    if ($_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($docowner)) {
+    if (!$fmt->{safe} && $_->{_xmlnod} && $_->{_xmlnod}->getOwner->isSameNode($docowner)) {
       ##-- in-place
       $fmt->sentenceNode($_);
     } else {
@@ -595,7 +608,7 @@ sub putDocument {
   my $docnod = $fmt->documentNode($doc); ##-- respects in-place processing
   my ($xdoc,$root);
   if (!defined($xdoc=$fmt->{xdoc}) || !defined($root=$fmt->{xdoc}->documentElement)) {
-    if (defined($doc->{_xmldoc})) {
+    if (!$fmt->{safe} && defined($doc->{_xmldoc})) {
       ##-- in-place on document
       $xdoc = $fmt->{xdoc} = $doc->{_xmldoc};
     } else {
@@ -734,6 +747,9 @@ Constructor.
  ##-- output
  encoding => $encoding,           ##-- default: UTF-8; applies to output only!
  level => $level,                 ##-- output formatting level (default=0)
+ ##
+ ##-- common: safety
+ safe => $bool,                   ##-- if true (default), _xml* keys will not be generated or honored
  ##
  ##-- common: XML element & attribute names
  documentElt      => $eltName,    ##-- default: 'doc'
