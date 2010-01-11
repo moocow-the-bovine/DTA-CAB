@@ -128,6 +128,7 @@ sub getAnalyzeTokenSub {
 
     ##-- output
     $tok->{$akey} = $safe ? 1 : 0;
+    return $tok;
   };
 }
 
