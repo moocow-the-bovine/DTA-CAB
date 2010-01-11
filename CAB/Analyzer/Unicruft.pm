@@ -110,8 +110,53 @@ sub getAnalyzeTokenSub {
 }
 
 ##==============================================================================
-## Methods: Output Formatting --> OBSOLETE !
+## Methods: Analysis: v1.x
 ##==============================================================================
+
+## $doc = $xlit->analyzeTypes($doc,\%opts)
+##  + perform type-wise analysis of all (text) types in $doc->{types}
+##  + sets (for $key=$anl->{analysisKey}):
+##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
+##    with:
+##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
+##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
+##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
+sub analyzeTypes {
+  my ($xlit,$doc,$opts) = @_;
+  my $akey = $xlit->{analysisKey};
+
+  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
+  foreach $tok (values(%{$doc->{types}})) {
+    $w   = $tok->{text};
+    $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
+
+    ##-- construct latin-1/de approximation
+    $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
+    if (
+	#$uc !~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
+	$uc  =~ m(^[\x{00}-\x{ff}]*$) #)
+       )
+      {
+	$isLatin1 = $isLatinExt = 1;
+      }
+    elsif ($uc =~ m(^[\p{Latin}]*$))
+      {
+	$isLatin1 = 0;
+	$isLatinExt = 1;
+      }
+    else
+      {
+	$isLatin1 = $isLatinExt = 0;
+      }
+
+    ##-- return
+    #return [ $l, $isLatin1, $isLatinExt ];
+    #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
+    $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
+  }
+
+  return $doc;
+}
 
 
 1; ##-- be happy

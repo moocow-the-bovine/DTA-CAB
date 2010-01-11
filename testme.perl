@@ -138,6 +138,66 @@ sub test_all_explicit {
 #test_all_explicit;
 
 ##==============================================================================
+## test: v1.x
+
+sub test_analyze_v1 {
+  our $xlit  = DTA::CAB::Analyzer::Unicruft->new();
+  our $rcdir = 'system/resources';
+  our $lts = DTA::CAB::Analyzer::LTS->new(fstFile=>"$rcdir/dta-lts.gfst",labFile=>"$rcdir/dta-lts.lab");
+  #our $morph = DTA::CAB::Analyzer::Morph->new(fstFile=>"$rcdir/dta-morph-tagh.gfst", labFile=>"$rcdir/dta-morph-tagh.lab");
+  #our $rw = DTA::CAB::Analyzer::Rewrite->new(fstFile=>"$rcdir/dta-rw.gfsc", labFile=>"$rcdir/dta-rw.lab",analysisKey=>'rw',max_paths=>1);
+
+  $lts->ensureLoaded();
+  #$morph->ensureLoaded();
+  #$rw->ensureLoaded();
+
+  our $w = 'eyne';
+  our $doc = toDocument([toSentence([toToken($w)])]);
+  our $tok = toToken($w);
+
+  $tok = $xlit->analyzeToken($tok);
+  $tok = $lts->analyzeToken($tok);
+
+  $doc = $xlit->analyzeDocument1($doc);
+  $doc = $lts->analyzeDocument1($doc);
+
+  our $fmt = DTA::CAB::Format::TT->new;
+  print
+    ("$0\[v0]:\n", $fmt->flush->putToken($tok)->toString,
+     "$0\[v1]:\n", $fmt->flush->putDocument($doc)->toString,
+    );
+}
+#test_analyze_v1;
+
+sub test_chain_v1 {
+  our $xlit  = DTA::CAB::Analyzer::Unicruft->new();
+  our $rcdir = 'system/resources';
+  our $lts = DTA::CAB::Analyzer::LTS->new(fstFile=>"$rcdir/dta-lts.gfst",labFile=>"$rcdir/dta-lts.lab");
+  #our $morph = DTA::CAB::Analyzer::Morph->new(fstFile=>"$rcdir/dta-morph-tagh.gfst", labFile=>"$rcdir/dta-morph-tagh.lab");
+  #our $rw = DTA::CAB::Analyzer::Rewrite->new(fstFile=>"$rcdir/dta-rw.gfsc", labFile=>"$rcdir/dta-rw.lab",analysisKey=>'rw',max_paths=>1);
+
+  #$xlit->ensureLoaded();
+  #$lts->ensureLoaded();
+  #$morph->ensureLoaded();
+  #$rw->ensureLoaded();
+
+  our $ach = DTA::CAB::Analyzer::Chain->new(chain=>[$xlit,$lts]);
+  $ach->ensureLoaded();
+
+  our $w = 'eyne';
+  our $tok0 = $ach->analyzeToken($w);
+  our $tok1 = $ach->analyzeToken1($w);
+
+  our $fmt = DTA::CAB::Format::TT->new;
+  print
+    ("$0\[v0]:\n", $fmt->flush->putToken($tok0)->toString,
+     "$0\[v1]:\n", $fmt->flush->putToken($tok1)->toString,
+    );
+}
+test_chain_v1;
+
+
+##==============================================================================
 ## test: all: wrapped
 
 sub test_cab {
@@ -631,7 +691,7 @@ sub bench_lab2str {
   my $labh  = $abet->asHash();
   my @csyms = grep {defined($_) && length($_)==1} @$laba;
   my $labc  = [];
-  @$labc[map {ord($_)} @csyms] = @$labh{@csyms}
+  @$labc[map {ord($_)} @csyms] = @$labh{@csyms};
   my $str_in   = decode('latin1','Abänderungsvorschläge');
   ##--
   #my $labs_in_len = 32;
@@ -651,7 +711,7 @@ sub bench_lab2str {
 
 
   ##-- bench: string->labels
-  my ($str_in_l,$labs_out);
+  my ($str_in_l,$labs_out,$str_l);
   my $str2lab_perl_c = sub { $labs_out = [@$labc[unpack('U0U*',$str_in)]]; };
   my $str2lab_perl_h = sub { $labs_out = [@$labh{split(//,$str_in)}]; };
   my $str2lab_gfsm   = sub { $str_in_l=$str_l; utf8::downgrade($str_in_l); $labs_out = $abet->string_to_labels($str_in_l,0,1); };
