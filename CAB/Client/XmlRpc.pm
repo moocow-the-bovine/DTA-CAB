@@ -131,7 +131,7 @@ sub request {
 
 
 ##==============================================================================
-## Methods: Generic Client API: Queries
+## Methods: Generic Client API: Queries: v0.x
 ##==============================================================================
 
 ## $req = $cli->newRequest($methodName, @args)
@@ -149,7 +149,8 @@ sub newRequest {
 ## $tok = $cli->analyzeToken($analyzer, $tok, \%opts)
 sub analyzeToken {
   my ($cli,$aname,$tok,$opts) = @_;
-  my $rsp = $cli->request($cli->newRequest("$aname.analyzeToken",
+  my $suffix = $opts && $opts->{methodSuffix} ? $opts->{methodSuffix} : ''; ##-- e.g. methodSuffix=>1" for v1.x interface
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeToken${suffix}",
 					   $tok,
 					   (defined($opts) ? $opts : qw())
 					  ));
@@ -159,7 +160,8 @@ sub analyzeToken {
 ## $sent = $cli->analyzeSentence($analyzer, $sent, \%opts)
 sub analyzeSentence {
   my ($cli,$aname,$sent,$opts) = @_;
-  my $rsp = $cli->request($cli->newRequest("$aname.analyzeSentence",
+  my $suffix = $opts && $opts->{methodSuffix} ? $opts->{methodSuffix} : '';  ##-- e.g. methodSuffix=>1" for v1.x interface
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeSentence${suffix}",
 					   $sent,
 					   (defined($opts) ? $opts : qw())
 					  ));
@@ -169,7 +171,8 @@ sub analyzeSentence {
 ## $doc = $cli->analyzeDocument($analyzer, $doc, \%opts)
 sub analyzeDocument {
   my ($cli,$aname,$doc,$opts) = @_;
-  my $rsp = $cli->request($cli->newRequest("$aname.analyzeDocument",
+  my $suffix = $opts && $opts->{methodSuffix} ? $opts->{methodSuffix} : ''; ##-- e.g. methodSuffix=>1" for v1.x interface
+  my $rsp = $cli->request($cli->newRequest("$aname.analyzeDocument${suffix}",
 					   $doc,
 					   (defined($opts) ? $opts : qw())
 					  ));
@@ -187,7 +190,6 @@ sub analyzeData {
 			 );
   return ref($rsp) && !$rsp->is_fault ? $rsp->value : $rsp;
 }
-
 
 1; ##-- be happy
 

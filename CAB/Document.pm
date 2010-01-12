@@ -23,6 +23,7 @@ our @ISA = qw(DTA::CAB::Datum);
 ##  + object structure: HASH
 ##    {
 ##     body => \@sentences,  ##-- DTA::CAB::Sentence objects
+##     types => \%text2tok,  ##-- maps token text type-wise to Token objects (optional)
 ##     ##
 ##     ##-- dta-tokwrap attributes
 ##     xmlbase => $base,
@@ -44,6 +45,50 @@ sub nTokens {
   $ntoks += scalar(@{$_->{tokens}}) foreach (@{$_[0]->{body}});
   return $ntoks;
 }
+
+## \%types = $doc->types()
+##  + get hash \%types = ($typeText => $typeToken, ...) mapping token text to
+##    basic token objects (with only 'text' key defined)
+##  + just returns cached $doc->{types} if defined
+##  + otherwise computes & caches in $doc->{types}
+sub types {
+  return $_[0]{types} if ($_[0]{types});
+  return $_[0]->getTypes();
+}
+## \%types = $doc->getTypes()
+##  + (re-)computes hash \%types = ($typeText => $typeToken, ...) mapping token text to
+##    basic token objects (with only 'text' key defined)
+sub getTypes {
+  my $doc = shift;
+  my $types = $doc->{types} = {};
+  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    next if (exists($types->{$_->{text}}));
+    $types->{$_->{text}} = bless({text=>$_->{text}},'DTA::CAB::Token');
+  }
+  return $types;
+}
+
+## $doc = $doc->expandTypes()
+##  + expands $doc->{types} map into tokens
+sub expandTypes {
+  my $doc = shift;
+  return $doc if (!$doc->{types}); ##-- no {types} key
+  my $types = $doc->{types};
+  my ($typ);
+  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    $typ = $types->{$_->{text}};
+    @$_{keys %$typ} = values %$typ;
+  }
+  return $doc;
+}
+
+## $doc = $doc->clearTypes()
+##  + clears {types} cache
+sub clearTypes {
+  delete $_[0]{types};
+  return $_[0];
+}
+
 
 1; ##-- be happy
 

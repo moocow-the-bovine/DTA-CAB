@@ -27,10 +27,8 @@ our @ISA = qw(DTA::CAB::Persistent);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure:
 ##    (
-##     ##-- Low-level: analysis closures
-##     _analyzeToken    => $coderef, ##-- token-analysis routine
-##     _analyzeSentence => $coderef, ##-- sentence-analysis routine
-##     _analyzeDocument => $coderef, ##-- document-analysis routine
+##     label => $label,    ##-- analyzer label (default: from class name)
+##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method)
 ##    )
 sub new {
   my $that = shift;
@@ -39,6 +37,7 @@ sub new {
 		   @_
 		  }, ref($that)||$that);
   $anl->initialize();
+  $anl->{label} = $anl->defaultLabel() if (!defined($anl->{label})); ##-- get label
   return $anl;
 }
 
@@ -47,9 +46,25 @@ sub new {
 sub initialize { return; }
 
 ## undef = $anl->dropClosures();
-##  + drops '_analyze*' closures
-sub dropClosures {
-  delete(@{$_[0]}{'_analyzeToken','_analyzeSentence','_analyzeDocument'});
+##  + (OBSOLETE): drops '_analyze*' closures
+##  + currently does nothing
+sub dropClosures { return; }
+
+## $label = $anl->defaultLabel()
+##  + default label for this class
+##  + default is final component of perl class-name
+sub defaultLabel {
+  my $anl = shift;
+  my $lab = ref($anl);
+  $lab =~ s/^.*\:\://;
+  return $lab;
+}
+
+## $class = $anl->analysisClass()
+##  + gets cached $anl->{aclass} if exists, otherwise caches & returns ref($anl)."::Analysis"
+sub analysisClass {
+  return $_[0]{aclass} if (exists($_[0]{aclass}));
+  return $_[0]{aclass} = ref($_[0])."::Analysis";
 }
 
 ##==============================================================================
@@ -73,9 +88,9 @@ sub ensureLoaded { return 1; }
 
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
-##  + default just returns list of known '_analyze' keys
+##  + default just greps for CODE-refs
 sub noSaveKeys {
-  return ('_analyzeToken','_analyzeSentence','_analyzeDocument');
+  return grep {UNIVERSAL::isa($_[0]{$_},'CODE')} keys(%{$_[0]});
 }
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
@@ -92,9 +107,9 @@ sub loadPerlRef {
 
 ## @keys = $class_or_obj->noSaveBinKeys()
 ##  + returns list of keys not to be saved for binary mode
-##  + default just returns list of known '_analyze' keys
+##  + default just greps for CODE-refs
 sub noSaveBinKeys {
-  return ('_analyzeToken','_analyzeSentence','_analyzeDocument');
+  grep {UNIVERSAL::isa($_[0]{$_},'CODE')} keys(%{$_[0]});
 }
 
 ## $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref)
@@ -107,292 +122,134 @@ sub loadBinRef {
 
 
 ##==============================================================================
-## Methods: Analysis Closures: Generic
-##
-## + General schema for thingies of type XXX:
-##    $coderef = $anl->getAnalyzeXXXSub();            ##-- generate closure
-##    $coderef = $anl->analyzeXXXSub();               ##-- get cached closure or generate
-##    $thingy  = $anl->analyzeXXX($thingy,\%options)  ##-- get & apply (cached) closure
-## + XXX may be one of: 'Token', 'Sentence', 'Document',...
-## + analyze() alone just aliases analyzeToken()
-##==============================================================================
-
-BEGIN {
-  *getAnalyzeSub = \&getAnalyzeTokenSub;
-  *analyzeSub    = \&analyzeTokenSub;
-  *analyze       = \&analyzeToken;
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Generic
-
-## $bool = $anl->canAnalyze()
-##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + default method always returns true
-sub canAnalyze {
-  return 1;
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Token
-
-## $tok = $anl->analyzeToken($tok,\%analyzeOptions)
-##  + destructively alters input token $tok with analysis
-##  + really just a convenience wrapper for $anl->analyzeTokenSub()->($in,\%analyzeOptions)
-sub analyzeToken { return $_[0]->analyzeTokenSub()->(@_[1..$#_]); }
-
-## $coderef = $anl->analyzeTokenSub()
-##  + returned sub should be callable as:
-##     $tok = $coderef->($tok,\%analyzeOptions)
-##  + caches sub in $anl->{_analyzeToken}
-##  + implicitly loads analysis data with $anl->ensureLoaded()
-##  + otherwise, calls $anl->getAnalyzeTokenSub()
-sub analyzeTokenSub {
-  my $anl = shift;
-  return $anl->{_analyzeToken} if (defined($anl->{_analyzeToken}));
-  $anl->ensureLoaded()
-    or die(ref($anl)."::analyzeTokenSub(): could not load analysis data: $!");
-  return $anl->{_analyzeToken}=$anl->getAnalyzeTokenSub(@_);
-}
-
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + guts for $anl->analyzeTokenSub()
-sub getAnalyzeTokenSub {
-  my $anl = shift;
-  croak(ref($anl)."::getAnalyzeTokenSub(): not implemented");
-}
-
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Sentence
-
-## $sent = $anl->analyzeSentence($sent,\%analyzeOptions)
-sub analyzeSentence { return $_[0]->analyzeSentenceSub()->(@_[1..$#_]); }
-
-## $coderef = $anl->analyzeSentenceSub()
-sub analyzeSentenceSub {
-  my $anl = shift;
-  return $anl->{_analyzeSentence} if (defined($anl->{_analyzeSentence}));
-  $anl->ensureLoaded()
-    or die(ref($anl)."::analyzeSentenceSub(): could not load analysis data: $!");
-  return $anl->{_analyzeSentence}=$anl->getAnalyzeSentenceSub(@_);
-}
-
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + default implementation just calls analyzeToken() on each token of input sentence
-sub getAnalyzeSentenceSub {
-  my $anl = shift;
-  my $anl_tok = $anl->analyzeTokenSub();
-  my ($sent,$opts);
-  return sub {
-    ($sent,$opts) = @_;
-    $sent = toSentence($sent);
-    @{$sent->{tokens}} = map { $anl_tok->(toToken($_),$opts) } @{$sent->{tokens}};
-    return $sent;
-  };
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Document
-
-## $doc = $anl->analyzeDocument($sent,\%analyzeOptions)
-sub analyzeDocument { return $_[0]->analyzeDocumentSub()->(@_[1..$#_]); }
-
-## $coderef = $anl->analyzeDocumentSub()
-sub analyzeDocumentSub {
-  my $anl = shift;
-  return $anl->{_analyzeDocument} if (defined($anl->{_analyzeDocument}));
-  $anl->ensureLoaded()
-    or die(ref($anl)."::analyzeDocumentSub(): could not load analysis data: $!");
-  return $anl->{_analyzeDocument}=$anl->getAnalyzeDocumentSub(@_);
-}
-
-## $coderef = $anl->getAnalyzeDocumentSub()
-##  + guts for $anl->analyzeDocumentSub()
-##  + default implementation just calls analyzeToken() on each token of input sentence
-sub getAnalyzeDocumentSub {
-  my $anl = shift;
-  my $anl_sent = $anl->analyzeSentenceSub();
-  my ($doc,$opts);
-  return sub {
-    ($doc,$opts) = @_;
-    $doc = toDocument($doc);
-    @{$doc->{body}} = map { $anl_sent->(toSentence($_),$opts) } @{$doc->{body}};
-    return $doc;
-  };
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Raw Data
-
-
-## $data = $anl->analyzeData($data,\%analyzeOptions)
-sub analyzeData { return $_[0]->analyzeDataSub()->(@_[1..$#_]); }
-
-## $coderef = $anl->analyzeDataSub()
-sub analyzeDataSub {
-  my $anl = shift;
-  return $anl->{_analyzeData} if (defined($anl->{_analyzeData}));
-  $anl->ensureLoaded()
-    or die(ref($anl)."::analyzeDataSub(): could not load analysis data: $!");
-  return $anl->{_analyzeData}=$anl->getAnalyzeDataSub(@_);
-}
-
-## $coderef = $anl->getanalyzeDataSub()
-##  + for raw data analysis
-##  + returned sub is callable as:
-##     $base64 = $coderef->($data_str,\%opts);
-sub getAnalyzeDataSub {
-  require RPC::XML;
-  my $anl = shift;
-  my $a_doc = $anl->analyzeDocumentSub();
-  my ($opts, $ifmt,$ofmt,$iopts,$oopts, $doc,$str);
-  return sub {
-    $opts = $_[1];
-    $opts = {} if (!defined($opts));
-    $opts->{reader} = {} if (!$opts->{reader});
-    $opts->{writer} = {} if (!$opts->{writer});
-
-    ##-- get format reader,writer
-    $ifmt = DTA::CAB::Format->newReader(%{$opts->{reader}});
-    $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %{$opts->{writer}});
-
-    $doc = $ifmt->parseString($_[0]);
-    #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
-    $doc = $a_doc->($doc,$opts);
-    $str = $ofmt->flush->putDocument($doc)->toString;
-    $ofmt->flush;
-
-    return RPC::XML::base64->new($str);
-  };
-}
-
-##==============================================================================
 ## Methods: Analysis: v1.x
+
+##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: Utils
+
+## $bool = $anl->canAnalyze();
+##  + returns true iff analyzer can perform its function (e.g. data is loaded & non-empty)
+##  + default implementation always returns true
+sub canAnalyze { return 1; }
+
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + alias for $anl->can("analyze${name}") && (!exists($opts{"doAnalyze${name}"}) || $opts{"doAnalyze${name}"})
+sub doAnalyze {
+  my ($anl,$opts,$name) = @_;
+  return $anl->can("analyze${name}") && (!$opts || !exists($opts->{"doAnalyze${name}"}) || $opts->{"doAnalze${name}"});
+}
+
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
 
-## $doc = $anl->analyzeDocument1($doc,\%opts)
+## $doc = $anl->analyzeDocument($doc,\%opts)
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
 ##  + default implementation just calls:
-##      $doc = toDocument($doc);
-##      $doc->{types} = $anl->getTypes($doc,\%opts)
 ##      $anl->ensureLoaded();
-##      $anl->analyzeTypes($doc,\%opts)
-##      $anl->analyzeTokens($doc,\%opts)
-##      $anl->analyzeSentences($doc,\%opts)
-##      $anl->analyzeLocal($doc,\%opts)
-##      $anl->analyzeClean($doc,\%opts)
-sub analyzeDocument1 {
+##      $doc = toDocument($doc);
+##      if ($anl->doAnalyze('Types')) {
+##        $doc->getTypes();
+##        $anl->analyzeTypes($doc,\%opts);
+##        $doc->expandTypes();
+##        $doc->clearTypes();
+##      }
+##      $anl->analyzeTokens($doc,\%opts)    if ($anl->doAnalyze(\%opts,'Tokens'));
+##      $anl->analyzeSentences($doc,\%opts) if ($anl->doAnalyze(\%opts,'Sentences'));
+##      $anl->analyzeLocal($doc,\%opts)     if ($anl->doAnalyze(\%opts,'Local'));
+##      $anl->analyzeClean($doc,\%opts)     if ($anl->doAnalyze(\%opts,'Clean'));
+sub analyzeDocument {
   my ($anl,$doc,$opts) = @_;
+  return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
+  return $doc if (!$anl->canAnalyze);      ##-- ok...
   $doc = toDocument($doc);
-  my $rc = 1;
-  $rc &&= ($doc->{types} = $anl->getTypes($doc,$opts));
-  $rc &&= $anl->ensureLoaded();
-  $rc &&= $anl->analyzeTypes($doc,$opts);
-  $rc &&= $anl->analyzeTokens($doc,$opts);
-  $rc &&= $anl->analyzeSentences($doc,$opts);
-  $rc &&= $anl->analyzeLocal($doc,$opts);
-  $rc &&= $anl->analyzeClean($doc,$opts);
-  return $rc ? $doc : undef;
+  if ($anl->doAnalyze($opts,'Types')) {
+    $doc->getTypes();
+    $anl->analyzeTypes($doc,$opts);
+    $doc->expandTypes();
+    $doc->clearTypes();
+  }
+  $anl->analyzeTokens($doc,$opts)    if ($anl->doAnalyze($opts,'Tokens'));
+  $anl->analyzeSentences($doc,$opts) if ($anl->doAnalyze($opts,'Sentences'));
+  $anl->analyzeLocal($doc,$opts)     if ($anl->doAnalyze($opts,'Local'));
+  $anl->analyzeClean($doc,$opts)     if ($anl->doAnalyze($opts,'Clean'));
+  return $doc;
 }
 
 ## $doc = $anl->analyzeTypes($doc,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
 ##  + default implementation does nothing
-sub analyzeTypes {
-  my ($anl,$doc,$opts) = @_;
-  return $doc;
-}
+sub analyzeTypes { return $_[1]; }
 
 ## $doc = $anl->analyzeTokens($doc,\%opts)
 ##  + perform token-wise analysis of all tokens $doc->{body}[$si]{tokens}[$wi]
-##  + default implementation just shallow copies tokens in $doc->{types}
-sub analyzeTokens {
-  my ($anl,$doc,$opts) = @_;
-  my $types = $doc->{types};
-  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
-    %$_ = %{$types->{$_->{text}}};
-  }
-  return $doc;
-}
+##  + no default implementation
+sub analyzeTokens { return $_[1]; }
 
 ## $doc = $anl->analyzeSentences($doc,\%opts)
 ##  + perform sentence-wise analysis of all sentences $doc->{body}[$si]
-##  + default implementation does nothing
-sub analyzeSentences {
-  my ($anl,$doc,$opts) = @_;
-  return $doc;
-}
+##  + no default implementation
+sub analyzeSentences { return $_[1]; }
 
 ## $doc = $anl->analyzeLocal($doc,\%opts)
-##  + perform local document-level analysis of $doc
-##  + default implementation does nothing
-sub analyzeLocal {
-  my ($anl,$doc,$opts) = @_;
-  return $doc;
-}
+##  + perform analyzer-local document-level analysis of $doc
+##  + no default implementation
+sub analyzeLocal { return $_[1]; }
 
 ## $doc = $anl->analyzeClean($doc,\%opts)
 ##  + cleanup any temporary data associated with $doc
-##  + default implementaiton deletes $doc->{types}
-sub analyzeClean {
-  my ($anl,$doc,$opts) = @_;
-  delete($doc->{types});
-  return $doc;
-}
+##  + no default implementation
+sub analyzeClean { return $_[1]; }
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: Wrappers
 
-## $tok = $anl->analyzeToken1($tok_or_string,\%opts)
-##  + perform type-, token- and local analyses on $tok_or_string
-sub analyzeToken1 {
+## $tok = $anl->analyzeToken($tok_or_string,\%opts)
+##  + perform type- and token- analyses on $tok_or_string
+##  + wrapper for $anl->analyzeDocument()
+sub analyzeToken {
   my ($anl,$tok,$opts) = @_;
-  $tok = toToken($tok);
-  my $doc = toDocument([toSentence([$tok])]);
-  my $rc = 1;
-  $doc->{types} = {$tok->{text} => $tok};
-  $rc &&= $anl->ensureLoaded();
-  $rc &&= $anl->analyzeTypes($doc,$opts);
-  $rc &&= $anl->analyzeTokens($doc,$opts);
-  #$rc &&= $anl->analyzeSentences($doc,$opts);
-  $rc &&= $anl->analyzeLocal($doc,$opts);
-  $rc &&= $anl->analyzeClean($doc,$opts);
-  ##
+  my $doc = toDocument([toSentence([toToken($tok)])]);
+  $anl->analyzeDocument($doc, {%$opts, doAnalyzeSentences=>0,doAnalyzeLocal=>0});
   return $doc->{body}[0]{tokens}[0];
 }
 
-## $tok = $anl->analyzeSentence1($sent_or_array,\%opts)
-##  + perform type- and token-, sentence- and local analyses on $sent_or_array
-##  + wrapper for $anl->analyzeDocument1()
-sub analyzeSentence1 {
+## $tok = $anl->analyzeSentence($sent_or_array,\%opts)
+##  + perform type- and token-, and sentence- analyses on $sent_or_array
+##  + wrapper for $anl->analyzeDocument()
+sub analyzeSentence {
   my ($anl,$sent,$opts) = @_;
   $sent = [$sent] if (!UNIVERSAL::isa($sent,'ARRAY'));
   @$sent = map {toToken($_)} @$sent;
-  $sent = toSentence($sent);
-  my $doc = toDocument([$sent]);
-  $anl->analyzeDocument1($doc);
+  my $doc = toDocument([toSentence($sent)]);
+  $anl->analyzeDocument($doc, {%$opts, doAnalyzeLocal=>0});
   return $doc->{body}[0];
 }
 
+## $rpc_xml_base64 = $anl->analyzeData($data_str,\%opts)
+##  + analyze a raw (formatted) data string $data_str with internal parsing & formatting
+##  + wrapper for $anl->analyzeDocument()
+sub analyzeData {
+  require RPC::XML;
+  my ($anl,$doc,$opts) = @_;
 
-##------------------------------------------------------------------------
-## Methods: Analysis: v1.x: Utilities: Types
+  ##-- parsing & formatting options
+  my $reader = $opts && $opts->{reader} ? $opts->{reader} : {}; ##-- reader options
+  my $writer = $opts && $opts->{writer} ? $opts->{writer} : {}; ##-- writer options
 
-## \%text2tok = $anl->getTypes($doc,\%opts)
-##  + maps document (text) types to pseudo-tokens, for types-wise analyses
-sub getTypes {
-  my ($anl,$doc) = @_;
-  my $types = {};
-  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
-    next if (exists($types->{$_->{text}}));
-    $types->{$_->{text}} = bless({%$_},'DTA::CAB::Token');
-  }
-  return $types;
+  ##-- get format reader,writer
+  my $ifmt = DTA::CAB::Format->newReader(%$reader);
+  my $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %$writer);
+
+  ##-- parse, analyze, format
+  $doc = $ifmt->parseString($_[0]);
+  #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
+  $doc = $anl->analyzeDocument($doc,$opts);
+  my $str = $ofmt->flush->putDocument($doc)->toString;
+  $ofmt->flush;
+
+  return RPC::XML::base64->new($str);
 }
 
 
@@ -427,9 +284,9 @@ sub xmlRpcMethods {
   my $anl   = shift;
   return (
 	  {
-	   ##-- Analyze: Token
-	   name      => 'analyzeToken',
-	   code      => $anl->analyzeTokenSub,
+	   ##-- Analyze: Type (v1.x)
+	   name      => 'analyzeType',
+	   code      => sub { $anl->analyzeType(@_) },
 	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
 			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
@@ -437,9 +294,19 @@ sub xmlRpcMethods {
 	   wrapEncoding => 1,
 	  },
 	  {
-	   ##-- Analyze: Sentence
+	   ##-- Analyze: Token (v1.x)
+	   name      => 'analyzeToken',
+	   code      => sub { $anl->analyzeToken(@_) },
+	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
+			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
+			],
+	   help      => 'Analyze a single token (text string or struct with "text" string field)',
+	   wrapEncoding => 1,
+	  },
+	  {
+	   ##-- Analyze: Sentence (v1.x)
 	   name      => 'analyzeSentence',
-	   code      => $anl->analyzeSentenceSub,
+	   code      => sub { $anl->analyzeSentence(@_) },
 	   signature => [ 'struct array',  'struct array struct',  ## array ?opts -> struct
 			  'struct struct', 'struct struct struct', ## struct ?opts -> struct
 			],
@@ -447,9 +314,9 @@ sub xmlRpcMethods {
 	   wrapEncoding => 1,
 	  },
 	  {
-	   ##-- Analyze: Document
+	   ##-- Analyze: Document (v1.x)
 	   name      => 'analyzeDocument',
-	   code      => $anl->analyzeDocumentSub,
+	   code      => sub { $anl->analyzeDocument(@_) },
 	   signature => [
 			 'struct array',  'struct array struct',   ## array ?opts -> struct
 			 'struct struct', 'struct struct struct',  ## struct ?opts -> struct
@@ -457,10 +324,10 @@ sub xmlRpcMethods {
 	   help      => 'Analyze a whole document (array of sentences or struct with "body" array field)',
 	   wrapEncoding => 1,
 	  },
-	  ##-- Analyze: raw data
+	  ##-- Analyze: raw data (v1.x)
 	  {
 	   name => 'analyzeData',
-	   code => $anl->analyzeDataSub,
+	   code => sub { $anl->analyzeData(@_) },
 	   signature => [
 			 #'string string',        ## string -> string
 			 #'string string struct', ## string ?opts -> string
@@ -471,52 +338,6 @@ sub xmlRpcMethods {
 	   help => 'Analyze raw document data with server-side parsing & formatting',
 	   wrapEncoding => 0,
 	  },
-
-	  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	  ## Analysis: XML-RPC: v1.x
-	  {
-	   ##-- Analyze: Document (v1.x)
-	   name      => 'analyzeDocument1',
-	   code      => $anl->can('analyzeDocument1'),
-	   signature => [
-			 'struct array',  'struct array struct',   ## array ?opts -> struct
-			 'struct struct', 'struct struct struct',  ## struct ?opts -> struct
-			],
-	   help      => 'Analyze a whole document (array of sentences or struct with "body" array field)',
-	   wrapEncoding => 1,
-	  },
-	  {
-	   ##-- Analyze: Type
-	   name      => 'analyzeType1',
-	   code      => $anl->can('analyzeType1'),
-	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
-			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
-			],
-	   help      => 'Analyze a single token (text string or struct with "text" string field)',
-	   wrapEncoding => 1,
-	  },
-	  {
-	   ##-- Analyze: Token
-	   name      => 'analyzeToken1',
-	   code      => $anl->can('analyzeToken1'),
-	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
-			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
-			],
-	   help      => 'Analyze a single token (text string or struct with "text" string field)',
-	   wrapEncoding => 1,
-	  },
-	  {
-	   ##-- Analyze: Sentence
-	   name      => 'analyzeSentence1',
-	   code      => $anl->can('analyzeSentence1'),
-	   signature => [ 'struct array',  'struct array struct',  ## array ?opts -> struct
-			  'struct struct', 'struct struct struct', ## struct ?opts -> struct
-			],
-	   help      => 'Analyze a single sentence (array of tokens or struct with "tokens" array field)',
-	   wrapEncoding => 1,
-	  },
-
-
 	 );
 }
 

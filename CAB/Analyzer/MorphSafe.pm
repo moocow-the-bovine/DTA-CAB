@@ -132,6 +132,84 @@ sub getAnalyzeTokenSub {
   };
 }
 
+##==============================================================================
+## Methods: Analysis: v1.x
+##==============================================================================
+
+## $doc = $xlit->analyzeTypes($doc,\%opts)
+##  + perform type-wise analysis of all (text) types in $doc->{types}
+##  + sets (for $key=$anl->{analysisKey}):
+##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
+##    with:
+##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
+##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
+##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
+sub analyzeTypes {
+  my ($ms,$doc,$opts) = @_;
+
+  my $srcKey = $ms->{analysisSrcKey};
+  my $akey   = $ms->{analysisKey};
+  my $auxkey = $ms->{auxSrcKey};
+  my ($tok,$analyses,$safe);
+  foreach $tok (values(%{$doc->{types}})) {
+    $analyses = $tok->{$srcKey};
+    $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
+	     && $tok->{text} !~ m/\#/                      ##-- unless they contain '#' (placeholder for unrecognized char)
+	    );
+    $safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
+    $safe ||=
+      (
+       $analyses                 ##-- defined & true
+       && @$analyses > 0         ##-- non-empty
+       && (
+	   grep {                ##-- at least one non-"unsafe" analysis:
+	     ($_                     ##-- only "unsafe" if defined
+	      && $_->{hi}            ##-- only "unsafe" if upper labels are defined & non-empty
+	      && $_->{hi} !~ m(
+                   (?:               ##-- unsafe: regexes
+                       \[_FM\]       ##-- unsafe: tag: FM: foreign material
+                     | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
+                     | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
+                     | \[_NE\]       ##-- unsafe: tag: NE: proper name
+
+		     ##-- unsafe: composita
+                     #| \/NE          ##-- unsafe: composita with NE
+
+                     ##-- unsafe: verb roots
+                     | \b te    (?:\/V|\~)
+                     | \b gel   (?:\/V|\~)
+                     | \b gell  (?:\/V|\~)
+                     | \b öl    (?:\/V|\~)
+                     | \b penn  (?:\/V|\~)
+                     | \b dau   (?:\/V|\~)
+		     | \b äs    (?:\/V|\~)
+
+                     ##-- unsafe: noun roots
+                     | \b Bus   (?:\/N|\[_NN\])
+                     | \b Ei    (?:\/N|\[_NN\])
+                     | \b Eis   (?:\/N|\[_NN\])
+                     | \b Gel   (?:\/N|\[_NN\])
+                     | \b Gen   (?:\/N|\[_NN\])
+                     | \b Öl    (?:\/N|\[_NN\])
+                     | \b Reh   (?:\/N|\[_NN\])
+                     | \b Tee   (?:\/N|\[_NN\])
+                     | \b Teig  (?:\/N|\[_NN\])
+                     | \b Zen   (?:\/N|\[_NN\])
+                     | \b Heu   (?:\/N|\[_NN\])
+                     | \b Szene (?:\/N|\[_NN\])
+		   )
+                 )x)
+	   } @$analyses
+	  )
+      );
+
+    ##-- output
+    $tok->{$akey} = $safe ? 1 : 0;
+  }
+
+  return $doc;
+}
+
 
 1; ##-- be happy
 

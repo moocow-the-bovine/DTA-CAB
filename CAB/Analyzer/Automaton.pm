@@ -35,9 +35,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     dictFile=> $filename,    ##-- default: none
 ##
 ##     ##-- Analysis Output
-##     analysisClass  => $class, ##-- default: none (ARRAY)
+##     aclass         => $class, ##-- analysis class (OVERRIDE default: 'DTA::CAB::Analysis::Automaton')
 ##     analyzeSrc     => $key,   ##-- source key for analysis (default: 'text')
-##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
 ##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
 ##
 ##     ##-- Analysis Options
@@ -62,6 +61,10 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
 ##     result=>$resultfst, ##-- (child classes only) e.g. result fst
 ##     dict => \%dict,     ##-- exception lexicon / static cache of analyses
+##
+##     ##-- INHERITED from DTA::CAB::Analyzer
+##     label => $label,    ##-- analyzer label (default: from analyzer class name)
+##     aclass => $class,   ##-- analysis class (default: from analyzer class name)
 ##    )
 sub new {
   my $that = shift;
@@ -94,9 +97,8 @@ sub new {
 			      allowTextRegex => undef, #'(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			      ##-- analysis I/O
-			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
+			      aclass     => undef,
 			      analyzeSrc => 'text',
-			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
 			      wantAnalysisLo => 1,
 
 			      ##-- user args
@@ -120,25 +122,9 @@ sub clear {
   @{$aut->{laba}} = qw();
   @{$aut->{labc}} = qw();
 
-  ##-- profiling
-  #$aut->resetProfilingData();
-
   return $aut;
 }
 
-## $aut = $aut->resetProfilingData()
-##  + OBSOLETE
-sub resetProfilingData {
-  my $aut = shift;
-  $aut->{profile} = 0;
-  $aut->{ntoks} = 0;
-  $aut->{ndict} = 0;
-  $aut->{nknown} = 0;
-  $aut->{ntoksa} = 0;
-  $aut->{ndicta} = 0;
-  $aut->{nknowna} = 0;
-  return $aut;
-}
 
 ##==============================================================================
 ## Methods: Generic
@@ -334,138 +320,6 @@ sub canAnalyze {
   return $_[0]->dictOk || ($_[0]->labOk && $_[0]->fstOk);
 }
 
-##------------------------------------------------------------------------
-## Methods: Analysis: Token
-
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##     $tok = $coderef->($tok,\%opts)
-##  + analyzes text $opts{src}, defaults to $tok->{text}
-##  + sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
-##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
-##    - each \%analysisI is a HASH:
-##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
-##    - if $opts->{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
-##  + if $anl->analysisClass() returned defined, $out is blessed into it
-##  + implicitly loads analysis data (automaton and labels)
-sub getAnalyzeTokenSub {
-  my $aut = shift;
-
-  ##-- setup common variables
-  my $aclass = $aut->{analysisClass};
-  my $asrc   = $aut->{analyzeSrc};
-  my $adst   = $aut->{analyzeDst};
-  my $dict   = $aut->{dict};
-  my $fst    = $aut->{fst};
-  my $fst_ok = $aut->fstOk();
-  my $result = $aut->{result};
-  my $lab    = $aut->{lab};
-  my $labc   = $aut->{labc};
-  my $laba   = $aut->{laba};
-  my $labenc = $aut->{labenc};
-  my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
-
-  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
-
-  ##-- ananalysis options
-  my @analyzeOptionKeys = (qw(check_symbols auto_connect),
-			   qw(tolower tolowerNI toupperI bashWS attInput),
-			   qw(wantAnalysisLo max_paths max_weight max_ops),
-			  );
-  my $doprofile = $aut->{profile};
-
-  my ($tok,$src, $w,$opts,$uword,$ulword,@wlabs, $isdict, $analyses);
-  return sub {
-    ($tok,$opts) = @_;
-    $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
-
-    ##-- maybe ignore this token
-    return $tok if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex);
-
-    ##-- ensure $opts hash exists
-    $opts = $opts ? {%$opts} : {}; ##-- copy / create
-
-    ##-- get source text ($w), ensure $opts->{src} is defined
-    $src = defined($opts->{src}) ? $opts->{src} : ($opts->{src}=$tok->{$asrc});
-
-    ##-- set default options
-    $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-    $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
-    $analyses = [];
-
-    ##-- loop & analyze (accept FST-style list input)
-    foreach (ref($src) && UNIVERSAL::isa($src,'ARRAY') ? @$src : $src) {
-      $w = (ref($_) && UNIVERSAL::isa($_,'HASH') ? $_->{hi} : $_); ##-- hack
-
-      ##-- normalize word
-      $uword = $w;
-      if    ($opts->{tolower})   { $uword = lc($uword); }
-      elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
-      if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
-      if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
-
-      ##-- check for (normalized) word in dict
-      if ($dict && exists($dict->{$uword})) {
-	push(@$analyses, @{$dict->{$uword}});
-      }
-      elsif ($fst_ok) {
-	##-- not in dict: fst lookup (if fst is kosher)
-
-	##-- get labels
-	if ($opts->{attInput}) {
-	  ##-- get labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
-	  $ulword = $uword;
-	  utf8::downgrade($ulword);
-	  @wlabs = (@{$lab->string_to_labels($ulword, $opts->{check_symbols}, 1)}, @eowlab);
-	}
-	elsif ($opts->{check_symbols}) {
-	  ##-- get labels: by character: verbose
-	  @wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
-	  foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	    $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
-	  }
-	  @wlabs = grep {defined($_)} @wlabs;
-	}
-	else {
-	  ##-- get labels: by character: quiet
-	  @wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
-	}
-
-	##-- fst lookup
-	$aut->{fst}->lookup(\@wlabs, $result);
-	$result->_connect() if ($opts->{auto_connect});
-	#$result->_rmepsilon() if ($opts->{auto_rmeps});
-
-	##-- parse analyses
-	push(@$analyses,
-	     map {
-	       {(
-		 ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
-		 'hi'=> (defined($labenc)
-			 ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
-			 : $lab->labels_to_string($_->{hi},0,1)),
-		 'w' => $_->{w},
-		)}
-	     } @{$result->paths($Gfsm::LSUpper)}
-	    );
-      }
-      #else { ; } ##-- no dictionary entry and no FST: do nothing
-    }
-
-    ##-- wipe or bless analyses
-    if (!@$analyses) {
-      undef($analyses);
-    } elsif (defined($aclass)) {
-      $analyses = bless($analyses,$aclass);
-    }
-
-    ##-- set token properties: analyses
-    if (defined($opts->{dst})) { ${ $opts->{dst} } = $analyses; }
-    else { $tok->{$adst} = $analyses; }
-
-    return $tok;
-  };
-}
 
 ##==============================================================================
 ## Methods: Analysis: v1.x
@@ -485,7 +339,7 @@ sub analyzeTypes {
   my ($aut,$doc,$opts) = @_;
 
   ##-- setup common variables
-  my $aclass = $aut->{analysisClass};
+  my $aclass = $aut->analysisClass;
   my $asrc   = $aut->{analyzeSrc};
   my $adst   = $aut->{analyzeDst};
   my $dict   = $aut->{dict};
@@ -510,13 +364,14 @@ sub analyzeTypes {
   ##-- setup $opts hash
   $opts = $opts ? {%$opts} : {}; ##-- copy / create
   $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-  $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
+  #$aut->setLookupOptions($opts) if ($aut->can('setLookupOptions')); ##-- this has to happen type-wise (length-sensitive params)
 
   my ($tok,$src, $w,$uword,$ulword,@wlabs, $isdict, $analyses);
   foreach $tok (values(%{$doc->{types}})) {
     ##-- get source text ($w), ensure $opts->{src} is defined
-    #$src = defined($opts->{src}) ? $opts->{src} : ($opts->{src}=$tok->{$asrc}); ##-- DISABLED in v1.x
     $src = $tok->{$asrc};
+    $src = $src->text() if (UNIVERSAL::can($src,'text'));
+    $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions')); ##-- hack for linear f(length) max_weight !
 
     ##-- maybe ignore this token
     next if (defined($allowTextRegex) && $src !~ $allowTextRegex);
@@ -597,6 +452,18 @@ sub analyzeTypes {
 
   return $doc;
 }
+
+
+##==============================================================================
+## PACKAGE: Analysis::Automaton
+##==============================================================================
+package DTA::CAB::Analysis::Automaton;
+use strict;
+our @ISA = qw(DTA::CAB::Analysis);
+
+## \@text = $a->text()
+sub text { return map {$_->{hi}} @{$_[0]}; }
+
 
 1; ##-- be happy
 

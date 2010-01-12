@@ -34,12 +34,18 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
-##    analysisKey => $key,   ##-- token analysis key (default='xlit')
+##     label => 'xlit',        ##-- analyzer label
+##     aclass => $class,       ##-- OVERRIDE: 'DTA::CAB::Analysis::Unicruft'
+##     #analysisKey => $key,   ##-- token analysis key (default='xlit') ##-- OBSOLETE: now uses 'label'
+##  + object structure, INHERITED from Analyzer:
+##     label => $label,        ##-- analyzer label (default: from class name)
+##     aclass => $class,       ##-- analysis class (optional; see $anl->analysisClass() method)
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'xlit',
+			   label => 'xlit',
+			   aclass => 'DTA::CAB::Analysis::Unicruft',
 
 			   ##-- user args
 			   @_
@@ -55,61 +61,6 @@ sub new {
 sub ensureLoaded { return 1; }
 
 ##==============================================================================
-## Methods: Analysis
-##==============================================================================
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Token
-
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##      $tok = $coderef->($tok,\%analyzeOptions)
-##  + sets (for $key=$anl->{analysisKey}):
-##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
-##    with:
-##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
-##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
-##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
-sub getAnalyzeTokenSub {
-  my $xlit = shift;
-  my $akey = $xlit->{analysisKey};
-
-  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
-  return sub {
-    $tok = shift;
-    $tok = toToken($tok) if (!ref($tok));
-    $w   = $tok->{text};
-    $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
-
-    ##-- construct latin-1/de approximation
-    $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
-    if (
-	#$uc !~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
-	$uc  =~ m(^[\x{00}-\x{ff}]*$) #)
-       )
-      {
-	$isLatin1 = $isLatinExt = 1;
-      }
-    elsif ($uc =~ m(^[\p{Latin}]*$))
-      {
-	$isLatin1 = 0;
-	$isLatinExt = 1;
-      }
-    else
-      {
-	$isLatin1 = $isLatinExt = 0;
-      }
-
-    ##-- return
-    #return [ $l, $isLatin1, $isLatinExt ];
-    #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
-    $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
-
-    return $tok;
-  };
-}
-
-##==============================================================================
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
@@ -123,7 +74,7 @@ sub getAnalyzeTokenSub {
 ##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
 sub analyzeTypes {
   my ($xlit,$doc,$opts) = @_;
-  my $akey = $xlit->{analysisKey};
+  my $akey = $xlit->{label};
 
   my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
   foreach $tok (values(%{$doc->{types}})) {
@@ -149,14 +100,23 @@ sub analyzeTypes {
 	$isLatin1 = $isLatinExt = 0;
       }
 
-    ##-- return
-    #return [ $l, $isLatin1, $isLatinExt ];
-    #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
+    ##-- update token
     $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
+    bless($tok->{$akey}, $anl->{aclass}) if ($anl->{aclass});
   }
 
   return $doc;
 }
+
+##==============================================================================
+## PACKAGE: Analysis::Unicruft
+##==============================================================================
+package DTA::CAB::Analysis::Unicruft;
+use strict;
+our @ISA = qw(DTA::CAB::Analysis);
+
+## \@textStrings = $a->text()
+sub text { return [$_[0]->{latin1Text}]; }
 
 
 1; ##-- be happy

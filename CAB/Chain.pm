@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Chain.pm
+## File: DTA::CAB::Chain.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: generic analyzer API: analyzer "chains" / "cascades" / "pipelines" / ...
 
-package DTA::CAB::Analyzer::Chain;
+package DTA::CAB::Chain;
 use DTA::CAB::Analyzer;
 use DTA::CAB::Datum ':all';
 use Carp;
@@ -159,16 +159,16 @@ sub getAnalyzeTokenSub {
 ## Methods: Analysis: Sentence
 
 ## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
+##  + guts for $anl->analyzeSentence(), $anl->analyzeSentenceSub()
 ##  + default implementation just calls analyzeToken() on each token of input sentence
 ##  + INHERITED from Analyzer
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Document
 
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + default implementation just calls analyzeToken() on each token of input sentence
+## $coderef = $anl->getAnalyzeDocumentSub()
+##  + guts for $anl->analyzeDocument(), $anl->analyzeDocumentSub()
+##  + default implementation just calls analyzeSentence() on each sentence of input document
 ##  + INHERITED from Analyzer
 
 

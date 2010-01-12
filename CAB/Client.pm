@@ -1,4 +1,4 @@
-### -*- Mode: CPerl -*-
+## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Client.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
