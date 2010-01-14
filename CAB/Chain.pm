@@ -63,6 +63,7 @@ sub new {
 sub ensureLoaded {
   my $ach = shift;
   my $rc  = 1;
+  @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
   foreach (@{$ach->{chain}}) {
     $rc &&= $_->ensureLoaded();
     last if (!$rc); ##-- short-circuit
@@ -186,26 +187,17 @@ sub getAnalyzeTokenSub {
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
 
-## $doc = $ach->analyzeDocument1($doc,\%opts)
+## $doc = $ach->analyzeDocument($doc,\%opts)
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
-##  + default implementation just calls:
-##      $doc = toDocument($doc);
-##      $doc->{types} = $ach->getTypes($doc,\%opts)
-##      $ach->ensureLoaded();
-##      $ach->analyzeTypes($doc,\%opts)
-##      $ach->analyzeTokens($doc,\%opts)
-##      $ach->analyzeSentences($doc,\%opts)
-##      $ach->analyzeLocal($doc,\%opts)
-##      $ach->analyzeClean($doc,\%opts)
 ##  + INHERITED from Analyzer
 
-## $doc = $ach->analyzeTypes($doc,\%opts)
+## $doc = $ach->analyzeTypes($doc,$types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
 ##  + Chain default calls $a->analyzeTypes for each analyzer $a in the chain
 sub analyzeTypes {
-  my ($ach,$doc,$opts) = @_;
-  $_->analyzeTypes($doc,$opts) foreach (@{$ach->{chain}});
+  my ($ach,$doc,$types,$opts) = @_;
+  $_->analyzeTypes($doc,$types,$opts) foreach (@{$ach->{chain}});
   return $doc;
 }
 
@@ -245,15 +237,20 @@ sub analyzeClean {
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: Wrappers
 
-## $tok = $ach->analyzeToken1($tok_or_string,\%opts)
-##  + perform type-, token- and local analyses on $tok_or_string
+## $tok = $ach->analyzeToken($tok_or_string,\%opts)
+##  + perform type- and token-analyses on $tok_or_string
+##  + wrapper for $ach->analyzeDocument()
 ##  + INHERITED from Analyzer
 
-## $tok = $ach->analyzeSentence1($sent_or_array,\%opts)
-##  + perform type- and token-, sentence- and local analyses on $sent_or_array
-##  + wrapper for $ach->analyzeDocument1()
+## $tok = $ach->analyzeSentence($sent_or_array,\%opts)
+##  + perform type-, token-, and sentence-analyses on $sent_or_array
+##  + wrapper for $ach->analyzeDocument()
 ##  + INHERITED from Analyzer
 
+## $rpc_xml_base64 = $anl->analyzeData($data_str,\%opts)
+##  + analyze a raw (formatted) data string $data_str with internal parsing & formatting
+##  + wrapper for $anl->analyzeDocument()
+##  + INHERITED from Analyzer
 
 ##==============================================================================
 ## Methods: XML-RPC

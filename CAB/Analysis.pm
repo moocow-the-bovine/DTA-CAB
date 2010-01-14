@@ -3,6 +3,7 @@
 ## File: DTA::CAB::Analysis.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: generic API for (token-level) analyses
+#   + Nothing here (yet), just an abstract base class
 
 package DTA::CAB::Analysis;
 use DTA::CAB::Datum;
@@ -18,17 +19,6 @@ our @ISA = qw(DTA::CAB::Datum);
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
-
-# (nothing here)
-
-##==============================================================================
-## Access
-##==============================================================================
-
-## \@text = $a->text()
-##  + get analysis "text" string(s)
-##  + default implementation just returns ["$a"]
-sub text { return UNIVERSAL::isa($_[0],'ARRAY') ? $_[0] : ["$_[0]"]; }
 
 
 1; ##-- be happy

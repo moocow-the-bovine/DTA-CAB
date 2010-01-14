@@ -49,6 +49,7 @@ our %inputOpts   = (encoding=>undef);
 our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
 
+our $bench_iters = 1; ##-- number of benchmark iterations for -bench mode
 
 ##==============================================================================
 ## Command-line
@@ -73,6 +74,7 @@ GetOptions(##-- General
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'raw|r|data|D' => sub { $action='raw'; }, ##-- server-side parsing
+	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
@@ -237,6 +239,28 @@ elsif ($action eq 'raw') {
       profile_stop();
       $ntoks += $ofmt->parseString($s_out)->nTokens;
       profile_start();
+    }
+  }
+}
+elsif ($action eq 'bench') {
+  $doProfile=1;
+  our ($bench_i);
+  our ($d_in,$w_in,$w_out);
+  $bench_iters = 1 if (!$bench_iters);
+  foreach $doc_filename (@ARGV) {
+    $d_in = $ifmt->parseFile($doc_filename)
+      or die("$0: parse failed for input file '$doc_filename': $!");
+      foreach $bench_i (1..$bench_iters) {
+	profile_start();
+	foreach $w_in (map {@{$_->{tokens}}} @{$d_in->{body}}) {
+	  $w_out = $cli->analyzeToken($analyzer, $w_in, \%analyzeOpts);
+	}
+	profile_stop();
+      }
+    #$ofmt->putDocumentRaw($d_out);
+    if ($doProfile) {
+      $ntoks += $bench_iters * $d_in->nTokens();
+      $nchrs += $bench_iters * (-s $doc_filename);
     }
   }
 }

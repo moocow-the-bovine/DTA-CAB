@@ -9,7 +9,6 @@ use DTA::CAB::Logger;
 use DTA::CAB::Persistent;
 
 use DTA::CAB::Analyzer;
-use DTA::CAB::Analyzer::Chain;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
@@ -37,6 +36,9 @@ use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalen
 #use DTA::CAB::Analyzer::Dict::Latin;    ##-- full-form latin lexicon
 
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
+
+use DTA::CAB::Chain;
+use DTA::CAB::Analyzer::RewriteSub;
 
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;

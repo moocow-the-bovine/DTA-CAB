@@ -22,8 +22,7 @@ sub new {
 			      #tolower => 1,
 
 			      ##-- analysis selection
-			      #analysisClass => 'DTA::CAB::Analyzer::LTS::Analysis',
-			      analyzeDst     => 'lts',
+			      label => 'lts',
 			      wantAnalysisLo => 0,
 
 			      ##-- user args

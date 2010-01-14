@@ -30,8 +30,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     dictFile=> $filename,    ##-- default: none
 ##
 ##     ##-- Analysis Output
-##     analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
-##     analyzeSrc     => $key,   ##-- source analysis key (default: $obj->{analyzeDst})
+##     label          => $lab,   ##-- analyzer label
+##     analyzeGet     => $code,  ##-- string or coderef (default='{text}')
 ##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
@@ -59,9 +59,8 @@ sub new {
 			      toupperI       => 0,
 
 			      ##-- analysis output
-			      #analysisClass => 'DTA::CAB::Analyzer::Automaton::Analysis',
-			      analyzeDst => (DTA::CAB::Utils::xml_safe_string(ref($that)||$that).'.Analysis'), ##-- default output key
-			      analyzeSrc => undef, ##-- default: $obj->{analyzeDst}
+			      label => 'dict',
+			      analyzeGet => '{text}',
 
 			      ##-- user args
 			      @_
@@ -221,42 +220,33 @@ sub canAnalyze {
   return $_[0]->dictOk();
 }
 
-
 ##------------------------------------------------------------------------
-## Methods: Analysis: Token
+## Methods: Analysis: v1.x: API
 
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##     $tok = $coderef->($tok,\%opts)
-##  + analyzes text $opts{src}, defaults to $tok->{text}
-##  + sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
-##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
-##    - each \%analysisI is a HASH:
-##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
-##    - if $opts->{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
-##  + if $anl->analysisClass() returned defined, $out is blessed into it
-##  + implicitly loads analysis data (automaton and labels)
-sub getAnalyzeTokenSub {
-  my $dic = shift;
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in $doc->{types}
+##  + default implementation does nothing
+sub analyzeTypes {
+  my ($dic,$doc,$types,$opts) = @_;
 
   ##-- setup common variables
-  my $adst   = $dic->{analyzeDst};
-  my $dict   = $dic->{dict};
+  my $lab   = $dic->{label};
+  my $dict  = $dic->{dict};
+
+  ##-- accessors
+  my $aget  = defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : '{text}';
+  my $aget_sub = ref($aget) ? $aget : eval "sub { $aget }";
 
   ##-- ananalysis options
   my @analyzeOptionKeys = qw(tolower tolowerNI toupperI); #)
+  $opts = $opts ? {%$opts} : {}; ##-- set default options: copy / create
+  $opts->{$_} = $dic->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
 
-  my ($tok, $w,$opts,$uword, $entry);
-  return sub {
-    ($tok,$opts) = @_;
-    $tok = DTA::CAB::Token::toToken($tok) if (!ref($tok));
-
-    ##-- set default options
-    $opts = $opts ? {%$opts} : {}; ##-- copy / create
-    $opts->{$_} = $dic->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-
+  my ($tok, $w,$uword, $entry);
+  foreach $tok (values %$types) {
     ##-- get source text ($w)
-    $w = defined($opts->{src}) ? $opts->{src} : $tok->{text};
+    $w = $aget_sub->($tok);
+    next if (!defined($w)); ##-- accessor returned undef: skip this word
 
     ##-- normalize word
     $uword = $w;
@@ -264,12 +254,14 @@ sub getAnalyzeTokenSub {
     elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
 
-    ##-- check for (normalized) word in dict
-    $tok->{$adst} = $dict->{$uword};
+    ##-- check for (normalized) word in dict & update tok
+    next if (!defined($entry=$dict->{$uword}));
+    $tok->{$lab} = $uword;
+  }
 
-    return $tok;
-  };
+  return $doc;
 }
+
 
 ##==============================================================================
 ## Methods: Output Formatting: OBSOLETE
@@ -330,7 +322,6 @@ DTA::CAB::Analyzer::Dict - simple dictionary lookup analyzer
  ## Methods: Analysis
  
  $bool = $anl->canAnalyze();
- $coderef = $anl->getAnalyzeTokenSub();
 
 =cut
 
@@ -507,44 +498,6 @@ Implicitly calls $obj-E<gt>clear()
 
 Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
 Default implementation just wraps $anl-E<gt>dictOk().
-
-=item getAnalyzeTokenSub
-
- $coderef = $dict->getAnalyzeTokenSub();
-
-=over 4
-
-=item *
-
-see L<DTA::TokWrap::Analyzer::getAnalyzeTokenSub()|DTA::TokWrap::Analyzer/item_getAnalyzeTokenSub>.
-
-=item *
-
-returned sub is callable as:
-
- $tok = $coderef->($tok,\%opts)
-
-=item *
-
-analyzes text $opts{src}, defaults to $tok-E<gt>{text}
-
-=item *
-
-sets output ${ $opts{dst} } = $out = $dictEntry
-
-=over 4
-
-=item *
-
-$opts{dst} defaults to \$tok-E<gt>{ $dict-E<gt>{analyzeDst} }
-
-=back
-
-=item *
-
-implicitly loads dictionary data
-
-=back
 
 =back
 

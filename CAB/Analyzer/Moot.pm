@@ -6,6 +6,7 @@
 
 package DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer;
+use DTA::CAB::Datum ':all';
 
 use moot;
 use Encode qw(encode decode);
@@ -20,6 +21,16 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
+## $DEFAULT_ANALYZE_TAGS_GET
+##  + default coderef or eval-able string for {analyzeTagsGet}
+##  + parameters:
+##      $_[0] => token object being analyzed
+##  + closure vars:
+##      $moot => analyzer object
+##  + should return a list of hash-refs ({tag=>$tag,details=>$details,cost=>$cost,src=>$whereFrom}, ...) given token
+our $DEFAULT_ANALYZE_TAGS_GET = \&parseMorphAnalyses;
+#our $DEFAULT_ANALYZE_TAGS_GET = '($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw())',
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -33,8 +44,9 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
 ##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='latin1')
-##     analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
-##     analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
+##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default='$_[0]{text}')
+##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
+##     #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
 ##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
 ##                               ##     %fnc = ($akey=>$perlcode_str, ...)
 ##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
@@ -46,7 +58,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##                               ##       $cost    ##-- source analysis weight
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
-##     analyzeDst     => $dst,   ##-- destination key (default='moot')
+##     label             =>$lab, ##-- destination key (default='moot')
 ##     analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default=undef(=none))
 ##     analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='text')
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
@@ -72,9 +84,9 @@ sub new {
 
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
-			       analyzeDst => 'moot',
-			       analyzeTextSrc => 'text',
-			       analyzeTagSrcs => ['morph'],
+			       label => 'moot',
+			       analyzeTextGet => '$_[0]{text}',
+			       analyzeTagsGet => $DEFAULT_ANALYZE_TAGS_GET,
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
 			       analyzeLiteralFlag=>undef,
@@ -196,37 +208,71 @@ sub canAnalyze {
 }
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Token
+## Methods: Analysis: Utilities
 
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##     $tok = $coderef->($tok,\%opts)
-##  + dummy version, does nothing
-sub _analyzeTokenSub { $_[0]; }
-sub getAnalyzeTokenSub { return \&_analyzeTokenSub; }
+## \%infoHash = CLASS::parseAnalysis(\%infoHash, %opts)
+## \%infoHash = CLASS::parseAnalysis(\%fstAnalysisHash, %opts)
+## \%infoHash = CLASS::parseAnalysis(\%xlitAnalysisHash, %opts)
+## \%infoHash = CLASS::parseAnalysis( $tagString, %opts)
+##  + returns an info hash {tag=>$tag,details=>$details,cost=>$cost} for various analysis types
+sub parseAnalysis {
+  my $ta = shift;
+  my ($tag,$details,$cost);
+  if (UNIVERSAL::isa($ta,'HASH')) {
+    ##-- case: hash-ref: use literal 'tag','details','cost' keys if present
+    ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
+    if (exists($ta->{hi})) {
+      ##-- case: hash-ref: tok/FstPaths (e.g. $tok->{rw} for dmoot, $tok->{morph} for moot)
+      $details = $ta->{hi};
+      if ($details =~ /\[\_?([^\s\]]*)/) {
+	$tag = $1;
+      } else {
+	$tag = $details;
+	$tag =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape brackets (for DynLex)
+	$tag =~ s/\\(.)/$1/g;
+      }
+    }
+    elsif (defined($tag=$ta->{latin1Text})) {
+      ##-- case: hash-ref: xlit (e.g. $tok->{xlit} for dmoot)
+      $details=''
+    }
+    $cost = $ta->{w} if (!defined($cost) && defined($ta->{w}));
+  }
+  else {
+    ##-- case: non-hash: assume it's all tag
+    ($tag,$details) = ($ta,'');
+  }
+  $cost = 0 if (!defined($cost));
+  return {tag=>$tag,details=>$details,cost=>$cost,@_};
+}
+
+## @analyses = parseMorphAnalyses($tok)
+##  + utility for PoS tagging using {morph} and {rw}{morph} analyses
+sub parseMorphAnalyses {
+  return
+    (($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
+     ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
+		   map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
+    );
+}
+
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Sentence
+## Methods: Analysis: v1.x: API
 
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + returned sub is callable as:
-##     $sent = $coderef->($sent,\%opts)
-##  + calls tagger on $sent, populating $tok->{ $moot->{analyzeDst} } keys
-##  + input text for index "$i" may be passed as one of the following:
-##    - $sent->{tokens}[$i]{ $moot->{analyzeTextSrc} }
-##    - $sent->{tokens}[$i]{ $moot->{analyzeTextSrc} }{hi}
-##    - $opts->{src   }[$i]{ $moot->{analyzeTextSrc} }
-##    - $opts->{src   }[$i]{ $moot->{analyzeTextSrc} }{hi}
-##  + input analyses are assumed to be automaton-like, passed either in $src or $tok
-sub getAnalyzeSentenceSub {
-  my $moot = shift;
+## $doc = $anl->analyzeSentences($doc,\%opts)
+##  + perform sentence-wise analysis of all sentences $doc->{body}[$si]
+##  + no default implementation
+sub analyzeSentences {
+  my ($moot,$doc,$opts) = @_;
+  return undef if (!$moot->ensureLoaded()); ##-- uh-oh...
+  return $doc if (!$moot->canAnalyze);      ##-- ok...
+  $doc = toDocument($doc);
 
   ##-- setup common variables
-  my $aclass = $moot->{analysisClass};
-  my $atxt   = $moot->{analyzeTextSrc};
+  my $aclass = $moot->analysisClass;
   my $atag_srcs  = $moot->{analyzeTagSrcs};
-  my $adst   = $moot->{analyzeDst};
+  my $adst   = $moot->{label};
   my $prune  = $moot->{prune};
   my $uniqa  = $moot->{uniqueAnalyses};
   my $hmm    = $moot->{hmm};
@@ -236,12 +282,19 @@ sub getAnalyzeSentenceSub {
   my $alitSrc  = $moot->{analyzeLiteralSrc};
   my $msent  = moot::Sentence->new();
 
+  ##-- setup access closures
+  my $atext_get = $moot->{analyzeTextGet} || '$_[0]{text}';
+  my $atags_get = $moot->{analyzeTagsGet} || $DEFAULT_ANALYZE_TAGS_GET;
+  my $atext_get_sub = ref($atext_get) ? $atext_get : eval "sub { $atext_get }";
+  my $atags_get_sub = ref($atags_get) ? $atags_get : eval "sub { $atags_get }";
+
   ##-- common variables: moot constants
   my $toktyp_vanilla = $moot::TokTypeVanilla;
 
   ##-- closure variables
   ##   + these must be declared before cost-munging funcs get compiled, else closure-bindings fail
-  my ($sent,$opts,$atags, $i,$src,$tok,$text, $mtok, %mtah,$ta,$tag,$details,$cost,$dcs,$dc, $tmoot,$mtas,$mta);
+  my ($sent, $i,$src,$tok,$text, $mtok, %mtah,$ta,$dcs,$dc, $tmoot,$mtas,$mta);
+  my ($tag,$details,$cost,$tsrc);
 
   ##-- common variables: cost-munging funcs
   my $acfunc_strs = $moot->{analyzeCostFuncs} || {};
@@ -252,27 +305,25 @@ sub getAnalyzeSentenceSub {
     $moot->logconfess("cannot evaluate cost-munging function '$acf' for analysis key '$asrc': $@") if ($@);
   }
 
-  return sub {
-    ($sent,$opts) = @_;
+  ##-- ensure $opts hash exists
+  $opts = {} if (!$opts);
+
+  ##-- debug options
+  $hmm->{dynlex_beta} = $opts->{dynlex_beta} if (defined($opts->{dynlex_beta}));
+  $hmm->{dynlex_base} = $opts->{dynlex_base} if (defined($opts->{dynlex_base}));
+
+  ##-- ye olde loope
+  foreach $sent (@{$doc->{body}}) {
     $sent = DTA::CAB::Datum::toSentence($sent) if (!UNIVERSAL::isa($sent,'DTA::CAB::Sentence'));
 
-    ##-- ensure $opts hash exists
-    $opts = $opts ? {%$opts} : {}; ##-- copy / create
-
-    ##-- debug options
-    $hmm->{dynlex_beta} = $opts->{dynlex_beta} if (defined($opts->{dynlex_beta}));
-    $hmm->{dynlex_base} = $opts->{dynlex_base} if (defined($opts->{dynlex_base}));
-
-    ##-- get source text-array ([$w1,...,$wN]), ensure $opts->{src} is defined
-    $src = defined($opts->{src}) ? $opts->{src} : $sent->{tokens};
+    ##-- get source text-array ([$w1,...,$wN])
+    $src = $sent->{tokens};
 
     ##-- wrap into moot::Sentence $msent
     $msent->clear();
     foreach $i (0..$#$src) {
       $tok  = defined($src->[$i]) ? $src->[$i] : $sent->{tokens}[$i];
-      $text = $tok;
-      $text = $text->{$atxt} if (ref($text) && exists($text->{$atxt}));
-      $text = $text->{hi}    if (ref($text) && exists($text->{hi}));
+      $text = $atext_get_sub->($tok);
       $text = '' if (!defined($text));
 
       $msent->push_back(moot::Token->new($toktyp_vanilla));
@@ -281,50 +332,22 @@ sub getAnalyzeSentenceSub {
 
       ##-- parse analyses into %mtah: ( $tag=>[[$details1,$cost1], ...], ... )
       %mtah = qw();
-      foreach $atags (
-		      (defined($alitFlag) && $tok->{$alitFlag}
-		       ? $alitSrc
-		       : (defined($atag_srcs) ? @$atag_srcs : qw()))
-		     )
-	{
-	  next if (!defined($atags) || !defined($tok->{$atags}));
-	  foreach $ta ( UNIVERSAL::isa($tok->{$atags},'ARRAY') ? @{$tok->{$atags}} : $tok->{$atags} ) {
-	    $cost=undef;
-	    if (UNIVERSAL::isa($ta,'HASH')) {
-	      ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
-	      if (!defined($tag) && defined($ta->{hi})) {
-		##-- case automaton
-		$details = $ta->{hi};
-		if ($details =~ /\[\_?([^\s\]]*)/) {
-		  $tag = $1;
-		} else {
-		  $tag = $details;
-		  $tag =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape brackets (for DynLex)
-		  $tag =~ s/\\(.)/$1/g;
-		}
-	      } elsif (defined($tag=$ta->{latin1Text})) {
-		##-- case 'xlit'
-		$details=''
-	      }
-	      $cost = $ta->{w} if (!defined($cost) && defined($ta->{w}));
-	    } else {
-	      ($tag,$details) = ($ta,'');
-	    }
+      foreach $ta (defined($alitFlag) && $tok->{$alitFlag} ? $alitSrc : $atags_get_sub->($tok)) {
+	($tag,$details,$cost,$tsrc) = @$ta{qw(tag details cost src)};
 
-	    ##-- munge cost if requested
-	    $cost = 0 if (!defined($cost));
-	    $cost = $acfunc_code{$atags}->($cost) if ($acfunc_code{$atags});
-	    $cost = 0 if (!defined($cost));
+	##-- munge cost if requested
+	$cost = 0 if (!defined($cost));
+	$cost = $acfunc_code{$tsrc}->($cost) if ($acfunc_code{$tsrc});
+	$cost = 0 if (!defined($cost)); ##-- double-check here in case of busted $acfunc_code
 
-	    ##-- add analysis to %mtah
-	    if (!$mtah{$tag} || !$uniqa) {
-	      push(@{$mtah{$tag}}, [$details,$cost]);
-	    } elsif ($uniqa && $cost < $mtah{$tag}[0][1]) {
-	      @{$mtah{$tag}[0]} = ($details,$cost);
-	    }
-	  }
+	##-- add analysis to %mtah
+	if (!$mtah{$tag} || !$uniqa) {
+	  push(@{$mtah{$tag}}, [$details,$cost]);
+	} elsif ($uniqa && $cost < $mtah{$tag}[0][1]) {
+	  @{$mtah{$tag}[0]} = ($details,$cost);
 	}
-      ##--/foreach $atags ...
+      }
+      ##--/foreach $ta ...
 
       ##-- sanity check: require analyses?
       if ($requireAnalyses && !scalar(keys(%mtah))) {
@@ -383,11 +406,6 @@ sub getAnalyzeSentenceSub {
     return $sent;
   };
 }
-
-
-##==============================================================================
-## Methods: Output Formatting: OBSOLETE
-##==============================================================================
 
 1; ##-- be happy
 
@@ -595,13 +613,6 @@ Implicitly calls $obj-E<gt>clear()
  $bool = $anl->canAnalyze();
 
 Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-
-=item getAnalyzeTokenSub
-
-Returns dummy no-op sub.
-
-=item getAnalyzeSentenceSub
-
 
 =back
 

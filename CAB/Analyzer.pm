@@ -150,10 +150,10 @@ sub doAnalyze {
 ##      $anl->ensureLoaded();
 ##      $doc = toDocument($doc);
 ##      if ($anl->doAnalyze('Types')) {
-##        $doc->getTypes();
-##        $anl->analyzeTypes($doc,\%opts);
-##        $doc->expandTypes();
-##        $doc->clearTypes();
+##        $types = $anl->getTypes($doc);
+##        $anl->analyzeTypes($doc,$types,\%opts);
+##        $anl->expandTypes($doc,$types);
+##        $anl->clearTypes($doc);
 ##      }
 ##      $anl->analyzeTokens($doc,\%opts)    if ($anl->doAnalyze(\%opts,'Tokens'));
 ##      $anl->analyzeSentences($doc,\%opts) if ($anl->doAnalyze(\%opts,'Sentences'));
@@ -164,11 +164,12 @@ sub analyzeDocument {
   return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
   return $doc if (!$anl->canAnalyze);      ##-- ok...
   $doc = toDocument($doc);
+  my ($types);
   if ($anl->doAnalyze($opts,'Types')) {
-    $doc->getTypes();
-    $anl->analyzeTypes($doc,$opts);
-    $doc->expandTypes();
-    $doc->clearTypes();
+    $types = $anl->getTypes($doc);
+    $anl->analyzeTypes($doc,$types,$opts);
+    $anl->expandTypes($doc,$types);
+    $anl->clearTypes($doc);
   }
   $anl->analyzeTokens($doc,$opts)    if ($anl->doAnalyze($opts,'Tokens'));
   $anl->analyzeSentences($doc,$opts) if ($anl->doAnalyze($opts,'Sentences'));
@@ -177,7 +178,7 @@ sub analyzeDocument {
   return $doc;
 }
 
-## $doc = $anl->analyzeTypes($doc,\%opts)
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
 ##  + default implementation does nothing
 sub analyzeTypes { return $_[1]; }
@@ -201,6 +202,33 @@ sub analyzeLocal { return $_[1]; }
 ##  + cleanup any temporary data associated with $doc
 ##  + no default implementation
 sub analyzeClean { return $_[1]; }
+
+##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: API: Type-wise
+
+## \%types = $anl->getTypes($doc)
+##  + returns a hash \%types = ($typeText => $typeToken, ...) mapping token text to
+##    basic token objects (with only 'text' key defined)
+##  + default just calls $doc->types()
+sub getTypes {
+  return $_[1]->types;
+}
+
+## $doc = $anl->expandTypes($doc)
+## $doc = $anl->expandTypes($doc,\%types)
+##  + expands \%types into $doc->{body} tokens
+##  + default just calls $doc->expandTypes(\%types)
+sub expandTypes {
+  return $_[1]->expandTypes($_[2]);
+}
+
+## $doc = $anl->clearTypes($doc)
+##  + clears cached type->object map in $doc->{types}
+##  + default just calls $doc->clearTypes()
+sub clearTypes {
+  return $_[1]->clearTypes();
+}
+
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: Wrappers
@@ -250,6 +278,31 @@ sub analyzeData {
   $ofmt->flush;
 
   return RPC::XML::base64->new($str);
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: Closure Utilities (optional)
+
+## \&closure = $anl->analyzeClosure($which)
+##  + returns cached $anl->{"_analyze${which}"} if present
+##  + otherwise calls $anl->getAnalyzeClosure($which) & caches result
+##  + optional utility for closure-based analysis
+sub analyzeClosure {
+  my ($anl,$which) = @_;
+  return $anl->{"_analyze${which}"} if (defined($anl->{"_analyze${which}"}));
+  return $anl->{"_analyze${which}"} = $anl->getAnalyzeClosure($which);
+}
+
+## \&closure = $anl->getAnalyzeClosure($which)
+##  + returns closure \&closure for analyzing data of type "$which"
+##    (e.g. Word, Type, Token, Sentence, Document, ...)
+##  + default implementation calls $anl->getAnalyze"${which}"Closure() if
+##    available, otherwise croak()s
+sub getAnalyzeClosure {
+  my ($anl,$which) = @_;
+  my $getsub = $anl->can("getAnalyze${which}Closure");
+  return $getsub->($anl) if ($getsub);
+  $anl->logconfess("getAnalyzeClosure('$which'): no getAnalyze${which}Closure() method defined!");
 }
 
 

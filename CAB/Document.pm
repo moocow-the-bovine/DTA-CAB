@@ -55,6 +55,7 @@ sub types {
   return $_[0]{types} if ($_[0]{types});
   return $_[0]->getTypes();
 }
+
 ## \%types = $doc->getTypes()
 ##  + (re-)computes hash \%types = ($typeText => $typeToken, ...) mapping token text to
 ##    basic token objects (with only 'text' key defined)
@@ -69,11 +70,12 @@ sub getTypes {
 }
 
 ## $doc = $doc->expandTypes()
-##  + expands $doc->{types} map into tokens
+## $doc = $doc->expandTypes(\%types)
+##  + expands \%types (default=$doc->{types}) map into tokens
 sub expandTypes {
-  my $doc = shift;
-  return $doc if (!$doc->{types}); ##-- no {types} key
-  my $types = $doc->{types};
+  my ($doc,$types) = @_;
+  $types = $doc->{types} if (!$types);
+  return $doc if (!$types); ##-- no {types} key
   my ($typ);
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     $typ = $types->{$_->{text}};

@@ -1,42 +1,72 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Rewrite.pm
+## File: DTA::CAB::Analyzer::RewriteSub.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: rewrite analysis via Gfsm::XL cascade
+## Description: sub-analysis (LTS, Morph) of rewrite targets
 
 ##==============================================================================
-## Package: Analyzer::Rewrite
+## Package: Analyzer::RewriteSub
 ##==============================================================================
-package DTA::CAB::Analyzer::Rewrite;
-use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
+package DTA::CAB::Analyzer::RewriteSub;
+use DTA::CAB::Chain;
+use DTA::CAB::Analyzer::Morph;
+use DTA::CAB::Analyzer::LTS;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Automaton::Gfsm::XL);
+our @ISA = qw(DTA::CAB::Chain);
 
-## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm::XL
+## $obj = CLASS_OR_OBJ->new(chain=>\@analyzers, %args)
+##  + basic object structure: (see also DTA::CAB::Chain)
+##     chain => [$a1, ..., $aN], ##-- sub-analysis chain (e.g. chain=>[$lts,$morph])
+##  + new object structure:
+##     rwLabel => $label,        ##-- label of source 'rewrite' object (default='rw')
 sub new {
   my $that = shift;
-  my $aut = $that->SUPER::new(
-			      ##-- defaults
-			      #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
+  my $asub = $that->SUPER::new(
+			       ##-- defaults
+			       #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
 
-			      ##-- analysis selection
-			      label => 'rw',
-			      analyzeGet => '$_[0]{msafe} ? undef : ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text})',
-			      wantAnalysisLo => 0,
-			      tolowerNI => 1,
+			       ##-- analysis selection
+			       rwLabel => 'rw',
 
-			      ##-- analysis parameters
-			      max_weight => 1e38,
-			      #max_weight => [2,0],
-			      max_paths  => 1,
-			      max_ops    => -1,
+			       ##-- user args
+			       @_
+			      );
+  return $asub;
+}
 
-			      ##-- user args
-			      @_
-			     );
-  return $aut;
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
+##  + extracts rewrite targets, builds pseudo-type hash, calls sub-chain analyzeTypes(), & expands
+sub analyzeTypes {
+  my ($asub,$doc,$types,$opts) = @_;
+
+  ##-- load
+  $asub->ensureLoaded();
+
+  ##-- get rewrite target types
+  my $rwkey   = $asub->{rwLabel};
+  my $rwtypes = {
+		 map { ($_->{hi}=>bless({text=>$_->{hi}},'DTA::CAB::Token')) }
+		 map { $_->{$rwkey} ? @{$_->{$rwkey}} : qw() }
+		 values(%$types)
+		};
+
+  ##-- analyze rewrite target types
+  $_->analyzeTypes($doc,$rwtypes,$opts) foreach (@{$asub->{chain}});
+
+  ##-- delete rewrite target type 'text'
+  delete($_->{text}) foreach (values %$rwtypes);
+
+  ##-- expand rewrite target types
+  my ($rwtyp);
+  foreach (map {$_->{$rwkey} ? @{$_->{$rwkey}} : qw()} values(%$types)) {
+    $rwtyp = $rwtypes->{$_->{hi}};
+    @$_{keys %$rwtyp} = values %$rwtyp;
+  }
+
+  ##-- return
+  return $doc;
 }
 
 

@@ -22,7 +22,7 @@ sub new {
 			      #analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
 
 			      ##-- analysis selection
-			      analyzeDst => 'mlatin',
+			      label => 'mlatin',
 			      wantAnalysisLo => 0,
                               tolower => 1,
 

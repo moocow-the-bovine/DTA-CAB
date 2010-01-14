@@ -54,29 +54,25 @@ sub new {
 sub ensureLoaded { return 1; }
 
 ##==============================================================================
-## Methods: Analysis
+## Methods: Analysis: v1.x
 ##==============================================================================
 
-##------------------------------------------------------------------------
-## Methods: Analysis: Token
-
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##      $tok = $coderef->($tok,\%analyzeOptions)
-##  + sets (for $key=$anl->{analysisKey}):
-##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
+## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in values(%types)
+##  + sets
+##      $tok->{$anl->{label}} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
 ##    with:
 ##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
 ##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
 ##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
-sub getAnalyzeTokenSub {
-  my $xlit = shift;
-  my $akey = $xlit->{analysisKey};
+sub analyzeTypes {
+  my ($xlit,$doc,$types,$opts) = @_;
+  $types = $doc->types if (!$types);
+  my $akey = $xlit->{label};
+  my $aclass = $xlit->analysisClass;
 
-  my ($tok, $w,$uc,$l0,$l, $isLatin1,$isLatinExt);
-  return sub {
-    $tok = shift;
-    $tok = toToken($tok) if (!ref($tok));
+  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
+  foreach $tok (values(%$types)) {
     $w   = $tok->{text};
     $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 
@@ -127,14 +123,11 @@ sub getAnalyzeTokenSub {
     #return [ $l, $isLatin1, $isLatinExt ];
     #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
     $tok->{$akey} = { latin1Text=>$l, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
-
-    return $tok;
-  };
+    bless($tok->{$akey}, $aclass) if ($aclass);
+  }
+  return $doc;
 }
 
-##==============================================================================
-## Methods: Output Formatting --> OBSOLETE !
-##==============================================================================
 
 
 1; ##-- be happy
@@ -228,44 +221,6 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
  $bool = $aut->ensureLoaded();
 
 Override: ensures analysis data is loaded
-
-=back
-
-=cut
-
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Methods: Analysis
-=pod
-
-=head2 Methods: Analysis
-
-=over 4
-
-=item getAnalyzeTokenSub
-
-Override: see L<DTA::CAB::Analyzer::getAnalyzeTokenSub()|DTA::CAB::Analyzer/getAnalyzeTokenSub>.
-
-=over 4
-
-=item *
-
-returned sub is callable as:
-
- $tok = $coderef->($tok,\%analyzeOptions)
-
-=item *
-
-sets (for $key=$anl-E<gt>{analysisKey}, by default C<xlit>):
-
- $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
-
-with:
-
- $latin1Text = $str     ##-- best latin-1 approximation of $token-E<gt>{text}
- $isLatin1   = $bool    ##-- true iff $token-E<gt>{text} is losslessly encodable as latin1
- $isLatinExt = $bool,   ##-- true iff $token-E<gt>{text} is losslessly encodable as latin-extended
-
-=back
 
 =back
 

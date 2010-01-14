@@ -33,7 +33,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Options
 ##     analyzeWhich     => $which, ##-- one of 'token', 'sentence', 'document'; default='document'
-##     analyzeDst       => $dst,   ##-- destination key (default='langid')
+##     label            => $label, ##-- destination key (default='langid')
 ##
 ##     ##-- Analysis Objects
 ##     map            => $map,   ##-- a Lingua::LangId::Map object
@@ -46,7 +46,7 @@ sub new {
 
 			       ##-- options
 			       analyzeWhich => 'document',
-			       analyzeDst   => 'langid',
+			       label        => 'langid',
 
 			       ##-- analysis objects
 			       #map => undef,
@@ -161,70 +161,47 @@ sub canAnalyze {
 ## $thingy = $lid->analyzeThingy($thingy, \$str, \%opts)
 sub analyzeThingy {
   my ($lid,$thingy,$ref,$opts) = @_;
-  $thingy->{$lid->{analyzeDst}} = $lid->{map}->applyString($ref);
+  $thingy->{$lid->{label}} = $lid->{map}->applyString($ref);
   return $thingy;
 }
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Token
+## Methods: Analysis: v1.x: API
 
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##     $tok = $coderef->($tok,\%opts)
-##  + only used if $map->{analyzeWhich} = 'token'
-sub getAnalyzeTokenSub {
-  my $lid = shift;
-  return sub { $_[0] } if ($lid->{analyzeWhich} !~ /^tok/);
-  my ($tok,$str);
-  return sub {
-    $tok = toToken(shift);
-    $str = $tok->{text};
-    return $lid->analyzeThingy($tok,\$str,@_);
-  };
+## $doc = $anl->analyzeDocument($doc,\%opts)
+##  + analyze a DTA::CAB::Document $doc
+##  + top-level API routine
+sub analyzeDocument {
+  my ($anl,$doc,$opts) = @_;
+  return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
+  return $doc if (!$anl->canAnalyze);      ##-- ok...
+  $doc = toDocument($doc);
+  my ($str);
+  if ($anl->{analyzeWhich} eq 'document') {
+    $str = join(' ', map {toToken($_)->{text}} map {@{toSentence($_)->{tokens}}} @{$doc->{body}});
+    $anl->analyzeThingy($doc,\$str,$opts);
+  }
+  elsif ($anl->{analyzeWhich} eq 'sentence') {
+    foreach (map {toSentence($_)} @{$doc->{body}}) {
+      $_ = toSentence($_);
+      $str = join(' ', map {toToken($_)->{text}} @{$_->{tokens}});
+      $anl->analyzeThingy($_,\$str,$opts);
+    }
+  }
+  elsif ($anl->{analyzeWhich} eq 'token' || $anl->{analyzeWhich} eq 'type') {
+    foreach (@{$doc->{body}}) {
+      $_ = toSentence($_);
+      foreach (@{$_->{tokens}}) {
+	$_ = toToken($_);
+	$anl->analyzeThingy($_,\$_->{text},$opts);
+      }
+    }
+  }
+  else {
+    $anl->logconfess("analyzeDocument(): unknown {analyzeWhich}='$anl->{analyzeWhich}'");
+  }
+  return $doc;
 }
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Sentence
-
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + returned sub is callable as:
-##     $sent = $coderef->($sent,\%opts)
-##  + only used if $map->{analyzeWhich} = 'sentence'
-sub getAnalyzeSentenceSub {
-  my $lid = shift;
-  return $lid->SUPER::getAnalyzeSentenceSub(@_) if ($lid->{analyzeWhich} !~ /^sent/);
-  my ($sent,$str);
-  return sub {
-    $sent = toSentence(shift);
-    $str = join(' ', map {toToken($_)->{text}} @{$sent->{tokens}});
-    return $lid->analyzeThingy($sent,\$str,@_);
-  };
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Document
-
-## $coderef = $anl->getAnalyzeDocumentSub()
-##  + guts for $anl->analyzeDocumentSub()
-##  + returned sub is callable as:
-##     $doc = $coderef->($doc,\%opts)
-##  + only used if $map->{analyzeWhich} = 'document'
-sub getAnalyzeDocumentSub {
-  my $lid = shift;
-  return $lid->SUPER::getAnalyzeDocumentSub(@_) if ($lid->{analyzeWhich} !~ /^doc/);
-  my ($doc,$str);
-  return sub {
-    $doc = toDocument(shift);
-    $str = join(' ', map {toToken($_)->{text}} map {@{toSentence($_)->{tokens} }} @{$doc->{body}});
-    return $lid->analyzeThingy($doc,\$str,@_);
-  };
-}
-
-
-##==============================================================================
-## Methods: Output Formatting: OBSOLETE
-##==============================================================================
 
 1; ##-- be happy
 

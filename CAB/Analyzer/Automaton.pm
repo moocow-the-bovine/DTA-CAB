@@ -22,6 +22,23 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
+## $DEFAULT_ANALYZE_GET
+##  + default coderef or eval-able string for {analyzeGet}
+##  + parameters:
+##      $_[0] => token object being analyzed
+##  + closure vars:
+##      $aut  => analyzing automaton
+our $DEFAULT_ANALYZE_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
+
+## $DEFAULT_ANALYZE_SET
+##  + default coderef or eval-able string for {analyzeSet}
+##  + parameters:
+##      $_[0] => token object being analyzed
+##      $_[1] => blessed analyses (array-ref, maybe blessed)
+##  + closure vars:
+##      $aut  => analyzing automaton
+our $DEFAULT_ANALYZE_SET = '$_[0]{$aut->{label}}=$_[1]';
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -36,7 +53,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Output
 ##     aclass         => $class, ##-- analysis class (OVERRIDE default: 'DTA::CAB::Analysis::Automaton')
-##     analyzeSrc     => $key,   ##-- source key for analysis (default: 'text')
+##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
+##     analyzeSet     => $code,  ##-- accessor: coderef or string: set analyses (default=$DEFAULT_ANALYZE_SET)
 ##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
 ##
 ##     ##-- Analysis Options
@@ -325,23 +343,27 @@ sub canAnalyze {
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
-## $doc = $anl->analyzeTypes($doc,\%opts)
-##  + perform type-wise analysis of all (text) types in $doc->{types}
-##  + analyzes text $opts{src}, defaults to $tok->{text}
-##  + sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
-##    + $opts{dst} defaults to \$tok->{ $anl->{analyzeDst} }
+##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: Closure Utilities (optional)
+
+## $closure = $anl->getAnalyzeWordClosure()
+##  + re-computes closure $closure for analyzing single words
+##  + returned closure is callable as:
+##      $analyses = $closure->($textString,\%analyzeOpts)
+##  + returned analyses have the form:
+##      [ \%analysis1, ..., \%analysisN ]
 ##    - each \%analysisI is a HASH:
 ##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
 ##    - if $opts->{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
-##  + if $anl->analysisClass() returned defined, $out is blessed into it
 ##  + implicitly loads analysis data (automaton and labels)
-sub analyzeTypes {
-  my ($aut,$doc,$opts) = @_;
+sub getAnalyzeWordClosure {
+  my $aut = shift;
+
+  ##-- load
+  $aut->ensureLoaded();
 
   ##-- setup common variables
   my $aclass = $aut->analysisClass;
-  my $asrc   = $aut->{analyzeSrc};
-  my $adst   = $aut->{analyzeDst};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
@@ -359,95 +381,107 @@ sub analyzeTypes {
 			   qw(tolower tolowerNI toupperI bashWS attInput),
 			   qw(wantAnalysisLo max_paths max_weight max_ops),
 			  );
-  my $doprofile = $aut->{profile};
 
-  ##-- setup $opts hash
-  $opts = $opts ? {%$opts} : {}; ##-- copy / create
-  $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-  #$aut->setLookupOptions($opts) if ($aut->can('setLookupOptions')); ##-- this has to happen type-wise (length-sensitive params)
-
-  my ($tok,$src, $w,$uword,$ulword,@wlabs, $isdict, $analyses);
-  foreach $tok (values(%{$doc->{types}})) {
-    ##-- get source text ($w), ensure $opts->{src} is defined
-    $src = $tok->{$asrc};
-    $src = $src->text() if (UNIVERSAL::can($src,'text'));
-    $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions')); ##-- hack for linear f(length) max_weight !
+  my ($w,$opts,$uword,$ulword,@wlabs, $analyses);
+  return sub {
+    ($w,$opts) = @_;
 
     ##-- maybe ignore this token
-    next if (defined($allowTextRegex) && $src !~ $allowTextRegex);
+    return undef if (defined($allowTextRegex) && $w !~ $allowTextRegex);
 
-    ##-- create analyses
+    $opts = $opts ? {%$opts} : {}; ##-- ensure $opts hash exists: copy / create
+    $opts->{src} = $w;             ##-- set $opts->{src} (hack for setLookupOptions())
+
+    ##-- set default options
+    $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
+    $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
     $analyses = [];
 
-    ##-- loop & analyze (accept FST-style list input)
-    foreach (ref($src) && UNIVERSAL::isa($src,'ARRAY') ? @$src : $src) {
-      $w = (ref($_) && UNIVERSAL::isa($_,'HASH') ? $_->{hi} : $_); ##-- hack
+    ##---- analyze
+    ##-- normalize word
+    $uword = $w;
+    if    ($opts->{tolower})   { $uword = lc($uword); }
+    elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
+    if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
+    if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
 
-      ##-- normalize word
-      $uword = $w;
-      if    ($opts->{tolower})   { $uword = lc($uword); }
-      elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
-      if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
-      if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
-
-      ##-- check for (normalized) word in dict
-      if ($dict && exists($dict->{$uword})) {
-	push(@$analyses, @{$dict->{$uword}});
-      }
-      elsif ($fst_ok) {
-	##-- not in dict: fst lookup (if fst is kosher)
-
-	##-- get labels
-	if ($opts->{attInput}) {
-	  ##-- get labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
-	  $ulword = $uword;
-	  utf8::downgrade($ulword);
-	  @wlabs = (@{$lab->string_to_labels($ulword, $opts->{check_symbols}, 1)}, @eowlab);
-	}
-	elsif ($opts->{check_symbols}) {
-	  ##-- get labels: by character: verbose
-	  @wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
-	  foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	    $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
-	  }
-	  @wlabs = grep {defined($_)} @wlabs;
-	}
-	else {
-	  ##-- get labels: by character: quiet
-	  @wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
-	}
-
-	##-- fst lookup
-	$aut->{fst}->lookup(\@wlabs, $result);
-	$result->_connect() if ($opts->{auto_connect});
-	#$result->_rmepsilon() if ($opts->{auto_rmeps});
-
-	##-- parse analyses
-	push(@$analyses,
-	     map {
-	       {(
-		 ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
-		 'hi'=> (defined($labenc)
-			 ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
-			 : $lab->labels_to_string($_->{hi},0,1)),
-		 'w' => $_->{w},
-		)}
-	     } @{$result->paths($Gfsm::LSUpper)}
-	    );
-      }
-      #else { ; } ##-- no dictionary entry and no FST: do nothing
+    ##-- check for (normalized) word in dict
+    if ($dict && exists($dict->{$uword})) {
+      push(@$analyses, @{$dict->{$uword}});
     }
+    elsif ($fst_ok) {
+      ##-- not in dict: fst lookup (if fst is kosher)
 
-    ##-- wipe or bless analyses
-    if (!@$analyses) {
-      undef($analyses);
-    } elsif (defined($aclass)) {
-      $analyses = bless($analyses,$aclass);
+      ##-- get labels
+      if ($opts->{attInput}) {
+	##-- get labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
+	$ulword = $uword;
+	utf8::downgrade($ulword);
+	@wlabs = (@{$lab->string_to_labels($ulword, $opts->{check_symbols}, 1)}, @eowlab);
+      }
+      elsif ($opts->{check_symbols}) {
+	##-- get labels: by character: verbose
+	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
+	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
+	  $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+	}
+	@wlabs = grep {defined($_)} @wlabs;
+      }
+      else {
+	##-- get labels: by character: quiet
+	@wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
+      }
+
+      ##-- fst lookup
+      $aut->{fst}->lookup(\@wlabs, $result);
+      $result->_connect() if ($opts->{auto_connect});
+      #$result->_rmepsilon() if ($opts->{auto_rmeps});
+
+      ##-- parse analyses
+      push(@$analyses,
+	   map {
+	     {(
+	       ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
+	       'hi'=> (defined($labenc)
+		       ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
+		       : $lab->labels_to_string($_->{hi},0,1)),
+	       'w' => $_->{w},
+	      )}
+	   } @{$result->paths($Gfsm::LSUpper)}
+	  );
     }
+    #else { ; } ##-- no dictionary entry and no FST: do nothing
 
-    ##-- set token properties: analyses
-    if (defined($opts->{dst})) { ${ $opts->{dst} } = $analyses; }
-    else { $tok->{$adst} = $analyses; }
+    return undef if (!@$analyses);
+    return $aclass ? bless($analyses,$aclass) : $analyses;
+  };
+}
+
+
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
+##  + calls $anl->getAnalyzeWordClosure()->($_) foreach values(%types)
+sub analyzeTypes {
+  my ($aut,$doc,$types,$opts) = @_;
+  $types = $doc->types if (!$types);
+
+  ##-- closure variables
+  my ($tok,$w,$a);
+
+  ##-- common variables
+  my $aword = $aut->analyzeClosure('Word') or return $doc; ##-- can't analyze?
+  my $aget  = defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
+  my $aset  = defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET;
+
+  ##-- path-closures
+  my $aget_sub = ref($aget) ? $aget : eval "sub { $aget }";
+  my $aset_sub = ref($aset) ? $aset : eval "sub { $aset }";
+
+  foreach $tok (values(%$types)) {
+    $w = $aget_sub->($tok);
+    next if (!defined($w));  ##-- accessor returned undef: skip this token
+    $a = $aword->($w,$opts);
+    $aset_sub->($tok,$a);
   }
 
   return $doc;
@@ -523,8 +557,6 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  ##========================================================================
  ## Methods: Analysis
  
- $bool = $anl->canAnalyze();
- $coderef = $anl->getAnalyzeTokenSub();
 
 =cut
 
@@ -763,58 +795,6 @@ Returns true if analyzer can perform its function (e.g. data is loaded & non-emp
 This implementation just returns:
 
  $anl->dictOk || ($anl->labOk && $anl->fstOk)
-
-=item getAnalyzeTokenSub
-
- $coderef = $aut->getAnalyzeTokenSub();
-
-=over 4
-
-=item *
-
-see L<DTA::TokWrap::Analyzer::getAnalyzeTokenSub()|DTA::TokWrap::Analyzer/item_getAnalyzeTokenSub>.
-
-=item *
-
-returned sub is callable as:
-
- $tok = $coderef->($tok,\%opts)
-
-=item *
-
-analyzes text $opts{src}, defaults to $tok-E<gt>{text}
-
-=item *
-
-sets output ${ $opts{dst} } = $out = [ \%analysis1, ..., \%analysisN ]
-
-=over 4
-
-=item *
-
-$opts{dst} defaults to \$tok-E<gt>{ $aut-E<gt>{analyzeDst} }
-
-=item *
-
-each \%analysisI is a HASH:
-
- \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
-
-=item *
-
-if $opts-E<gt>{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
-
-=back
-
-=item *
-
-if $aut-E<gt>analysisClass() returned defined, $out is blessed into it
-
-=item *
-
-implicitly loads analysis data (automaton and labels)
-
-=back
 
 =back
 

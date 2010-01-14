@@ -32,7 +32,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     mapFile => $filename,     ##-- binary source file for 'map' (default: none) : REQUIRED
 ##
 ##     ##-- Analysis Options
-##     analyzeDst       => $dst,   ##-- document destination key (default='classified')
+##     label            => $label, ##-- document destination key (default='classified')
 ##     analyzeClearBody => $bool,  ##-- if true, document analysis routine will wipe $doc->{body} (default=false)
 ##
 ##     ##-- Analysis Objects
@@ -45,7 +45,7 @@ sub new {
 			      mapFile => undef,
 
 			      ##-- options
-			      analyzeDst => 'classified',
+			      label => 'classified',
 			      analyzeClearBody => 0,
 
 			      ##-- analysis objects
@@ -153,37 +153,19 @@ sub canAnalyze {
 }
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Token
+## Methods: Analysis: v1.x: API
 
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##     $tok = $coderef->($tok,\%opts)
-##  + dummy implementation, does nothing
-sub getAnalyzeTokenSub { return sub { $_[0] }; }
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Sentence
-
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + returned sub is callable as:
-##     $sent = $coderef->($sent,\%opts)
-##  + dummy implementation, does nothing
-sub getAnalyzeSentenceSub { return sub { $_[0] }; }
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Document
-
-## $coderef = $anl->getAnalyzeDocumentSub()
-##  + guts for $anl->analyzeDocumentSub()
-##  + returned sub is callable as:
-##     $doc = $coderef->($doc,\%opts)
-sub getAnalyzeDocumentSub {
-  my $dc = shift;
+## $doc = $anl->analyzeDocument($doc,\%opts)
+##  + analyze a DTA::CAB::Document $doc
+##  + top-level API routine
+sub analyzeDocument {
+  my ($anl,$doc,$opts) = @_;
+  return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
+  return $doc if (!$anl->canAnalyze);      ##-- ok...
+  $doc = toDocument($doc);
 
   ##-- vars
-  my $adst = $dc->{analyzeDst};
-  my $aclear = $dc->{analyzeClearBody};
+  my $lab    = $dc->{label};
 
   my $map = $dc->{map};
   my $dcdoc = $dc->{_dcdoc} = DocClassify::Document->new(string=>"<doc type=\"dummy\" src=\"$dc\"/>\n",label=>(ref($dc)." dummy document"));
@@ -191,36 +173,30 @@ sub getAnalyzeDocumentSub {
   my $sig_tf = $dcsig->{tf};
   my $sig_Nr = \$dcsig->{N};
 
-  my ($doc,$opts, $s,$w, $wkey);
-  return sub {
-    ($doc,$opts) = @_;
-    $doc = toDocument($doc);
-
-    ##-- populate signature from non-refs in tokens
-    %$sig_tf = qw();
-    $$sig_Nr = 0;
-    foreach $s (@{$doc->{body}}) {
-      foreach $w (@{$s->{tokens}}) {
-	$wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%$w));
-	$sig_tf->{$wkey}++;
-	$$sig_Nr++;
-      }
+  ##-- populate signature from non-refs in tokens
+  %$sig_tf = qw();
+  $$sig_Nr = 0;
+  foreach $s (@{$doc->{body}}) {
+    foreach $w (@{$s->{tokens}}) {
+      $wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%$w));
+      $sig_tf->{$wkey}++;
+      $$sig_Nr++;
     }
+  }
 
-    ##-- map & annotate
-    $dcdoc->{sig} = $dcsig;
-    $map->mapDocument($dcdoc);
-    $doc->{$adst} = [ $dcdoc->cats() ];
-    @{$doc->{body}} = qw() if ($aclear);
+  ##-- map & annotate
+  $dcdoc->{sig} = $dcsig;
+  $map->mapDocument($dcdoc);
+  $doc->{$adst} = [ $dcdoc->cats() ];
+  @{$doc->{body}} = qw() if ($dc->{analyzeClearBody});
 
-    ##-- cleanup
-    @{$dcdoc->{cats}} = qw();
-    $dcdoc->clearCache();
-    $dcsig->clear();
+  ##-- cleanup
+  @{$dcdoc->{cats}} = qw();
+  $dcdoc->clearCache();
+  $dcsig->clear();
 
-    ##-- return
-    return $doc;
-  };
+  ##-- return
+  return $doc;
 }
 
 

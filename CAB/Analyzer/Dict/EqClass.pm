@@ -31,7 +31,7 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict);
 ##  + object structure, new:
 ##
 ##    ##-- Analysis Options
-##    analysisKey => $key,     ##-- token analysis key (default='eqpho')
+##    label       => $key,     ##-- token output-analysis key (default='eqpho')
 ##    inputKey    => $key,     ##-- token input key (default='lts')
 ##                             ##   : $tok->{$key} should be ARRAY-ref as returned by Analyzer::Automaton
 ##    allowRegex  => $re,      ##-- if defined, only tokens with matching text will be analyzed
@@ -58,7 +58,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'eqpho',
+			   label       => 'eqpho',
 			   inputKey    => 'lts',
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
@@ -162,20 +162,23 @@ sub loadDict {
 ##==============================================================================
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: Token
+## Methods: Analysis: v1.x: API
 
-## $coderef = $anl->getAnalyzeTokenSub()
-##  + returned sub is callable as:
-##      $tok = $coderef->($tok,\%analyzeOptions)
-##  + analyzes phonetic source $opts{phoSrc}, defaults to $tok->{ $eqc->{inputKey} }[0]{hi}
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in $doc->{types}
+##  + analyzes phonetid source $tok->{ $anl->{inputKey} }[0]{hi}
 ##  + falls back to analysis of text $opts{src} rsp. $tok->{text}
-##  + sets (for $key=$anl->{analysisKey}):
-##      $tok->{$key} = [ $eqTxt1, $eqText2, ... ]
-sub getAnalyzeTokenSub {
-  my $eqc = shift;
-  my $akey = $eqc->{analysisKey};
-  my $ikey = $eqc->{inputKey};
+##  + sets
+##      $tok->{$anl->{label}} = [ $eqTxt1, $eqText2, ... ]
+sub analyzeTypes {
+  my ($eqc,$doc,$types,$opts) = @_;
 
+  ##-- keys & paths
+  my $akey = $eqc->{label};
+  my $ikey = $eqc->{inputKey};
+  my $aclass = $eqc->analysisClass;
+
+  ##-- common vars
   my $txt2tid = $eqc->{txt2tid};
   my $tid2txt = $eqc->{tid2txt};
   my $pho2pid = $eqc->{pho2pid};
@@ -185,34 +188,33 @@ sub getAnalyzeTokenSub {
 
   my $allowRegex = defined($eqc->{allowRegex}) ? qr($eqc->{allowRegex}) : undef;
 
+  ##-- options
+  $opts = {} if (!defined($opts));
+
   my ($tok,$txt,$args, $p,$pid, $tid, %pws,%p2tw,%t2tw, $w0,$w1);
-  return sub {
-    ($tok,$args) = @_;
-    $tok  = toToken($tok) if (!UNIVERSAL::isa($tok,'DTA::CAB::Token'));
-    $args = {} if (!defined($args));
+  foreach $tok (values %$types) {
+    #$tok  = toToken($tok) if (!UNIVERSAL::isa($tok,'DTA::CAB::Token'));
 
     ##-- wipe token analysis key
     delete($tok->{$akey});
 
     ##-- get source text
-    if (!defined($txt=$args->{src})) {
-      $txt = $tok->{text};
-    }
+    $txt = $tok->{text};
 
     ##-- maybe ignore this token
     return $tok if (defined($allowRegex) && $txt !~ $allowRegex);
 
     ##-- get source phonetic (ID,weight) pairs: %pws: $pid=>$weight, ...
-    if (defined($args->{phoSrc})) {
-      %pws = ($args->{phoSrc},0);
-    } elsif (defined($tok->{$ikey}) && @{$tok->{$ikey}}) {
+    if (defined($tok->{$ikey}) && @{$tok->{$ikey}}) {
       %pws = map {
 	$pid = $pho2pid->{$_->{hi}};
 	(defined($pid) ? ($pid=>$_->{w}) : qw())
       } @{$tok->{$ikey}};
-    } elsif (defined($tid=$txt2tid->{$txt})) {
+    }
+    elsif (defined($tid=$txt2tid->{$txt})) {
       %pws = unpack('(Lf)*', $tid2pws->[$tid]);
-    } else {
+    }
+    else {
       return $tok; ##-- no phonetic source: cannot analyze
     }
 
@@ -242,15 +244,12 @@ sub getAnalyzeTokenSub {
 		       }
 			 keys(%t2tw)
 		      ];
+      bless($tok->{$akey},$aclass) if ($aclass);
     }
-
-    return $tok;
   };
-}
 
-##==============================================================================
-## Methods: Output Formatting --> OBSOLETE !
-##==============================================================================
+  return $doc;
+}
 
 
 1; ##-- be happy
@@ -289,10 +288,6 @@ DTA::CAB::Analyzer::Dict::EqClass - canonical-form-dictionary-based equivalence-
  $bool = $eqc->dictOk();
  $eqc = $eqc->loadDict($dictfile);
  
- ##========================================================================
- ## Methods: Analysis
- 
- $coderef = $anl->getAnalyzeTokenSub();
 
 =cut
 
@@ -401,44 +396,6 @@ Override: load dictionary from $dictfile.
 
 =cut
 
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Methods: Analysis
-=pod
-
-=head2 Methods: Analysis
-
-=over 4
-
-=item getAnalyzeTokenSub
-
- $coderef = $anl->getAnalyzeTokenSub();
-
-=over 4
-
-=item *
-
-returned sub is callable as:
-
- $tok = $coderef->($tok,\%analyzeOptions)
-
-=item *
-
-analyzes phonetic source $opts{phoSrc}, defaults to $tok-E<gt>{ $eqc-E<gt>{inputKey} }[0]{hi}
-
-=item *
-
-falls back to analysis of text $opts{src} rsp. $tok-E<gt>{text}
-
-=item *
-
-sets (for $key=$anl-E<gt>{analysisKey}):
-$tok-E<gt>{$key} = [ $eqTxt1, $eqText2, ... ]
-
-=back
-
-=back
-
-=cut
 
 ##========================================================================
 ## END POD DOCUMENTATION, auto-generated by podextract.perl
