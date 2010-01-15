@@ -39,7 +39,6 @@ sub new {
   return $that->SUPER::new(
 			   ##-- options
 			   label => 'xlit',
-			   aclass => 'DTA::CAB::Analysis::Transliterator',
 
 			   ##-- user args
 			   @_
@@ -70,7 +69,6 @@ sub analyzeTypes {
   my ($xlit,$doc,$types,$opts) = @_;
   $types = $doc->types if (!$types);
   my $akey = $xlit->{label};
-  my $aclass = $xlit->analysisClass;
 
   my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
   foreach $tok (values(%$types)) {
@@ -124,17 +122,9 @@ sub analyzeTypes {
     #return [ $l, $isLatin1, $isLatinExt ];
     #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
     $tok->{$akey} = { latin1Text=>$l, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
-    bless($tok->{$akey}, $aclass) if ($aclass);
   }
   return $doc;
 }
-
-##==============================================================================
-## PACKAGE: Analysis::Transliterator
-##==============================================================================
-package DTA::CAB::Analysis::Transliterator;
-use strict;
-our @ISA = qw(DTA::CAB::Analysis);
 
 1; ##-- be happy
 

@@ -32,7 +32,6 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict);
 ##
 ##    ##-- Analysis Options
 ##    label       => $key,     ##-- token output-analysis key (default='eqpho')
-##    aclass      => $class,   ##-- analysis class (OVERRIDE default='DTA::CAB::Analysis::EqClass')
 ##    inputKey    => $key,     ##-- token input key (default='lts')
 ##                             ##   : $tok->{$key} should be ARRAY-ref as returned by Analyzer::Automaton
 ##    allowRegex  => $re,      ##-- if defined, only tokens with matching text will be analyzed
@@ -60,7 +59,6 @@ sub new {
   return $that->SUPER::new(
 			   ##-- options
 			   label       => 'eqpho',
-			   aclass      => 'DTA::CAB::Analysis::EqClass',
 			   inputKey    => 'lts',
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
@@ -178,7 +176,6 @@ sub analyzeTypes {
   ##-- keys & paths
   my $akey = $eqc->{label};
   my $ikey = $eqc->{inputKey};
-  my $aclass = $eqc->analysisClass;
 
   ##-- common vars
   my $txt2tid = $eqc->{txt2tid};
@@ -246,19 +243,11 @@ sub analyzeTypes {
 		       }
 			 keys(%t2tw)
 		      ];
-      bless($tok->{$akey},$aclass) if ($aclass);
     }
   };
 
   return $doc;
 }
-
-##==============================================================================
-## PACKAGE: Analysis::EqClass
-##==============================================================================
-package DTA::CAB::Analysis::EqClass;
-use strict;
-our @ISA = qw(DTA::CAB::Analysis);
 
 
 1; ##-- be happy

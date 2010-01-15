@@ -19,7 +19,6 @@ sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- defaults
-			      #analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
 
 			      ##-- analysis selection
 			      label => 'morph',

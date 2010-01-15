@@ -61,7 +61,6 @@ sub new {
 			      ##-- analysis output
 			      label => 'dict',
 			      analyzeGet => '$_[0]{text}',
-			      aclass => undef, ##-- no analysis class
 
 			      ##-- user args
 			      @_
@@ -148,7 +147,6 @@ sub loadDictDoc {
   ##-- parse loaded tokens into dictionary hash
   my $dict = $dic->{dict};
   my $akey = $dic->{label};
-  my $aclass = $dic->analysisClass;
   my ($w,$text);
   foreach $w (map {@{$_->{tokens}}} @{$ddoc->{body}}) {
     next if (!defined($w->{$akey}));
@@ -157,7 +155,6 @@ sub loadDictDoc {
     elsif ($dic->{tolowerNI}) { $text =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($dic->{toupperI})  { $text = ucfirst($text); }
     $dict->{$text} = $w->{$akey};
-    bless($dict->{$text},$aclass) if (ref($dict->{$text}) && $aclass);
   }
 
   $dic->dropClosures();

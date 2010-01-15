@@ -28,7 +28,7 @@ our @ISA = qw(DTA::CAB::Persistent);
 ##  + object structure:
 ##    (
 ##     label => $label,    ##-- analyzer label (default: from class name)
-##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method)
+##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method; default=undef)
 ##    )
 sub new {
   my $that = shift;
@@ -61,10 +61,10 @@ sub defaultLabel {
 }
 
 ## $class = $anl->analysisClass()
-##  + gets cached $anl->{aclass} if exists, otherwise caches & returns ref($anl)."::Analysis"
+##  + gets cached $anl->{aclass} if exists, otherwise returns undef
+##  + really just an ugly wrapper for $anl->{aclass}
 sub analysisClass {
-  return $_[0]{aclass} if (exists($_[0]{aclass}));
-  return $_[0]{aclass} = ref($_[0])."::Analysis";
+  return $_[0]{aclass};
 }
 
 ##==============================================================================

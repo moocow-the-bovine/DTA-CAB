@@ -35,17 +35,13 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
 ##     label => 'xlit',        ##-- analyzer label
-##     aclass => $class,       ##-- OVERRIDE: 'DTA::CAB::Analysis::Unicruft'
-##     #analysisKey => $key,   ##-- token analysis key (default='xlit') ##-- OBSOLETE: now uses 'label'
 ##  + object structure, INHERITED from Analyzer:
 ##     label => $label,        ##-- analyzer label (default: from class name)
-##     aclass => $class,       ##-- analysis class (optional; see $anl->analysisClass() method)
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
 			   label => 'xlit',
-			   aclass => 'DTA::CAB::Analysis::Unicruft',
 
 			   ##-- user args
 			   @_
@@ -76,7 +72,6 @@ sub analyzeTypes {
   my ($xlit,$doc,$types,$opts) = @_;
   $types = $doc->types if (!$types);
   my $akey = $xlit->{label};
-  my $aclass = $xlit->analysisClass;
 
   my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
   foreach $tok (values(%$types)) {
@@ -104,21 +99,10 @@ sub analyzeTypes {
 
     ##-- update token
     $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
-    bless($tok->{$akey}, $aclass) if ($aclass);
   }
 
   return $doc;
 }
-
-##==============================================================================
-## PACKAGE: Analysis::Unicruft
-##==============================================================================
-package DTA::CAB::Analysis::Unicruft;
-use strict;
-our @ISA = qw(DTA::CAB::Analysis);
-
-## \@textStrings = $a->text()
-sub text { return [$_[0]->{latin1Text}]; }
 
 
 1; ##-- be happy

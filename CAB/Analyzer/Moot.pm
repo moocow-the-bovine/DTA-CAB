@@ -276,7 +276,6 @@ sub analyzeSentences {
   $doc = toDocument($doc);
 
   ##-- setup common variables
-  my $aclass = $moot->analysisClass;
   my $atag_srcs  = $moot->{analyzeTagSrcs};
   my $adst   = $moot->{label};
   my $prune  = $moot->{prune};
@@ -398,7 +397,6 @@ sub analyzeSentences {
       $msent->rotate(1);
 
       ##-- bless & assign analyses
-      bless($tmoot, $aclass) if (defined($aclass));
       $tok->{$adst} = $tmoot;
     }
 
