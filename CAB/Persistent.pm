@@ -33,7 +33,39 @@ sub new {
 
 ## $obj = $obj->clone()
 ##  + deep clone
-sub clone { return Storable::dclone($_[0]); }
+sub clone {
+  #storable_push({Eval=>1,Deparse=>1});
+  my $clone = Storable::dclone($_[0]);
+  #storable_pop();
+  return $clone;
+}
+
+## @STORABLE_STACK
+##  + state variables (HASH-refs) for Storable module
+our @STORABLE_STACK = qw();
+
+## \%vars = CLASS_OR_OBJ->storable_push()
+## \%vars = CLASS_OR_OBJ->storable_push(\%vars)
+##  + pushes old Storable state vars onto @STORABLE_STACK, & sets current \%vars
+sub storable_push {
+  no strict 'refs';
+  my $vars = shift;
+  $vars = {Deparse=>1,Eval=>1} if (!$vars);
+  push(@STORABLE_STACK, {Deparse=>$Storable::Deparse,Eval=>$Storable::Eval});
+  ${"Storable::$_"} = $vars->{$_} foreach (keys %$vars);
+  return $vars;
+}
+
+## \%vars = CLASS_OR_OBJ->storable_pop()
+##  + pops Storable state vars from @STORABLE_STACK
+sub storable_pop {
+  no strict 'refs';
+  return if (!@STORABLE_STACK); ##-- nothing to do
+  my $vars = pop(@STORABLE_STACK);
+  ${"Storable::$_"} = $vars->{$_} foreach (keys %$vars);
+  return $vars;
+}
+
 
 ##==============================================================================
 ## Methods: Persistence

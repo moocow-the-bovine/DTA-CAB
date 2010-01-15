@@ -23,12 +23,12 @@ sub new {
 			      #check_symbols => 0,
 
 			      ##-- analysis selection
-			      #analysisClass => 'DTA::CAB::Analyzer::EqPho::FST::Analysis',
-			      analyzeSrc     => 'lts',
-			      analyzeDst     => 'eqpho',
+			      label => 'eqpho',
+			      analyzeGet     => '$_[0]{lts} ? (map {$_->{hi}} @{$_[0]{lts}}) : qw()',
 			      attInput       => 1,
 			      wantAnalysisLo => 1,
 			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			      #allowWordRegex => '.',
 
 			      ##-- user args
 			      @_

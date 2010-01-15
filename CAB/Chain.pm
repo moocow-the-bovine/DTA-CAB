@@ -197,7 +197,9 @@ sub getAnalyzeTokenSub {
 ##  + Chain default calls $a->analyzeTypes for each analyzer $a in the chain
 sub analyzeTypes {
   my ($ach,$doc,$types,$opts) = @_;
-  $_->analyzeTypes($doc,$types,$opts) foreach (@{$ach->{chain}});
+  foreach (@{$ach->{chain}}) {
+    $_->analyzeTypes($doc,$types,$opts);
+  }
   return $doc;
 }
 

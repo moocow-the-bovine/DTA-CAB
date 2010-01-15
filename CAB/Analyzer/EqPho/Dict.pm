@@ -24,8 +24,8 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'eqpho',
-			   inputKey    => 'lts',
+			   label       => 'eqpho',
+			   analyzeGet  => '$_[0]{lts}[0]{hi}',
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			   ##-- user args

@@ -31,7 +31,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Output
 ##     label          => $lab,   ##-- analyzer label
-##     analyzeGet     => $code,  ##-- string or coderef (default='{text}')
+##     analyzeGet     => $code,  ##-- string or coderef (default='$_[0]{text}')
 ##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
@@ -60,7 +60,7 @@ sub new {
 
 			      ##-- analysis output
 			      label => 'dict',
-			      analyzeGet => '{text}',
+			      analyzeGet => '$_[0]{text}',
 
 			      ##-- user args
 			      @_
@@ -234,8 +234,7 @@ sub analyzeTypes {
   my $dict  = $dic->{dict};
 
   ##-- accessors
-  my $aget  = defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : '{text}';
-  my $aget_sub = ref($aget) ? $aget : eval "sub { $aget }";
+  my $aget  = $dic->accessClosure(defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : '$_[0]{text}');
 
   ##-- ananalysis options
   my @analyzeOptionKeys = qw(tolower tolowerNI toupperI); #)
@@ -245,7 +244,7 @@ sub analyzeTypes {
   my ($tok, $w,$uword, $entry);
   foreach $tok (values %$types) {
     ##-- get source text ($w)
-    $w = $aget_sub->($tok);
+    $w = $aget->($tok);
     next if (!defined($w)); ##-- accessor returned undef: skip this word
 
     ##-- normalize word

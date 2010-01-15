@@ -24,10 +24,11 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $DEFAULT_ANALYZE_GET
 ##  + default coderef or eval-able string for {analyzeGet}
+##  + eval()d in list context, may return multiples
 ##  + parameters:
 ##      $_[0] => token object being analyzed
 ##  + closure vars:
-##      $aut  => analyzing automaton
+##      $anl  => analyzer (automaton)
 our $DEFAULT_ANALYZE_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
 
 ## $DEFAULT_ANALYZE_SET
@@ -36,8 +37,8 @@ our $DEFAULT_ANALYZE_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}'
 ##      $_[0] => token object being analyzed
 ##      $_[1] => blessed analyses (array-ref, maybe blessed)
 ##  + closure vars:
-##      $aut  => analyzing automaton
-our $DEFAULT_ANALYZE_SET = '$_[0]{$aut->{label}}=$_[1]';
+##      $anl  => analyzer (automaton)
+our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 
 ##==============================================================================
 ## Constructors etc.
@@ -70,6 +71,7 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$aut->{label}}=$_[1]';
 ##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
 ##     allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
 ##                              ##   : useful: /(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
+##     allowWordRegex => $re,   ##-- if defined, only source strings matching $re will be analyzed (default: none)
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -113,6 +115,7 @@ sub new {
 			      bashWS         => '_',
 			      attInput       => 0,
 			      allowTextRegex => undef, #'(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			      allowWordRegex => undef,
 
 			      ##-- analysis I/O
 			      aclass     => undef,
@@ -374,7 +377,7 @@ sub getAnalyzeWordClosure {
   my $labenc = $aut->{labenc};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
 
-  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
+  my $allowWordRegex = defined($aut->{allowWordRegex}) ? qr($aut->{allowWordRegex}) : undef;
 
   ##-- ananalysis options
   my @analyzeOptionKeys = (qw(check_symbols auto_connect),
@@ -387,7 +390,7 @@ sub getAnalyzeWordClosure {
     ($w,$opts) = @_;
 
     ##-- maybe ignore this token
-    return undef if (defined($allowTextRegex) && $w !~ $allowTextRegex);
+    return undef if (defined($allowWordRegex) && $w !~ $allowWordRegex);
 
     $opts = $opts ? {%$opts} : {}; ##-- ensure $opts hash exists: copy / create
     $opts->{src} = $w;             ##-- set $opts->{src} (hack for setLookupOptions())
@@ -465,23 +468,25 @@ sub analyzeTypes {
   my ($aut,$doc,$types,$opts) = @_;
   $types = $doc->types if (!$types);
 
-  ##-- closure variables
-  my ($tok,$w,$a);
-
   ##-- common variables
   my $aword = $aut->analyzeClosure('Word') or return $doc; ##-- can't analyze?
-  my $aget  = defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
-  my $aset  = defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET;
+  my $aget  = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
+  my $aset  = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
 
-  ##-- path-closures
-  my $aget_sub = ref($aget) ? $aget : eval "sub { $aget }";
-  my $aset_sub = ref($aset) ? $aset : eval "sub { $aset }";
+  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
 
+  my ($tok,@w,$w,$wa,$a);
   foreach $tok (values(%$types)) {
-    $w = $aget_sub->($tok);
-    next if (!defined($w));  ##-- accessor returned undef: skip this token
-    $a = $aword->($w,$opts);
-    $aset_sub->($tok,$a);
+    next if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex); ##-- text-sensitive regex
+    @w = grep {defined($_)} $aget->($tok);
+    next if (!@w);  ##-- accessor returned undef: skip this token
+    $a = [];
+    foreach $w (@w) {
+      $wa = $aword->($w,$opts);
+      push(@$a,@$wa) if ($wa);
+    }
+    undef($a) if (!@$a);
+    $aset->($tok,$a);
   }
 
   return $doc;

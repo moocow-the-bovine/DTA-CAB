@@ -21,6 +21,10 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
+## $DEFAULT_ANALYZE_TEXT_GET
+##  + default coderef or eval-able string for {analyzeTextGet}
+our $DEFAULT_ANALYZE_TEXT_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
+
 ## $DEFAULT_ANALYZE_TAGS_GET
 ##  + default coderef or eval-able string for {analyzeTagsGet}
 ##  + parameters:
@@ -28,7 +32,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##  + closure vars:
 ##      $moot => analyzer object
 ##  + should return a list of hash-refs ({tag=>$tag,details=>$details,cost=>$cost,src=>$whereFrom}, ...) given token
-our $DEFAULT_ANALYZE_TAGS_GET = \&parseMorphAnalyses;
+our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
+#our $DEFAULT_ANALYZE_TAGS_GET = \&parseMorphAnalyses;
 #our $DEFAULT_ANALYZE_TAGS_GET = '($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw())',
 
 ##==============================================================================
@@ -44,9 +49,9 @@ our $DEFAULT_ANALYZE_TAGS_GET = \&parseMorphAnalyses;
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
 ##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='latin1')
-##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default='$_[0]{text}')
+##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_ANALYZE_TEXT_GET)
 ##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
-##     #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
+##     #analyzeTagSrcs => \@srcs, ##-- OBSOLETE: source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
 ##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
 ##                               ##     %fnc = ($akey=>$perlcode_str, ...)
 ##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
@@ -77,6 +82,7 @@ sub new {
 			       ##-- options
 			       hmmArgs   => {
 					     verbose=>$moot::HMMvlWarnings,
+					     #relax => 1,
 					    },
 			       hmmEnc  => 'latin1',
 			       prune => 1,
@@ -85,7 +91,7 @@ sub new {
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
 			       label => 'moot',
-			       analyzeTextGet => '$_[0]{text}',
+			       analyzeTextGet => $DEFAULT_ANALYZE_TEXT_GET,
 			       analyzeTagsGet => $DEFAULT_ANALYZE_TAGS_GET,
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
@@ -283,10 +289,8 @@ sub analyzeSentences {
   my $msent  = moot::Sentence->new();
 
   ##-- setup access closures
-  my $atext_get = $moot->{analyzeTextGet} || '$_[0]{text}';
-  my $atags_get = $moot->{analyzeTagsGet} || $DEFAULT_ANALYZE_TAGS_GET;
-  my $atext_get_sub = ref($atext_get) ? $atext_get : eval "sub { $atext_get }";
-  my $atags_get_sub = ref($atags_get) ? $atags_get : eval "sub { $atags_get }";
+  my $atext_get = $moot->accessClosure($moot->{analyzeTextGet} || $DEFAULT_ANALYZE_TEXT_GET);
+  my $atags_get = $moot->accessClosure($moot->{analyzeTagsGet} || $DEFAULT_ANALYZE_TAGS_GET);
 
   ##-- common variables: moot constants
   my $toktyp_vanilla = $moot::TokTypeVanilla;
@@ -323,7 +327,7 @@ sub analyzeSentences {
     $msent->clear();
     foreach $i (0..$#$src) {
       $tok  = defined($src->[$i]) ? $src->[$i] : $sent->{tokens}[$i];
-      $text = $atext_get_sub->($tok);
+      $text = $atext_get->($tok);
       $text = '' if (!defined($text));
 
       $msent->push_back(moot::Token->new($toktyp_vanilla));
@@ -332,7 +336,7 @@ sub analyzeSentences {
 
       ##-- parse analyses into %mtah: ( $tag=>[[$details1,$cost1], ...], ... )
       %mtah = qw();
-      foreach $ta (defined($alitFlag) && $tok->{$alitFlag} ? $alitSrc : $atags_get_sub->($tok)) {
+      foreach $ta (defined($alitFlag) && $tok->{$alitFlag} ? $alitSrc : $atags_get->($tok)) {
 	($tag,$details,$cost,$tsrc) = @$ta{qw(tag details cost src)};
 
 	##-- munge cost if requested
@@ -402,9 +406,10 @@ sub analyzeSentences {
     undef($mtok);
     undef($mtas);
     undef($mta);
+  }
+  ##-- /foreach $sent
 
-    return $sent;
-  };
+  return $doc;
 }
 
 1; ##-- be happy

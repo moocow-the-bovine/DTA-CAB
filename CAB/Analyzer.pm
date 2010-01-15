@@ -305,6 +305,27 @@ sub getAnalyzeClosure {
   $anl->logconfess("getAnalyzeClosure('$which'): no getAnalyze${which}Closure() method defined!");
 }
 
+##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: (Token-)Accessor Closures
+
+## $closure = $anl->accessClosure( $methodName);
+## $closure = $anl->accessClosure(\&codeRef);
+## $closure = $anl->accessClosure( $codeString);
+##  + returns accessor-closure $closure for $anl
+##  + passed argument can be one of the following:
+##    - a CODE ref resolves to itself
+##    - a method name resolves to $anl->can($methodName)
+##    - any other string resolves to 'sub { $codeString }';
+##      which may reference the closure variable $anl
+sub accessClosure {
+  my ($anl,$code) = @_;
+  $code = ';' if (!defined($code));
+  return $code if (UNIVERSAL::isa($code,'CODE'));
+  return $anl->can($code) if ($anl->can($code));
+  return eval "sub { $code }";
+}
+
+
 
 ##==============================================================================
 ## Methods: XML-RPC

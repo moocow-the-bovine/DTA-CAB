@@ -45,6 +45,7 @@ sub analyzeTypes {
   $asub->ensureLoaded();
 
   ##-- get rewrite target types
+  $types = $doc->types if (!$types);
   my $rwkey   = $asub->{rwLabel};
   my $rwtypes = {
 		 map { ($_->{hi}=>bless({text=>$_->{hi}},'DTA::CAB::Token')) }
