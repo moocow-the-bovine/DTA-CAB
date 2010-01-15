@@ -38,39 +38,6 @@ sub new {
   return $aut;
 }
 
-## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
-##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
-##  + extracts rewrite targets, builds pseudo-type hash, calls sub-chain analyzeTypes(), & expands
-sub analyzeTypesNope {
-  my ($anl,$doc,$types,$opts) = @_;
-
-  ##-- load
-  $anl->ensureLoaded();
-  $types = $doc->types if (!$types);
-
-  ##-- analyze all
-  my $aword    = $anl->getAnalyzeWordClosure();
-  my $aget_txt = $anl->accessClosure($anl->{analyzeGet}   || '$_[0]{text}');
-  my $aget_rw  = $anl->accessClosure($anl->{analyzeGetRw} || 'qw()');
-  my $aset     = $anl->accessClosure($anl->{analyzeSet}   || '$_[0]{$anl->{label}}=$_[1]');
-
-  ##-- ye olde loope
-  my ($tok,$w,$a_w, @rw,$rw,$a_rw);
-  foreach $tok (values %$types) {
-    $w  = $aget_txt->($tok);
-    @rw = $aget_rw->($tok);
-    $a_w =  $aword->($w,$opts);
-    $a   = 0; ##-- CONTINUE HERE
-    foreach $rw (@rw) {
-      $a_rw =  0; ##-- CONTINUE HERE
-    }
-    $aset->($tok,$a);
-  }
-
-  ##-- return
-  return $doc;
-}
-
 1; ##-- be happy
 
 __END__

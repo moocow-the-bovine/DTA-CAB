@@ -61,6 +61,7 @@ sub new {
 			      ##-- analysis output
 			      label => 'dict',
 			      analyzeGet => '$_[0]{text}',
+			      aclass => undef, ##-- no analysis class
 
 			      ##-- user args
 			      @_
@@ -146,7 +147,8 @@ sub loadDictDoc {
 
   ##-- parse loaded tokens into dictionary hash
   my $dict = $dic->{dict};
-  my $akey = defined($dic->{analyzeSrc}) ? $dic->{analyzeSrc} : $dic->{analyzeDst};
+  my $akey = $dic->{label};
+  my $aclass = $dic->analysisClass;
   my ($w,$text);
   foreach $w (map {@{$_->{tokens}}} @{$ddoc->{body}}) {
     next if (!defined($w->{$akey}));
@@ -155,6 +157,7 @@ sub loadDictDoc {
     elsif ($dic->{tolowerNI}) { $text =~ s/^(.)(.*)$/$1\L$2\E/; }
     if    ($dic->{toupperI})  { $text = ucfirst($text); }
     $dict->{$text} = $w->{$akey};
+    bless($dict->{$text},$aclass) if (ref($dict->{$text}) && $aclass);
   }
 
   $dic->dropClosures();
@@ -172,9 +175,8 @@ sub asDocument {
   my $dic = shift;
 
   my $dict  = $dic->{dict};
-  my $a_dst = $dic->{analyzeDst};
-  my $a_src = defined($dic->{analyzeSrc}) ? $dic->{analyzeSrc} : $dic->{analyzeDst};
-  my $toks  = [map { bless({text=>$_, $a_src=>$dict->{$_}}, 'DTA::CAB::Token') } sort(keys(%$dict))];
+  my $lab   = $dic->{label};
+  my $toks  = [map { bless({text=>$_, $lab=>$dict->{$_}}, 'DTA::CAB::Token') } sort(keys(%$dict))];
 
   return toDocument( [toSentence($toks)] );
 }
@@ -255,7 +257,7 @@ sub analyzeTypes {
 
     ##-- check for (normalized) word in dict & update tok
     next if (!defined($entry=$dict->{$uword}));
-    $tok->{$lab} = $uword;
+    $tok->{$lab} = $entry;
   }
 
   return $doc;

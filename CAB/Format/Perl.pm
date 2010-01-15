@@ -51,7 +51,7 @@ sub new {
 		   #doc => undef,
 
 		   ##-- Output
-		   dumper => Data::Dumper->new([])->Purity(1)->Terse(0),
+		   dumper => Data::Dumper->new([])->Purity(1)->Terse(0)->Deepcopy(1),
 		   level  => 0,
 		   outbuf => '',
 

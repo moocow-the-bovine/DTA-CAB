@@ -53,7 +53,8 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##     dictFile=> $filename,    ##-- default: none
 ##
 ##     ##-- Analysis Output
-##     aclass         => $class, ##-- analysis class (OVERRIDE default: 'DTA::CAB::Analysis::Automaton')
+##     aclass         => $class, ##-- analysis class (OVERRIDE default: 'DTA::CAB::Analysis::FstPathList')
+##     aclass1        => $class, ##-- analysis item class (default: 'DTA::CAB::Analysis::FstPath')
 ##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
 ##     analyzeSet     => $code,  ##-- accessor: coderef or string: set analyses (default=$DEFAULT_ANALYZE_SET)
 ##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
@@ -118,7 +119,8 @@ sub new {
 			      allowWordRegex => undef,
 
 			      ##-- analysis I/O
-			      aclass     => undef,
+			      aclass     => 'DTA::CAB::Analysis::FstPathList',
+			      aclass1    => 'DTA::CAB::Analysis::FstPath',
 			      analyzeSrc => 'text',
 			      wantAnalysisLo => 1,
 
@@ -366,7 +368,8 @@ sub getAnalyzeWordClosure {
   $aut->ensureLoaded();
 
   ##-- setup common variables
-  my $aclass = $aut->analysisClass;
+  #my $aclass = $aut->analysisClass;
+  my $aclass1= $aut->{aclass1};
   my $dict   = $aut->{dict};
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
@@ -456,7 +459,9 @@ sub getAnalyzeWordClosure {
     #else { ; } ##-- no dictionary entry and no FST: do nothing
 
     return undef if (!@$analyses);
-    return $aclass ? bless($analyses,$aclass) : $analyses;
+    if ($aclass1) { bless($_, $aclass1) foreach (@$analyses) }
+    #if ($aclass)  { bless($analyses,$aclass); }
+    return $analyses;
   };
 }
 
@@ -469,6 +474,7 @@ sub analyzeTypes {
   $types = $doc->types if (!$types);
 
   ##-- common variables
+  my $aclass = $aut->analysisClass;
   my $aword = $aut->analyzeClosure('Word') or return $doc; ##-- can't analyze?
   my $aget  = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
   my $aset  = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
@@ -480,7 +486,7 @@ sub analyzeTypes {
     next if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex); ##-- text-sensitive regex
     @w = grep {defined($_)} $aget->($tok);
     next if (!@w);  ##-- accessor returned undef: skip this token
-    $a = [];
+    $a = $aclass ? bless([],$aclass) : [];
     foreach $w (@w) {
       $wa = $aword->($w,$opts);
       push(@$a,@$wa) if ($wa);
@@ -494,14 +500,19 @@ sub analyzeTypes {
 
 
 ##==============================================================================
-## PACKAGE: Analysis::Automaton
+## PACKAGE: Analysis::FstPathList
 ##==============================================================================
-package DTA::CAB::Analysis::Automaton;
+package DTA::CAB::Analysis::FstPathList;
 use strict;
 our @ISA = qw(DTA::CAB::Analysis);
 
-## \@text = $a->text()
-sub text { return map {$_->{hi}} @{$_[0]}; }
+##==============================================================================
+## PACKAGE: Analysis::FstPath
+##==============================================================================
+package DTA::CAB::Analysis::FstPath;
+use strict;
+our @ISA = qw(DTA::CAB::Analysis);
+
 
 
 1; ##-- be happy

@@ -33,12 +33,13 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
-##    analysisKey => $key,   ##-- token analysis key (default='xlit')
+##    label => $key,   ##-- token analysis key (default='xlit')
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'xlit',
+			   label => 'xlit',
+			   aclass => 'DTA::CAB::Analysis::Transliterator',
 
 			   ##-- user args
 			   @_
@@ -128,7 +129,12 @@ sub analyzeTypes {
   return $doc;
 }
 
-
+##==============================================================================
+## PACKAGE: Analysis::Transliterator
+##==============================================================================
+package DTA::CAB::Analysis::Transliterator;
+use strict;
+our @ISA = qw(DTA::CAB::Analysis);
 
 1; ##-- be happy
 
