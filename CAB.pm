@@ -168,6 +168,7 @@ sub savePerlRef {
 ##     do_rw_lts   => $bool, ##-- enable/disable lts/rewrite analysis (default: enabled)
 ##     do_eqrw  => $bool,    ##-- enable/disable rewrite-equivalence-class analysis analysis (default: enabled)
 ##     ...
+BEGIN { *getAnalyzeTokenClosure = \&getAnalyzeTokenSub; }
 sub getAnalyzeTokenSub {
   my $cab = shift;
   my ($xlit,$lts,$eqpho,$morph,$mlatin,$msafe,$rw,$eqrw) = @$cab{qw(xlit lts eqpho morph mlatin msafe rw eqrw)};
@@ -275,6 +276,7 @@ sub getAnalyzeTokenSub {
 ##     do_moot  => $bool,    ##-- enable/disable moot tagger analysis (default: enabled)
 ##     ...                   ##-- ... and maybe more
 ##
+BEGIN { *getAnalyzeSentenceClosure = \&getAnalyzeSentenceSub; }
 sub getAnalyzeSentenceSub {
   my $cab = shift;
 
@@ -312,6 +314,29 @@ sub getAnalyzeSentenceSub {
     ##-- return
     return $sent;
   };
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Types (hack)
+sub analyzeTypes {
+  my ($cab,$doc,$types,$opts) = @_;
+  my $asub = $cab->analyzeClosure('Token');
+  foreach (values %$types) {
+    $_ = $asub->($_,$opts);
+  }
+  return $doc;
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Sentences: hack
+sub analyzeSentences {
+  my ($cab,$doc,$opts) = @_;
+  my $asub = $cab->analyzeClosure('Sentence');
+  $doc = toDocument($doc);
+  foreach (@{$doc->{body}}) {
+    $_ = $asub->($_,$opts);
+  }
+  return $doc;
 }
 
 
