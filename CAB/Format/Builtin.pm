@@ -8,6 +8,7 @@ package DTA::CAB::Format::Builtin;
 use DTA::CAB::Format;
 
 #use DTA::CAB::Format::Freeze;
+use DTA::CAB::Format::Null;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Text;

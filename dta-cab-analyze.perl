@@ -119,6 +119,8 @@ DTA::CAB->debug("using output format class ", ref($ofmt));
 
 $cab->ensureLoaded()
   or die("$0: could not load analyzer: $!");
+$cab->canAnalyze()
+  or die("$0: canAnalyze() failed for loaded analyzer");
 
 ##-- profiling
 our $tv_started = [gettimeofday] if ($doProfile);

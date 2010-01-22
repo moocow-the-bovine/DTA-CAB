@@ -29,7 +29,7 @@ BEGIN {
 ##  + object structure:
 ##    (
 ##     ##-- Analyzers
-##     chain => [ $a1, $a2, ..., $aN ],        ##-- analysis chain (default: empty)
+##     chain => [ $a1, $a2, ..., $aN ],        ##-- default analysis chain; see also chain() method (default: empty)
 ##    )
 sub new {
   my $that = shift;
@@ -44,11 +44,23 @@ sub new {
 
 ## undef = $ach->initialize();
 ##  + default implementation does nothing
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## undef = $ach->dropClosures();
 ##  + drops '_analyze*' closures
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
+
+##==============================================================================
+## Methods: Chain selection
+##==============================================================================
+
+## \@analyzers = $ach->chain()
+## \@analyzers = $ach->chain(\%opts)
+##  + get selected analyzer chain
+##  + default method just returns $anl->{chain}
+sub chain {
+  return $_[0]{chain};
+}
 
 ##==============================================================================
 ## Methods: I/O
@@ -59,12 +71,12 @@ sub new {
 
 ## $bool = $ach->ensureLoaded()
 ##  + ensures analysis data is loaded from default files
-##  + default version calls $a->ensureLoaded()
+##  + default version calls $a->ensureLoaded() for each $a in $ach->{chain}
 sub ensureLoaded {
   my $ach = shift;
   my $rc  = 1;
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
-  foreach (@{$ach->{chain}}) {
+  foreach (@{$ach->chain}) {
     $rc &&= $_->ensureLoaded();
     last if (!$rc); ##-- short-circuit
   }
@@ -80,12 +92,12 @@ sub ensureLoaded {
 
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
-##  + default just returns list of known '_analyze' keys
-##  + INHERITED from Analyzer
+##  + default just greps for CODE-refs
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
 ##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ##======================================================================
 ## Methods: Persistence: Bin
@@ -93,93 +105,33 @@ sub ensureLoaded {
 ## @keys = $class_or_obj->noSaveBinKeys()
 ##  + returns list of keys not to be saved for binary mode
 ##  + default just returns list of known '_analyze' keys
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $loadedObj = $CLASS_OR_OBJ->loadBinRef($ref)
 ##  + drops closures
-##  + INHERITED from Analyzer
-
+##  + INHERITED from DTA::CAB::Analyzer
 
 ##==============================================================================
-## Methods: Analysis Closures: Generic
-##
-## + General schema for thingies of type XXX:
-##    $coderef = $ach->getAnalyzeXXXSub();            ##-- generate closure
-##    $coderef = $ach->analyzeXXXSub();               ##-- get cached closure or generate
-##    $thingy  = $ach->analyzeXXX($thingy,\%options)  ##-- get & apply (cached) closure
-## + XXX may be one of: 'Token', 'Sentence', 'Document',...
-## + analyze() alone just aliases analyzeToken()
+## Methods: Analysis
 ##==============================================================================
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Generic
 
 ## $bool = $ach->canAnalyze()
+## $bool = $ach->canAnalyze(\%opts)
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + returns true if all analyzers in the chain do as well
+##  + returns true if all analyzers in the chain do to
 sub canAnalyze {
   my $ach = shift;
-  foreach (@{$ach->{chain}}) {
-    return 0 if (!$_->canAnalyze);
+  foreach (@{$ach->chain(@_)}) {
+    if (!$_ || !$_->canAnalyze) {
+      #$ach->logwarn("canAnalyze() returning 0 for sub-analyzer \"$_\"");
+      return 0;
+    }
   }
   return 1;
 }
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Token
-
-## $tok = $ach->analyzeToken($tok,\%analyzeOptions)
-##  + destructively alters input token $tok with analysis
-##  + really just a convenience wrapper for $ach->analyzeTokenSub()->($in,\%analyzeOptions)
-##  + INHERITED from Analyzer
-
-## $coderef = $ach->analyzeTokenSub()
-##  + returned sub should be callable as:
-##     $tok = $coderef->($tok,\%analyzeOptions)
-##  + caches sub in $ach->{_analyzeToken}
-##  + implicitly loads analysis data with $ach->ensureLoaded()
-##  + otherwise, calls $ach->getAnalyzeTokenSub()
-##  + INHERITED from Analyzer
-
-## $coderef = $ach->getAnalyzeTokenSub()
-##  + guts for $ach->analyzeTokenSub()
-##  + default implementation just chains all inherited analyzeTokenSub()s
-sub getAnalyzeTokenSub {
-  my $ach = shift;
-  my @subs = grep {defined($_)} map {$_->analyzeTokenSub} @{$ach->{chain}};
-  my ($a,$tok,$opts);
-  return sub {
-    ($tok,$opts) = @_;
-    $tok = toToken($tok) if (!ref($tok));
-    $tok = $_->($tok,$opts) foreach (@subs);
-    return $tok;
-  };
-}
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Sentence
-
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentence(), $anl->analyzeSentenceSub()
-##  + default implementation just calls analyzeToken() on each token of input sentence
-##  + INHERITED from Analyzer
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Document
-
-## $coderef = $anl->getAnalyzeDocumentSub()
-##  + guts for $anl->analyzeDocument(), $anl->analyzeDocumentSub()
-##  + default implementation just calls analyzeSentence() on each sentence of input document
-##  + INHERITED from Analyzer
-
-
-##------------------------------------------------------------------------
-## Methods: Analysis: Raw Data
-
-## $coderef = $anl->getAnalyzeSentenceSub()
-##  + guts for $anl->analyzeSentenceSub()
-##  + default implementation just calls analyzeToken() on each token of input sentence
-##  + INHERITED from Analyzer
 
 ##==============================================================================
 ## Methods: Analysis: v1.x
@@ -190,14 +142,14 @@ sub getAnalyzeTokenSub {
 ## $doc = $ach->analyzeDocument($doc,\%opts)
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $doc = $ach->analyzeTypes($doc,$types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
 ##  + Chain default calls $a->analyzeTypes for each analyzer $a in the chain
 sub analyzeTypes {
   my ($ach,$doc,$types,$opts) = @_;
-  foreach (@{$ach->{chain}}) {
+  foreach (@{$ach->chain($opts)}) {
     $_->analyzeTypes($doc,$types,$opts);
   }
   return $doc;
@@ -206,14 +158,16 @@ sub analyzeTypes {
 ## $doc = $ach->analyzeTokens($doc,\%opts)
 ##  + perform token-wise analysis of all tokens $doc->{body}[$si]{tokens}[$wi]
 ##  + default implementation just shallow copies tokens in $doc->{types}
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $doc = $ach->analyzeSentences($doc,\%opts)
 ##  + perform sentence-wise analysis of all sentences $doc->{body}[$si]
 ##  + Chain default calls $a->analyzeSentences for each analyzer $a in the chain
 sub analyzeSentences {
   my ($ach,$doc,$opts) = @_;
-  $_->analyzeSentences($doc,$opts) foreach (@{$ach->{chain}});
+  foreach (@{$ach->chain($opts)}) {
+    $_->analyzeSentences($doc,$opts);
+  }
   return $doc;
 }
 
@@ -222,7 +176,9 @@ sub analyzeSentences {
 ##  + Chain default calls $a->analyzeLocal for each analyzer $a in the chain
 sub analyzeLocal {
   my ($ach,$doc,$opts) = @_;
-  $_->analyzeLocal($doc,$opts) foreach (@{$ach->{chain}});
+  foreach (@{$ach->chain($opts)}) {
+    $_->analyzeLocal($doc,$opts);
+  }
   return $doc;
 }
 
@@ -232,7 +188,9 @@ sub analyzeLocal {
 ##    then superclass Analyzer->analyzeClean
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
-  $_->analyzeClean($doc,$opts) foreach (@{$ach->{chain}});
+  foreach (@{$ach->chain($opts)}) {
+    $_->analyzeClean($doc,$opts);
+  }
   return $ach->SUPER::analyzeClean($doc,$opts);
 }
 
@@ -242,21 +200,21 @@ sub analyzeClean {
 ## $tok = $ach->analyzeToken($tok_or_string,\%opts)
 ##  + perform type- and token-analyses on $tok_or_string
 ##  + wrapper for $ach->analyzeDocument()
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $tok = $ach->analyzeSentence($sent_or_array,\%opts)
 ##  + perform type-, token-, and sentence-analyses on $sent_or_array
 ##  + wrapper for $ach->analyzeDocument()
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ## $rpc_xml_base64 = $anl->analyzeData($data_str,\%opts)
 ##  + analyze a raw (formatted) data string $data_str with internal parsing & formatting
 ##  + wrapper for $anl->analyzeDocument()
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 ##==============================================================================
 ## Methods: XML-RPC
-##  + INHERITED from Analyzer
+##  + INHERITED from DTA::CAB::Analyzer
 
 1; ##-- be happy
 

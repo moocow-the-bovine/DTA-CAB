@@ -23,6 +23,7 @@ use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
+use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::DynLex;
 
@@ -38,7 +39,7 @@ use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalen
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
 
 use DTA::CAB::Chain;
-use DTA::CAB::Analyzer::RewriteSub;
+use DTA::CAB::Chain::DTA;
 
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
