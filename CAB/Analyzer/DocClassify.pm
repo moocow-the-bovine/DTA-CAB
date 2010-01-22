@@ -165,6 +165,7 @@ sub analyzeDocument {
   $doc = toDocument($doc);
 
   ##-- vars
+  my $dc     = $anl; ##-- hack
   my $lab    = $dc->{label};
 
   my $map = $dc->{map};
@@ -176,6 +177,7 @@ sub analyzeDocument {
   ##-- populate signature from non-refs in tokens
   %$sig_tf = qw();
   $$sig_Nr = 0;
+  my ($s,$w,$wkey);
   foreach $s (@{$doc->{body}}) {
     foreach $w (@{$s->{tokens}}) {
       $wkey = join("\t", map {"$_=$w->{$_}"} grep {!ref($w->{$_})} sort keys(%$w));
@@ -187,7 +189,7 @@ sub analyzeDocument {
   ##-- map & annotate
   $dcdoc->{sig} = $dcsig;
   $map->mapDocument($dcdoc);
-  $doc->{$adst} = [ $dcdoc->cats() ];
+  $doc->{$dc->{label}} = [ $dcdoc->cats() ];
   @{$doc->{body}} = qw() if ($dc->{analyzeClearBody});
 
   ##-- cleanup
