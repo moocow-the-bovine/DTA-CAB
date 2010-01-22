@@ -350,17 +350,28 @@ sub accessClosure {
 ##  + returns help string for default XML-RPC procedure
 #sub xmlRpcHelp { return '?'; }
 
+## \%opts = $anl->mergeOptions(\%defaultOptions,\%userOptions)
+##  + returns options hash like (%defaultOptions,%userOptions) [user clobbers default]
+sub mergeOptions {
+  my ($anl,$defaults,$user) = @_;
+  return { ($defaults ? %$defaults : qw()), ($user ? %$user : qw()) };
+}
+
+
 ## @procedures = $anl->xmlRpcMethods()
+## @procedures = $anl->xmlRpcMethods($prefix,\%opts)
 ##  + returns a list of procedures suitable for passing to RPC::XML::Server::add_proc()
-##  + default method defines an 'analyze' method
 ##  + additional keys recognized in procedure specs: see DTA::CAB::Server::XmlRpc::prepareLocal()
+##  + "${prefix}." is appended to procedure 'name' key if $prefix is specified
+##  + \%opts are passed to analyze methods if defined
 sub xmlRpcMethods {
-  my $anl   = shift;
+  my ($anl,$prefix,$opts) = @_;
+  $prefix = $prefix ? "${prefix}." : '';
   return (
 	  {
 	   ##-- Analyze: Type (v1.x)
-	   name      => 'analyzeType',
-	   code      => sub { $anl->analyzeType(@_) },
+	   name      => "${prefix}analyzeType",
+	   code      => sub { $anl->analyzeType($_[0],$anl->mergeOptions($opts,$_[1])) },
 	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
 			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
@@ -369,8 +380,8 @@ sub xmlRpcMethods {
 	  },
 	  {
 	   ##-- Analyze: Token (v1.x)
-	   name      => 'analyzeToken',
-	   code      => sub { $anl->analyzeToken(@_) },
+	   name      => "${prefix}analyzeToken",
+	   code      => sub { $anl->analyzeToken($_[0],$anl->mergeOptions($opts,$_[1])) },
 	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
 			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
@@ -379,8 +390,8 @@ sub xmlRpcMethods {
 	  },
 	  {
 	   ##-- Analyze: Sentence (v1.x)
-	   name      => 'analyzeSentence',
-	   code      => sub { $anl->analyzeSentence(@_) },
+	   name      => "${prefix}analyzeSentence",
+	   code      => sub { $anl->analyzeSentence($_[0],$anl->mergeOptions($opts,$_[1])) },
 	   signature => [ 'struct array',  'struct array struct',  ## array ?opts -> struct
 			  'struct struct', 'struct struct struct', ## struct ?opts -> struct
 			],
@@ -389,8 +400,8 @@ sub xmlRpcMethods {
 	  },
 	  {
 	   ##-- Analyze: Document (v1.x)
-	   name      => 'analyzeDocument',
-	   code      => sub { $anl->analyzeDocument(@_) },
+	   name      => "${prefix}analyzeDocument",
+	   code      => sub { $anl->analyzeDocument($_[0],$anl->mergeOptions($opts,$_[1])) },
 	   signature => [
 			 'struct array',  'struct array struct',   ## array ?opts -> struct
 			 'struct struct', 'struct struct struct',  ## struct ?opts -> struct
@@ -400,8 +411,8 @@ sub xmlRpcMethods {
 	  },
 	  ##-- Analyze: raw data (v1.x)
 	  {
-	   name => 'analyzeData',
-	   code => sub { $anl->analyzeData(@_) },
+	   name => "${prefix}analyzeData",
+	   code => sub { $anl->analyzeData($_[0],$anl->mergeOptions($opts,$_[1])) },
 	   signature => [
 			 #'string string',        ## string -> string
 			 #'string string struct', ## string ?opts -> string

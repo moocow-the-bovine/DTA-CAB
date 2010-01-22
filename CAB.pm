@@ -39,6 +39,7 @@ use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalen
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
 
 use DTA::CAB::Chain;
+use DTA::CAB::Chain::Multi;
 use DTA::CAB::Chain::DTA;
 
 use DTA::CAB::Datum ':all';

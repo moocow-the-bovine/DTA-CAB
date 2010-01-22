@@ -1,11 +1,11 @@
 ## -*- Mode: CPerl -*-
-## File: DTA::CAB::Chain::DTA.pm
+## File: DTA::CAB::Chain::Multi.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: robust analysis: default chain
+## Description: robust analysis: multi-chains
 
-package DTA::CAB::Chain::DTA;
+package DTA::CAB::Chain::Multi;
 use DTA::CAB::Datum ':all';
-use DTA::CAB::Chain::Multi;
+use DTA::CAB::Chain;
 use IO::File;
 use Carp;
 
@@ -14,7 +14,7 @@ use strict;
 ##==============================================================================
 ## Constants
 ##==============================================================================
-our @ISA = qw(DTA::CAB::Chain::Multi);
+our @ISA = qw(DTA::CAB::Chain);
 
 ##==============================================================================
 ## Constructors etc.
@@ -25,29 +25,12 @@ our @ISA = qw(DTA::CAB::Chain::Multi);
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   ##-- analyzers
-			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
-			   lts   => DTA::CAB::Analyzer::LTS->new(),
-			   ##
-			   morph => DTA::CAB::Analyzer::Morph->new(),
-			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
-			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
-			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
-			   rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
-			   ##
-			   eqpho => DTA::CAB::Analyzer::EqPho->new(),       ##-- default (FST)
-			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- default (FST)
-			   ##
-			   ##
-			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
-			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger
-
 			   ##-- user args
 			   @_,
 
 			   ##-- overrides
-			   chains => undef, ##-- see setupChains() method
-			   chain => undef, ##-- see setupChains() method
+			   chains => undef, ##-- ($chainName=>\@chainAnalyzers,...): see setupChains() method
+			   chain => undef,  ##-- default chain: see setupChains() method
 			  );
 }
 
@@ -57,32 +40,17 @@ sub new {
 
 ## $ach = $ach->setupChains()
 ##  + setup default named sub-chains in $ach->{chains}
-##  + override
+##  + set default chain $ach->{chain}
+##  + default implementation just sets ($key=>[$ach->{$key}]) for each analyzer value in %$ach
+##  + default implementation sets default chain to sorted list of analyzer values in %$ach
 sub setupChains {
   my $ach = shift;
-  $ach->{rwsub}{chain} = [@$ach{qw(lts morph)}];
-  my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
+  my @akeys = sort grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {
-     (map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
-     ##
-     'sub.expand'    =>[@$ach{qw(eqpho eqrw)}],
-     'sub.sent'      =>[@$ach{qw(dmoot moot)}],
-     ##
-     'default.xlit'  =>[@$ach{qw(xlit)}],
-     'default.lts'   =>[@$ach{qw(xlit lts)}],
-     'default.morph' =>[@$ach{qw(xlit morph)}],
-     'default.rw'    =>[@$ach{qw(xlit rw)}],
-     'default.rw.safe'  =>[@$ach{qw(xlit morph msafe rw)}], #mlatin
-     'default.base'     =>[@$ach{qw(xlit lts morph mlatin msafe)}],
-     'default.type'     =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
-     ##
-     'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
-     'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub dmoot moot)}],
-     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqpho eqrw dmoot moot)}],
+     (map {("$_"=>[$ach->{$_}])} @akeys), ##-- e.g. sub.xlit, sub.lts, ...
+     'default'  =>[@$ach{@akeys}],
     };
-  #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 
   ##-- sanitize chains
   foreach (values %{$ach->{chains}}) {
@@ -94,19 +62,28 @@ sub setupChains {
 
   ##-- force default labels
   $ach->{$_}{label} = $_ foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach));
+
+  ##-- return
   return $ach;
+}
+
+## $ach = $ach->ensureChain()
+##  + checks for $ach->{chain}, calls $ach->setupChains() if needed
+sub ensureChain {
+  $_[0]->setupChains if (!$_[0]{chain} || !@{$_[0]{chain}});
+  return $_[0];
 }
 
 ## \@analyzers = $ach->chain()
 ## \@analyzers = $ach->chain(\%opts)
 ##  + get selected analyzer chain
-##  + inherited from DTA::CAB::Chain::Multi
-##    - calls setupChains() if $ach->{chain} is empty
-##    - checks for $opts{chain} and returns $ach->{chains}{ $opts{chain} } if available
-
-## $ach = $ach->ensureChain()
-##  + checks for $ach->{chain}, calls $ach->setupChains() if needed
-##  + inherited from DTA::CAB::Chain::Multi
+##  + OVERRIDE calls setupChains() if $ach->{chain} is empty
+##  + OVERRIDE checks for $opts{chain} and returns $ach->{chains}{ $opts{chain} } if available
+sub chain {
+  $_[0]->ensureChain;
+  return $_[0]{chains}{$_[1]{chain}} if ($_[1] && $_[1]{chain} && $_[0]{chains}{$_[1]{chain}});
+  return $_[0]{chain};
+}
 
 ##==============================================================================
 ## Methods: I/O
@@ -114,7 +91,26 @@ sub setupChains {
 
 ## $bool = $ach->ensureLoaded()
 ##  + ensures analysis data is loaded from default files
-##  + inherited DTA::CAB::Chain::Multi override calls ensureChain() before inherited method
+##  + override calls ensureChain() before inherited method
+##  + override sanitizes sub-chains to canAnalyze() sub-analyzers after load
+sub ensureLoaded {
+  my $ach = shift;
+  $ach->ensureChain;
+  my $rc = 1;
+
+ LOAD_CHAIN:
+  foreach (values %{$ach->{chains}}) {
+    foreach (grep {$_} @$_) {
+      $rc &&= $_->ensureLoaded();
+      last LOAD_CHAIN if (!$rc);
+    }
+
+    ##-- sanitize sub-chain
+    @$_ = grep {$_ && $_->canAnalyze} @$_;
+  }
+
+  return $rc;
+}
 
 ##==============================================================================
 ## Methods: Persistence
@@ -126,7 +122,11 @@ sub setupChains {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
 ##  + default just greps for CODE-refs
-##  + inherited from DTA::CAB::Chain::Multi: override appends {chain},{chains}
+##  + override appends {chain},{chains}
+sub noSaveKeys {
+  my $ach = shift;
+  return ($ach::SUPER->noSaveKeys, qw(chain chains));
+}
 
 ## $saveRef = $obj->savePerlRef()
 ##  + return reference to be saved (top-level objects only)
@@ -194,7 +194,28 @@ sub setupChains {
 
 ##==============================================================================
 ## Methods: XML-RPC
-##  + INHERITED from DTA::CAB::Chain::Multi
 
+## \@sigs = $anl->xmlRpcSignatures()
+##  + returns an array-ref of valid XML-RPC signatures:
+##    [ "$returnType1 $argType1_1 $argType1_2 ...", ..., "$returnTypeN ..." ]
+##  + inherited from DTA::CAB::Analyzer::XmlRpc
+#sub xmlRpcMethods {
+#  my ($anl,$prefix,$opts) = @_;
+#  $prefix = $prefix ? "${prefix}." : '';
+#  $opts   = {} if (!$opts);
+#  return map {$anl->SUPER::xmlRpcMethods($prefix.$_, {%$opts,chain=>$_})} keys(%{$anl->{chains}});
+#}
+
+## \%analyzerHash = $anl->xmlRpcAnalyzers()
+## \%analyzerHash = $anl->xmlRpcAnalyzers($prefix)
+##  + returns pseudo hash for use with DTA::CAB::Server::XmlRpc 'as' attribute
+sub xmlRpcAnalyzers {
+  my ($anl,$prefix) = @_;
+  $prefix  = '' if (!defined($prefix));
+  $prefix .= '.' if ($prefix && $prefix !~ /\.$/);
+  $anl->ensureChain;
+  return
+    { (map {("${prefix}$_"=>bless({%$anl,chain=>$anl->{chains}{$_}},ref($anl)))} keys(%{$anl->{chains}})) };
+}
 
 1; ##-- be happy
