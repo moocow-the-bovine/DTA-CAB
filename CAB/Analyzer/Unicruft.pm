@@ -79,22 +79,7 @@ sub getAnalyzeTokenSub {
     $tok = shift;
     $tok = toToken($tok) if (!ref($tok));
     $w   = $tok->{text};
-
-    ##-- 2010-01-23: Mantis Bug #140: 'µ'="\x{b5}" gets mapped to 'm' rather than
-    ##   + (unicruft-v0.07) 'u'
-    ##   + (unicruft-v0.08) 'µ' (identity)
-    ##   + problem is NFKC-decomposition which maps
-    ##       'µ'="\x{b5}" = Latin1 Supplement / MICRO SIGN
-    ##     to
-    ##       "\x{03bc}" = Greek and Coptic / GREEK SMALL LETTER MU
-    ##   + solution (hack): use NFC (canonical composition only)
-    ##     rather than NFKC (compatibility decomposition + canonical composition) here,
-    ##     and let Unicruft take care of decomposition
-    ##   + potentially problematic cases (from unicode normalization form techreport
-    ##     @ http://unicode.org/reports/tr15/ : fi ligature, 2^5, long-S + diacritics)
-    ##     are all handled correctly by unicruft
-    #$uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
-    $uc  = Unicode::Normalize::NFC($w);   ##-- canonical composition only
+    $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
 
     ##-- construct latin-1/de approximation
     $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
@@ -125,53 +110,8 @@ sub getAnalyzeTokenSub {
 }
 
 ##==============================================================================
-## Methods: Analysis: v1.x
+## Methods: Output Formatting --> OBSOLETE !
 ##==============================================================================
-
-## $doc = $xlit->analyzeTypes($doc,\%opts)
-##  + perform type-wise analysis of all (text) types in $doc->{types}
-##  + sets (for $key=$anl->{analysisKey}):
-##      $tok->{$key} = { latin1Text=>$latin1Text, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt }
-##    with:
-##      $latin1Text = $str     ##-- best latin-1 approximation of $token->{text}
-##      $isLatin1   = $bool    ##-- true iff $token->{text} is losslessly encodable as latin1
-##      $isLatinExt = $bool,   ##-- true iff $token->{text} is losslessly encodable as latin-extended
-sub analyzeTypes {
-  my ($xlit,$doc,$opts) = @_;
-  my $akey = $xlit->{analysisKey};
-
-  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
-  foreach $tok (values(%{$doc->{types}})) {
-    $w   = $tok->{text};
-    $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition
-
-    ##-- construct latin-1/de approximation
-    $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
-    if (
-	#$uc !~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
-	$uc  =~ m(^[\x{00}-\x{ff}]*$) #)
-       )
-      {
-	$isLatin1 = $isLatinExt = 1;
-      }
-    elsif ($uc =~ m(^[\p{Latin}]*$))
-      {
-	$isLatin1 = 0;
-	$isLatinExt = 1;
-      }
-    else
-      {
-	$isLatin1 = $isLatinExt = 0;
-      }
-
-    ##-- return
-    #return [ $l, $isLatin1, $isLatinExt ];
-    #$tok->{$akey} = [ $l, $isLatin1, $isLatinExt ];
-    $tok->{$akey} = { latin1Text=>$ld, isLatin1=>$isLatin1, isLatinExt=>$isLatinExt };
-  }
-
-  return $doc;
-}
 
 
 1; ##-- be happy

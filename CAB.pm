@@ -9,7 +9,6 @@ use DTA::CAB::Logger;
 use DTA::CAB::Persistent;
 
 use DTA::CAB::Analyzer;
-use DTA::CAB::Analyzer::Chain;
 use DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
@@ -55,7 +54,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 0.19;
+our $VERSION = 0.18;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
