@@ -54,11 +54,12 @@ sub new {
 
 ## $bool = $anl->ensureLoaded()
 ##  + ensures analysis data is loaded
-##  + always returns 1, but reports Unicruft module + library version
+##  + always returns 1, but reports Unicruft module + library version if (!$anl->{loaded})
 sub ensureLoaded {
   my $anl = shift;
-  $anl->info("using Unicruft.xs v$Unicruft::VERSION; libunicruft v", Unicruft::library_version);
-  return 1;
+  $anl->info("using Unicruft.xs v$Unicruft::VERSION; libunicruft v", Unicruft::library_version)
+    if (!$anl->{loaded});
+  return $anl->{loaded}=1;
 }
 
 ##==============================================================================

@@ -141,7 +141,7 @@ sub prepareLocal {
 		    " + RPC::XML::Server error: $xp\n",
 		   );
       } else {
-	$srv->info("registered XML-RPC procedure $_->{name}() for analyzer '$aname'\n");
+	$srv->trace("registered XML-RPC procedure $_->{name}() for analyzer '$aname'\n");
       }
     }
   }
