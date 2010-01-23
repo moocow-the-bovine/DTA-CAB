@@ -37,7 +37,7 @@ use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalen
 #use DTA::CAB::Analyzer::Dict::Latin;    ##-- full-form latin lexicon
 
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
-use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocClassify
+#use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocClassify
 
 use DTA::CAB::Chain;
 use DTA::CAB::Chain::Multi;

@@ -52,9 +52,14 @@ sub new {
 ## Methods: I/O
 ##==============================================================================
 
-## $bool = $aut->ensureLoaded()
+## $bool = $anl->ensureLoaded()
 ##  + ensures analysis data is loaded
-sub ensureLoaded { return 1; }
+##  + always returns 1, but reports Unicruft module + library version
+sub ensureLoaded {
+  my $anl = shift;
+  $anl->info("using Unicruft.xs v$Unicruft::VERSION; libunicruft v", Unicruft::library_version);
+  return 1;
+}
 
 ##==============================================================================
 ## Methods: Analysis: v1.x
