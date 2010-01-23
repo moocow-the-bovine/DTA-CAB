@@ -28,6 +28,7 @@ WriteMakefile
 		    'Log::Log4perl' => 1.07,
 		    'Text::Unidecode' => 0.04,
 		    'RPC::XML' => 0.59,
+		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
 		   },
 
    EXE_FILES   => [
