@@ -20,6 +20,21 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer::Moot);
 
+## $DEFAULT_DYN_ANALYZE_TEXT_GET
+##  + default coderef or eval-able string for {analyzeTextGet}
+#our $DEFAULT_DYN_ANALYZE_TEXT_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
+our $DEFAULT_DYN_ANALYZE_TEXT_GET = '$_[0]{text}';
+
+## $DEFAULT_DYN_ANALYZE_TAGS_GET
+##  + default coderef or eval-able string for {analyzeTagsGet}
+##  + parameters:
+##      $_[0] => token object being analyzed
+##  + closure vars:
+##      $moot => analyzer object
+##  + should return a list of hash-refs ({tag=>$tag,details=>$details,cost=>$cost,src=>$whereFrom}, ...) given token
+#our $DEFAULT_DYN_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
+our $DEFAULT_DYN_ANALYZE_TAGS_GET = 'parseDynAnalyses';
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -37,8 +52,9 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
 ##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='latin1')
-##     analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
-##     analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
+##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_DYN_ANALYZE_TEXT_GET)
+##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_DYN_ANALYZE_TAGS_GET)
+##     ##
 ##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
 ##                               ##     %fnc = ($akey=>$perlcode_str, ...)
 ##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
@@ -50,15 +66,19 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ##                               ##       $cost    ##-- source analysis weight
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
-##     analyzeDst     => $dst,   ##-- destination key (default='moot')
-##     analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default='dmootLiteral')
-##     analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='xlit')
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=0)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
 ##
+##
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
+##
+##     ##-- OBSOLETE (use analyzeTextGet, analyzeTagsGet pseudo-closure accessors)
+##     #analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
+##     #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
+##     #analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default='dmootLiteral')
+##     #analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='xlit')
 ##    )
 sub new {
   my $that = shift;
@@ -79,10 +99,9 @@ sub new {
 
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
-			       analyzeTextSrc => 'text',
-			       #analyzeTagSrcs => [qw(eqpho rw)],
-			       analyzeTagSrcs => [qw(text xlit eqpho rw)],
-			       analyzeDst => 'dmoot',
+			       label => 'dmoot',
+			       analyzeTextGet => $DEFAULT_DYN_ANALYZE_TEXT_GET,
+			       analyzeTagsGet => $DEFAULT_DYN_ANALYZE_TAGS_GET,
 			       requireAnalyses => 1,
 			       analyzeLiteralFlag=>'dmootLiteral',
 			       analyzeLiteralSrc=>'text',
@@ -114,6 +133,25 @@ sub hmmOk {
 ##  + returns class for $moot->{hmm} object
 ##  + default just returns 'moot::HMM'
 sub hmmClass { return 'moot::DynLexHMM_Boltzmann'; }
+
+##==============================================================================
+## Methods: Analysis
+##==============================================================================
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Utilities
+
+BEGIN { *parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
+
+## @analyses = CLASS::parseDynAnalyses($tok)
+##  + utility for disambiguation using @$tok{qw(text xlit eqpho rw)} fields
+sub parseDynAnalyses {
+  return
+    (($_[0]{xlit}  ? (parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : qw()),
+     ($_[0]{eqpho} ? (map {parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
+     ($_[0]{rw}    ? (map {parseAnalysis($_,src=>'rw')} @{$_[0]{rw}}) : qw()),
+    );
+}
 
 ##==============================================================================
 ## Methods: I/O

@@ -52,6 +52,8 @@ our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
 ##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_ANALYZE_TEXT_GET)
 ##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
 ##     #analyzeTagSrcs => \@srcs, ##-- OBSOLETE: source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
+##     analyzeLiteralFlag=>$code, ##-- pseudo-accessor: if true, only literal analyses are allowed (default=undef(=none))
+##     analyzeLiteralGet =>$code, ##-- pseudo-accessor: source for literal analyses (default=undef=none)
 ##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
 ##                               ##     %fnc = ($akey=>$perlcode_str, ...)
 ##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
@@ -64,8 +66,6 @@ our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default just returns $cost (identity function)
 ##     label             =>$lab, ##-- destination key (default='moot')
-##     analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default=undef(=none))
-##     analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='text')
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
@@ -93,10 +93,10 @@ sub new {
 			       label => 'moot',
 			       analyzeTextGet => $DEFAULT_ANALYZE_TEXT_GET,
 			       analyzeTagsGet => $DEFAULT_ANALYZE_TAGS_GET,
+			       analyzeLiteralFlag=>undef,
+			       analyzeLiteralGet=>undef,
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
-			       analyzeLiteralFlag=>undef,
-			       analyzeLiteralSrc=>'text',
 
 			       ##-- analysis objects
 			       #hmm => undef,
@@ -220,7 +220,7 @@ sub canAnalyze {
 ## \%infoHash = CLASS::parseAnalysis(\%fstAnalysisHash, %opts)
 ## \%infoHash = CLASS::parseAnalysis(\%xlitAnalysisHash, %opts)
 ## \%infoHash = CLASS::parseAnalysis( $tagString, %opts)
-##  + returns an info hash {tag=>$tag,details=>$details,cost=>$cost} for various analysis types
+##  + returns an info hash {%opts,tag=>$tag,details=>$details,cost=>$cost} for various analysis types
 sub parseAnalysis {
   my $ta = shift;
   my ($tag,$details,$cost);
@@ -249,10 +249,10 @@ sub parseAnalysis {
     ($tag,$details) = ($ta,'');
   }
   $cost = 0 if (!defined($cost));
-  return {tag=>$tag,details=>$details,cost=>$cost,@_};
+  return {@_,tag=>$tag,details=>$details,cost=>$cost};
 }
 
-## @analyses = parseMorphAnalyses($tok)
+## @analyses = CLASS::parseMorphAnalyses($tok)
 ##  + utility for PoS tagging using {morph} and {rw}{morph} analyses
 sub parseMorphAnalyses {
   return
@@ -283,13 +283,11 @@ sub analyzeSentences {
   my $hmm    = $moot->{hmm};
   my $hmmEnc = $moot->{hmmEnc};
   my $requireAnalyses = $moot->{requireAnalyses};
-  my $alitFlag = $moot->{analyzeLiteralFlag};
-  my $alitSrc  = $moot->{analyzeLiteralSrc};
   my $msent  = moot::Sentence->new();
 
   ##-- setup access closures
-  my $atext_get = $moot->accessClosure($moot->{analyzeTextGet} || $DEFAULT_ANALYZE_TEXT_GET);
-  my $atags_get = $moot->accessClosure($moot->{analyzeTagsGet} || $DEFAULT_ANALYZE_TAGS_GET);
+  my $atext_get  = $moot->accessClosure($moot->{analyzeTextGet} || $DEFAULT_ANALYZE_TEXT_GET);
+  my $atags_get  = $moot->accessClosure($moot->{analyzeTagsGet} || $DEFAULT_ANALYZE_TAGS_GET);
 
   ##-- common variables: moot constants
   my $toktyp_vanilla = $moot::TokTypeVanilla;
@@ -335,7 +333,7 @@ sub analyzeSentences {
 
       ##-- parse analyses into %mtah: ( $tag=>[[$details1,$cost1], ...], ... )
       %mtah = qw();
-      foreach $ta (defined($alitFlag) && $tok->{$alitFlag} ? $alitSrc : $atags_get->($tok)) {
+      foreach $ta ($atags_get->($tok)) {
 	($tag,$details,$cost,$tsrc) = @$ta{qw(tag details cost src)};
 
 	##-- munge cost if requested
@@ -515,9 +513,6 @@ Object structure, %args:
      ##-- Analysis Options
      hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
      hmmEnc       => $enc,   ##-- encoding of model file (default='latin1')
-     analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
-     analyzeTagSrc  => $src,   ##-- source token 'analyses' key (default='morph', undef for none)
-     analyzeDst     => $dst,   ##-- destination key (default='moot')
      prune          => $bool,  ##-- if true (default), prune analyses after tagging
      ##
      ##-- Analysis Objects
