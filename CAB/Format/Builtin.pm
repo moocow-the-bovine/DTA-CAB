@@ -12,6 +12,7 @@ use DTA::CAB::Format::Null;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Text;
+#use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;
 use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlNative; ##-- load first to avoid clobbering '.xml' extension

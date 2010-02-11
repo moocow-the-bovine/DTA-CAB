@@ -25,26 +25,20 @@ our @ISA = qw(DTA::CAB::Datum);
 ##  + object structure: HASH
 ##    {
 ##     ##-- Required Attributes
-##     text => $raw_text,      ##-- raw token text
+##     text   => $raw_text,     ##-- raw token text
 ##     ##
-##     ##-- DTA::TokWrap attributes
-##     loc   => { off=>$offset, len=>$length },
-##     ##
-##     ##-- Additional attributes (should be passed through by formats)
-##     other => { $attrName => \@attrValues, ... }
+##     ##-- Optional Attributes
+##     _attrs => \%attrs,       ##-- scalar attributes ($key=>$val, e.g. for xml pass-through)
+##     _dtrs  => \@dtrs,        ##-- structural daughters (DTA::CAB::Datum objects, e.g. for xml pass-through)
+##     $key   => $value,        ##-- perl-level structure (e.g. analyzer output)
 ##     ##
 ##     ##-- DTA::CAB Attributes (post-analysis)
 ##     #loc   => {off=>$offset, len=>$len}, ##-- parsed & passed through by some formats
-##     #xlit  => $a_xlit,     ##-- analysis output by DTA::CAB::Analyzer::Transliterator
-##     #morph => $a_morph,    ##-- analysis output by DTA::CAB::Analyzer::Morph subclass for literal morphology lookup
-##     #safe  => $a_safe,     ##-- analysis output by DTA::CAB::Analyzer::MorphSafe (?)
-##     #rw    => $a_rw,       ##-- analysis output by DTA::CAB::Analyzer::Rewrite subclass for rewrite lookup
+##     #xlit  => $a_xlit,       ##-- analysis output by DTA::CAB::Analyzer::Transliterator
+##     #morph => $a_morph,      ##-- analysis output by DTA::CAB::Analyzer::Morph subclass for literal morphology lookup
+##     #safe  => $a_safe,       ##-- analysis output by DTA::CAB::Analyzer::MorphSafe (?)
+##     #rw    => $a_rw,         ##-- analysis output by DTA::CAB::Analyzer::Rewrite subclass for rewrite lookup
 ##    }
-## + $tok->{other} attributes used by DTA::TokWrap (and DTA::CAB::Format::XmlNative):
-##   {
-##     xmlid => [ $xml_id ],    ##-- @xml:id of this token
-##     chars => [ $chars_str ], ##-- space-separated character string
-##   }
 sub new {
   return bless({
 		((@_ < 2 || @_ % 2 != 0)

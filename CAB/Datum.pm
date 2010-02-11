@@ -22,7 +22,18 @@ our %EXPORT_TAGS = (all=>\@EXPORT_OK);
 
 ##==============================================================================
 ## Constructors etc.
-##  + nothing here
+##==============================================================================
+
+## $dat = $CLASS_OR_OBJECT->new(%args)
+##  + %$dat, %args:
+##    _attrs => \%attrs,       ##-- scalar attributes ($key=>$val,...), e.g. for xml pass-through
+##    _dtrs  => \@dtrs,        ##-- structural daughters (DTA::CAB::Datum objects), e.g. for xml pass-through
+sub new {
+  return bless {@_[1..$#_]}, ref($_[0])||$_[0];
+}
+
+##==============================================================================
+## Utilities
 ##==============================================================================
 
 ## $tok = CLASS::toToken($tok)
@@ -55,11 +66,6 @@ sub toDocument {
   return bless($_[0],'DTA::CAB::Document') if (ref($_[0]) eq 'HASH' && exists($_[0]{body}));
   return DTA::CAB::Document->new(@_); ##-- default
 }
-
-
-##==============================================================================
-## Methods: Formatting (gone again)
-##==============================================================================
 
 
 1; ##-- be happy
