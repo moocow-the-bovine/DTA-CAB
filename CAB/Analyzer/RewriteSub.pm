@@ -70,6 +70,38 @@ sub analyzeTypes {
   return $doc;
 }
 
+##------------------------------------------------------------------------
+## Methods: I/O: Input: all
+
+## $bool = $ach->ensureLoaded()
+##  + returns true if any chain member loads successfully
+sub ensureLoaded {
+  my $ach = shift;
+  my $rc  = 0;
+  @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
+  foreach (@{$ach->chain}) {
+    $rc ||= $_->ensureLoaded();
+  }
+  return $rc;
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Generic
+
+## $bool = $ach->canAnalyze()
+## $bool = $ach->canAnalyze(\%opts)
+##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
+##  + returns true if ANY analyzers in the chain do to
+sub canAnalyze {
+  my $ach = shift;
+  @{$ach->{chain}} = grep {$_ && $_->canAnalyze} @{$ach->chain(@_)};
+  foreach (@{$ach->chain(@_)}) {
+    return 1 if ($_->canAnalyze);
+  }
+  return 1;
+}
+
+
 
 1; ##-- be happy
 
