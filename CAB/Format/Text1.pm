@@ -152,6 +152,8 @@ sub parseTextString {
       }
     }
 
+
+      ##~~~~~~~~~~~~~~~~ OLD
     elsif ($line =~ /^\t\+\[loc\] off=(\d+) len=(\d+)$/) {
       ##-- token: location
       $w->{loc} = { off=>$1, len=>$2 };

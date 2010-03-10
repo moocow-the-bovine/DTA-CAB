@@ -89,10 +89,17 @@ sub parseDocument {
   my $doc   = bless({body=>$sents},'DTA::CAB::Document');
 
   ##-- common variables
-  my ($snod,$s,$stoks, $wnod,$w);
+  my ($cnod,$c, $snod,$s,$stoks, $wnod,$w);
 
   ##-- doc attributes: xmlbase
   $doc->{$_->name} = $_->value foreach ($root->attributes);
+
+  ##-- classes
+  foreach $cnod (@{ $root->findnodes(".//cat|.//vat") }) {
+    $c = {};
+    $c->{$_->name} = $_->value foreach ($cnod->attributes);
+    push(@{$doc->{cats}},$c);
+  }
 
   ##-- loop: sentences
   foreach $snod (@{ $root->findnodes(".//s") }) {
@@ -145,7 +152,18 @@ sub documentNode {
   $doc = toDocument($doc);
   my $docnod = XML::LibXML::Element->new('doc');
   $docnod->setAttribute($_,$doc->{$_}) foreach (grep {defined($doc->{$_}) && !ref($doc->{$_})} sort(keys(%$doc)));
-  $docnod->addChild($fmt->sentenceNode($_)) foreach (@{$doc->{body}});
+  if ($doc->{cats}) {
+    my $croot = $docnod->addNewChild(undef,'classification');
+    my ($c,$cnod);
+    foreach $c (@{$doc->{cats}}) {
+      $cnod = $croot->addNewChild(undef,'cat');
+      $cnod->setAttribute($_, (defined($c->{$_}) ? $c->{$_} : '')) foreach (sort(keys(%$c)));
+    }
+  }
+  if ($doc->{body}) {
+    my $cooked = $docnod->addNewChild(undef,'cooked');
+    $cooked->addChild($fmt->sentenceNode($_)) foreach (@{$doc->{body}});
+  }
   return $docnod;
 }
 

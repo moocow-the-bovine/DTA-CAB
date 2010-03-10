@@ -100,7 +100,8 @@ sub prepareSignalHandlers {
   my $catcher = sub {
     my $signame = shift;
     $srv->finish();
-    $srv->logdie("caught signal SIG$signame - exiting");
+    $srv->fatal("caught signal SIG$signame - exiting");
+    exit(255);
   };
   my ($sig);
   foreach $sig (qw(HUP TERM KILL __DIE__)) {
@@ -120,6 +121,7 @@ sub prepareLocal { return 1; }
 sub run {
   my $srv = shift;
   $srv->logcroak("run() method not implemented!");
+  
   $srv->finish(); ##-- cleanup
 }
 
@@ -127,6 +129,7 @@ sub run {
 ##  + cleanup method; should be called when server dies or after run() has completed
 sub finish {
   my $srv = shift;
+  delete @SIG{qw(HUP TERM KILL __DIE__)}; ##-- unset signal handlers
   unlink($srv->{pidfile}) if ($srv->{pidfile});
   return 1;
 }
