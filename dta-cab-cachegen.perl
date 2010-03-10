@@ -106,7 +106,7 @@ if (!defined($rwDictFile) && !$aopts{do_rw}) {
   $aopts{do_rw} = 0;
 }
 
-our $a_tok = $cab->analyzeTokenSub();
+#our $a_tok = $cab->analyzeTokenSub();
 
 ##===================
 ## Read input (1 word per line)
@@ -119,8 +119,16 @@ while (defined($line=<>)) {
   $line = decode($inputEncoding,$line);
   ($text,$rest) = split(/\t/,$line);
   $tok = bless({text=>$text,(defined($rest) ? (rest=>$rest) : qw())},'DTA::CAB::Token');
-  push(@toks, $a_tok->($tok,\%aopts)); ##-- analyze
+  push(@toks, $tok);
 }
+
+##===================
+## analyze input
+$cab->info("loading analyzer data");
+$cab->ensureLoaded();
+$cab->info("analyzing buffered input");
+my $doc = toDocument([ toSentence(\@toks) ]);
+$cab->analyzeDocument($doc);
 
 ##===================
 ## Generate dictionary file(s)
@@ -136,6 +144,7 @@ sub genDictFile {
     or die("$0: putDocument() failed for '$dkey' cache file '$dfile': $!");
 }
 
+$cab->info("generating cache file(s)");
 genDictFile('lts',  $ltsDictFile)   if (defined($ltsDictFile));
 genDictFile('morph',$morphDictFile) if (defined($morphDictFile));
 genDictFile('rw',   $rwDictFile)    if (defined($rwDictFile));
