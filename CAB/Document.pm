@@ -69,6 +69,18 @@ sub getTypes {
   return $types;
 }
 
+## \%types = $doc->extendTypes(\%types,@keys)
+##  + extends \%types with token keys @keys
+sub extendTypes {
+  my ($doc,$types,@keys) = @_;
+  $types = $doc->types() if (!defined($types));
+  my ($tok);
+  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    $types->{$tok->{text}}{$_} = Storable::dclone($tok->{$_}) foreach (@keys);
+  }
+  return $types;
+}
+
 ## $doc = $doc->expandTypes()
 ## $doc = $doc->expandTypes(\%types)
 ##  + expands \%types (default=$doc->{types}) map into tokens

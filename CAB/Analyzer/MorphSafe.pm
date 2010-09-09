@@ -60,6 +60,7 @@ sub ensureLoaded { return 1; }
 sub analyzeTypes {
   my ($ms,$doc,$types,$opts) = @_;
   $types = $doc->types if (!$types);
+  #$types = $doc->extendTypes($types,'morph') if (!grep {$_->{morph}} values(%$types)); ##-- DEBUG
 
   my $label   = $ms->{label};
   #my $srcKey = $ms->{analysisSrcKey};
@@ -76,7 +77,7 @@ sub analyzeTypes {
        $analyses                 ##-- defined & true
        && @$analyses > 0         ##-- non-empty
        && (
-	   grep {                ##-- at least one non-"unsafe" analysis:
+	   grep {                ##-- at least one non-"unsafe" (i.e. "safe") analysis:
 	     ($_                     ##-- only "unsafe" if defined
 	      && $_->{hi}            ##-- only "unsafe" if upper labels are defined & non-empty
 	      && $_->{hi} !~ m(
@@ -84,7 +85,12 @@ sub analyzeTypes {
                        \[_FM\]       ##-- unsafe: tag: FM: foreign material
                      | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
                      | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
-                     | \[_NE\]       ##-- unsafe: tag: NE: proper name
+                     #| \[_NE\]       ##-- unsafe: tag: NE: proper name: all
+		     #| \[_NE\]\[geoname\]     ##-- unsafe: tag: NE.geo
+		     #| \[_NE\]\[firstname\]   ##-- unsafe: tag: NE.first
+		     | \[_NE\]\[lastname\]     ##-- unsafe: tag: NE.last
+		     | \[_NE\]\[orgname\]      ##-- unsafe: tag: NE.org
+		     | \[_NE\]\[productname\]  ##-- unsafe: tag: NE.product
 
 		     ##-- unsafe: composita
                      #| \/NE          ##-- unsafe: composita with NE
