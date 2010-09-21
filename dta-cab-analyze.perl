@@ -40,6 +40,8 @@ our $outputClass = undef;  ##-- default format class
 our $inputWords  = 0;      ##-- inputs are words, not filenames
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
+our $blocksize   = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
+our $default_blocksize = 65535; ##-- default block size if -block is specified
 our $outfile     = '-';
 
 ##==============================================================================
@@ -60,6 +62,8 @@ GetOptions(##-- General
 	   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
 	   'input-option|io|parser-option|po=s'      => \%inputOpts,
 	   'tokens|t|words|w!'                       => \$inputWords,
+	   'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
+	   'noblock|B' => sub { undef $blocksize; },
 
 	   ##-- I/O: output
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
@@ -104,6 +108,12 @@ our $cab = DTA::CAB::Analyzer->loadFile($rcFile)
 ##======================================================
 ## Input & Output Formats
 
+if ($blocksize) {
+  require Lingua::TT;
+  DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
+  $inputClass=$outputClass='TT';
+}
+
 $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
@@ -128,6 +138,34 @@ our $ntoks = 0;
 our $nchrs = 0;
 
 ##======================================================
+## Subs: analyze: block-wise
+
+## undef = analyzeBlock(\$inbuf,$ttout)
+our $blocki=0;
+sub analyzeBlock {
+  my ($inbufr,$ttout) = @_;
+  ++$blocki;
+  $ifmt->trace("BLOCK=$blocki: parseString()");
+  $doc = $ifmt->parseString($$inbufr)
+      or die("$0: parse failed for block=$blocki");
+
+  $cab->trace("BLOCK=$blocki: analyzeDocument()");
+  $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
+
+  $ofmt->trace("BLOCK=$blocki: putDocumentRaw()");
+  $ofmt->putDocumentRaw($doc);
+  substr($ofmt->{outbuf},-1,1)='' if (substr($$inbufr,-2,2) ne "\n\n"); ##-- truncate final eos hack
+  $ttout->{fh}->print($ofmt->{outbuf});
+  $ofmt->flush;
+
+  if ($doProfile) {
+    $ntoks += $doc->nTokens;
+    $nchrs += (-s $file) if ($file ne '-');
+  }
+}
+
+
+##======================================================
 ## Analyze
 
 our ($file,$doc);
@@ -146,8 +184,38 @@ if ($inputWords) {
     $ntoks += $doc->nTokens;
     $nchrs += length($_) foreach (@words);
   }
-} else {
-  ##-- file input mode
+
+  $ofmt->trace("toFile($outfile)");
+  $ofmt->toFile($outfile);
+}
+elsif (defined($blocksize)) {
+
+  ##-- file input mode, doc-wise
+  push(@ARGV,'-') if (!@ARGV);
+  my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>$outputOpts{encoding})
+    or die("$0: could not open output file '$outfile': $!");
+  my $inbuf = '';
+  my $buflen = 0;
+
+  foreach $file (@ARGV) {
+    $cab->info("processing file '$file'");
+    my $ttin = Lingua::TT::IO->fromFile($file,encoding=>$inputOpts{encoding})
+      or die("$0: could not open input file '$file': $!");
+    my $infh = $ttin->{fh};
+    while (defined($_=<$infh>)) {
+      $inbuf .= $_;
+      if (++$buflen >= $blocksize) {
+	analyzeBlock(\$inbuf,$ttout);
+	$buflen = 0;
+	$inbuf  = '';
+      }
+    }
+    $infh->close();
+  }
+  analyzeBlock(\$inbuf,$ttout) if ($buflen>0);
+}
+else {
+  ##-- file input mode, block-wise tt
   push(@ARGV,'-') if (!@ARGV);
   foreach $file (@ARGV) {
     $cab->info("processing file '$file'");
@@ -167,10 +235,11 @@ if ($inputWords) {
       $nchrs += (-s $file) if ($file ne '-');
     }
   }
+
+  $ofmt->trace("toFile($outfile)");
+  $ofmt->toFile($outfile);
 }
 
-$ofmt->trace("toFile($outfile)");
-$ofmt->toFile($outfile);
 
 ##======================================================
 ## Report
@@ -217,6 +286,8 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -profile , -noprofile           ##-- do/don't report profiling information (default: do)
 
  I/O Options
+  -words                          ##-- arguments are word text, not filenames
+  -block-size NLINES              ##-- streaming block-wise analysis (implies -ic=TT -oc=TT)
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)
   -input-option OPT=VALUE         ##-- set input parser option
