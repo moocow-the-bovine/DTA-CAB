@@ -72,6 +72,7 @@ sub setupChains {
      'default.xlit'  =>[@$ach{qw(xlit)}],
      'default.lts'   =>[@$ach{qw(xlit lts)}],
      'default.morph' =>[@$ach{qw(xlit morph)}],
+     'default.msafe' =>[@$ach{qw(xlit morph msafe)}],
      'default.rw'    =>[@$ach{qw(xlit rw)}],
      'default.rw.safe'  =>[@$ach{qw(xlit morph msafe rw)}], #mlatin
      'default.base'     =>[@$ach{qw(xlit lts morph mlatin msafe)}],

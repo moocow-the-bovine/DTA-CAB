@@ -141,9 +141,10 @@ our $nchrs = 0;
 ## Subs: analyze: block-wise
 
 ## undef = analyzeBlock(\$inbuf,$ttout)
+## undef = analyzeBlock(\$inbuf,$ttout,$infile)
 our $blocki=0;
 sub analyzeBlock {
-  my ($inbufr,$ttout) = @_;
+  my ($inbufr,$ttout,$infile) = @_;
   ++$blocki;
   $ifmt->trace("BLOCK=$blocki: parseString()");
   $doc = $ifmt->parseString($$inbufr)
@@ -160,7 +161,7 @@ sub analyzeBlock {
 
   if ($doProfile) {
     $ntoks += $doc->nTokens;
-    $nchrs += (-s $file) if ($file ne '-');
+    $nchrs += (-s $infile) if ($infile && $infile ne '-');
   }
 }
 
