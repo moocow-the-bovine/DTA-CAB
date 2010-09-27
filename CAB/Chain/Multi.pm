@@ -79,9 +79,13 @@ sub ensureChain {
 ##  + get selected analyzer chain
 ##  + OVERRIDE calls setupChains() if $ach->{chain} is empty
 ##  + OVERRIDE checks for $opts{chain} and returns $ach->{chains}{ $opts{chain} } if available
+##  + OVERRIDE splits $opts{chain} on /[\,\s]+/ and constructs chain
 sub chain {
   $_[0]->ensureChain;
-  return $_[0]{chains}{$_[1]{chain}} if ($_[1] && $_[1]{chain} && $_[0]{chains}{$_[1]{chain}});
+  if ($_[1] && $_[1]{chain}) {
+    return $_[0]{chains}{$_[1]{chain}} if ($_[0]{chains}{$_[1]{chain}});     ##-- pre defined chain
+    return [grep {ref($_)} map {@{$_||[]}} @{$_[0]{chains}}{split(/[\,\s]+/,$_[1]{chain})}]; ##-- parsed user chain
+  }
   return $_[0]{chain};
 }
 

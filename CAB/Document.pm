@@ -25,12 +25,16 @@ our @ISA = qw(DTA::CAB::Datum);
 ##     body => \@sentences,  ##-- DTA::CAB::Sentence objects
 ##     types => \%text2tok,  ##-- maps token text type-wise to Token objects (optional)
 ##     ##
+##     ##-- special attributes
+##     noTypeKeys => \@keys, ##-- token keys which should not be mapped to/from types (default='_xmlnod')
+##     ##
 ##     ##-- dta-tokwrap attributes
 ##     xmlbase => $base,
 ##    }
 sub new {
   return bless({
 		body => ($#_>=1 ? $_[1] : []),
+		noTypeKeys => [qw(_xmlnod)],
 		@_[2..$#_],
 	       }, ref($_[0])||$_[0]);
 }
@@ -58,13 +62,30 @@ sub types {
 
 ## \%types = $doc->getTypes()
 ##  + (re-)computes hash \%types = ($typeText => $typeToken, ...) mapping token text to
-##    basic token objects (with only 'text' key defined)
+##    token objects (with all but @{$doc->{noTypeKeys}} keys)
 sub getTypes {
   my $doc = shift;
   my $types = $doc->{types} = {};
+  my @nokeys = @{$doc->{noTypeKeys}||[]};
+  my ($typ);
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (exists($types->{$_->{text}}));
-    $types->{$_->{text}} = bless({text=>$_->{text}},'DTA::CAB::Token');
+    $typ = $types->{$_->{text}} = bless({%$_},'DTA::CAB::Token');
+    delete(@$typ{@nokeys});
+  }
+  return $types;
+}
+
+## \%types = $doc->getTextTypes()
+##  + (re-)computes hash \%types = ($typeText => {text=>$typeText}, ...) mapping token text to
+##    basic token objects (with only 'text' key defined)
+sub getTextTypes {
+  my $doc = shift;
+  my $types = $doc->{types} = {};
+  my ($typ);
+  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    next if (exists($types->{$_->{text}}));
+    $typ = $types->{$_->{text}} = bless({text=>$_->{text}},'DTA::CAB::Token');
   }
   return $types;
 }

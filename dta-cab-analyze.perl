@@ -11,7 +11,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
-use DTA::CAB::Analyzer::Moot; ##-- DEBUG
+#use DTA::CAB::Analyzer::Moot; ##-- DEBUG
 
 ##==============================================================================
 ## Constants & Globals
@@ -31,6 +31,7 @@ our $logConfigFile = undef;
 
 ##-- Analysis Options
 our $rcFile      = undef;
+our $analyzeClass = 'DTA::CAB::Analyzer';
 our %analyzeOpts = qw();
 our $doProfile = 1;
 
@@ -55,6 +56,7 @@ GetOptions(##-- General
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
 	   'analysis-option|analyze-option|ao|aO|O=s' => \%analyzeOpts,
+	   'analyzer-class|analysis-class|analyze-class|ac|a=s' => \$analyzeClass,
 	   'profile|p!' => \$doProfile,
 
 	   ##-- I/O: input
@@ -88,7 +90,7 @@ if ($version) {
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
-pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
+#pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
 
 ##==============================================================================
 ## MAIN
@@ -100,10 +102,21 @@ if (defined($logConfigFile)) {
 } else {
   DTA::CAB::Logger->logInit(undef, %logOpts);
 }
+##-- hack: set utf8 mode on stdio
+binmode(STDOUT,':utf8');
+binmode(STDERR,':utf8');
 
 ##-- analyzer
-our $cab = DTA::CAB::Analyzer->loadFile($rcFile)
-  or die("$0: load failed for analyzer from '$rcFile': $!");
+eval "use $analyzeClass;";
+die("$prog: could not load analyzer class '$analyzeClass': $@") if ($@);
+our ($cab);
+if (defined($rcFile)) {
+  $cab = $analyzeClass->loadFile($rcFile)
+    or die("$0: load failed for analyzer from '$rcFile': $!");
+} else {
+  $cab = $analyzeClass->new(%analyzeOpts)
+    or die("$0: $analyzeClass->new() failed: $!");
+}
 
 ##======================================================
 ## Input & Output Formats
