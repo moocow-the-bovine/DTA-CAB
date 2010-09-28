@@ -41,7 +41,9 @@ our $outputClass = undef;  ##-- default format class
 our $inputWords  = 0;      ##-- inputs are words, not filenames
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
+
 our $blocksize   = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
+our $block_sents = 0;           ##-- must block boundaries coincide with sentence boundaries?
 our $default_blocksize = 65535; ##-- default block size if -block is specified
 our $outfile     = '-';
 
@@ -66,6 +68,8 @@ GetOptions(##-- General
 	   'tokens|t|words|w!'                       => \$inputWords,
 	   'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
 	   'noblock|B' => sub { undef $blocksize; },
+	   'block-sentences|block-sents|bS!'         => \$block_sents,
+	   'block-tokens|block-toks|bT'              => sub { $block_sents=!$_[1]; },
 
 	   ##-- I/O: output
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
@@ -124,6 +128,9 @@ if (defined($rcFile)) {
 if ($blocksize) {
   require Lingua::TT;
   DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
+  if ($block_sents) {
+    DTA::CAB->debug("using sentence-level blocking");
+  }
   $inputClass=$outputClass='TT';
 }
 
@@ -174,7 +181,7 @@ sub analyzeBlock {
 
   if ($doProfile) {
     $ntoks += $doc->nTokens;
-    $nchrs += (-s $infile) if ($infile && $infile ne '-');
+    $nchrs += length($$inbufr);
   }
 }
 
@@ -203,8 +210,7 @@ if ($inputWords) {
   $ofmt->toFile($outfile);
 }
 elsif (defined($blocksize)) {
-
-  ##-- file input mode, doc-wise
+  ##-- file input mode, block-wise tt
   push(@ARGV,'-') if (!@ARGV);
   my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>$outputOpts{encoding})
     or die("$0: could not open output file '$outfile': $!");
@@ -218,7 +224,7 @@ elsif (defined($blocksize)) {
     my $infh = $ttin->{fh};
     while (defined($_=<$infh>)) {
       $inbuf .= $_;
-      if (++$buflen >= $blocksize) {
+      if (++$buflen >= $blocksize && (!$block_sents || /^$/)) {
 	analyzeBlock(\$inbuf,$ttout);
 	$buflen = 0;
 	$inbuf  = '';
@@ -229,7 +235,7 @@ elsif (defined($blocksize)) {
   analyzeBlock(\$inbuf,$ttout) if ($buflen>0);
 }
 else {
-  ##-- file input mode, block-wise tt
+  ##-- file input mode, doc-wise
   push(@ARGV,'-') if (!@ARGV);
   foreach $file (@ARGV) {
     $cab->info("processing file '$file'");
@@ -302,6 +308,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
  I/O Options
   -words                          ##-- arguments are word text, not filenames
   -block-size NLINES              ##-- streaming block-wise analysis (implies -ic=TT -oc=TT)
+  -block-sents , -block-toks      ##-- do/don't force block boundaries to be EOS (default=don't)
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)
   -input-option OPT=VALUE         ##-- set input parser option
