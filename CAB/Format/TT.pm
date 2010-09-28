@@ -161,7 +161,7 @@ sub parseTTString {
 	}
 	elsif ($field =~ m/^\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
 	  ##-- token: field: phonetic equivalent, with optional weight
-	  push(@{$tok->{eqpho}}, {hi=>$1,w=>$2});
+	  push(@{$tok->{eqpho}}, {hi=>$1,w=>(defined($2) ? $2 : 0)});
 	}
 	elsif ($field =~ m/^\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: rw equivalent, full-fst version
