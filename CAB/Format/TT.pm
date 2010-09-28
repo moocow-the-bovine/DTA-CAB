@@ -159,9 +159,17 @@ sub parseTTString {
 	  ##-- token: field: phonetic equivalent, full-fst version
 	  push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
 	}
-	elsif ($line =~ m/^\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+	elsif ($field =~ m/^\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
 	  ##-- token: field: phonetic equivalent, with optional weight
 	  push(@{$tok->{eqpho}}, {hi=>$1,w=>$2});
+	}
+	elsif ($field =~ m/^\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+	  ##-- token: field: rw equivalent, full-fst version
+	  push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+	}
+	elsif ($field =~ m/^\[eqrw\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+	  ##-- token: field: rw equivalent, with optional weight
+	  push(@{$tok->{eqrw}}, {hi=>$1,w=>$2});
 	}
 	elsif ($field =~ m/^\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: morph analysis

@@ -128,9 +128,7 @@ if (defined($rcFile)) {
 if ($blocksize) {
   require Lingua::TT;
   DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
-  if ($block_sents) {
-    DTA::CAB->debug("using sentence-level blocking");
-  }
+  DTA::CAB->debug("using ", ($block_sents ? "sentence" : "token"), "-level block boundaries");
   $inputClass=$outputClass='TT';
 }
 

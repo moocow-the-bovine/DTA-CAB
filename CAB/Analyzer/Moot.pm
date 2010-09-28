@@ -344,7 +344,7 @@ sub analyzeSentences {
 	##-- add analysis to %mtah
 	if (!$mtah{$tag} || !$uniqa) {
 	  push(@{$mtah{$tag}}, [$details,$cost]);
-	} elsif ($uniqa && $cost < $mtah{$tag}[0][1]) {
+	} elsif ($uniqa && $mtah{$tag} && $cost < $mtah{$tag}[0][1]) {
 	  @{$mtah{$tag}[0]} = ($details,$cost);
 	}
       }
