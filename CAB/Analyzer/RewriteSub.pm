@@ -70,6 +70,14 @@ sub analyzeTypes {
   return $doc;
 }
 
+## @keys = $anl->typeKeys()
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + override returns $anl->{rwLabel}
+sub typeKeys {
+  return $_[0]{rwLabel};
+}
+
+
 ##------------------------------------------------------------------------
 ## Methods: I/O: Input: all
 

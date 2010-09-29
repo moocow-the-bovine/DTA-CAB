@@ -83,6 +83,7 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
+##     typeKeys => \@keys, ##-- type-wise keys to expand
 ##    )
 sub new {
   my $that = shift;

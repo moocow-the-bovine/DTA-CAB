@@ -104,8 +104,11 @@ sub extendTypes {
 
 ## $doc = $doc->expandTypes()
 ## $doc = $doc->expandTypes(\%types)
+## $doc = $doc->expandTypes(\@keys,\%types)
 ##  + expands \%types (default=$doc->{types}) map into tokens
+##  + clobbers all keys
 sub expandTypes {
+  return $_[0]->expandTypeKeys(@_[1,2]) if (@_>2);
   my ($doc,$types) = @_;
   $types = $doc->{types} if (!$types);
   return $doc if (!$types); ##-- no {types} key
@@ -113,6 +116,22 @@ sub expandTypes {
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     $typ = $types->{$_->{text}};
     @$_{keys %$typ} = values %$typ;
+  }
+  return $doc;
+}
+
+## $doc = $doc->expandTypeKeys(\@typeKeys)
+## $doc = $doc->expandTypeKeys(\@typeKeys,\%types)
+##  + expands \%types (default=$doc->{types}) map into tokens
+##  + only keys in \@typeKeys are expanded
+sub expandTypeKeys {
+  my ($doc,$keys,$types) = @_;
+  $types = $doc->{types} if (!$types);
+  return $doc if (!$types || !$keys || !@$keys); ##-- no {types} key, or no keys to expand
+  my ($typ);
+  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    $typ = $types->{$_->{text}};
+    @$_{@$keys} = @$typ{@$keys};
   }
   return $doc;
 }

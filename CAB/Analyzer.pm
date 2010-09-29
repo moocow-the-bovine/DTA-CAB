@@ -29,6 +29,7 @@ our @ISA = qw(DTA::CAB::Persistent);
 ##    (
 ##     label => $label,    ##-- analyzer label (default: from class name)
 ##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method; default=undef)
+##     typeKeys => \@keys, ##-- analyzer type keys for $anl->typeKeys()
 ##    )
 sub new {
   my $that = shift;
@@ -66,6 +67,14 @@ sub defaultLabel {
 sub analysisClass {
   return $_[0]{aclass};
 }
+
+## @keys = $anl->typeKeys(\%opts)
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + default returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label})
+sub typeKeys {
+  return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : (defined($_[0]{label}) ? ($_[0]{label}) : qw());
+}
+
 
 ##==============================================================================
 ## Methods: I/O
@@ -152,7 +161,7 @@ sub doAnalyze {
 ##      if ($anl->doAnalyze('Types')) {
 ##        $types = $anl->getTypes($doc);
 ##        $anl->analyzeTypes($doc,$types,\%opts);
-##        $anl->expandTypes($doc,$types);
+##        $anl->expandTypes($doc,$types,\%opts);
 ##        $anl->clearTypes($doc);
 ##      }
 ##      $anl->analyzeTokens($doc,\%opts)    if ($anl->doAnalyze(\%opts,'Tokens'));
@@ -168,7 +177,7 @@ sub analyzeDocument {
   if ($anl->doAnalyze($opts,'Types')) {
     $types = $anl->getTypes($doc);
     $anl->analyzeTypes($doc,$types,$opts);
-    $anl->expandTypes($doc,$types);
+    $anl->expandTypes($doc,$types,$opts);
     $anl->clearTypes($doc);
   }
   $anl->analyzeTokens($doc,$opts)    if ($anl->doAnalyze($opts,'Tokens'));
@@ -214,12 +223,13 @@ sub getTypes {
   return $_[1]->types;
 }
 
-## $doc = $anl->expandTypes($doc)
-## $doc = $anl->expandTypes($doc,\%types)
+## $doc = $anl->expandTypes($doc,\%types,\%opts)
 ##  + expands \%types into $doc->{body} tokens
-##  + default just calls $doc->expandTypes(\%types)
+##  + default just calls $doc->expandTypeKeys(\@typeKeys,\%types)
 sub expandTypes {
-  return $_[1]->expandTypes($_[2]);
+  my ($anl,$doc,$types,$opts) = @_;
+  my %typeKeys = map {($_=>undef)} $anl->typeKeys($opts);
+  return $doc->expandTypeKeys([keys %typeKeys],$types);
 }
 
 ## $doc = $anl->clearTypes($doc)
@@ -322,7 +332,9 @@ sub accessClosure {
   $code = ';' if (!defined($code));
   return $code if (UNIVERSAL::isa($code,'CODE'));
   return $anl->can($code) if ($anl->can($code));
-  return eval "sub { $code }";
+  my $sub = eval "sub { $code }";
+  $anl->logcluck("accessClosure(): could not compile closure {$code}: $@") if (!$sub);
+  return $sub;
 }
 
 

@@ -33,7 +33,7 @@ our $DEFAULT_DYN_ANALYZE_TEXT_GET = '$_[0]{text}';
 ##      $moot => analyzer object
 ##  + should return a list of hash-refs ({tag=>$tag,details=>$details,cost=>$cost,src=>$whereFrom}, ...) given token
 #our $DEFAULT_DYN_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
-our $DEFAULT_DYN_ANALYZE_TAGS_GET = 'parseDynAnalyses';
+our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalyses';
 
 ##==============================================================================
 ## Constructors etc.

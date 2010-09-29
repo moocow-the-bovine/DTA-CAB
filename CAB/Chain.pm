@@ -50,6 +50,14 @@ sub new {
 ##  + drops '_analyze*' closures
 ##  + INHERITED from DTA::CAB::Analyzer
 
+## @keys = $anl->typeKeys(\%opts)
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + default just concatenates keys for sub-analyzers
+sub typeKeys {
+  return map {ref($_) ? $_->typeKeys(@_[1..$#_]) : qw()} @{$_[0]->chain(@_[1..$#_])}
+}
+
+
 ##==============================================================================
 ## Methods: Chain selection
 ##==============================================================================

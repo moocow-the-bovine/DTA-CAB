@@ -21,6 +21,7 @@ sub new {
 			      ##-- overrides
 			      #tolower => 0,
 			      #check_symbols => 0,
+			      #typeKeys => ['eqrw'],
 
 			      ##-- analysis selection
 			      #analysisClass => 'DTA::CAB::Analyzer::EqRW::FST::Analysis',

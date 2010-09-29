@@ -30,6 +30,9 @@ sub new {
 			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 			      #allowWordRegex => '.',
 
+			      ##-- type expansion
+			      #typeKeys => [qw(eqpho)],
+
 			      ##-- user args
 			      @_
 			     );

@@ -120,6 +120,13 @@ sub clear {
   return $moot;
 }
 
+## @keys = $anl->typeKeys(\%opts)
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + override returns empty list
+sub typeKeys {
+  return qw();
+}
+
 ##==============================================================================
 ## Methods: Generic
 ##==============================================================================
