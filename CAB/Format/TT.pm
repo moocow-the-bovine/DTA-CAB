@@ -123,8 +123,9 @@ sub parseTTString {
       ##-- special comment: sentence attribute: xml:id
       $sa{xmlid} = $1;
     }
-    elsif ($line =~ /^\%\%/) {
-      ##-- comment line: skip
+    elsif ($line =~ /^\%\%(.*)$/) {
+      ##-- generic line: add to _cmts
+      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
       next;
     }
     elsif ($line eq '') {
@@ -274,7 +275,13 @@ sub toString {
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
   my ($fmt,$tok) = @_;
-  my $out = $tok->{text};
+  my $out = '';
+
+  ##-- pre-token comments
+  $out .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$tok->{_cmts}}) if ($tok->{_cmts});
+
+  ##-- text
+  $out .= $tok->{text};
 
   ##-- Location ('loc'), moot compatibile
   $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
@@ -362,6 +369,7 @@ sub putToken {
 ##  + concatenates formatted tokens, adding sentence-id comment if available
 sub putSentence {
   my ($fmt,$sent) = @_;
+  $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}}) if ($sent->{_cmts});
   $fmt->{outbuf} .= "%% Sentence $sent->{xmlid}\n" if (defined($sent->{xmlid}));
   $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{outbuf} .= "\n";
@@ -372,6 +380,7 @@ sub putSentence {
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
 sub putDocument {
   my ($fmt,$doc) = @_;
+  $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}}) if ($doc->{_cmts});
   $fmt->{outbuf} .= "%% xml:base=$doc->{xmlbase}\n\n" if (defined($doc->{xmlbase}));
   $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
   return $fmt;

@@ -95,8 +95,9 @@ sub parseTextString {
       ##-- special comment: sentence attribute: xml:id
       $sa{xmlid} = $1;
     }
-    elsif ($line =~ /^\%\%/) {
-      ##-- comment line: skip
+    elsif ($line =~ /^\%\%(.*)$/) {
+      ##-- generic line: add to _cmts
+      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
       next;
     }
     elsif ($line eq '') {
@@ -233,7 +234,13 @@ sub parseTextString {
 ##  + appends $tok to output buffer
 sub putToken {
   my ($fmt,$tok) = @_;
-  my $out = $tok->{text}."\n";
+  my $out = '';
+
+  ##-- pre-token comments
+  $out .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$tok->{_cmts}}) if ($tok->{_cmts});
+
+  ##-- text
+  $out .= $tok->{text}."\n";
 
   ##-- Location ('loc')
   $out .= "\t+[loc] off=$tok->{loc}{off} len=$tok->{loc}{len}\n"
