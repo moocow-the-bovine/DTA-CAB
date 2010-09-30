@@ -58,8 +58,11 @@ our %badTypes =
   (
    qw(Nahme Nahmen),
    qw(Thaler),
-   qw(Thür Thüre Thürer),
-   qw(Thor Thore),
+   qw(Thür Thüre Thüren Thürer),
+   qw(Thor Thore Thoren),
+   qw(Loos),
+   qw(Vortheil Vortheile Vortheilen),
+   qw(Geheimniß),
   );
 
 ## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
@@ -130,6 +133,7 @@ sub analyzeTypes {
 
                      ##-- unsafe: name roots
 		     | \b Thür  (?:\/NE|\[_NE\])
+		     | \b Loo(?:s?)  (?:\/NE|\[_NE\])
 		   )
                  )x)
 	   } @$analyses
