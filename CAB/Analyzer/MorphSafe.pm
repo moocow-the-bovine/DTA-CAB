@@ -53,6 +53,15 @@ sub ensureLoaded { return 1; }
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
+our %badTypes =
+  map {($_=>undef)},
+  (
+   qw(Nahme Nahmen),
+   qw(Thaler),
+   qw(Thür Thüre Thürer),
+   qw(Thor Thore),
+  );
+
 ## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
 ##  + checks for "safe" analyses in $tok->{morph} for each $tok in $doc->{types}
@@ -74,10 +83,11 @@ sub analyzeTypes {
     #$safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
     $safe ||=
       (
-       $analyses                 ##-- defined & true
-       && @$analyses > 0         ##-- non-empty
+       !exists($badTypes{$tok->{text}}) ##-- not a known bad type
+       && $analyses                 ##-- analyses defined & true
+       && @$analyses > 0            ##-- non-empty analysis set
        && (
-	   grep {                ##-- at least one non-"unsafe" (i.e. "safe") analysis:
+	   grep {               ##-- at least one non-"unsafe" (i.e. "safe") analysis:
 	     ($_                     ##-- only "unsafe" if defined
 	      && $_->{hi}            ##-- only "unsafe" if upper labels are defined & non-empty
 	      && $_->{hi} !~ m(
@@ -117,6 +127,9 @@ sub analyzeTypes {
                      | \b Zen   (?:\/N|\[_NN\])
                      | \b Heu   (?:\/N|\[_NN\])
                      | \b Szene (?:\/N|\[_NN\])
+
+                     ##-- unsafe: name roots
+		     | \b Thür  (?:\/NE|\[_NE\])
 		   )
                  )x)
 	   } @$analyses
