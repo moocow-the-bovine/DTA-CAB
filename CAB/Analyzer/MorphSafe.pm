@@ -54,7 +54,7 @@ sub ensureLoaded { return 1; }
 ##==============================================================================
 
 our %badTypes =
-  map {($_=>undef)},
+  map {($_=>undef)}
   (
    qw(Nahme Nahmen),
    qw(Thaler),
