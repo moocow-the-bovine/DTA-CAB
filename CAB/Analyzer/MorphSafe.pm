@@ -63,6 +63,7 @@ our %badTypes =
    qw(Loos),
    qw(Vortheil Vortheile Vortheilen),
    qw(Geheimniß),
+   qw(Proceß Proceße Process Processe),
   );
 
 ## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
