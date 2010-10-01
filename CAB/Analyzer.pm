@@ -30,6 +30,7 @@ our @ISA = qw(DTA::CAB::Persistent);
 ##     label => $label,    ##-- analyzer label (default: from class name)
 ##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method; default=undef)
 ##     typeKeys => \@keys, ##-- analyzer type keys for $anl->typeKeys()
+##     enabled => $bool,   ##-- set to false, non-undef value to disable this analyzer
 ##    )
 sub new {
   my $that = shift;
@@ -148,6 +149,20 @@ sub doAnalyze {
   return $anl->can("analyze${name}") && (!$opts || !exists($opts->{"doAnalyze${name}"}) || $opts->{"doAnalze${name}"});
 }
 
+## $bool = $anl->enabled(\%opts)
+##  + returns true if analyzer SHOULD operate, acording to %opts
+##  + default returns:
+##     (!defined($anl->{enabled}) || $anl->{enabled})                           ##-- globally enabled
+##     &&
+##     (!$opts || !defined($opts{"${lab}_enabled"} || $opts{"${lab}_enabled"})  ##-- ... and locally enabled
+sub enabled {
+  return (
+	  (!defined($_[0]{enabled}) || $_[0]{enabled})
+	  &&
+	  (!$_[1] || !defined($_[1]{"$_[0]{label}_enabled"}) || $_[1]{"$_[0]{label}_enabled"})
+	 );
+}
+
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
@@ -170,8 +185,9 @@ sub doAnalyze {
 ##      $anl->analyzeClean($doc,\%opts)     if ($anl->doAnalyze(\%opts,'Clean'));
 sub analyzeDocument {
   my ($anl,$doc,$opts) = @_;
+  return $doc if (!$anl->enabled($opts));  ##-- disabled analyzer
   return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
-  return $doc if (!$anl->canAnalyze);      ##-- ok...
+  return $doc if (!$anl->canAnalyze);      ##-- ok... (?)
   $doc = toDocument($doc);
   my ($types);
   if ($anl->doAnalyze($opts,'Types')) {

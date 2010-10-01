@@ -54,7 +54,8 @@ sub new {
 ##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
 ##  + default just concatenates keys for sub-analyzers
 sub typeKeys {
-  return map {ref($_) ? $_->typeKeys(@_[1..$#_]) : qw()} @{$_[0]->chain(@_[1..$#_])}
+  my $ach = shift;
+  return map {ref($_) ? $_->typeKeys(@_) : qw()} @{$ach->chain(@_)}
 }
 
 
@@ -65,9 +66,12 @@ sub typeKeys {
 ## \@analyzers = $ach->chain()
 ## \@analyzers = $ach->chain(\%opts)
 ##  + get selected analyzer chain
-##  + default method just returns $anl->{chain}
+###  + OLD: default method just returns $anl->{chain}
+###  + NEW: default method returns all globally enabled analyzers in $anl->{chain}
 sub chain {
-  return $_[0]{chain};
+  my $ach = shift;
+  #return $ach->{chain};
+  return [grep {$_ && $_->enabled} @{$ach->{chain}}];
 }
 
 ##==============================================================================
@@ -83,7 +87,7 @@ sub chain {
 sub ensureLoaded {
   my $ach = shift;
   my $rc  = 1;
-  @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
+  #@{$ach->{chain}} = grep {$_ && $_->enabled} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
   foreach (@{$ach->chain}) {
     $rc &&= $_->ensureLoaded();
     last if (!$rc); ##-- short-circuit
@@ -139,6 +143,13 @@ sub canAnalyze {
     }
   }
   return 1;
+}
+
+## $bool = $anl->enabled(\%opts)
+##  + returns disjunction over all sub-analyzers
+sub enabled {
+  my $ach = shift;
+  return scalar(grep {$_->enabled(@_)} @{$ach->chain(@_)});
 }
 
 ##==============================================================================

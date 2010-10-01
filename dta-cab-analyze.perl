@@ -191,7 +191,7 @@ our ($file,$doc);
 if ($inputWords) {
   ##-- word input mode
   my @words = map { $inputOpts{encoding} ? decode($inputOpts{encoding},$_) : $_ } @ARGV;
-  $doc = toDocument([ toSentence([ @words ]) ]);
+  $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
 
   $cab->trace("analyzeDocument($words[0], ...)");
   $doc = $cab->analyzeDocument($doc,\%analyzeOpts);

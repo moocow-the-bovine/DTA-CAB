@@ -84,9 +84,9 @@ sub chain {
   $_[0]->ensureChain;
   if ($_[1] && $_[1]{chain}) {
     return $_[0]{chains}{$_[1]{chain}} if ($_[0]{chains}{$_[1]{chain}});     ##-- pre defined chain
-    return [grep {ref($_)} map {@{$_||[]}} @{$_[0]{chains}}{split(/[\,\s]+/,$_[1]{chain})}]; ##-- parsed user chain
+    return [grep {ref($_) && $_->enabled($_[1])} map {@{$_||[]}} @{$_[0]{chains}}{split(/[\,\s]+/,$_[1]{chain})}]; ##-- parsed user chain
   }
-  return $_[0]{chain};
+  return [grep {ref($_) && $_->enabled($_[1])} @{$_[0]{chain}}];
 }
 
 ##==============================================================================
