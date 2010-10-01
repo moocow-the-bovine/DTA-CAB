@@ -25,6 +25,7 @@ sub new {
   my $asub = $that->SUPER::new(
 			       ##-- defaults
 			       #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
+			       label => 'rwsub',
 
 			       ##-- analysis selection
 			       rwLabel => 'rw',
@@ -40,6 +41,7 @@ sub new {
 ##  + extracts rewrite targets, builds pseudo-type hash, calls sub-chain analyzeTypes(), & expands
 sub analyzeTypes {
   my ($asub,$doc,$types,$opts) = @_;
+  return $doc if (!$asub->enabled($opts));
 
   ##-- load
   $asub->ensureLoaded();
@@ -54,7 +56,12 @@ sub analyzeTypes {
 		};
 
   ##-- analyze rewrite target types
-  $_->analyzeTypes($doc,$rwtypes,$opts) foreach (@{$asub->{chain}});
+  my ($sublabel);
+  foreach (@{$asub->{chain}}) {
+    $sublabel = $asub->{label}.'_'.$_->{label};
+    next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
+    $_->analyzeTypes($doc,$rwtypes,$opts);
+  }
 
   ##-- delete rewrite target type 'text'
   delete($_->{text}) foreach (values %$rwtypes);
@@ -81,13 +88,23 @@ sub typeKeys {
 ##------------------------------------------------------------------------
 ## Methods: I/O: Input: all
 
+## \@analyzers = $ach->chain()
+## \@analyzers = $ach->chain(\%opts)
+##  + get selected analyzer chain
+###  + NEW: just return $ach->{chain}, since analyzers may still be disabled here (argh)
+sub chain {
+  my $ach = shift;
+  return $ach->{chain};
+  #return [grep {$_ && $_->enabled} @{$ach->{chain}}];
+}
+
 ## $bool = $ach->ensureLoaded()
 ##  + returns true if any chain member loads successfully
 sub ensureLoaded {
   my $ach = shift;
   my $rc  = 0;
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
-  foreach (@{$ach->chain}) {
+  foreach (grep {$_} @{$ach->{chain}}) {
     $rc ||= $_->ensureLoaded();
   }
   return $rc;

@@ -39,6 +39,7 @@ sub new {
 		   @_
 		  }, ref($that)||$that);
   $ach->initialize();
+  $ach->{label} = $ach->defaultLabel if (!defined($ach->{label}));
   return $ach;
 }
 
@@ -146,10 +147,10 @@ sub canAnalyze {
 }
 
 ## $bool = $anl->enabled(\%opts)
-##  + returns disjunction over all sub-analyzers
+##  + returns $anl->{enabled} and disjunction over all sub-analyzers
 sub enabled {
   my $ach = shift;
-  return scalar(grep {$_->enabled(@_)} @{$ach->chain(@_)});
+  return $ach->SUPER::enabled(@_) && scalar(grep {$_->enabled(@_)} @{$ach->chain(@_)});
 }
 
 ##==============================================================================

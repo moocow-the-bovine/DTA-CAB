@@ -116,6 +116,20 @@ sub setupChains {
 ## $bool = $ach->ensureLoaded()
 ##  + ensures analysis data is loaded from default files
 ##  + inherited DTA::CAB::Chain::Multi override calls ensureChain() before inherited method
+sub ensureLoaded {
+  my $ach = shift;
+  $ach->SUPER::ensureLoaded(@_) || return 0;
+
+  ##-- hack: copy chain members AFTER loading, setting 'enabled' if appropriate
+  if (ref($ach->{rwsub})) {
+    foreach (grep {!$_->{_rwsub}} @{$ach->{rwsub}{chain}}) {
+      $_ = bless( {%$_}, ref($_) );
+      $_->{enabled} = $ach->{rwsub}{enabled};
+      $_->{_rwsub}  = 1;
+    }
+  }
+  return 1;
+}
 
 ##==============================================================================
 ## Methods: Persistence
