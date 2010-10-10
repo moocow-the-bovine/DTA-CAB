@@ -254,6 +254,11 @@ sub putToken {
   $out .= join('', map { "\t+[lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{lts}})
     if ($tok->{lts});
 
+  ##-- phonetic digests ('soundex', 'koeln', 'metaphone')
+  $out .= "\t+[soundex] $tok->{soundex}\n"     if (defined($tok->{soundex}));
+  $out .= "\t+[koeln] $tok->{koeln}\n"         if (defined($tok->{koeln}));
+  $out .= "\t+[metaphone] $tok->{metaphone}\n" if (defined($tok->{metaphone}));
+
   ##-- Phonetic Equivalents ('eqpho')
   $out .= join('', map { "\t+[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
