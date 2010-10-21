@@ -99,10 +99,10 @@ sub chain {
 }
 
 ## $bool = $ach->ensureLoaded()
-##  + returns true if any chain member loads successfully
+##  + returns true if any chain member loads successfully (or if the chain is empty)
 sub ensureLoaded {
   my $ach = shift;
-  my $rc  = 0;
+  my $rc  = 1;
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
   foreach (grep {$_} @{$ach->{chain}}) {
     $rc ||= $_->ensureLoaded();

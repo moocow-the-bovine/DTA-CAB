@@ -44,12 +44,6 @@ our $serverEncoding = undef;
 our $daemonMode = 0;       ##-- do a fork() ?
 our $pidFile  = undef;     ##-- save PID to a file?
 
-##-- Log config
-our $logLevel = 'TRACE';   ##-- default log level for internal configuration
-our $rootLevel = 'WARN';   ##-- root log level internal configuration
-our $logConfigFile = undef;
-our $logWatch = undef;
-
 ##==============================================================================
 ## Command-line
 GetOptions(##-- General
@@ -69,9 +63,7 @@ GetOptions(##-- General
 	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
 
 	   ##-- Log4perl stuff
-	   'verbose|v|log-level|loglevel|ll|L=s'  => sub { $logLevel=uc($_[1]); },
-	   'log-config|logconfig|lc|l=s' => \$logConfigFile,
-	   'log-watch|logwatch|watch|lw|w!' => \$logWatch,
+	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
 	  );
 
 if ($version) {
@@ -114,11 +106,7 @@ sub CHLD_REAPER {
 ##-- check for daemon mode
 
 ##-- log4perl initialization
-if (defined($logConfigFile)) {
-  DTA::CAB::Logger->logInit($logConfigFile,$logWatch);
-} else {
-  DTA::CAB::Logger->logInit(undef, rootLevel=>$rootLevel, level=>$logLevel);
-}
+DTA::CAB::Logger->logInit();
 
 ##-- create / load server object
 our $srv = DTA::CAB::Server::XmlRpc->new(pidfile=>$pidFile);

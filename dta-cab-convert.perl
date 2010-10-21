@@ -30,9 +30,6 @@ our $doprofile = 0; ##-- compatibility only; has no other effect
 #  binmode(STDERR,':utf8');
 #}
 
-##-- Log options
-our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
-
 ##-- Formats
 our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
@@ -47,7 +44,6 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
-	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
 	   'profile|prof!' => \$doprofile, ##-- compatibility only
 
 	   ##-- I/O: input
@@ -61,6 +57,9 @@ GetOptions(##-- General
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
+
+	   ##-- Log4perl
+	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
 	  );
 
 if ($version) {
@@ -81,7 +80,7 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog(undef,%logOpts);
+DTA::CAB::Logger->logInit();
 
 ##======================================================
 ## Input & Output Formats

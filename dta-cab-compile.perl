@@ -21,10 +21,6 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-##-- Log options
-our %logOpts = (rootLevel=>'WARN', level=>'TRACE'); ##-- options for DTA::CAB::Logger::ensureLog()
-our $logConfigFile = undef;
-
 ##-- Analysis Options
 our $rcFile      = undef;
 our %analyzeOpts = qw();
@@ -52,8 +48,7 @@ GetOptions(##-- General
 	   'output-mode|outmode|omode|om|m' => \$outmode,
 
 	   ##-- Log4perl stuff
-	   'verbose|v|log-level|loglevel|ll|L=s'  => sub { $logOpts{level}=uc($_[1]); },
-	   'log-config|logconfig|lc|l=s' => \$logConfigFile,
+	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
 	  );
 
 if ($version) {
@@ -74,11 +69,7 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if 
 ##==============================================================================
 
 ##-- log4perl initialization
-if (defined($logConfigFile)) {
-  DTA::CAB::Logger->logInit($logConfigFile,0); ##-- don't watch the file
-} else {
-  DTA::CAB::Logger->logInit(undef, %logOpts);
-}
+DTA::CAB::Logger->logInit();
 
 ##-- analyzer
 DTA::CAB::Analyzer->info("loading analyzer config from '$rcFile'");

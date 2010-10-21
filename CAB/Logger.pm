@@ -16,53 +16,167 @@ use strict;
 
 our @ISA = qw();
 
+our ($MIN_LEVEL);       ##-- minimum log level
+our (%defaultLogOpts);  ##-- default log options
+BEGIN {
+  $MIN_LEVEL = $Log::Log4perl::Level::LEVELS{(sort {$a<=>$b} keys(%Log::Log4perl::Level::LEVELS))[0]};
+  %defaultLogOpts =
+      (
+       l4pfile   => undef, ##-- formerly $logConfigFile
+       watch     => undef, ##-- watch l4pfile (undef or secs)?
+       rootLevel => ($^W ? 'WARN' : 'FATAL'),
+       level     => ($^W ? $MIN_LEVEL : 'INFO'),
+       stderr    => 1,
+       file      => undef,
+       rotate    => undef, ##-- default: haveFileRotate()
+       syslog    => 0,
+       sysLevel  => ($^W ? 'debug' : 'info'),
+       sysName   => File::Basename::basename($0),
+       sysIdent  => undef,     ##-- default=$opts{sysName}
+       sysFacility => ($0 =~ m/(?:server|daemon)/i ? 'daemon' : 'user'),
+      );
+}
+
 ## $DEFAULT_LOG_CONF = PACKAGE->defaultLogConf(%opts)
 ##  + default configuration for Log::Log4perl
 ##  + see Log::Log4perl(3pm), Log::Log4perl::Config(3pm) for details
 ##  + %opts:
-##     rootLevel => $LEVEL_OR_UNDEF,
-##     level     => $LEVEL_OR_UNDEF,
+##     rootLevel => $LEVEL_OR_UNDEF,  ##-- min root log level (default='WARN' or 'FATAL', depending on $^W)
+##     level     => $LEVEL_OR_UNDEF,  ##-- min log level (default=$MIN_LEVEL or 'INFO', depending on $^W)
+##     stderr    => $bool,            ##-- whether to log to stderr (default=1)
+##     file      => $filename,        ##-- log to $filename if true
+##     rotate    => $bool,            ##-- use Log::Dispatch::FileRotate if available and $filename is true
+##     syslog    => $bool,            ##-- use Log::Dispatch::Syslog if available and true (default=false)
+##     sysLevel  => $level,           ##-- minimum level for syslog (default='debug' or 'info', depending on $^W)
+##                                    ##   : available levels: debug,info,notice,warning,error,critical,alert,emergency (== 0..7)
+##     sysName   => $sysName,         ##-- name for syslog (default=basename($0))
+##     sysIdent  => $sysIdent,        ##-- ident string for syslog (default=$sysName)
+##     sysFacility => $facility,      ##-- facility for syslog (default='daemon')
 sub defaultLogConf {
   my ($that,%opts) = @_;
-  $opts{rootLevel} = ($^W ? 'WARN'  : 'FATAL')  if (!exists($opts{rootLevel}));
-  $opts{level}     = ($^W ? 'DEBUG' : 'TRACE')  if (!exists($opts{level}));
+  %opts = (%defaultLogOpts,%opts);
+  $opts{rotate}   = haveFileRotate() if (defined($opts{file}) && !defined($opts{rotate}));
+  $opts{sysIdent} = $opts{sysName}   if (!defined($opts{sysIdent}));
+
+
+  ##-- generate base config
   my $cfg = "
 ##-- Loggers
 log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the same appender
-".($opts{rootLevel} ? "log4perl.rootLogger = $opts{rootLevel}, AppStderr" : '')."
-".($opts{level} ? "log4perl.logger.DTA.CAB = $opts{level}, AppStderr" : '')."
+";
 
+  if ($opts{rootLevel}) {
+    ##-- root logger
+    $cfg .= "log4perl.rootLogger = $opts{rootLevel}, AppStderr\n";
+  }
+
+  if ($opts{level} && ($opts{stderr} || $opts{file} || $opts{syslog})) {
+    ##-- package logger
+    $cfg .= "log4perl.logger.DTA.CAB = $opts{level}, ".join(", ",
+								($opts{stderr} ? 'AppStderr' : qw()),
+								($opts{file}   ? 'AppFile'   : qw()),
+								($opts{syslog} ? 'AppSyslog' : qw()),
+							       )."\n";
+    $cfg .= "log4perl.additivity.DTA.CAB = 0\n";
+  }
+
+  ##-- appenders: utils
+  $cfg .= "
 ##-- Appenders: Utilities
 log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename(\"$::0\"); }
+";
 
+  ##-- appender: stderr
+  $cfg .= "
 ##-- Appender: AppStderr
 log4perl.appender.AppStderr = Log::Log4perl::Appender::Screen
 log4perl.appender.AppStderr.stderr = 1
 log4perl.appender.AppStderr.layout = Log::Log4perl::Layout::PatternLayout
-log4perl.appender.AppStderr.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} %G[%P] %p: %c: %m%n
+log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P] %p: %c: %m%n
 ";
+
+  ##-- appender: syslog
+  if ($opts{syslog}) {
+    $cfg .= "
+log4perl.appender.AppSyslog = Log::Dispatch::Syslog
+log4perl.appender.AppSyslog.name = $opts{sysName}
+log4perl.appender.AppSyslog.ident = $opts{sysIdent}
+log4perl.appender.AppSyslog.min_level = $opts{sysLevel}
+log4perl.appender.AppSyslog.facility = $opts{sysFacility}
+log4perl.appender.AppSyslog.logopt = pid
+log4perl.appender.AppSyslog.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.AppSyslog.layout.ConversionPattern = (%p) %c: %m%n
+";
+  }
+
+  if ($opts{file} && $opts{rotate}) {
+    ##-- rotating file appender
+    $cfg .= "
+##-- Appender: AppFile: rotating file appender
+log4perl.appender.AppFileR = Log::Dispatch::FileRotate
+log4perl.appender.AppFileR.min_level = debug
+log4perl.appender.AppFileR.filename = $opts{file}
+log4perl.appender.AppFileR.mode = append
+log4perl.appender.AppFileR.size = 10485760
+log4perl.appender.AppFileR.max  = 10
+log4perl.appender.AppFileR.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.AppFileR.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
+";
+  }
+  elsif ($opts{file}) {
+    ##-- raw file appender
+    $cfg .= "
+##-- Appender: AppFile: raw file appender
+log4perl.appender.AppFile = Log::Log4perl::Appender::File
+log4perl.appender.AppFile.filename = $opts{file}
+log4perl.appender.AppFile.mode = append
+log4perl.appender.AppFile.utf8 = 1
+log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
+";
+  }
+
   return $cfg;
+}
+
+## $bool = CLASS::haveFileRotate()
+##  + returns true if Log::Dispatch::FileRotate is available
+sub haveFileRotate {
+  return 1 if (defined($Log::Dispatch::FileRotate));
+  eval "use Log::Dispatch::FileRotate;";
+  return 1 if (defined($Log::Dispatch::FileRotate) && !$@);
+  $@='';
+  return 0;
+}
+
+## $bool = CLASS::haveSyslog()
+##  + returns true if Log::Dispatch::Syslog is available
+sub haveSyslog {
+  return 1 if (defined($Log::Dispatch::Syslog));
+  eval "use Log::Dispatch::Syslog;";
+  return 1 if (defined($Log::Dispatch::Syslog) && !$@);
+  $@='';
+  return 0;
 }
 
 ##==============================================================================
 ## Functions: Initialization
 ##==============================================================================
 
-## undef = PACKAGE->logInit()             ##-- use default configuration
-## undef = PACKAGE->logInit(undef,%opts)  ##-- use default configuration with %opts
-## undef = PACKAGE->logInit($file)        ##-- read configuration from a file
-## undef = PACKAGE->logInit($file,$watch) ##-- watch configuration file
-##  + all log calls in the DTA::CAB should use a subcategory of 'DTA::CAB'
+## undef = PACKAGE->logInit(%opts)  ##-- use default configuration with %opts
+##  + %opts: see defaultLogConf()
+##  + all log calls in the DTA::CAB namespace should use a subcategory of 'DTA::CAB'
 ##  + only needs to be called once; see Log::Log4perl->initialized()
 sub logInit {
-  my ($that,$file,$watch) = @_;
-  if (!defined($file)) {
-    my $confstr = $that->defaultLogConf(@_[2..$#_]);
+  my $that = shift;
+  my %opts = (%defaultLogOpts,@_);
+  if (!defined($opts{l4pfile})) {
+    my $confstr = $that->defaultLogConf(%opts);
     Log::Log4perl::init(\$confstr);
-  } elsif (defined($watch)) {
-    Log::Log4perl::init_and_watch($file,$watch);
+  } elsif (defined($opts{watch})) {
+    Log::Log4perl::init_and_watch($opts{l4pfile},$opts{watch});
   } else {
-    Log::Log4perl::init($file);
+    Log::Log4perl::init($opts{l4pfile});
   }
   #__PACKAGE__->info("initialized logging facility");
 }
@@ -124,6 +238,41 @@ sub logdie { $_[0]->logger->logdie(@_[1..$#_]); }         # die w/o stack trace
 sub logcroak { $_[0]->logger->logcroak(@_[1..$#_]); }     # die w/ 1-level stack trace
 sub logconfess { $_[0]->logger->logconfess(@_[1..$#_]); } # die w/ full stack trace
 
+
+##==============================================================================
+## Utils: Getopt::Long specification
+##==============================================================================
+
+## %getoptLongHash = $PACKAGE->cabLogOptions(%localOpts)
+##  + %localOpts
+##     verbose => $bool,   ##-- if true, add 'verbose|v' as alias for 'log-level'
+##  + adds support for logging options:
+##    'log-level|loglevel|ll|L=s' => \$defaultLogOpts{level},
+##    'log-config|logconfig|log4perl-config|l4p-config|l4p=s' => \$defaultLogOpts{l4pfile},
+##    'log-watch|logwatch|watch|lw=i' => \$defaultLogOpts{watch},
+##    'nolog-watch|nologwatch|nowatch|nolw' => sub { $defaultLogOpts{watch}=undef; },
+##    'log-stderr|stderr|lse!' => \$defaultLogOpts{stderr},
+##    'log-file|lf=s' => \$defaultLogOpts{file},
+##    'nolog-file|nolf' => sub { $defaultLogOpts{file}=undef; },
+##    'log-rotate|rotate|lr!' => \$defaultLogOpts{rotate},
+##    'log-syslog|syslog|ls!' => \$defaultLogOpts{syslog},
+sub cabLogOptions {
+  my ($that,%opts) = @_;
+  return
+    (##-- Logging Options
+     ($opts{verbose} ? ('verbose|v=s' => sub { $defaultLogOpts{level}=uc($_[1]); }) : qw()),
+     'log-level|loglevel|ll|L=s'  => sub { $defaultLogOpts{level}=uc($_[1]); },
+     'log-config|logconfig|log4perl-config|l4p-config|l4p=s' => \$defaultLogOpts{l4pfile},
+     'log-watch|logwatch|watch|lw=i' => \$defaultLogOpts{watch},
+     'nolog-watch|nologwatch|nowatch|nolw' => sub { $defaultLogOpts{watch}=undef; },
+     'log-stderr|stderr|lse!' => \$defaultLogOpts{stderr},
+     'log-file|lf=s' => \$defaultLogOpts{file},
+     'nolog-file|nolf' => sub { $defaultLogOpts{file}=undef; },
+     'log-rotate|rotate|lr!' => \$defaultLogOpts{rotate},
+     'log-syslog|syslog|ls!' => \$defaultLogOpts{syslog},
+    );
+}
+
 1; ##-- be happy
 
 __END__
@@ -149,11 +298,18 @@ DTA::CAB::Logger - DTA::CAB logging facility using Log::Log4perl
  use DTA::CAB::Logger;
  
  ##========================================================================
+ ## Gobals
+ 
+ $DTA::CAB::Logger::defaultLogOpts{$opt} = $val;
+ $DTA::CAB::Logger::MIN_LEVEL = $min_log_level;
+ 
+ ##========================================================================
  ## Functions: Initialization
  
- PACKAGE->logInit();
- PACKAGE->ensureLog();
- $bool = CLASS_OR_OBJECT->logInitialized();
+ DTA::CAB::Logger->logInit(%opts);
+ DTA::CAB::Logger->ensureLog(%opts);
+ $DEFAULT_LOG_CONF = DTA::CAB::Logger->defaultLogConf(%opts)
+ $bool = $CLASS_OR_OJECT->logInitialized();
  
  ##========================================================================
  ## Methods: get logger
@@ -198,6 +354,27 @@ object-oriented access to the Log::Log4perl logging facility.
 =cut
 
 ##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Logger: Globals
+=pod
+
+=head2 Globals
+
+=over 4
+
+=item $DTA::CAB::Logger::MIN_LEVEL
+
+Minimum log level.  Default is minimum-keyed value in %LOG::Log4perl::Level::LEVELS if $^W
+is set, otherwise 'INFO'.
+
+=item %DTA::CAB::Logger::defaultLogOpts
+
+Default logging options.  See defaultLogConf().
+
+=back
+
+=cut
+
+##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Logger: Functions: Initialization
 =pod
 
@@ -207,12 +384,25 @@ object-oriented access to the Log::Log4perl logging facility.
 
 =item logInit
 
- $PACKAGE->logInit()             ##-- use default configuration
- $PACKAGE->logInit($file)        ##-- read configuration from a file
- $PACKAGE->logInit(\$str)        ##-- read configuration from a string
- $PACKAGE->logInit($file,$watch) ##-- watch configuration file
+ $PACKAGE->logInit(%opts)
 
 Initialize the logging facility.
+
+%opts:
+
+ l4pfile   => undef,            ##-- alternate Log4perl config file
+ watch     => undef,            ##-- watch l4pfile? (default=false)
+ rootLevel => $LEVEL_OR_UNDEF,  ##-- min root log level (default='WARN' or 'FATAL', depending on $^W)
+ level     => $LEVEL_OR_UNDEF,  ##-- min log level (default=$MIN_LEVEL or 'INFO', depending on $^W)
+ stderr    => $bool,            ##-- whether to log to stderr (default=1)
+ file      => $filename,        ##-- log to $filename if true
+ rotate    => $bool,            ##-- use Log::Dispatch::FileRotate if available and $filename is true
+ syslog    => $bool,            ##-- use Log::Dispatch::Syslog if available and true (default=false)
+ sysLevel  => $level,           ##-- minimum level for syslog (default='debug' or 'info', depending on $^W)
+                                ##   available levels: debug,info,notice,warning,error,critical,alert,emergency (== 0..7)
+ sysName   => $sysName,         ##-- name for syslog (default=basename($0))
+ sysIdent  => $sysIdent,        ##-- ident string for syslog (default=$sysName)
+ sysFacility => $facility,      ##-- facility for syslog (default='daemon')
 
 All log calls in the 'DTA::CAB' namespace should use a subcategory of 'DTA::CAB'.
 This function only needs to be called once; see
@@ -220,9 +410,15 @@ L<Log::Log4perl-E<gt>initialized()|Log::Log4perl> for details.
 
 =item ensureLog
 
- PACKAGE->ensureLog()
+ PACKAGE->ensureLog(%opts)
 
 Ensures that L<Log::Log4perl|Log::Log4perl> has been initialized.
+
+=item defaultLogConf
+
+ $DEFAULT_LOG_CONF = PACKAGE->defaultLogConf(%opts)
+
+Returns default L<Log::Log4perl|Log::Log4perl> configuration string for %opts.
 
 =item logInitialized
 
@@ -372,7 +568,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.7 or,

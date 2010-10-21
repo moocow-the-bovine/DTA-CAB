@@ -57,7 +57,6 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
-	   'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); },
 
 	   ##-- Server Options
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
@@ -86,6 +85,9 @@ GetOptions(##-- General
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
+
+	   ##-- Log4perl
+	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
 	  );
 
 if ($version) {
@@ -106,7 +108,7 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog(undef,%logOpts);
+DTA::CAB::Logger->logInit();
 
 ##-- sanity checks
 $serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+://|);

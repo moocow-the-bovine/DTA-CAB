@@ -50,6 +50,9 @@ GetOptions(##-- General
 	   'lts-cache|lts-dict|lc|ld|l=s'        => \$ltsDictFile,
 	   'morph-cache|morph-dict|md|mc|m=s'    => \$morphDictFile,
 	   'rw-cache|rw-dict|rc|rd|r=s'          => \$rwDictFile,
+
+	   ##-- logging options
+	   DTA::CAB::Logger->cabLogOptions(verbose=>1),
 	  );
 
 if ($version) {
@@ -74,7 +77,7 @@ pod2usage({-exitval=>0, -verbose=>0, -message=>'No output cache file(s) selected
 ##==============================================================================
 
 ##-- log4perl initialization
-DTA::CAB::Logger->ensureLog();
+DTA::CAB::Logger->logInit();
 
 ##-- analyzer
 our $cab = DTA::CAB->loadFile($rcFile)
