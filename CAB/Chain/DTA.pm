@@ -80,7 +80,7 @@ sub setupChains {
      ##
      'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
      'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub dmoot moot)}],
+     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqpho dmoot moot)}],
      'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqpho eqrw dmoot moot)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
@@ -210,6 +210,5 @@ sub ensureLoaded {
 ##==============================================================================
 ## Methods: XML-RPC
 ##  + INHERITED from DTA::CAB::Chain::Multi
-
 
 1; ##-- be happy

@@ -33,7 +33,8 @@ our $DEFAULT_DYN_ANALYZE_TEXT_GET = '$_[0]{text}';
 ##      $moot => analyzer object
 ##  + should return a list of hash-refs ({tag=>$tag,details=>$details,cost=>$cost,src=>$whereFrom}, ...) given token
 #our $DEFAULT_DYN_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
-our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalyses';
+#our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalyses';
+our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalysesSafe';
 
 ##==============================================================================
 ## Constructors etc.
@@ -65,9 +66,12 @@ our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalyses';
 ##                               ##       $details ##-- source analysis 'details' "$hi <$w>"
 ##                               ##       $cost    ##-- source analysis weight
 ##                               ##       $text    ##-- source token text
-##                               ##   + Default just returns $cost (identity function)
+##                               ##   + Default:
+##                                        xlit  => 2/length($text)
+##                                        eqpho => 1/length($text)
+##                                        rw    => $cost/length($text)
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=0)
-##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
+##     prune          => $bool,  ##-- if true, prune analyses after tagging (default (override)=false)
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
 ##
 ##
@@ -88,7 +92,7 @@ sub new {
 					     verbose=>$moot::HMMvlWarnings,
 					     newtag_str=>'@NEW',
 					     newtag_f=>0.5,
-					     Ftw_eps =>0.01,
+					     Ftw_eps =>0.0,  ##-- moot default=0.5
 					     invert_lexp=>1,
 					     hash_ngrams=>1,
 					     relax=>0,
@@ -103,8 +107,14 @@ sub new {
 			       analyzeTextGet => $DEFAULT_DYN_ANALYZE_TEXT_GET,
 			       analyzeTagsGet => $DEFAULT_DYN_ANALYZE_TAGS_GET,
 			       requireAnalyses => 1,
+			       prune => 0,
 			       analyzeLiteralFlag=>'dmootLiteral',
 			       analyzeLiteralSrc=>'text',
+			       analyzeCostFuncs => {
+						    xlit=>'2.0/length($text)',
+						    eqpho=>'1.0/length($text)',
+						    rw=>'$cost/length($text)',
+						   },
 
 			       ##-- analysis objects
 			       #hmm => undef,
@@ -143,15 +153,33 @@ sub hmmClass { return 'moot::DynLexHMM_Boltzmann'; }
 
 BEGIN { *parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
 
-## @analyses = CLASS::parseDynAnalyses($tok)
-##  + utility for disambiguation using @$tok{qw(text xlit eqpho rw)} fields
-sub parseDynAnalyses {
+BEGIN { *_parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
+
+## @analyses = CLASS::parseDynAnalysesSafe($tok)
+##  + pseudo-accessor utility for disambiguation using @$tok{qw(text xlit msafe eqpho rw)} fields
+##  + returns only $tok->{xlit} field if "$tok->{msafe}" flag is true
+sub parseDynAnalysesSafe {
   return
-    (($_[0]{xlit}  ? (parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : qw()),
-     ($_[0]{eqpho} ? (map {parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
-     ($_[0]{rw}    ? (map {parseAnalysis($_,src=>'rw')} @{$_[0]{rw}}) : qw()),
+    ($_[0]{xlit} ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text'))
+      if ($_[0]{msafe});
+  return
+    (($_[0]{xlit}  ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text')),
+     ($_[0]{eqpho} ? (map {_parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
+     ($_[0]{rw}    ? (map {_parseAnalysis($_,src=>'rw')} @{$_[0]{rw}}) : qw()),
     );
 }
+
+## @analyses = CLASS::parseDynAnalyses($tok)
+##  + pseudo-accessor utility for disambiguation using @$tok{qw(text xlit eqpho rw)} fields
+##  + always returns all analyses
+sub parseDynAnalyses {
+  return
+    (($_[0]{xlit}  ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text')),
+     ($_[0]{eqpho} ? (map {_parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
+     ($_[0]{rw}    ? (map {_parseAnalysis($_,src=>'rw')} @{$_[0]{rw}}) : qw()),
+    );
+}
+
 
 ##==============================================================================
 ## Methods: I/O

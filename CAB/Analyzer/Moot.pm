@@ -48,12 +48,10 @@ our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
 ##
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
-##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='latin1')
+##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='UTF-8')
 ##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_ANALYZE_TEXT_GET)
 ##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
 ##     #analyzeTagSrcs => \@srcs, ##-- OBSOLETE: source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
-##     analyzeLiteralFlag=>$code, ##-- pseudo-accessor: if true, only literal analyses are allowed (default=undef(=none))
-##     analyzeLiteralGet =>$code, ##-- pseudo-accessor: source for literal analyses (default=undef=none)
 ##     analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
 ##                               ##     %fnc = ($akey=>$perlcode_str, ...)
 ##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
@@ -73,6 +71,12 @@ our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
 ##    )
+##
+##     ##-- OBSOLETE (use analyzeTextGet, analyzeTagsGet pseudo-closure accessors)
+##     #analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
+##     #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
+##     #analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default='dmootLiteral')
+##     #analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='xlit')
 sub new {
   my $that = shift;
   my $moot = $that->SUPER::new(
@@ -84,7 +88,7 @@ sub new {
 					     verbose=>$moot::HMMvlWarnings,
 					     #relax => 1,
 					    },
-			       hmmEnc  => 'latin1',
+			       hmmEnc  => 'UTF-8',
 			       prune => 1,
 			       uniqueAnalyses=>0,
 
@@ -93,8 +97,6 @@ sub new {
 			       label => 'moot',
 			       analyzeTextGet => $DEFAULT_ANALYZE_TEXT_GET,
 			       analyzeTagsGet => $DEFAULT_ANALYZE_TAGS_GET,
-			       analyzeLiteralFlag=>undef,
-			       analyzeLiteralGet=>undef,
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
 
