@@ -60,7 +60,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 1.08;
+our $VERSION = 1.09;
 our @ISA = qw(DTA::CAB::Chain::DTA); ##-- inherit from default analyzer (v0.x-compatibility hack)
 
 

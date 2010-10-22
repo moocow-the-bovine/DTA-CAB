@@ -164,6 +164,14 @@ sub parseTTString {
 	  ##-- token: field: phonetic equivalent, with optional weight
 	  push(@{$tok->{eqpho}}, {hi=>$1,w=>(defined($2) ? $2 : 0)});
 	}
+	elsif ($field =~ m/^\[eqphox\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+	  ##-- token: field: phonetic equivalent, full-fst version
+	  push(@{$tok->{eqphox}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+	}
+	elsif ($field =~ m/^\[eqphox\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+	  ##-- token: field: phonetic equivalent, with optional weight
+	  push(@{$tok->{eqphox}}, {hi=>$1,w=>(defined($2) ? $2 : 0)});
+	}
 	elsif ($field =~ m/^\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
 	  ##-- token: field: rw equivalent, full-fst version
 	  push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
@@ -308,6 +316,10 @@ sub putToken {
   ##-- Phonetic Equivalents ('eqpho')
   $out .= join('', map { "\t[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
+
+  ##-- Known Phonetic Equivalents ('eqphox')
+  $out .= join('', map { "\t[eqphox] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqphox}})
+    if ($tok->{eqphox});
 
   ##-- Morph ('morph')
   $out .= join('', map { "\t[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{morph}})

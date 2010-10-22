@@ -6,6 +6,10 @@
 package DTA::CAB::Chain::DTA;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Chain::Multi;
+
+##-- sub-analyzers
+use DTA::CAB::Analyzer::EqPhoX;
+
 use IO::File;
 use Carp;
 
@@ -35,6 +39,7 @@ sub new {
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
 			   rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
 			   ##
+			   eqphox => DTA::CAB::Analyzer::EqPhoX->new(),     ##-- default (cascade)
 			   eqpho => DTA::CAB::Analyzer::EqPho->new(),       ##-- default (FST)
 			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- default (FST)
 			   ##
@@ -71,6 +76,7 @@ sub setupChains {
      ##
      'default.xlit'  =>[@$ach{qw(xlit)}],
      'default.lts'   =>[@$ach{qw(xlit lts)}],
+     'default.eqphox'=>[@$ach{qw(xlit lts eqphox)}],
      'default.morph' =>[@$ach{qw(xlit morph)}],
      'default.msafe' =>[@$ach{qw(xlit morph msafe)}],
      'default.rw'    =>[@$ach{qw(xlit rw)}],
@@ -80,8 +86,8 @@ sub setupChains {
      ##
      'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
      'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqpho dmoot moot)}],
-     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqpho eqrw dmoot moot)}],
+     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot moot)}],
+     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 

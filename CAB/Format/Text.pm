@@ -158,6 +158,14 @@ sub parseTextString {
       ##-- token: field: phonetic equivalent, optional weight
       push(@{$tok->{eqpho}}, {hi=>$1,w=>$2});
     }
+    elsif ($line =~ m/^\t\+\[eqphox\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
+      ##-- token: field: phonetic equivalent, full-fst version
+      push(@{$tok->{eqphox}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+    }
+    elsif ($line =~ m/^\t\+\[eqphox\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
+      ##-- token: field: phonetic equivalent, optional weight
+      push(@{$tok->{eqphox}}, {hi=>$1,w=>$2});
+    }
     elsif ($line =~ m/^\t\+\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
       ##-- token: field: rewrite equivalent, full-fst version
       push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
@@ -262,6 +270,10 @@ sub putToken {
   ##-- Phonetic Equivalents ('eqpho')
   $out .= join('', map { "\t+[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
+
+  ##-- Phonetic Equivalents ('eqphox')
+  $out .= join('', map { "\t+[eqphox] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqphox}})
+    if ($tok->{eqphox});
 
   ##-- Rewrite Equivalents ('eqrw')
   $out .= join('', map { "\t+[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqrw}})
