@@ -1,34 +1,33 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::RewriteSub.pm
+## File: DTA::CAB::Analyzer::DmootSub.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: sub-analysis (LTS, Morph) of rewrite targets
+## Description: sub-analysis (Morph) of dmoot targets
 
 ##==============================================================================
-## Package: Analyzer::RewriteSub
+## Package: Analyzer::DmootSub
 ##==============================================================================
-package DTA::CAB::Analyzer::RewriteSub;
+package DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Chain;
 use DTA::CAB::Analyzer::Morph;
-use DTA::CAB::Analyzer::LTS;
 use Carp;
 use strict;
 our @ISA = qw(DTA::CAB::Chain);
 
 ## $obj = CLASS_OR_OBJ->new(chain=>\@analyzers, %args)
 ##  + basic object structure: (see also DTA::CAB::Chain)
-##     chain => [$a1, ..., $aN], ##-- sub-analysis chain (e.g. chain=>[$lts,$morph])
+##     chain => [$a1, ..., $aN], ##-- sub-analysis chain (e.g. chain=>[$morph])
 ##  + new object structure:
-##     rwLabel => $label,        ##-- label of source 'rewrite' object (default='rw')
+##     dmootLabel => $label,        ##-- label of source dmoot object (default='dmoot')
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
 			       ##-- defaults
 			       #analysisClass => 'DTA::CAB::Analyzer::Rewrite::Analysis',
-			       label => 'rwsub',
+			       label => 'dmsub',
 
 			       ##-- analysis selection
-			       rwLabel => 'rw',
+			       dmootLabel => 'dmoot',
 
 			       ##-- user args
 			       @_
@@ -36,41 +35,62 @@ sub new {
   return $asub;
 }
 
-## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
-##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
-##  + extracts rewrite targets, builds pseudo-type hash, calls sub-chain analyzeTypes(), & expands
-sub analyzeTypes {
-  my ($asub,$doc,$types,$opts) = @_;
+## $doc = $anl->Sentences($doc,\%opts)
+##  + post-processing for 'dmoot' object
+##  + extracts dmoot targets, builds pseudo-type hash, calls sub-chain analyzeTypes(), & expands back into 'dmoot' sources
+sub analyzeSentences {
+  my ($asub,$doc,$opts) = @_;
   return $doc if (!$asub->enabled($opts));
 
   ##-- load
   $asub->ensureLoaded();
 
-  ##-- get rewrite target types
-  $types = $doc->types if (!$types);
-  my $rwkey   = $asub->{rwLabel};
-  my $rwtypes = {
-		 map { ($_->{hi}=>bless({text=>$_->{hi}},'DTA::CAB::Token')) }
-		 map { $_->{$rwkey} ? @{$_->{$rwkey}} : qw() }
-		 values(%$types)
-		};
+  ##-- get dmoot target types
+  my $dmkey = $asub->{dmootLabel};
+  my $dmtypes = {};
+  my $udmtypes = {};
+  my ($tok,$txt,$dm,$dmtag,$dmtyp);
+ TOK:
+  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    next if (!defined($dm=$tok->{$dmkey}));
+    $dmtag = $dm->{tag};
+    $dmtyp = $dmtypes->{$dmtag} = bless({ text=>$dmtag }, 'DTA::CAB::Token');
 
-  ##-- analyze rewrite target types
+    ##-- check for existing morph
+    $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
+    if ($dmtag eq $txt) {
+      ##-- existing morph: from text
+      $dmtyp->{morph} = $tok->{morph};
+      next TOK;
+    }
+    foreach (grep {$_->{hio} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
+      ##-- existing morph: from rewrite
+      $dmtyp->{morph} = $_->{morph};
+      last;
+    }
+
+    ##-- oops... might need to re-analyze
+    $udmtypes->{$dmtag} = $dmtyp if (!$dmtyp->{morph} || !@{$dmtyp->{morph}});
+  }
+
+
+  ##-- analyze remaining dmoot types
   my ($sublabel);
   foreach (@{$asub->{chain}}) {
     $sublabel = $asub->{label}.'_'.$_->{label};
     next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
-    $_->analyzeTypes($doc,$rwtypes,$opts);
+    $_->analyzeTypes($doc,$udmtypes,$opts);
   }
 
   ##-- delete rewrite target type 'text'
-  delete($_->{text}) foreach (values %$rwtypes);
+  delete($_->{text}) foreach (values %$dmtypes);
 
-  ##-- expand rewrite target types
-  my ($rwtyp);
-  foreach (map {$_->{$rwkey} ? @{$_->{$rwkey}} : qw()} values(%$types)) {
-    $rwtyp = $rwtypes->{$_->{hi}};
-    @$_{keys %$rwtyp} = values %$rwtyp;
+  ##-- re-expand dmoot target fields (morph)
+  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    next if (!defined($dm=$tok->{$dmkey}));
+    $dmtag = $dm->{tag};
+    $dmtyp = $dmtypes->{$dmtag};
+    @$dm{keys %$dmtyp} = values %$dmtyp;
   }
 
   ##-- return
@@ -79,9 +99,9 @@ sub analyzeTypes {
 
 ## @keys = $anl->typeKeys()
 ##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
-##  + override returns $anl->{rwLabel}
+##  + override returns $anl->{dmootLabel}
 sub typeKeys {
-  return $_[0]{rwLabel};
+  return $_[0]{dmootLabel};
 }
 
 

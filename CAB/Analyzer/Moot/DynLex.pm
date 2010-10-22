@@ -67,9 +67,10 @@ our $DEFAULT_DYN_ANALYZE_TAGS_GET = __PACKAGE__ . '::parseDynAnalysesSafe';
 ##                               ##       $cost    ##-- source analysis weight
 ##                               ##       $text    ##-- source token text
 ##                               ##   + Default:
-##                                        xlit  => 2/length($text)
-##                                        eqpho => 1/length($text)
-##                                        rw    => $cost/length($text)
+##                                        xlit   => 2/length($text)
+##                                        eqpho  => 1/length($text)
+##                                        eqphox => .5*$cost/length($text)
+##                                        rw     => $cost/length($text)
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=0)
 ##     prune          => $bool,  ##-- if true, prune analyses after tagging (default (override)=false)
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
@@ -113,6 +114,7 @@ sub new {
 			       analyzeCostFuncs => {
 						    xlit=>'2.0/length($text)',
 						    eqpho=>'1.0/length($text)',
+						    eqphox=>'(1+0.1*$cost)/length($text)',
 						    rw=>'$cost/length($text)',
 						   },
 
@@ -156,7 +158,7 @@ BEGIN { *parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
 BEGIN { *_parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
 
 ## @analyses = CLASS::parseDynAnalysesSafe($tok)
-##  + pseudo-accessor utility for disambiguation using @$tok{qw(text xlit msafe eqpho rw)} fields
+##  + pseudo-accessor utility for disambiguation using @$tok{qw(text xlit msafe eqphox rw)} fields (NOT 'eqpho'!)
 ##  + returns only $tok->{xlit} field if "$tok->{msafe}" flag is true
 sub parseDynAnalysesSafe {
   return
@@ -164,7 +166,8 @@ sub parseDynAnalysesSafe {
       if ($_[0]{msafe});
   return
     (($_[0]{xlit}  ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text')),
-     ($_[0]{eqpho} ? (map {_parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
+     #($_[0]{eqpho} ? (map {_parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
+     ($_[0]{eqphox} ? (map {_parseAnalysis($_,src=>'eqphox')} @{$_[0]{eqphox}}) : qw()),
      ($_[0]{rw}    ? (map {_parseAnalysis($_,src=>'rw')} @{$_[0]{rw}}) : qw()),
     );
 }

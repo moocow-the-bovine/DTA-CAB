@@ -308,7 +308,15 @@ sub putToken {
 
   ##-- moot
   if ($tok->{moot}) {
+    ##-- dmoot/tag
     $out .= "\t+[moot/tag] $tok->{moot}{tag}\n";
+
+    ##-- dmoot/morph
+    $out .= join('', map { "\t+[dmoot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" }
+		 @{$tok->{dmoot}{morph}})
+      if ($tok->{dmoot}{morph});
+
+    ##-- dmoot/analyses
     $out .= join('', map {"\t+[moot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
   }

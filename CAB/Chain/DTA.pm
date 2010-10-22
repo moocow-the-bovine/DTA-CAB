@@ -9,6 +9,8 @@ use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
 use DTA::CAB::Analyzer::EqPhoX;
+use DTA::CAB::Analyzer::RewriteSub;
+use DTA::CAB::Analyzer::DmootSub;
 
 use IO::File;
 use Carp;
@@ -45,6 +47,7 @@ sub new {
 			   ##
 			   ##
 			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
+			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),  ##-- moot n-gram disambiguator: sub-morph
 			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger
 
 			   ##-- user args
@@ -66,13 +69,14 @@ sub new {
 sub setupChains {
   my $ach = shift;
   $ach->{rwsub}{chain} = [@$ach{qw(lts morph)}];
+  $ach->{dmootsub}{chain} = [@$ach{qw(morph)}];
   my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {
      (map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
      ##
      'sub.expand'    =>[@$ach{qw(eqpho eqrw)}],
-     'sub.sent'      =>[@$ach{qw(dmoot moot)}],
+     'sub.sent'      =>[@$ach{qw(dmoot dmootsub moot)}],
      ##
      'default.xlit'  =>[@$ach{qw(xlit)}],
      'default.lts'   =>[@$ach{qw(xlit lts)}],
@@ -81,12 +85,14 @@ sub setupChains {
      'default.msafe' =>[@$ach{qw(xlit morph msafe)}],
      'default.rw'    =>[@$ach{qw(xlit rw)}],
      'default.rw.safe'  =>[@$ach{qw(xlit morph msafe rw)}], #mlatin
+     'default.dmoot'    =>[@$ach{qw(xlit lts eqphox morph msafe rw dmoot)}],
+     'default.moot'     =>[@$ach{qw(xlit lts eqphox morph msafe rw dmoot dmootsub moot)}],
      'default.base'     =>[@$ach{qw(xlit lts morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
      ##
      'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
      'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot moot)}],
+     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot)}],
      'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
@@ -126,14 +132,18 @@ sub ensureLoaded {
   my $ach = shift;
   $ach->SUPER::ensureLoaded(@_) || return 0;
 
-  ##-- hack: copy chain members AFTER loading, setting 'enabled' if appropriate
-  if (ref($ach->{rwsub})) {
-    foreach (grep {!$_->{_rwsub}} @{$ach->{rwsub}{chain}}) {
-      $_ = bless( {%$_}, ref($_) );
-      $_->{enabled} = $ach->{rwsub}{enabled};
-      $_->{_rwsub}  = 1;
+  ##-- hack: copy chain members AFTER loading for sub-analyzers, setting 'enabled' if appropriate
+  my ($subkey);
+  foreach $subkey (qw(rwsub dmootsub)) {
+    if (ref($ach->{$subkey})) {
+      foreach (grep {!$_->{"_${subkey}"}} @{$ach->{$subkey}{chain}}) {
+	$_ = bless( {%$_}, ref($_) );
+	$_->{enabled} = $ach->{$subkey}{enabled};
+	$_->{"_$subkey"}  = 1;
+      }
     }
   }
+
   return 1;
 }
 
