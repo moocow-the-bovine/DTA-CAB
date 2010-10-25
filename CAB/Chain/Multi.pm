@@ -93,9 +93,10 @@ sub chain {
 ## \@analyzers = $ach->subAnalyzers(\%opts)
 ##  + returns a list of all sub-analyzers
 ##  + override returns all defined analyzers in any chain in $ach->{chains} or in values(%$ach)
-sub subAnalyzers_OLD {
+sub subAnalyzers {
   my $ach = shift;
-  my %subh = map {(overload::StrVal($_)=>$_)} grep {ref($_) && $_->isa($_,'DTA::CAB::Analyzer')} values(%$ach);
+  my %subh = map {(overload::StrVal($_)=>$_)} grep {ref($_) && UNIVERSAL::isa($_,'DTA::CAB::Analyzer')} values(%$ach);
+  $subh{overload::StrVal($_)} = $_ foreach (@{$ach->chain(@_)});
   my ($ckey, $a);
   foreach $ckey (sort keys %{$ach->{chains}}) {
     foreach $a (grep {$_} @{$ach->{chains}{$ckey}||[]}) {
