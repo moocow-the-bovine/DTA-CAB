@@ -128,7 +128,8 @@ while (defined($line=<>)) {
 ##===================
 ## analyze input
 $cab->info("loading analyzer data");
-$cab->ensureLoaded();
+$cab->prepare()
+  or die("$0: prepare() failed: $!");
 $cab->info("analyzing buffered input");
 my $doc = toDocument([ toSentence(\@toks) ]);
 $cab->analyzeDocument($doc);

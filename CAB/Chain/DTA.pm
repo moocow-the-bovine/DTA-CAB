@@ -138,6 +138,7 @@ sub ensureLoaded {
     if (ref($ach->{$subkey})) {
       foreach (grep {!$_->{"_${subkey}"}} @{$ach->{$subkey}{chain}}) {
 	$_ = bless( {%$_}, ref($_) );
+	$_->{label}   = $subkey.'_'.$_->{label};
 	$_->{enabled} = $ach->{$subkey}{enabled};
 	$_->{"_$subkey"}  = 1;
       }

@@ -75,6 +75,15 @@ sub chain {
   return [grep {$_ && $_->enabled} @{$ach->{chain}}];
 }
 
+## \@analyzers = $ach->subAnalyzers()
+## \@analyzers = $ach->subAnalyzers(\%opts)
+##  + returns a list of all sub-analyzers
+##  + override just calls chain()
+sub subAnalyzers {
+  return $_[0]->chain(@_[1..$#_]);
+}
+
+
 ##==============================================================================
 ## Methods: I/O
 ##==============================================================================
@@ -83,14 +92,15 @@ sub chain {
 ## Methods: I/O: Input: all
 
 ## $bool = $ach->ensureLoaded()
+## $bool = $ach->ensureLoaded(\%opts)
 ##  + ensures analysis data is loaded from default files
-##  + default version calls $a->ensureLoaded() for each $a in $ach->{chain}
+##  + default version calls $a->ensureLoaded() for each $a in $ach->subAnalyzers(\%opts)
 sub ensureLoaded {
   my $ach = shift;
-  my $rc  = 1;
-  #@{$ach->{chain}} = grep {$_ && $_->enabled} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
-  foreach (@{$ach->chain}) {
-    $rc &&= $_->ensureLoaded();
+  my $subs = $ach->subAnalyzers(@_);
+  my $rc = 1;
+  foreach (@$subs) {
+    $rc &&= $_->ensureLoaded() if (ref($_) && $_->can('ensureLoaded'));
     last if (!$rc); ##-- short-circuit
   }
   return $rc;
@@ -134,10 +144,11 @@ sub ensureLoaded {
 ## $bool = $ach->canAnalyze()
 ## $bool = $ach->canAnalyze(\%opts)
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + returns true if all analyzers in the chain do to
+##  + returns true if all enabled analyzers in the chain can analyze
 sub canAnalyze {
   my $ach = shift;
-  foreach (@{$ach->chain(@_)}) {
+  my $subs = $ach->subAnalyzers(@_);
+  foreach (grep {ref($_) && $_->enabled(@_)} @$subs) {
     if (!$_ || !$_->canAnalyze) {
       #$ach->logwarn("canAnalyze() returning 0 for sub-analyzer \"$_\"");
       return 0;
@@ -146,12 +157,25 @@ sub canAnalyze {
   return 1;
 }
 
+
 ## $bool = $anl->enabled(\%opts)
 ##  + returns $anl->{enabled} and disjunction over all sub-analyzers
 sub enabled {
   my $ach = shift;
-  return $ach->SUPER::enabled(@_) && scalar(grep {$_->enabled(@_)} @{$ach->chain(@_)});
+  return $ach->SUPER::enabled(@_) && scalar(grep {$_->enabled(@_)} @{$ach->subAnalyzers(@_)});
 }
+
+
+## undef = $anl->initInfo()
+##  + logs initialization info
+##  + default method reports values of {label}, enabled()
+sub initInfo {
+  my $anl = shift;
+  $anl->SUPER::initInfo(@_);
+  $_->initInfo(@_) foreach (@{$anl->subAnalyzers(@_)});
+  return $anl;
+}
+
 
 ##==============================================================================
 ## Methods: Analysis: v1.x

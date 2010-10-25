@@ -44,7 +44,7 @@ sub analyzeTypes {
   return $doc if (!$asub->enabled($opts));
 
   ##-- load
-  $asub->ensureLoaded();
+  #$asub->ensureLoaded();
 
   ##-- get rewrite target types
   $types = $doc->types if (!$types);
@@ -58,9 +58,11 @@ sub analyzeTypes {
   ##-- analyze rewrite target types
   my ($sublabel);
   foreach (@{$asub->{chain}}) {
-    $sublabel = $asub->{label}.'_'.$_->{label};
+    $sublabel = $_->{label};
     next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
+    $_->{label} =~ s/^\Q$asub->{label}_\E//;  ##-- sanitize label (e.g. "rwsub_morph" --> "morph"), because it's also used as output key
     $_->analyzeTypes($doc,$rwtypes,$opts);
+    $_->{label} = $sublabel;
   }
 
   ##-- delete rewrite target type 'text'
@@ -102,9 +104,10 @@ sub chain {
 ##  + returns true if any chain member loads successfully (or if the chain is empty)
 sub ensureLoaded {
   my $ach = shift;
-  my $rc  = 1;
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
-  foreach (grep {$_} @{$ach->{chain}}) {
+  return 1 if (!@{$ach->{chain}});
+  my $rc = 0;
+  foreach (@{$ach->{chain}}) {
     $rc = $_->ensureLoaded() || $rc;
   }
   return $rc;

@@ -306,26 +306,28 @@ sub putToken {
 	       } @{$tok->{rw}})
     if ($tok->{rw});
 
-  ##-- moot
-  if ($tok->{moot}) {
+  ##-- dmoot
+  if ($tok->{dmoot}) {
     ##-- dmoot/tag
-    $out .= "\t+[moot/tag] $tok->{moot}{tag}\n";
+    $out .= "\t+[dmoot/tag] $tok->{dmoot}{tag}\n";
 
     ##-- dmoot/morph
-    $out .= join('', map { "\t+[dmoot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" }
-		 @{$tok->{dmoot}{morph}})
+    $out .= join('', map {"\t+[dmoot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{dmoot}{morph}})
       if ($tok->{dmoot}{morph});
 
     ##-- dmoot/analyses
-    $out .= join('', map {"\t+[moot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{moot}{analyses}})
-      if ($tok->{moot}{analyses});
-  }
-
-  ##-- dmoot
-  if ($tok->{dmoot}) {
-    $out .= "\t+[dmoot/tag] $tok->{dmoot}{tag}\n";
     $out .= join('', map {"\t+[dmoot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{dmoot}{analyses}})
       if ($tok->{dmoot}{analyses});
+  }
+
+  ##-- moot
+  if ($tok->{moot}) {
+    ##-- moot/tag
+    $out .= "\t+[moot/tag] $tok->{moot}{tag}\n";
+
+    ##-- moot/analyses
+    $out .= join('', map {"\t+[moot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{moot}{analyses}})
+      if ($tok->{moot}{analyses});
   }
 
   ##-- unparsed fields

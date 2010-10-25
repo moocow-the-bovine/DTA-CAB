@@ -53,6 +53,7 @@ sub ensureLoaded {
     $tp->logwarn("cannot use Text::Phonetic::$tp->{alg}: $@");
     return 0;
   }
+  $tp->info("using Text::Phonetic version ", ($Text::Phonetic::VERSION || '-undef-'));
   $tp->{tpo} = "Text::Phonetic::$tp->{alg}"->new();
   return $tp;
 }

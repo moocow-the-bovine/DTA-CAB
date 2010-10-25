@@ -43,7 +43,7 @@ sub analyzeSentences {
   return $doc if (!$asub->enabled($opts));
 
   ##-- load
-  $asub->ensureLoaded();
+  #$asub->ensureLoaded();
 
   ##-- get dmoot target types
   my $dmkey = $asub->{dmootLabel};
@@ -61,12 +61,13 @@ sub analyzeSentences {
     if ($dmtag eq $txt) {
       ##-- existing morph: from text
       $dmtyp->{morph} = $tok->{morph};
-      next TOK;
     }
-    foreach (grep {$_->{hio} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
-      ##-- existing morph: from rewrite
-      $dmtyp->{morph} = $_->{morph};
-      last;
+    else {
+      foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
+	##-- existing morph: from rewrite
+	$dmtyp->{morph} = $_->{morph};
+	last;
+      }
     }
 
     ##-- oops... might need to re-analyze
@@ -77,9 +78,12 @@ sub analyzeSentences {
   ##-- analyze remaining dmoot types
   my ($sublabel);
   foreach (@{$asub->{chain}}) {
-    $sublabel = $asub->{label}.'_'.$_->{label};
+    #$sublabel = $asub->{label}.'_'.$_->{label};
+    $sublabel = $asub->{label};
     next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
+    $_->{label} =~ s/^\Q$asub->{label}_\E//;  ##-- sanitize label ("dmoot_morph" --> "morph"), because it's also used as output key
     $_->analyzeTypes($doc,$udmtypes,$opts);
+    $_->{label} = $sublabel;
   }
 
   ##-- delete rewrite target type 'text'
@@ -122,9 +126,11 @@ sub chain {
 ##  + returns true if any chain member loads successfully (or if the chain is empty)
 sub ensureLoaded {
   my $ach = shift;
-  my $rc  = 1;
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
-  foreach (grep {$_} @{$ach->{chain}}) {
+  return 1 if (!@{$ach->{chain}});
+  my $rc = 0;
+  @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
+  foreach (@{$ach->{chain}}) {
     $rc = $_->ensureLoaded() || $rc;
   }
   return $rc;

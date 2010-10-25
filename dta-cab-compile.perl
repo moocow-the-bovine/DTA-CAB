@@ -81,8 +81,8 @@ our $cab = DTA::CAB::Analyzer->loadFile($rcFile)
 
 if ($preload) {
   $cab->info("pre-loading analyzer data");
-  $cab->ensureLoaded()
-    or die("$0: could not load analyzer: $!");
+  $cab->prepare()
+    or die("$0: could not prepare analyzer: $!");
 }
 
 ##======================================================

@@ -85,9 +85,29 @@ sub typeKeys {
 ## Methods: I/O: Input: all
 
 ## $bool = $anl->ensureLoaded()
-##  + ensures analysis data is loaded from default files
+## $bool = $anl->ensureLoaded(\%opts)
+##  + ensures analysis data is loaded from default files, or that
+##    no data is available to be loaded
+##  + should return false only if user has requested data to be loaded
+##    and that data cannot be loaded.  "empty" analyzers should return
+##    true here.
 ##  + default version always returns true
+##  + see canAnalyze(), autoDisable() for alternatives
 sub ensureLoaded { return 1; }
+
+## $bool = $anl->prepare()
+## $bool = $anl->prepare(\%opts)
+##  + wrapper for ensureLoaded(), autoEnable(), initInfo()
+sub prepare {
+  my $anl = shift;
+  $anl->ensureLoaded(@_)
+    or $anl->logdie("ensureLoaded() failed: $!");
+  $anl->autoEnable(@_);
+  $anl->initInfo(@_);
+  $anl->canAnalyze(@_)
+    or $anl->logdie("canAnalyze() failed");
+  return 1;
+}
 
 ##==============================================================================
 ## Methods: Persistence
@@ -138,6 +158,7 @@ sub loadBinRef {
 ## Methods: Analysis: v1.x: Utils
 
 ## $bool = $anl->canAnalyze();
+## $bool = $anl->canAnalyze(\%opts);
 ##  + returns true iff analyzer can perform its function (e.g. data is loaded & non-empty)
 ##  + default implementation always returns true
 sub canAnalyze { return 1; }
@@ -163,6 +184,40 @@ sub enabled {
 	 );
 }
 
+## $bool = $anl->autoEnable()
+## $bool = $anl->autoEnable(\%opts)
+##  + sets $anl->{enabled} flag if not already defined
+##  + calls $anl->canAnalyze(\%opts)
+##  + returns new value of $anl->{enabled}
+##  + implicitly calls autoEnable() on all sub-analyzers
+sub autoEnable {
+  my $anl = shift;
+  foreach (@{$anl->subAnalyzers(@_)}) {
+    $_->autoEnable(@_);
+  }
+  return $anl->{enabled} if (defined($anl->{enabled}));
+  return $anl->{enabled} = $anl->canAnalyze(@_);
+}
+sub autoDisable { return $_[0]->autoEnable(@_[1..$#_]); }
+
+## undef = $anl->initInfo()
+##  + logs initialization info
+##  + default method reports values of {label}, enabled()
+sub initInfo {
+  my $anl = shift;
+  $anl->info("initInfo($anl->{label}): enabled=", ($anl->enabled(@_) ? 1 : 0));
+}
+
+## \@analyzers = $anl->subAnalyzers()
+## \@analyzers = $anl->subAnalyzers(\%opts)
+##  + returns a list of all sub-analyzers
+##  + default returns all DTA::CAB::Analyzer subclass instances in values(%$anl)
+sub subAnalyzers {
+  my $anl = shift;
+  return [] if (!ref($anl));
+  return [grep {ref($_) && UNIVERSAL::isa($_,'DTA::CAB::Analyzer')} values(%$anl)];
+}
+
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
@@ -171,7 +226,7 @@ sub enabled {
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
 ##  + default implementation just calls:
-##      $anl->ensureLoaded();
+##      #$anl->ensureLoaded();
 ##      $doc = toDocument($doc);
 ##      if ($anl->doAnalyze('Types')) {
 ##        $types = $anl->getTypes($doc);
@@ -186,7 +241,7 @@ sub enabled {
 sub analyzeDocument {
   my ($anl,$doc,$opts) = @_;
   return $doc if (!$anl->enabled($opts));  ##-- disabled analyzer
-  return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
+  #return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
   return $doc if (!$anl->canAnalyze);      ##-- ok... (?)
   $doc = toDocument($doc);
   my ($types);

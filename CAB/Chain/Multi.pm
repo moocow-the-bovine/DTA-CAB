@@ -89,15 +89,36 @@ sub chain {
   return [grep {ref($_) && $_->enabled($_[1])} @{$_[0]{chain}}];
 }
 
+## \@analyzers = $ach->subAnalyzers()
+## \@analyzers = $ach->subAnalyzers(\%opts)
+##  + returns a list of all sub-analyzers
+##  + override returns all defined analyzers in any chain in $ach->{chains} or in values(%$ach)
+sub subAnalyzers_OLD {
+  my $ach = shift;
+  my %subh = map {(overload::StrVal($_)=>$_)} grep {ref($_) && $_->isa($_,'DTA::CAB::Analyzer')} values(%$ach);
+  my ($ckey, $a);
+  foreach $ckey (sort keys %{$ach->{chains}}) {
+    foreach $a (grep {$_} @{$ach->{chains}{$ckey}||[]}) {
+      $subh{overload::StrVal($a)} = $a;
+    }
+  }
+  return [values %subh];
+}
+
+
 ##==============================================================================
 ## Methods: I/O
 ##==============================================================================
+
+## $bool = $ach->autoEnable()
+##  + calls inherited autoEnable() method (auto-disable on all sub-analyzers)
+##  + prunes disabled analyzers from chains?
 
 ## $bool = $ach->ensureLoaded()
 ##  + ensures analysis data is loaded from default files
 ##  + override calls ensureChain() before inherited method
 ##  + override sanitizes sub-chains to canAnalyze() sub-analyzers after load
-sub ensureLoaded {
+sub ensureLoaded_OLD {
   my $ach = shift;
   $ach->ensureChain;
   my $rc = 1;

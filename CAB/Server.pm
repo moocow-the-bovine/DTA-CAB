@@ -75,7 +75,7 @@ sub prepare {
   ##-- prepare: analyzers
   foreach (sort(keys(%{$srv->{as}}))) {
     $srv->info("initializing analyzer '$_'");
-    if (!$srv->{as}{$_}->ensureLoaded) {
+    if (!$srv->{as}{$_}->prepare) {
       $srv->error("initialization failed for analyzer '$_'; skipping");
       $rc = 0;
     }
