@@ -23,7 +23,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $DEFAULT_ANALYZE_TEXT_GET
 ##  + default coderef or eval-able string for {analyzeTextGet}
-our $DEFAULT_ANALYZE_TEXT_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
+our $DEFAULT_ANALYZE_TEXT_GET = '$_[0]{dmoot} ? $_[0]{dmoot}{tag} : ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text})';
 
 ## $DEFAULT_ANALYZE_TAGS_GET
 ##  + default coderef or eval-able string for {analyzeTagsGet}
@@ -35,6 +35,30 @@ our $DEFAULT_ANALYZE_TEXT_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{t
 our $DEFAULT_ANALYZE_TAGS_GET = 'parseMorphAnalyses';
 #our $DEFAULT_ANALYZE_TAGS_GET = \&parseMorphAnalyses;
 #our $DEFAULT_ANALYZE_TAGS_GET = '($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw())',
+
+## %TAGX
+##  + global translation table (hack) for tags
+##  + workaround for TAGH/STTS incompatibilities
+our %TAGX =
+  (
+   'ADJC' => 'ADJA',
+   'ARTDEF' => 'ART',
+   'ARTINDEF' => 'ART',
+   'ARTDEF_INV' => 'ART',
+   'NNA' => 'NN',              ##-- "Nomen aus Adjektiv/Partizip-Konversion"
+   'PISNEG' => 'PIS',
+   'PIDAT' => 'PIAT',          ##-- PIDAT -> PIAT (both are STTS; tiger uses only PIAT)
+   'PIATNEG' => 'PIAT',
+   'PPOS' => 'PPOSS',
+   'PTKFOC' => 'ADV',  ##-- PTKFOC -> ADV? (e.g. "nur", "selbst" -- these already have ADV analyses though)
+   'PTKABT' => 'ADV',  ##-- PTKABT -> ADV (e.g. "gerademal")
+   'VMPP1'  => 'VMPP',
+   'VMPP2'  => 'VMPP',
+   'VAPP1'  => 'VAPP',
+   'VAPP2'  => 'VAPP',
+   'VVPP1'  => 'VVPP',
+   'VVPP2'  => 'VVPP',
+  );
 
 ##==============================================================================
 ## Constructors etc.
@@ -262,12 +286,18 @@ sub parseAnalysis {
 }
 
 ## @analyses = CLASS::parseMorphAnalyses($tok)
-##  + utility for PoS tagging using {morph} and {rw}{morph} analyses
+##  + utility for PoS tagging using {dmoot}{morph}, {morph}, and {rw}{morph} analyses
 sub parseMorphAnalyses {
   return
-    (($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
-     ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
-		   map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
+    (
+     map {$_->{tag}=$TAGX{$_->{tag}} if (defined($TAGX{$_->{tag}})); $_}
+     ($_[0]{dmoot}
+      ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}||[]})
+      : (
+	 ($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
+	 ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
+		       map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
+	)),
     );
 }
 

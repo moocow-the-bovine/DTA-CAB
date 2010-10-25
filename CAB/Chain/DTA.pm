@@ -48,7 +48,7 @@ sub new {
 			   ##
 			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),  ##-- moot n-gram disambiguator: sub-morph
-			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger
+			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger (on dmoot output)
 
 			   ##-- user args
 			   @_,
