@@ -273,8 +273,9 @@ sub parseAnalysis {
     }
     elsif (defined($tag=$ta->{latin1Text})) {
       ##-- case: hash-ref: xlit (e.g. $tok->{xlit} for dmoot)
-      $details=''
+      $details='';
     }
+    $details = $ta->{lemma}.' @ '.$details if (defined($ta->{lemma})); ##-- include lemma in 'details' string
     $cost = $ta->{w} if (!defined($cost) && defined($ta->{w}));
   }
   else {

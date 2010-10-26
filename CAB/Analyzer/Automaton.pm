@@ -55,7 +55,8 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##     ##-- Analysis Output
 ##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
 ##     analyzeSet     => $code,  ##-- accessor: coderef or string: set analyses (default=$DEFAULT_ANALYZE_SET)
-##     wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
+##     wantAnalysisLo => $bool,     ##-- set to true to include 'lo'    keys in analyses (default: true)
+##     wantAnalysisLemma => $bool,  ##-- set to true to include 'lemma' keys in analyses (default: false)
 ##
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
@@ -119,6 +120,7 @@ sub new {
 			      ##-- analysis I/O
 			      analyzeSrc => 'text',
 			      wantAnalysisLo => 1,
+			      wantAnalysisLemma => 0,
 
 			      ##-- user args
 			      @_
@@ -355,7 +357,8 @@ sub canAnalyze {
 ##      [ \%analysis1, ..., \%analysisN ]
 ##    - each \%analysisI is a HASH:
 ##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
-##    - if $opts->{wantAnalysisLo} is true, 'lo' key will be included in any %analysisI, otherwise not (default)
+##    - if $opts->{wantAnalysisLo}    is true, 'lo'    key will be included in any %analysisI, otherwise not (default here=false)
+##    - if $opts->{wantAnalysisLemma} is true, 'lemma' key will be included in any %analysisI, otherwise not (default here=false)
 ##  + implicitly loads analysis data (automaton and labels)
 sub getAnalyzeWordClosure {
   my $aut = shift;
@@ -379,10 +382,11 @@ sub getAnalyzeWordClosure {
   ##-- ananalysis options
   my @analyzeOptionKeys = (qw(check_symbols auto_connect),
 			   qw(tolower tolowerNI toupperI bashWS attInput),
-			   qw(wantAnalysisLo max_paths max_weight max_ops),
+			   qw(wantAnalysisLo wantAnalysisLemma),
+			   qw(max_paths max_weight max_ops),
 			  );
 
-  my ($w,$opts,$uword,$ulword,@wlabs, $analyses);
+  my ($w,$opts,$uword,$ulword,@wlabs, $analyses,$lemma);
   return sub {
     ($w,$opts) = @_;
 
@@ -449,10 +453,31 @@ sub getAnalyzeWordClosure {
 	      )}
 	   } @{$result->paths($Gfsm::LSUpper)}
 	  );
+
     }
     #else { ; } ##-- no dictionary entry and no FST: do nothing
+    return undef if (!@$analyses); ##-- check for empty analyses
 
-    return undef if (!@$analyses);
+    ##-- parse lemmata
+    if ($opts->{wantAnalysisLemma}) {
+      foreach (@$analyses) {
+	$lemma = $_->{hi};
+	if (defined($lemma) && $lemma ne '') {
+	  $lemma =~ s/\[.*$//;  ##-- trim everything after first non-character symbol
+	  $lemma =~ s/(?:\/\w+)|(?:[\\\¬\~\|\=\+\#])//g;
+	  substr($lemma,1) = lc(substr($lemma,1));
+	}
+	else {
+	  $lemma = $uword;
+	}
+	$lemma =~ s/^\s*//;
+	$lemma =~ s/\s*$//;
+	$lemma =~ s/\s+/_/g;
+	$_->{lemma} = $lemma;
+      }
+    }
+
+    ##-- return
     return $analyses;
   };
 }

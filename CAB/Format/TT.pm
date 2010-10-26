@@ -108,11 +108,17 @@ sub parseTTString {
   $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
 
   my ($tok,$rw,$line);
-  my ($text,@fields,$fieldi,$field);
+  my ($text,@fields,$fieldi,$field, $fkey,$fval,$fobj);
   my $sents  = [];
   my $s      = [];
   my %sa     = qw(); ##-- sentence attributes
   my %doca   = qw(); ##-- document attributes
+
+  my %f2key =
+    ('morph/lat'=>'mlatin',
+     'morph/la'=>'mlatin',
+    );
+
   while ($src =~ m/^(.*)$/mg) {
     $line = $1;
     if ($line =~ /^\%\% xml\:base=(.*)$/) {
@@ -152,68 +158,42 @@ sub parseTTString {
 	  ##-- token: field: xlit
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
 	}
-	elsif ($field =~ m/^\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: lts analysis (no lower)
-	  push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[eqpho\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: phonetic equivalent, full-fst version
-	  push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-	  ##-- token: field: phonetic equivalent, with optional weight
-	  push(@{$tok->{eqpho}}, {hi=>$1,w=>(defined($2) ? $2 : 0)});
-	}
-	elsif ($field =~ m/^\[eqphox\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: phonetic equivalent, full-fst version
-	  push(@{$tok->{eqphox}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[eqphox\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-	  ##-- token: field: phonetic equivalent, with optional weight
-	  push(@{$tok->{eqphox}}, {hi=>$1,w=>(defined($2) ? $2 : 0)});
-	}
-	elsif ($field =~ m/^\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: rw equivalent, full-fst version
-	  push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[eqrw\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-	  ##-- token: field: rw equivalent, with optional weight
-	  push(@{$tok->{eqrw}}, {hi=>$1,w=>$2});
-	}
-	elsif ($field =~ m/^\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: morph analysis
-	  push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[morph\/lat?\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-	  ##-- token: field: latin-language analysis
-	  push(@{$tok->{mlatin}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
+	elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
+	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/morph|eqrw|...)
+	  ($fkey,$fval) = ($1,$2);
+	  if ($fkey =~ s/^rw\///) {
+	    $tok->{rw} = [ {} ] if (!$tok->{rw});
+	    $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
+	    $fobj      = $rw;
+	  }
+	  elsif ($fkey =~ s/^dmoot\///) {
+	    $tok->{dmoot} = {} if (!$tok->{dmoot});
+	    $fobj         = $tok->{dmoot};
+	  }
+	  elsif ($fkey =~ s/^moot\///) {
+	    $tok->{moot}  = {} if (!$tok->{moot});
+	    $fobj         = $tok->{moot};
+	  }
+	  else {
+	    $fobj = $tok;
+	  }
+	  $fkey = $f2key{$fkey} if (defined($f2key{$fkey}));
+	  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/) {
+	    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>$4});
+	  } else {
+	    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
+	  }
 	}
 	elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
 	  ##-- token: field: morph-safety check (morph/safe)
 	  $tok->{msafe} = $1;
 	}
-	elsif ($field =~ m/^\[rw\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
-	  ##-- token: field: rewrite target
-	  push(@{$tok->{rw}}, $rw={(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[rw\/lts\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
-	  ##-- token: LTS analysis of rewrite target
-	  $tok->{rw} = [ {} ] if (!$tok->{rw});
-	  $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-	  push(@{$rw->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
-	elsif ($field =~ m/^\[rw\/morph\] (?:((?:\\.|[^:])*) : )?(.*) <([\d\.\+\-eE]+)>$/) {
-	  ##-- token: morph analysis of rewrite target
-	  $tok->{rw}   = [ {} ] if (!$tok->{rw});
-	  $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-	  push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-	}
 	elsif ($field =~ m/^\[(.*?moot)\/tag\]\s?(.*)$/) {
-	  ##-- token: field: moot/tag
+	  ##-- token: field: moot/tag|dmoot/tag
 	  $tok->{$1}{tag} = $2;
 	}
 	elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
-	  ##-- token: field: moot/analysis
+	  ##-- token: field: moot/analysis|dmoot/analysis
 	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
@@ -322,8 +302,14 @@ sub putToken {
     if ($tok->{eqphox});
 
   ##-- Morph ('morph')
-  $out .= join('', map { "\t[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{morph}})
-    if ($tok->{morph});
+  if ($tok->{morph}) {
+    $out .= join('',
+		 map {("\t[morph] "
+		       .(defined($_->{lo}) ? "$_->{lo} : " : '')
+		       .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
+		       ."$_->{hi} <$_->{w}>")
+		    } @{$tok->{morph}});
+  }
 
   ##-- Morph::Latin ('morph/lat')
   $out .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
@@ -342,7 +328,11 @@ sub putToken {
 		   : qw()),
 		  (##-- rw/morph
 		   $_->{morph}
-		   ? map { "\t[rw/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$_->{morph}}
+		   ? map {("\t[rw/morph] "
+			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
+			   ."$_->{hi} <$_->{w}>"
+			  )} @{$_->{morph}}
 		   : qw()),
 		 )
 	       } @{$tok->{rw}})
@@ -354,12 +344,15 @@ sub putToken {
     $out .= "\t[moot/tag] $tok->{moot}{tag}";
 
     ##-- moot/morph (UNUSED)
-    $out .= join('', map { "\t[moot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" }
-		 @{$tok->{moot}{morph}})
+    $out .= join('', map {("\t[moot/morph] "
+			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
+			   ."$_->{hi} <$_->{w}>"
+			  )} @{$tok->{moot}{morph}})
       if ($tok->{moot}{morph});
 
     ##-- moot/analyses
-    $out .= join('', map {"\t[moot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">"} @{$tok->{moot}{analyses}})
+    $out .= join('', map {("\t[moot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">")} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
   }
 
@@ -369,12 +362,15 @@ sub putToken {
     $out .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
 
     ##-- dmoot/morph
-    $out .= join('', map { "\t[dmoot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" }
-		 @{$tok->{dmoot}{morph}})
+    $out .= join('', map {("\t[dmoot/morph] "
+			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
+			   ."$_->{hi} <$_->{w}>"
+			  )} @{$tok->{dmoot}{morph}})
       if ($tok->{dmoot}{morph});
 
     ##-- dmoot/analyses
-    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
+    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
       if ($tok->{dmoot}{analyses});
   }
 
