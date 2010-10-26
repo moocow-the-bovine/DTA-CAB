@@ -163,8 +163,7 @@ sub parseTTString {
 	  ($fkey,$fval) = ($1,$2);
 	  if ($fkey =~ s/^rw\///) {
 	    $tok->{rw} = [ {} ] if (!$tok->{rw});
-	    $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-	    $fobj      = $rw;
+	    $fobj      = $tok->{rw}[$#{$tok->{rw}}];
 	  }
 	  elsif ($fkey =~ s/^dmoot\///) {
 	    $tok->{dmoot} = {} if (!$tok->{dmoot});
