@@ -20,7 +20,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::TT);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text|cab\-txt|cab\-text)$/);
 }
 
 ##==============================================================================
@@ -70,6 +70,7 @@ BEGIN {
 ## $fmt = $fmt->fromString($string)
 ##  + wrapper for: $fmt->close->parseTTString($_[0])
 ##  + inherited from DTA::CAB::Format::TT
+##  + name is aliased here to parseTextString() !
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
@@ -78,128 +79,8 @@ BEGIN {
 BEGIN { *parseTTString = \&parseTextString; }
 sub parseTextString {
   my ($fmt,$src) = @_;
-  $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
-
-  my ($tok,$rw,$line);
-  my $sents  = [];   ##-- doc body
-  my $s      = [];   ##-- current sentence
-  my %sa     = qw(); ##-- sentence attributes
-  my %doca   = qw(); ##-- document attributes
-  while ($src =~ m/^(.*)$/mg) {
-    $line = $1;
-    if ($line =~ /^\%\% xml\:base=(.*)$/) {
-      ##-- special comment: document attribute: xml:base
-      $doca{xmlbase} = $1;
-    }
-    elsif ($line =~ /^\%\% Sentence (.*)$/) {
-      ##-- special comment: sentence attribute: xml:id
-      $sa{xmlid} = $1;
-    }
-    elsif ($line =~ /^\%\%(.*)$/) {
-      ##-- generic line: add to _cmts
-      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
-      next;
-    }
-    elsif ($line eq '') {
-      ##-- blank line: eos
-      push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa);
-      $s  = [];
-      %sa = qw();
-    }
-    elsif ($line =~ /^(\S.*)/) {
-      ##-- new token: text
-      push(@$s, $tok=bless({text=>$1},'DTA::CAB::Token'));
-    }
-    elsif ($line =~ /^^\t\+\[loc\] off=(\d+) len=(\d+)$/) {
-      ##-- token: location
-      $tok->{loc} = { off=>$1, len=>$2 };
-    }
-    elsif ($line =~ m/^\t\+\[xlit\] isLatin1=(\d) isLatinExt=(\d) latin1Text=(.*)$/) {
-      ##-- token: xlit
-      $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
-    }
-    elsif ($line =~ m/^\t\+\[lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: lts analysis
-      push(@{$tok->{lts}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: morph analysis
-      push(@{$tok->{morph}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[morph\/lat?\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: morph analysis
-      push(@{$tok->{mlatin}}, {(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[morph\/safe] (\d)$/) {
-      ##-- token: field: morph-safety check
-      $tok->{msafe} = $1;
-    }
-    elsif ($line =~ m/^\t\+\[rw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: rewrite target
-      push(@{$tok->{rw}}, $rw={(defined($1) ? (lo=>$1) : qw()),hi=>$2,w=>$3});
-    }
-    elsif ($line =~ m/^\t+\+\[rw\/lts\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: LTS analysis of rewrite target
-      $tok->{rw} = [ {} ] if (!$tok->{rw});
-      $rw        = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      push(@{$rw->{lts}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-    }
-    elsif ($line =~ m/^\t+\+\[rw\/morph\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: morph analysis of rewrite target
-      $tok->{rw}   = [ {} ] if (!$tok->{rw});
-      $rw          = $tok->{rw}[$#{$tok->{rw}}] if (!$rw);
-      push(@{$rw->{morph}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[eqpho\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: phonetic equivalent, full-fst version
-      push(@{$tok->{eqpho}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[eqpho\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-      ##-- token: field: phonetic equivalent, optional weight
-      push(@{$tok->{eqpho}}, {hi=>$1,w=>$2});
-    }
-    elsif ($line =~ m/^\t\+\[eqphox\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: phonetic equivalent, full-fst version
-      push(@{$tok->{eqphox}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[eqphox\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-      ##-- token: field: phonetic equivalent, optional weight
-      push(@{$tok->{eqphox}}, {hi=>$1,w=>$2});
-    }
-    elsif ($line =~ m/^\t\+\[eqrw\] (?:((?:\\.|[^:])*) : )?(.*) \<([\d\.\+\-eE]+)\>$/) {
-      ##-- token: field: rewrite equivalent, full-fst version
-      push(@{$tok->{eqrw}}, {(defined($1) ? (lo=>$1) : qw()), hi=>$2, w=>$3});
-    }
-    elsif ($line =~ m/^\t\+\[eqrw\] (.*?)\s*(?:\<([\d\.\+\-eE]+)\>)?$/) {
-      ##-- token: field: rewrite equivalent, optional weight
-      push(@{$tok->{eqrw}}, {hi=>$1,w=>$2});
-    }
-    elsif ($line =~ m/^\t\+\[(.*?moot)\/tag\]\s?(.*)$/) {
-      ##-- token: field: ?moot/tag
-      $tok->{$1}{tag} = $2;
-    }
-    elsif ($line =~ m/^\t\+\[(.*moot)\/analysis\]\s?(\S+)\s(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
-      ##-- token: field: ?moot/analysis
-      push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
-    }
-    elsif ($line =~ m/^\t\+\[([^\]]*)\]\s?(.*)$/) {
-      ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
-      push(@{$tok->{other}{$1}}, $2);
-    }
-    else {
-      ##-- token: field: unnamed field
-      #$fmt->warn("parseTextString(): could not parse line '$line'");
-      $line =~ s/^\t//;
-      push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $line);
-    }
-  }
-  push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa); ##-- final sentence
-
-  ##-- construct & buffer document
-  $_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
-  $fmt->{doc} = bless({%doca,body=>$sents}, 'DTA::CAB::Document');
-
-  return $fmt;
+  $src =~ s/\r?\n\t\+?/\t/sg;
+  return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
 ##--------------------------------------------------------------
@@ -225,7 +106,21 @@ sub parseTextString {
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
 ##  + default implementation just encodes string in $fmt->{outbuf}
-##  + inherited from DTA::CAB::Format::TT
+##  + override re-formats TT output string
+sub toString {
+  $_[0]->tt2text(\$_[0]{outbuf});
+  return $_[0]->SUPER::toString(@_[1..$#_]);
+}
+
+## \$bufr = $fmt->tt2text(\$buffer)
+##   + convert TT buffer \$buffer to text
+##   + should be a null-op if \$buffer is already text format
+sub tt2text {
+  my $bufr = $_[1];
+  $$bufr =~ s/(?<!\n)\t/\n\t/sg;
+  $$bufr =~ s/^\t\[/\t+\[/mg;
+  return $bufr;
+}
 
 ## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
@@ -240,114 +135,7 @@ sub parseTextString {
 
 ## $fmt = $fmt->putToken($tok)
 ##  + appends $tok to output buffer
-sub putToken {
-  my ($fmt,$tok) = @_;
-  my $out = '';
-
-  ##-- pre-token comments
-  $out .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$tok->{_cmts}}) if ($tok->{_cmts});
-
-  ##-- text
-  $out .= $tok->{text}."\n";
-
-  ##-- Location ('loc')
-  $out .= "\t+[loc] off=$tok->{loc}{off} len=$tok->{loc}{len}\n"
-    if (defined($tok->{loc}));
-
-  ##-- Transliterator ('xlit')
-  $out .= "\t+[xlit] isLatin1=$tok->{xlit}{isLatin1} isLatinExt=$tok->{xlit}{isLatinExt} latin1Text=$tok->{xlit}{latin1Text}\n"
-    if (defined($tok->{xlit}));
-
-  ##-- LTS ('lts')
-  $out .= join('', map { "\t+[lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{lts}})
-    if ($tok->{lts});
-
-  ##-- phonetic digests ('soundex', 'koeln', 'metaphone')
-  $out .= "\t+[soundex] $tok->{soundex}\n"     if (defined($tok->{soundex}));
-  $out .= "\t+[koeln] $tok->{koeln}\n"         if (defined($tok->{koeln}));
-  $out .= "\t+[metaphone] $tok->{metaphone}\n" if (defined($tok->{metaphone}));
-
-  ##-- Phonetic Equivalents ('eqpho')
-  $out .= join('', map { "\t+[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqpho}})
-    if ($tok->{eqpho});
-
-  ##-- Phonetic Equivalents ('eqphox')
-  $out .= join('', map { "\t+[eqphox] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqphox}})
-    if ($tok->{eqphox});
-
-  ##-- Rewrite Equivalents ('eqrw')
-  $out .= join('', map { "\t+[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_)."\n" } grep {defined($_)} @{$tok->{eqrw}})
-    if ($tok->{eqrw});
-
-  ##-- Morph ('morph')
-  $out .= join('', map { "\t+[morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{morph}})
-    if ($tok->{morph});
-
-  ##-- Morph::Latin ('morph/lat')
-  $out .= join('', map { "\t+[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{mlatin}})
-    if ($tok->{mlatin});
-
-  ##-- MorphSafe ('morph/safe')
-  $out .= "\t+[morph/safe] ".($tok->{msafe} ? 1 : 0)."\n" if (exists($tok->{msafe}));
-
-  ##-- Rewrites + analyses
-  $out .= join('',
-	       map {
-		 ("\t+[rw] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n",
-		  (##-- rw/lts
-		   $_->{lts}
-		   ? map { "\t+[rw/lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$_->{lts}}
-		   : qw()),
-		  (##-- rw/morph
-		   $_->{morph}
-		   ? map { "\t+[rw/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$_->{morph}}
-		   : qw()),
-		 )
-	       } @{$tok->{rw}})
-    if ($tok->{rw});
-
-  ##-- dmoot
-  if ($tok->{dmoot}) {
-    ##-- dmoot/tag
-    $out .= "\t+[dmoot/tag] $tok->{dmoot}{tag}\n";
-
-    ##-- dmoot/morph
-    $out .= join('', map {"\t+[dmoot/morph] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>\n" } @{$tok->{dmoot}{morph}})
-      if ($tok->{dmoot}{morph});
-
-    ##-- dmoot/analyses
-    $out .= join('', map {"\t+[dmoot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{dmoot}{analyses}})
-      if ($tok->{dmoot}{analyses});
-  }
-
-  ##-- moot
-  if ($tok->{moot}) {
-    ##-- moot/tag
-    $out .= "\t+[moot/tag] $tok->{moot}{tag}\n";
-
-    ##-- moot/analyses
-    $out .= join('', map {"\t+[moot/analysis] $_->{tag} $_->{details} <".($_->{cost}||0).">\n"} @{$tok->{moot}{analyses}})
-      if ($tok->{moot}{analyses});
-  }
-
-  ##-- unparsed fields
-  if ($tok->{other}) {
-    my ($name);
-    $out .= ("\t"
-	     .join("\n\t",
-		   (map { $name=$_; map { "+[$name] $_" } @{$tok->{other}{$name}} }
-		    sort grep {$_ ne $fmt->{defaultFieldName}} keys %{$tok->{other}}
-		   ),
-		   ($tok->{other}{$fmt->{defaultFieldName}}
-		    ? @{$tok->{other}{$fmt->{defaultFieldName}}}
-		    : qw()
-		   ))
-	     ."\n");
-  }
-
-  $fmt->{outbuf} .= $out;
-  return $fmt;
-}
+##  + INHERITED from Format::TT
 
 ## $fmt = $fmt->putSentence($sent)
 ##  + concatenates formatted tokens, adding sentence-id comment if available
@@ -404,6 +192,8 @@ DTA::CAB::Format::Text - Datum parser: verbose human-readable text
 =pod
 
 =head1 DESCRIPTION
+
+Human-readable wrapper for L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>.
 
 =cut
 
