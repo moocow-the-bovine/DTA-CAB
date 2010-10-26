@@ -11,6 +11,7 @@ use DTA::CAB::Chain::Multi;
 use DTA::CAB::Analyzer::EqPhoX;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
+use DTA::CAB::Analyzer::MootSub;
 
 use IO::File;
 use Carp;
@@ -49,6 +50,7 @@ sub new {
 			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),  ##-- moot n-gram disambiguator: sub-morph
 			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger (on dmoot output)
+			   mootsub => DTA::CAB::Analyzer::MootSub->new(),    ##-- moot tagger, post-processing hacks
 
 			   ##-- user args
 			   @_,
@@ -92,8 +94,8 @@ sub setupChains {
      ##
      'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
      'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot)}],
-     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot)}],
+     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot mootsub)}],
+     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot mootsub)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 

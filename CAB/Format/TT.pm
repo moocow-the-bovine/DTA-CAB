@@ -159,7 +159,7 @@ sub parseTTString {
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
 	}
 	elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
-	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/morph|eqrw|...)
+	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|...)
 	  ($fkey,$fval) = ($1,$2);
 	  if ($fkey =~ s/^rw\///) {
 	    $tok->{rw} = [ {} ] if (!$tok->{rw});
@@ -188,11 +188,11 @@ sub parseTTString {
 	  ##-- token: field: morph-safety check (morph/safe)
 	  $tok->{msafe} = $1;
 	}
-	elsif ($field =~ m/^\[(.*?moot)\/tag\]\s?(.*)$/) {
-	  ##-- token: field: moot/tag|dmoot/tag
-	  $tok->{$1}{tag} = $2;
+	elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
+	  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
+	  $tok->{$1}{$2} = $3;
 	}
-	elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
+	elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
 	  ##-- token: field: moot/analysis|dmoot/analysis
 	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 	}
@@ -340,8 +340,14 @@ sub putToken {
 
   ##-- moot
   if ($tok->{moot}) {
+    ##-- moot/word
+    $out .= "\t[moot/word] $tok->{moot}{word}" if (defined($tok->{moot}{word}));
+
     ##-- moot/tag
     $out .= "\t[moot/tag] $tok->{moot}{tag}";
+
+    ##-- moot/lemma
+    $out .= "\t[moot/lemma] $tok->{moot}{lemma}" if (defined($tok->{moot}{lemma}));
 
     ##-- moot/morph (UNUSED)
     $out .= join('', map {("\t[moot/morph] "
