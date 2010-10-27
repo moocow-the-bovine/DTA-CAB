@@ -3,7 +3,7 @@
 ## File: DTA::CAB::Analyzer::MootSub.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: post-processing for moot PoS tagger in DTA chain
-##  + instantiates $tok->{moot}{word}, $tok->{moot}{lemma}
+##  + tweaks $tok->{moot}{word}, instantiates $tok->{moot}{lemma}
 
 package DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer;
@@ -42,7 +42,7 @@ sub analyzeSentences {
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
     $t = $m->{tag} = '@UNKNOWN' if (!defined($t=$m->{tag}));
 
-    ##-- populate $tok->{moot}{word}
+    ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
     $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
 		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
 		     : $tok->{text}));

@@ -101,6 +101,7 @@ sub new {
 					     dynlex_beta=>1,
 					    },
 			       uniqueAnalyses=>1,
+			       wantTaggedWord=>0,
 
 			       ##-- analysis I/O
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',

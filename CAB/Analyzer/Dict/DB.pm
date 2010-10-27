@@ -2,15 +2,17 @@
 ##
 ## File: DTA::CAB::Analyzer::Dict.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: generic analysis dictionary API using Lingua::TT::Dict
+## Description: generic analysis dictionary API using Lingua::TT::DB::File
 
-package DTA::CAB::Analyzer::Dict;
-use DTA::CAB::Analyzer;
+package DTA::CAB::Analyzer::Dict::DB;
+use DTA::CAB::Analyzer::Dict ':all';
 use DTA::CAB::Format;
-use Lingua::TT::Dict;
+use Lingua::TT::DB::File;
 use IO::File;
-use Exporter;
 use Carp;
+use DB_File;
+use Fcntl;
+use Encode qw(encode decode);
 
 use strict;
 
@@ -20,70 +22,11 @@ use strict;
 
 our @ISA = qw(Exporter DTA::CAB::Analyzer);
 
-##--------------------------------------------------------------
-## Globals: Accessors: Get
-
-##$ $DICT_GET_TEXT 
-##  + $text = "$DICT_GET_TEXT"->($tok)
-##  + access closure
-our $DICT_GET_TEXT = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
-
-##$ $DICT_GET_LTS
-##  + $pho = "$DICT_GET_LTS"->($tok)
-##  + access closure
-our $DICT_GET_LTS = '$_[0]{lts} && @{$_[0]{lts}} ? $_[0]{lts}[0]{hi} : $_[0]{text}';
-
-##--------------------------------------------------------------
-## Globals: Accessors: Set
-
-## $DICT_SET_RAW
-##  + undef = "$DICT_SET_RAW"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = \%key2val
-our $DICT_SET_RAW = '$_[0]{$anl->{label}}=$_[1];';
-
-## $DICT_SET_LIST
-##  + undef = "$DICT_SET_LIST"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = [map {split(/\t/,$_)} values(%key2val)]
-our $DICT_SET_LIST = '$_[0]{$anl->{label}} = [map {split(/\t/,$_)} grep {defined($_)} values(%{$_[1]})];';
-
-## $DICT_SET_FST
-##  + undef = "$DICT_SET_FST"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = [map {split(/\t/,$_)} values(%key2val)]
-our $DICT_SET_FST = '$_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0)} map {'.__PACKAGE__.'::parseFstString($_)} map {split(/\t/,$_)} grep {defined($_)} values(%{$_[1]})];';
-
-##--------------------------------------------------------------
-## Globals: Accessors: Defaults
-
 ## $DEFAULT_ANALYZE_GET
-##  + default coderef or eval-able string for {analyzeGet}
-##  + eval()d in list context, may return multiples
-##  + parameters:
-##      $_[0] => token object being analyzed
-##  + closure vars:
-##      $anl  => analyzer (automaton)
-our $DEFAULT_ANALYZE_GET = $DICT_GET_TEXT;
+##  + inherited from Dict
 
 ## $DEFAULT_ANALYZE_SET
-##  + default coderef or eval-able string for {analyzeSet}
-##  + parameters:
-##      $_[0] => token object being analyzed
-##      $_[1] => hash {$analysisKey => $dictVal} of dict lookup results; may be safely copied by reference
-##  + closure vars:
-##      $anl  => analyzer (dictionary)
-our $DEFAULT_ANALYZE_SET = $DICT_SET_LIST;
-
-##==============================================================================
-## Exports
-
-our @EXPORT = qw();
-our %EXPORT_TAGS =
-  ('get'   => [qw($DICT_GET_TEXT $DICT_GET_LTS)],
-   'set'   => [qw($DICT_SET_RAW $DICT_SET_LIST $DICT_SET_FST parseFstString)],
-   'defaults'  => [qw($DEFAULT_ANALYZE_GET $DEFAULT_ANALYZE_SET)],
-  );
-$EXPORT_TAGS{all}   = [map {@$_} values %EXPORT_TAGS];
-$EXPORT_TAGS{child} = @{$EXPORT_TAGS{all}};
-our @EXPORT_OK = @{$EXPORT_TAGS{all}};
+##  + inherited from Dict
 
 ##==============================================================================
 ## Constructors etc.
@@ -93,7 +36,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ##  + object structure:
 ##    (
 ##     ##-- Filename Options
-##     dictFile=> $filename,     ##-- default: none
+##     dbFile => $filename,     ##-- default: none
 ##
 ##     ##-- Analysis Output
 ##     label          => $lab,   ##-- analyzer label
@@ -101,10 +44,18 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ##     analyzeSet     => $code,  ##-- pseudo-accessor ($code->($tok,$key,$val)) sets analyses for $tok
 ##
 ##     ##-- Analysis Options
-##     encoding       => $enc,   ##-- encoding of dict file (default='UTF-8')
+##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8')
 ##
 ##     ##-- Analysis objects
-##     ttd => $ttdict,           ##-- underlying Lingua::TT::Dict object
+##     dbf => $dbf,              ##-- underlying Lingua::TT::DB::File object (default=undef)
+##     dba => \%dba,             ##-- args for Lingua::TT::DB::File->new()
+##     #={
+##     #  mode  => $mode,        ##-- default: 0644
+##     #  dbflags => $flags,     ##-- default: O_RDONLY
+##     #  type    => $type,      ##-- one of 'HASH', 'BTREE', 'RECNO' (default: 'BTREE')
+##     #  dbinfo  => \%dbinfo,   ##-- default: "DB_File::${type}INFO"->new();
+##     #  dbopts  => \%opts,     ##-- db options (e.g. cachesize,bval,...) -- defaults to none (uses DB_File defaults)
+##     # }
 ##    )
 sub new {
   my $that = shift;
@@ -113,7 +64,12 @@ sub new {
 			      dictFile => undef,
 
 			      ##-- analysis objects
-			      ttd=>Lingua::TT::Dict->new(),
+			      dbf=>undef,
+			      dba=>{
+				    type    => 'BTREE',
+				    mode    => 0644,
+				    dbflags => O_RDONLY,
+				   },
 
 			      ##-- options
 			      encoding       => 'UTF-8',
@@ -130,9 +86,10 @@ sub new {
 }
 
 ## $dic = $dic->clear()
+##  + DANGEROUS
 sub clear {
   my $dic = shift;
-  $dic->{ttd}->clear;
+  $dic->{dbf}->clear();
   return $dic;
 }
 
@@ -143,7 +100,7 @@ sub clear {
 
 ## $bool = $dic->dictOk()
 ##  + should return false iff dict is undefined or "empty"
-sub dictOk { return defined($_[0]{ttd}) && scalar(%{$_[0]{ttd}{dict}}); }
+sub dictOk { return $_[0]{dbf} && $_[0]{dbf}->opened; }
 
 ##==============================================================================
 ## Methods: I/O
@@ -157,9 +114,10 @@ sub dictOk { return defined($_[0]{ttd}) && scalar(%{$_[0]{ttd}{dict}}); }
 sub ensureLoaded {
   my $dic = shift;
   my $rc  = 1;
-  if ( defined($dic->{dictFile}) && !$dic->dictOk ) {
-    $dic->info("loading dictionary file '$dic->{dictFile}'");
-    $rc &&= $dic->{ttd}->loadFile($dic->{dictFile}, encoding=>$dic->{encoding});
+  if ( defined($dic->{dbFile}) && !$dic->dictOk ) {
+    $dic->info("Opening DB file '$dic->{dbFile}'");
+    $dic->{dbf} = Lingua::TT::DB::File->new(%{$dic->{dba}||{}});
+    $rc &&= $dic->{dbf}->open($dic->{dbFile});
   }
   return $rc;
 }
@@ -175,7 +133,7 @@ sub ensureLoaded {
 ##  + returns list of keys not to be saved
 sub noSaveKeys {
   my $that = shift;
-  return ($that->SUPER::noSaveKeys, qw(ttd));
+  return ($that->SUPER::noSaveKeys, qw(dbf));
 }
 
 ## $saveRef = $obj->savePerlRef()
@@ -186,7 +144,6 @@ sub noSaveKeys {
 sub loadPerlRef {
   my ($that,$ref) = @_;
   my $obj = $that->SUPER::loadPerlRef($ref);
-  $obj->clear();
   return $obj;
 }
 
@@ -215,7 +172,8 @@ sub analyzeTypes {
 
   ##-- setup common variables
   my $lab   = $dic->{label};
-  my $ttdd  = $dic->{ttd}{dict};
+  my $ttdd  = $dic->{dbf}{data};
+  my $dbenc = $dic->{encoding};
 
   ##-- accessors
   my $aget  = $dic->accessClosure(defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : $DEFAULT_ANALYZE_GET);
@@ -228,23 +186,16 @@ sub analyzeTypes {
 
   my ($tok, $k2v);
   foreach $tok (values %$types) {
-    $k2v = { map {($_=>$ttdd->{$_})} $aget->($tok) };
+    if (defined($dbenc)) {
+      $k2v = { map {($_=>decode($dbenc,$ttdd->{encode($dbenc,$_)}))} $aget->($tok) };
+    } else {
+      $k2v = { map {($_=>$ttdd->{$_})} $aget->($tok) };
+    }
     $aset->($tok,$k2v);
   }
 
   return $doc;
 }
-
-##==============================================================================
-## Methods: Utilities
-
-## \%fstAnalysis = PACKAGE::parseFstString($string)
-sub parseFstString {
-  return ($_[0] =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/
-	  ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}
-	  : {hi=>$_[0]})
-}
-
 
 
 1; ##-- be happy

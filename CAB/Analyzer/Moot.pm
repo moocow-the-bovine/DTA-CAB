@@ -91,6 +91,7 @@ our %TAGX =
 ##     requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
 ##     prune          => $bool,  ##-- if true (default), prune analyses after tagging
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
+##     wantTaggedWord => $bool,  ##-- if true, output field will contain top-level 'word' element (default=true)
 ##
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
@@ -123,6 +124,7 @@ sub new {
 			       analyzeTagsGet => $DEFAULT_ANALYZE_TAGS_GET,
 			       analyzeCostFuncs => {},
 			       requireAnalyses => 0,
+			       wantTaggedWord => 1,
 
 			       ##-- analysis objects
 			       #hmm => undef,
@@ -353,6 +355,8 @@ sub analyzeSentences {
   $hmm->{dynlex_beta} = $opts->{dynlex_beta} if (defined($opts->{dynlex_beta}));
   $hmm->{dynlex_base} = $opts->{dynlex_base} if (defined($opts->{dynlex_base}));
 
+  my $wantTaggedWord = (exists($opts->{wantTaggedWord}) ? $opts->{wantTaggedWord} : $moot->{wantTaggedWord});
+
   ##-- ye olde loope
   foreach $sent (@{$doc->{body}}) {
     $sent = DTA::CAB::Datum::toSentence($sent) if (!UNIVERSAL::isa($sent,'DTA::CAB::Sentence'));
@@ -418,6 +422,7 @@ sub analyzeSentences {
       $tmoot = {
 		#text => decode($hmmEnc,$mtok->{text}),
 		tag  => decode($hmmEnc,$mtok->{tag}),
+		($wantTaggedWord ? (word=>$text) : qw()),
 	       };
 
       ##-- unwrap analyses

@@ -1,11 +1,11 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqPho::Cascade.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: phonetic equivalence via Gfsm::XL cascade
 
 ##==============================================================================
-## Package: Analyzer::Rewrite
+## Package: Analyzer::EqPho::Cascade
 ##==============================================================================
 package DTA::CAB::Analyzer::EqPho::Cascade;
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;

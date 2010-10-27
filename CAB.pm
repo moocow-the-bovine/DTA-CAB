@@ -22,6 +22,7 @@ use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
+use DTA::CAB::Analyzer::Null;
 use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::Moot;
@@ -60,7 +61,7 @@ use strict;
 ## Constants
 ##==============================================================================
 
-our $VERSION = 1.09;
+our $VERSION = 1.10;
 our @ISA = qw(DTA::CAB::Chain::DTA); ##-- inherit from default analyzer (v0.x-compatibility hack)
 
 
