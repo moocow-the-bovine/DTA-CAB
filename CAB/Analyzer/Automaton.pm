@@ -48,9 +48,14 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##  + object structure:
 ##    (
 ##     ##-- Filename Options
-##     fstFile => $filename,    ##-- default: none
-##     labFile => $filename,    ##-- default: none
-##     dictFile=> $filename,    ##-- default: none
+##     fstFile => $filename,     ##-- source FST file (default: none)
+##     labFile => $filename,     ##-- source labels file (default: none)
+##     dictFile => $filename,    ##-- source dict file (default: none): clobbers $dict->{dictFile} if defined
+##
+##     ##-- Exception lexicon options
+##     dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
+##                               ##   + default=undef
+##     dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
 ##
 ##     ##-- Analysis Output
 ##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
@@ -62,7 +67,7 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
 ##     check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
 ##     labenc         => $enc,  ##-- encoding of labels file (default='latin1')
-##     dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8')
+##     #dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8') (set $aut->{dict}{encoding} instead)
 ##     auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
 ##     tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
 ##     tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
@@ -80,7 +85,6 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##     laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
 ##     result=>$resultfst, ##-- (child classes only) e.g. result fst
-##     dict => \%dict,     ##-- exception lexicon / static cache of analyses
 ##
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
@@ -101,13 +105,14 @@ sub new {
 			      labh=>{},
 			      laba=>[],
 			      labc=>[],
-			      dict=>{},
+			      dict=>undef,
+			      dictClass=>'DTA::CAB::Analyzer::Dict',
 
 			      ##-- options
 			      eow            =>'',
 			      check_symbols  => 1,
 			      labenc         => 'latin1',
-			      dictenc        => 'utf8',
+			      #dictenc        => 'utf8',
 			      auto_connect   => 0,
 			      tolower        => 0,
 			      tolowerNI      => 0,
@@ -169,7 +174,7 @@ sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 
 ## $bool = $aut->dictOk()
 ##  + should return false iff dict is undefined or "empty"
-sub dictOk { return defined($_[0]{dict}) && scalar(%{$_[0]{dict}}); }
+sub dictOk { return $_[0]{dict} && $_[0]{dict}->dictOk; }
 
 ##==============================================================================
 ## Methods: I/O
@@ -192,13 +197,13 @@ sub ensureLoaded {
     $rc &&= $aut->loadLabels($aut->{labFile});
   }
   ##-- ensure: dict
-  if ( defined($aut->{dictFile}) && !$aut->dictOk ) {
-    $rc &&= $aut->loadDict($aut->{dictFile});
+  if ( (defined($aut->{dictFile}) || ($aut->{dict} && $aut->{dict}{dictFile})) && !$aut->dictOk ) {
+    $rc &&= $aut->loadDict();
   }
   return $rc;
 }
 
-## $aut = $aut->load(fst=>$fstFile, lab=>$labFile)
+## $aut = $aut->load(fst=>$fstFile, lab=>$labFile, dict=>$dictFile)
 sub load {
   my ($aut,%args) = @_;
   return 0 if (!grep {defined($_)} @args{qw(fst lab dict)});
@@ -262,43 +267,24 @@ sub parseLabels {
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: Dictionary
 
+## $aut = $aut->loadDict()
 ## $aut = $aut->loadDict($dictfile)
 sub loadDict {
   my ($aut,$dictfile) = @_;
-  $aut->info("loading dictionary file '$dictfile'");
-  my $dictfh = IO::File->new("<$dictfile")
-    or $aut->logconfess("::loadDict() open failed for dictionary file '$dictfile': $!");
+  $dictfile = $aut->{dictFile} if (!defined($dictfile));
+  $dictfile = $aut->{dict}{dictFile} if (!defined($dictfile));
+  return $aut if (!defined($dictfile)); ##-- no dict file to load
+  $aut->info("loading exception lexicon from '$dictfile'");
 
-  my $enc  = $aut->{dictenc};
-  $enc     = $aut->{labenc} if (!defined($enc));
-  #$enc     = 'UTF-8' if (!defined($enc));  ##-- default encoding (use perl native if commented out)
+  ##-- sanitize dict object
+  my $dclass = (ref($aut->{dict})||$aut->{dictClass}||'DTA::CAB::Analyzer::Dict');
+  my $dict = $aut->{dict} = bless(unifyClobber($dclass->new,$aut->{dict},undef), $dclass);
+  $dict->{label}    = $aut->{label}."_dict"; ##-- force sub-analyzer label
+  $dict->{dictFile} = $dictfile;             ##-- clobber sub-analyzer file
 
-  my $dict = $aut->{dict};
-  my ($line,$word,@analyses,$entry,$aw,$a,$w);
-  while (defined($line=<$dictfh>)) {
-    chomp($line);
-    next if ($line =~ /^\s*$/ || $line =~ /^\s*%/);
-    $line = decode($enc, $line) if ($enc);
-    ($word,@analyses) = split(/\t+/,$line);
-    if    ($aut->{tolower})   { $word = lc($word); }
-    elsif ($aut->{tolowerNI}) { $word =~ s/^(.)(.*)$/$1\L$2\E/; }
-    if    ($aut->{toupperI})  { $word = ucfirst($word); }
-    $dict->{$word} = $entry = [];
-    foreach $aw (@analyses) {
-      $a = $aw;
-      if ($aw =~ /\<([\deE\+\-\.]+)\>\s*$/) {
-	$w = $1;
-	$a =~ s/\s*\<[\deE\+\-\.]+\>\s*$//;
-      } else {
-	$a = $aw;
-	$w = 0;
-      }
-      push(@$entry, {hi=>$a,w=>$w});
-    }
-  }
-  $dictfh->close;
-
-  $aut->dropClosures();
+  ##-- load dict object
+  $dict->ensureLoaded();
+  return undef if (!$dict->dictOk);
   return $aut;
 }
 
@@ -367,7 +353,7 @@ sub getAnalyzeWordClosure {
   $aut->ensureLoaded();
 
   ##-- setup common variables
-  my $dict   = $aut->{dict};
+  my $dict   = $aut->dictOk ? $aut->{dict}->dictHash : undef;
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
   my $result = $aut->{result};
@@ -411,7 +397,11 @@ sub getAnalyzeWordClosure {
 
     ##-- check for (normalized) word in dict
     if ($dict && exists($dict->{$uword})) {
-      push(@$analyses, @{$dict->{$uword}});
+      push(@$analyses,
+	   sort {($a->{w}||0) <=> ($b->{w}||0)}
+	   map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
+	   map  {split(/\t/,$_)}
+	   $dict->{uword});
     }
     elsif ($fst_ok) {
       ##-- not in dict: fst lookup (if fst is kosher)
@@ -621,7 +611,7 @@ Constuctor.
  ##-- Filename Options
  fstFile => $filename,    ##-- default: none
  labFile => $filename,    ##-- default: none
- dictFile=> $filename,    ##-- default: none
+ dictFile=> $filename,    ##-- default: none (clobbers $aut->{dict}{dictFile} if defined)
  ##
  ##-- Analysis Output
  analysisClass  => $class, ##-- default: none (ARRAY)
@@ -633,7 +623,7 @@ Constuctor.
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
  labenc         => $enc,  ##-- encoding of labels file (default='latin1')
- dictenc        => $enc,  ##-- dictionary encoding (default='utf8')
+ #dictenc        => $enc,  ##-- dictionary encoding (default='utf8') : prefer $aut->{dict}{encoding}
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
@@ -649,7 +639,7 @@ Constuctor.
  laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
  labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
  result=>$resultfst, ##-- (child classes only) e.g. result fst
- dict => \%dict,     ##-- exception lexicon / static cache of analyses
+ dict => $dict,      ##-- exception lexicon / static cache as DTA::CAB::Analyzer::Dict object
 
 =item clear
 
@@ -721,7 +711,7 @@ Ensures automaton data is loaded from default files.
 
 =item load
 
- $aut = $aut->load(fst=>$fstFile, lab=>$labFile);
+ $aut = $aut->load(fst=>$fstFile, lab=>$labFile, dict=>$dictFile);
 
 Loads specified files.
 
@@ -831,7 +821,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

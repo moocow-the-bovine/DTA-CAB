@@ -15,10 +15,13 @@ use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 #use DTA::CAB::Analyzer::Transliterator;
 use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
+
 use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
-use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict::EqClass (unused)
-use DTA::CAB::Analyzer::EqPho::Cascade;  ##-- via Gfsm::XL (unused)
-use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
+#use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict::DB (default)
+#use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict (unused)
+#use DTA::CAB::Analyzer::EqPho::Cascade;  ##-- via Gfsm::XL (unused)
+#use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
+
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
@@ -29,13 +32,13 @@ use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::DynLex;
 
 use DTA::CAB::Analyzer::EqRW;            ##-- default eqrw-expander
-use DTA::CAB::Analyzer::EqRW::Dict;      ##-- via Dict::EqClass (unused)
+#use DTA::CAB::Analyzer::EqRW::DB;        ##-- via Dict::DB (default)
+#use DTA::CAB::Analyzer::EqRW::Dict;      ##-- via Dict (unused)
 #use DTA::CAB::Analyzer::EqRW::Cascade;   ##-- via Gfsm::XL (unimplemented, unused)
-use DTA::CAB::Analyzer::EqRW::FST;       ##-- via Gfsm::Automaton (default)
+#use DTA::CAB::Analyzer::EqRW::FST;       ##-- via Gfsm::Automaton (default)
 
 use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer (base class)
-use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander
-#use DTA::CAB::Analyzer::Dict::Latin;    ##-- full-form latin lexicon
+#use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander (obsolete, removed)
 
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
 #use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocClassify

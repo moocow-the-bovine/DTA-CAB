@@ -28,6 +28,7 @@ sub new {
 			      label => 'eqrw',
 			      analyzeGet     => ('($_[0]{rw} && @{$_[0]{rw}} ? (map {$_->{hi}} @{$_[0]{rw}})'
 						 .': ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}))'),
+			      analyzeSet     => $DTA::CAB::Analyzer::Automaton::DEFAULT_ANALYZE_SET,
 			      attInput       => 1,
 			      wantAnalysisLo => 1,
 			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',

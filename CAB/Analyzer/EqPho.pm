@@ -1,16 +1,20 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqPho
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: phonetic equivalence class expansion: default
 
 ##==============================================================================
 ## Package: Analyzer::Morph
 ##==============================================================================
 package DTA::CAB::Analyzer::EqPho;
-use DTA::CAB::Analyzer::EqPho::FST;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::EqPho::FST);
+#use DTA::CAB::Analyzer::EqPho::FST;
+#our @ISA = qw(DTA::CAB::Analyzer::EqPho::FST);
+##
+use DTA::CAB::Analyzer::EqPho::DB;
+our @ISA = qw(DTA::CAB::Analyzer::EqPho::DB);
+
 
 1; ##-- be happy
 
@@ -52,7 +56,7 @@ DTA::CAB::Analyzer::EqPho - phonetic equivalence class expander
 =head1 DESCRIPTION
 
 Default phonetic equivalence class expander.
-Just a wrapper for L<DTA::CAB::Analyzer::EqPho::FST|DTA::CAB::Analyzer::EqPho::FST>.
+Just a wrapper for L<DTA::CAB::Analyzer::EqPho::DB|DTA::CAB::Analyzer::EqPho::DB>.
 
 =cut
 
@@ -71,7 +75,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

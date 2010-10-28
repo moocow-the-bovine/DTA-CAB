@@ -1,19 +1,34 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Morph::Latin.pm
+## File: DTA::CAB::Analyzer::Morph::Latin::DB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: latin pseudo-morphology (top-level alias)
+## Description: auxilliary latin-language analysis, dictionary-based
 
 ##==============================================================================
-## Package: Analyzer::Morph::Latin
+## Package: Analyzer::Morph::Latin::DB
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph::Latin;
-#use DTA::CAB::Analyzer::Morph::Latin::FST;
-#use DTA::CAB::Analyzer::Morph::Latin::Dict;
-use DTA::CAB::Analyzer::Morph::Latin::DB;
+package DTA::CAB::Analyzer::Morph::Latin::DB;
+use DTA::CAB::Analyzer::Dict ':all';
+use DTA::CAB::Analyzer::Dict::DB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Morph::Latin::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
+
+## $obj = CLASS_OR_OBJ->new(%args)
+##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
+sub new {
+  my $that = shift;
+  my $aut = $that->SUPER::new(
+			      ##-- analysis selection
+			      label      => 'mlatin',
+			      analyzeGet => "lc($DICT_GET_TEXT)",
+			      analyzeSet => $DICT_SET_FST,
+
+			      ##-- user args
+			      @_
+			     );
+  return $aut;
+}
 
 ##==============================================================================
 ## Analysis Formatting
@@ -35,7 +50,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin - latin pesudo-morphology analysis (wrapper)
+DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via external full-form dictionary
 
 =cut
 
@@ -45,9 +60,10 @@ DTA::CAB::Analyzer::Morph::Latin - latin pesudo-morphology analysis (wrapper)
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Morph::Latin;
+ use DTA::CAB::Analyzer::Morph::Latin::DB;
  
- $morph = DTA::CAB::Analyzer::Morph::Latin->new(%args);
+ $latin = DTA::CAB::Analyzer::Morph::Latin::DB->new(%args);
+ 
 
 =cut
 
@@ -57,9 +73,15 @@ DTA::CAB::Analyzer::Morph::Latin - latin pesudo-morphology analysis (wrapper)
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Morph::Latin
-is a just a wrapper for
-L<DTA::CAB::Analyzer::Morph::Latin::DB|DTA::CAB::Analyzer::Morph::Latin::DB>.
+DTA::CAB::Analyzer::Morph::Latin::DB
+is a just a simplified wrapper for
+L<DTA::CAB::Analyzer::Dict::DB|DTA::CAB::Analyzer::Dict::DB>
+which sets the following default options:
+
+ label      => 'mlatin',
+ analyzeGet => "lc($DICT_GET_TEXT)",
+ analyzeSet => $DICT_SET_FST,
+
 
 =cut
 
@@ -78,7 +100,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Bryan Jurish
+Copyright (C) 2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

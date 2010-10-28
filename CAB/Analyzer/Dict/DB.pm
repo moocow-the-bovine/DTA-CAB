@@ -141,6 +141,7 @@ sub ensureLoaded {
     $dic->{dbf} = Lingua::TT::DB::File->new(%{$dic->{dba}||{}});
     $rc &&= $dic->{dbf}->open($dic->{dictFile}, encoding=>$dic->{encoding});
   }
+  $dic->logwarn("error opening file '$dic->{dictFile}': $!") if (!$rc);
   return $rc;
 }
 

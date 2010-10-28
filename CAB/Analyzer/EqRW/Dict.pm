@@ -5,14 +5,14 @@
 ## Description: dictionary-based equivalence-class expander, rewrite variant
 
 package DTA::CAB::Analyzer::EqRW::Dict;
-use DTA::CAB::Analyzer::Dict::EqClass;
+use DTA::CAB::Analyzer::Dict ':all';
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Dict::EqClass);
+our @ISA = qw(DTA::CAB::Analyzer::Dict);
 
 ##==============================================================================
 ## Constructors etc.
@@ -24,9 +24,12 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   analysisKey => 'eqrw',
-			   inputKey    => 'rw',
+			   label       => 'eqrw',
+			   analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
+			   analyzeSet  => $DICT_SET_FST,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+
+			   #inputKey    => 'rw',
 
 			   ##-- user args
 			   @_
@@ -46,7 +49,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqRW::Dict - dictionary-based rewrite-form expander
+DTA::CAB::Analyzer::EqRW::Dict - dictionary-based rewrite-equivalence expander
 
 =cut
 
@@ -72,14 +75,12 @@ DTA::CAB::Analyzer::EqRW::Dict - dictionary-based rewrite-form expander
 
 =head1 DESCRIPTION
 
-B<WORK IN PROGRESS>
-
-Dictionary-based phonetic equivalence-class expander.
+Dictionary-based rewrite equivalence-class expander.
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::EqRW::Dict: Globals
 =pod
 
 =head2 Globals
@@ -89,14 +90,14 @@ Dictionary-based phonetic equivalence-class expander.
 =item Variable: @ISA
 
 DTA::CAB::Analyzer::EqRW::Dict inherits from
-L<DTA::CAB::Analyzer::Dict::EqClass>.
+L<DTA::CAB::Analyzer::Dict>.
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::EqClass: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::EqRW::Dict: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -109,8 +110,9 @@ L<DTA::CAB::Analyzer::Dict::EqClass>.
 
 Constructor.  Sets the following default options:
 
- analysisKey => 'eqrw',
- inputKey    => 'rw',
+ label       => 'eqrw',
+ analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
+ analyzeSet  => $DICT_SET_FST,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 =back
@@ -133,7 +135,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -1,26 +1,30 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Dict::Latin.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: auxilliary latin-language analysis, dictionary-based
+## File: DTA::CAB::Analyzer::Morph::Latin::FST.pm
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Description: morphological analysis via Gfsm automata, 'mlatin'
 
 ##==============================================================================
-## Package: Analyzer::Dict::Latin
+## Package: Analyzer::Morph::Latin::FST
 ##==============================================================================
-package DTA::CAB::Analyzer::Dict::Latin;
-use DTA::CAB::Analyzer::Dict;
+package DTA::CAB::Analyzer::Morph::Latin::FST;
+use DTA::CAB::Analyzer::Morph;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Dict);
+our @ISA = qw(DTA::CAB::Analyzer::Morph);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
+			      ##-- defaults
+			      #analysisClass => 'DTA::CAB::Analyzer::Morph::Analysis',
+
 			      ##-- analysis selection
-			      analyzeDst => 'latin',
-			      tolower => 1,
+			      label => 'mlatin',
+			      wantAnalysisLo => 0,
+                              tolower => 1,
 
 			      ##-- user args
 			      @_
@@ -48,7 +52,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Dict::Latin - auxilliary latin word recognizer via external full-form dictionary
+DTA::CAB::Analyzer::Morph::Latin::FST - auxilliary morphological analysis via Gfsm automata
 
 =cut
 
@@ -58,10 +62,9 @@ DTA::CAB::Analyzer::Dict::Latin - auxilliary latin word recognizer via external 
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Dict::Latin;
+ use DTA::CAB::Analyzer::Morph::Latin::FST;
  
- $latin = DTA::CAB::Analyzer::Dict::Latin->new(%args);
- $latin->analyze($tok);
+ $morph = DTA::CAB::Analyzer::Morph::Latin::FST->new(%args);
 
 =cut
 
@@ -71,14 +74,14 @@ DTA::CAB::Analyzer::Dict::Latin - auxilliary latin word recognizer via external 
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Dict::Latin
+DTA::CAB::Analyzer::Morph::Latin::FST
 is a just a simplified wrapper for
-L<DTA::CAB::Analyzer::Dict|DTA::CAB::Analyzer::Dict>
+L<DTA::CAB::Analyzer::Morph|DTA::CAB::Analyzer::Morph>
 which sets the following default options:
 
- ##-- analysis selection
- analyzeDst => 'latin',   ##-- analysis output property
- tolower    => 1,         ##-- case-insensitive lookup
+ label => 'mlatin',
+ wantAnalysisLo => 0,
+ tolower => 1,
 
 =cut
 
@@ -97,7 +100,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

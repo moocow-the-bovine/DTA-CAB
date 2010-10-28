@@ -102,6 +102,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ##
 ##     ##-- Analysis Options
 ##     encoding       => $enc,   ##-- encoding of dict file (default='UTF-8')
+##     allowRegex     => $re,    ##-- only lookup tokens whose text matches $re (default=none)
 ##
 ##     ##-- Analysis objects
 ##     ttd => $ttdict,           ##-- underlying Lingua::TT::Dict object
@@ -122,6 +123,7 @@ sub new {
 			      label => 'dict',
 			      analyzeGet => $DEFAULT_ANALYZE_GET,
 			      analyzeSet => $DEFAULT_ANALYZE_SET,
+			      allowRegex => undef,
 
 			      ##-- user args
 			      @_
@@ -136,14 +138,29 @@ sub clear {
   return $dic;
 }
 
-
 ##==============================================================================
-## Methods: Generic
+## Methods: Embedded API
 ##==============================================================================
 
-## $bool = $dic->dictOk()
-##  + should return false iff dict is undefined or "empty"
-sub dictOk { return defined($_[0]{ttd}) && scalar(%{$_[0]{ttd}{dict}}); }
+## $bool = $dict->dictOk()
+##  + returns false iff dict is undefined or "empty"
+sub dictOk {
+  return defined($_[0]{ttd}) && scalar(%{$_[0]{ttd}{dict}});
+}
+
+## \%key2val = $dict->dictHash()
+##   + returns a (possibly tie()d hash) representing dict contents
+##   + default just returns $dic->{ttd}{dict} or a new empty hash
+sub dictHash {
+  return $_[0]{ttd} && $_[0]{ttd}{dict} ? $_[0]{ttd}{dict} : {};
+}
+
+## $val_or_undef = $dict->dictLookup($key)
+##  + get stored value for key $key
+##  + default returns $dict->{ttd}{dict}{$key} or undef
+sub dictLookup {
+  return $_[0]{ttd} && $_[0]{ttd}{dict} ? $_[0]{ttd}{dict}{$_[1]} : undef;
+}
 
 ##==============================================================================
 ## Methods: I/O
@@ -182,11 +199,11 @@ sub noSaveKeys {
 ##  + inherited from DTA::CAB::Persistent
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
-##  + implicitly calls $obj->clear()
+##  + OLD: implicitly calls $obj->clear()
 sub loadPerlRef {
   my ($that,$ref) = @_;
   my $obj = $that->SUPER::loadPerlRef($ref);
-  $obj->clear();
+  #$obj->clear();
   return $obj;
 }
 
@@ -199,7 +216,7 @@ sub loadPerlRef {
 
 ## $bool = $anl->canAnalyze()
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + default method always returns true
+##  + override calls dictOk()
 sub canAnalyze {
   return $_[0]->dictOk();
 }
@@ -209,13 +226,13 @@ sub canAnalyze {
 
 ## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
-##  + default implementation does nothing
 sub analyzeTypes {
   my ($dic,$doc,$types,$opts) = @_;
 
   ##-- setup common variables
-  my $lab   = $dic->{label};
-  my $ttdd  = $dic->{ttd}{dict};
+  my $lab      = $dic->{label};
+  my $dhash    = $dic->dictHash;
+  my $allow_re = defined($dic->{allowRegex}) ? qr($dic->{allowRegex}) : undef;
 
   ##-- accessors
   my $aget  = $dic->accessClosure(defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : $DEFAULT_ANALYZE_GET);
@@ -228,7 +245,8 @@ sub analyzeTypes {
 
   my ($tok, $k2v);
   foreach $tok (values %$types) {
-    $k2v = { map {($_=>$ttdd->{$_})} $aget->($tok) };
+    next if (defined($allow_re) && $tok->{text} !~ $allow_re);
+    $k2v = { map {($_=>$dhash->{$_})} $aget->($tok) };
     $aset->($tok,$k2v);
   }
 

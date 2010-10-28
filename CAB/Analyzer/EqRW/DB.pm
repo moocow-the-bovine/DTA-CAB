@@ -1,33 +1,36 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqPho::Dict.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: dictionary-based equivalence-class expander, phonetic variant
+## File: DTA::CAB::Analyzer::EqRW::DB.pm
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Description: DB dictionary-based equivalence-class expander, rewrite variant
 
-package DTA::CAB::Analyzer::EqPho::Dict;
+package DTA::CAB::Analyzer::EqRW::DB;
 use DTA::CAB::Analyzer::Dict ':all';
+use DTA::CAB::Analyzer::Dict::DB;
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Dict);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see Dict
+##  + object structure: see DTA::CAB::Analyzer::Dict::DB
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   label       => 'eqpho',
-			   analyzeGet  => '$_[0]{lts}[0]{hi}',
+			   label       => 'eqrw',
+			   analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
 			   analyzeSet  => $DICT_SET_FST,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+
+			   #inputKey    => 'rw',
 
 			   ##-- user args
 			   @_
@@ -47,7 +50,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqPho::Dict - dictionary-based phonetic form expander
+DTA::CAB::Analyzer::EqRW::DB - DB dictionary-based rewrite-equivalence expander
 
 =cut
 
@@ -57,12 +60,12 @@ DTA::CAB::Analyzer::EqPho::Dict - dictionary-based phonetic form expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqPho::Dict;
+ use DTA::CAB::Analyzer::EqRW::DB;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqp = DTA::CAB::Analyzer::EqPho::Dict->new(%args);
+ $eqrw = DTA::CAB::Analyzer::EqRW::DB->new(%args);
  
 
 =cut
@@ -73,8 +76,7 @@ DTA::CAB::Analyzer::EqPho::Dict - dictionary-based phonetic form expander
 
 =head1 DESCRIPTION
 
-Dictionary-based phonetic equivalence-class expander.
-Composite analyzers should also include an 'lts' phonetic analyzer.
+DB Dictionary-based rewrite equivalence-class expander.
 
 =cut
 
@@ -88,7 +90,7 @@ Composite analyzers should also include an 'lts' phonetic analyzer.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqPho::Dict inherits from
+DTA::CAB::Analyzer::EqRW::DB inherits from
 L<DTA::CAB::Analyzer::Dict>.
 
 =back
@@ -96,7 +98,7 @@ L<DTA::CAB::Analyzer::Dict>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::EqRW::DB: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -109,8 +111,8 @@ L<DTA::CAB::Analyzer::Dict>.
 
 Constructor.  Sets the following default options:
 
- label       => 'eqpho',
- analyzeGet  => '$_[0]{lts}[0]{hi}',
+ label       => 'eqrw',
+ analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
  analyzeSet  => $DICT_SET_FST,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
@@ -134,7 +136,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Bryan Jurish
+Copyright (C) 2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,
