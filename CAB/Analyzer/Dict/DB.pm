@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Dict.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## File: DTA::CAB::Analyzer::Dict::DB.pm
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: generic analysis dictionary API using Lingua::TT::DB::File
 
 package DTA::CAB::Analyzer::Dict::DB;
@@ -20,7 +20,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(Exporter DTA::CAB::Analyzer);
+our @ISA = qw(Exporter DTA::CAB::Analyzer::Dict);
 
 ## $DEFAULT_ANALYZE_GET
 ##  + inherited from Dict
@@ -36,7 +36,7 @@ our @ISA = qw(Exporter DTA::CAB::Analyzer);
 ##  + object structure:
 ##    (
 ##     ##-- Filename Options
-##     dbFile => $filename,     ##-- default: none
+##     dictFile => $filename,    ##-- DB filename (default=undef)
 ##
 ##     ##-- Analysis Output
 ##     label          => $lab,   ##-- analyzer label
@@ -44,7 +44,7 @@ our @ISA = qw(Exporter DTA::CAB::Analyzer);
 ##     analyzeSet     => $code,  ##-- pseudo-accessor ($code->($tok,$key,$val)) sets analyses for $tok
 ##
 ##     ##-- Analysis Options
-##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8')
+##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding}
 ##
 ##     ##-- Analysis objects
 ##     dbf => $dbf,              ##-- underlying Lingua::TT::DB::File object (default=undef)
@@ -52,7 +52,7 @@ our @ISA = qw(Exporter DTA::CAB::Analyzer);
 ##     #={
 ##     #  mode  => $mode,        ##-- default: 0644
 ##     #  dbflags => $flags,     ##-- default: O_RDONLY
-##     #  type    => $type,      ##-- one of 'HASH', 'BTREE', 'RECNO' (default: 'BTREE')
+##     #  type    => $type,      ##-- one of 'HASH', 'BTREE', 'RECNO', 'GUESS' (default: 'GUESS')
 ##     #  dbinfo  => \%dbinfo,   ##-- default: "DB_File::${type}INFO"->new();
 ##     #  dbopts  => \%opts,     ##-- db options (e.g. cachesize,bval,...) -- defaults to none (uses DB_File defaults)
 ##     # }
@@ -66,7 +66,7 @@ sub new {
 			      ##-- analysis objects
 			      dbf=>undef,
 			      dba=>{
-				    type    => 'BTREE',
+				    type    => 'GUESS',
 				    mode    => 0644,
 				    dbflags => O_RDONLY,
 				   },
@@ -82,25 +82,47 @@ sub new {
 			      ##-- user args
 			      @_
 			     );
+  delete($dic->{ttd}); ##-- don't inherit 'ttd' (in-memory hash dict) key
   return $dic;
 }
 
 ## $dic = $dic->clear()
-##  + DANGEROUS
+##  + just closes db
 sub clear {
   my $dic = shift;
-  $dic->{dbf}->clear();
+  $dic->{dbf}->close if ($dic->{dbf} && $dic->{dbf}->opened);
+  delete($dic->{dbf});
   return $dic;
 }
 
 
 ##==============================================================================
-## Methods: Generic
+## Methods: Embedded API
 ##==============================================================================
 
 ## $bool = $dic->dictOk()
-##  + should return false iff dict is undefined or "empty"
-sub dictOk { return $_[0]{dbf} && $_[0]{dbf}->opened; }
+##  + returns false iff dict is undefined or "empty"
+sub dictOk {
+  return $_[0]{dbf} && $_[0]{dbf}->opened;
+}
+
+## \%key2val = $dict->dictHash()
+##   + returns a (possibly tie()d hash) representing dict contents
+##   + override returns $dict->{dbf}{data} or a new empty hash
+sub dictHash {
+  return $_[0]{dbf} && $_[0]{dbf}->opened ? $_[0]{dbf}{data} : {};
+}
+
+## $val_or_undef = $dict->dictLookup($key)
+##  + get stored value for key $key
+##  + default returns $dict->{ttd}{dict}{$key} or undef
+sub dictLookup {
+  return undef if (!$_[0]{dbf} || !$_[0]{dbf}->opened);
+#  return decode($_[0]{dbEncoding}, $_[0]{dbf}{data}{encode($_[0]{dbEncoding},$_[1])})
+#    if (defined($_[0]{dbEncoding}));
+  return $_[0]{dbf}{data}{$_[1]};
+}
+
 
 ##==============================================================================
 ## Methods: I/O
@@ -114,10 +136,10 @@ sub dictOk { return $_[0]{dbf} && $_[0]{dbf}->opened; }
 sub ensureLoaded {
   my $dic = shift;
   my $rc  = 1;
-  if ( defined($dic->{dbFile}) && !$dic->dictOk ) {
-    $dic->info("Opening DB file '$dic->{dbFile}'");
+  if ( defined($dic->{dictFile}) && !$dic->dictOk ) {
+    $dic->info("opening DB file '$dic->{dictFile}'");
     $dic->{dbf} = Lingua::TT::DB::File->new(%{$dic->{dba}||{}});
-    $rc &&= $dic->{dbf}->open($dic->{dbFile});
+    $rc &&= $dic->{dbf}->open($dic->{dictFile}, encoding=>$dic->{encoding});
   }
   return $rc;
 }
@@ -156,46 +178,14 @@ sub loadPerlRef {
 
 ## $bool = $anl->canAnalyze()
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + default method always returns true
-sub canAnalyze {
-  return $_[0]->dictOk();
-}
+##  + INHERITED from dict: calls dictOk()
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
 
 ## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
-##  + default implementation does nothing
-sub analyzeTypes {
-  my ($dic,$doc,$types,$opts) = @_;
-
-  ##-- setup common variables
-  my $lab   = $dic->{label};
-  my $ttdd  = $dic->{dbf}{data};
-  my $dbenc = $dic->{encoding};
-
-  ##-- accessors
-  my $aget  = $dic->accessClosure(defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : $DEFAULT_ANALYZE_GET);
-  my $aset  = $dic->accessClosure(defined($dic->{analyzeSet}) ? $dic->{analyzeSet} : $DEFAULT_ANALYZE_SET);
-
-  ##-- ananalysis options
-  #my @analyzeOptionKeys = qw(tolower tolowerNI toupperI); #)
-  #$opts = $opts ? {%$opts} : {}; ##-- set default options: copy / create
-  #$opts->{$_} = $dic->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-
-  my ($tok, $k2v);
-  foreach $tok (values %$types) {
-    if (defined($dbenc)) {
-      $k2v = { map {($_=>decode($dbenc,$ttdd->{encode($dbenc,$_)}))} $aget->($tok) };
-    } else {
-      $k2v = { map {($_=>$ttdd->{$_})} $aget->($tok) };
-    }
-    $aset->($tok,$k2v);
-  }
-
-  return $doc;
-}
+##  + INHERITED from Dict
 
 
 1; ##-- be happy
