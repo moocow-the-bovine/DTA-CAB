@@ -399,6 +399,7 @@ sub getAnalyzeWordClosure {
       push(@$analyses,
 	   sort {($a->{w}||0) <=> ($b->{w}||0)}
 	   map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
+	   grep {$_ ne ''}
 	   split(/\t/,$dict->{$uword})
 	  );
     }
