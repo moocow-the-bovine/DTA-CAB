@@ -5,9 +5,8 @@
 ## Description: generic analysis automaton API
 
 package DTA::CAB::Analyzer::Automaton;
-
 use DTA::CAB::Analyzer;
-
+use DTA::CAB::Unify ':all';
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -278,7 +277,7 @@ sub loadDict {
 
   ##-- sanitize dict object
   my $dclass = (ref($aut->{dict})||$aut->{dictClass}||'DTA::CAB::Analyzer::Dict');
-  my $dict = $aut->{dict} = bless(unifyClobber($dclass->new,$aut->{dict},undef), $dclass);
+  my $dict = $aut->{dict} = bless(_unifyClobber($dclass->new,$aut->{dict},undef), $dclass);
   $dict->{label}    = $aut->{label}."_dict"; ##-- force sub-analyzer label
   $dict->{dictFile} = $dictfile;             ##-- clobber sub-analyzer file
 
@@ -400,8 +399,8 @@ sub getAnalyzeWordClosure {
       push(@$analyses,
 	   sort {($a->{w}||0) <=> ($b->{w}||0)}
 	   map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
-	   map  {split(/\t/,$_)}
-	   $dict->{uword});
+	   split(/\t/,$dict->{$uword})
+	  );
     }
     elsif ($fst_ok) {
       ##-- not in dict: fst lookup (if fst is kosher)
