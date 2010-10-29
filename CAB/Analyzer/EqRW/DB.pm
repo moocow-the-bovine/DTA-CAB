@@ -27,7 +27,8 @@ sub new {
 			   ##-- options
 			   label       => 'eqrw',
 			   analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
-			   analyzeSet  => $DICT_SET_FST,
+			   analyzeSet  => $DICT_SET_FST_EQ,
+			   eqIdWeight  => 0,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			   #inputKey    => 'rw',
@@ -113,7 +114,8 @@ Constructor.  Sets the following default options:
 
  label       => 'eqrw',
  analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
- analyzeSet  => $DICT_SET_FST,
+ analyzeSet  => $DICT_SET_FST_EQ,
+ eqIdWeight  => 0,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 =back

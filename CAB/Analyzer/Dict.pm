@@ -49,7 +49,29 @@ our $DICT_SET_LIST = '$_[0]{$anl->{label}} = [map {split(/\t/,$_)} grep {defined
 ## $DICT_SET_FST
 ##  + undef = "$DICT_SET_FST"->($tok,\%key2val)
 ##  + just sets $tok->{$anl->{label}} = [map {split(/\t/,$_)} values(%key2val)]
-our $DICT_SET_FST = '$_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0)} map {'.__PACKAGE__.'::parseFstString($_)} map {split(/\t/,$_)} grep {defined($_)} values(%{$_[1]})];';
+our $DICT_SET_FST = q(
+  $_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")}
+			  map {).__PACKAGE__.q(::parseFstString($_)}
+			  map {split(/\t/,$_)}
+			  grep {defined($_)}
+			  values(%{$_[1]})];
+);
+
+## $DICT_SET_FST_EQ
+##  + undef = "$DICT_SET_FST_EQ"->($tok,\%key2val)
+##  + like $DICT_SET_FST, but adds pseudo-analysis {hi=>$key,w=>($anl->{eqIdWeight}||0)} for $tok->{text}, $tok->{xlit}{latin1Text}
+our $DICT_SET_FST_EQ = '
+  $_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")}
+			  values %{
+			    {((map {($_=>{hi=>$_,w=>($anl->{eqIdWeight}||0)})} ($_[0]{text}, ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : qw()))),
+			      (map {($_->{hi}=>$_)}
+			       map {'.__PACKAGE__.'::parseFstString($_)}
+			       map {split(/\t/,$_)}
+			       grep {defined($_)}
+			       values(%{$_[1]})))}
+			  }];
+';
+
 
 ##--------------------------------------------------------------
 ## Globals: Accessors: Defaults
@@ -78,7 +100,7 @@ our $DEFAULT_ANALYZE_SET = $DICT_SET_LIST;
 our @EXPORT = qw();
 our %EXPORT_TAGS =
   ('get'   => [qw($DICT_GET_TEXT $DICT_GET_LTS)],
-   'set'   => [qw($DICT_SET_RAW $DICT_SET_LIST $DICT_SET_FST parseFstString)],
+   'set'   => [qw($DICT_SET_RAW $DICT_SET_LIST $DICT_SET_FST $DICT_SET_FST_EQ parseFstString)],
    'defaults'  => [qw($DEFAULT_ANALYZE_GET $DEFAULT_ANALYZE_SET)],
   );
 $EXPORT_TAGS{all}   = [map {@$_} values %EXPORT_TAGS];
@@ -103,6 +125,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ##     ##-- Analysis Options
 ##     encoding       => $enc,   ##-- encoding of dict file (default='UTF-8')
 ##     allowRegex     => $re,    ##-- only lookup tokens whose text matches $re (default=none)
+##     eqIdWeight     => $w,     ##-- weight for identity analyses for analyzeSet=>$DICT_SET_FST_EQ
 ##
 ##     ##-- Analysis objects
 ##     ttd => $ttdict,           ##-- underlying Lingua::TT::Dict object

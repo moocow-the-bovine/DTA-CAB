@@ -27,7 +27,8 @@ sub new {
 			   ##-- options
 			   label       => 'eqpho',
 			   analyzeGet  => '$_[0]{lts}[0]{hi}',
-			   analyzeSet  => $DICT_SET_FST,
+			   analyzeSet  => $DICT_SET_FST_EQ,
+			   eqIdWeight  => 0,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 			   ##-- user args
@@ -112,7 +113,8 @@ Constructor.  Sets the following default options:
 
  label       => 'eqpho',
  analyzeGet  => '$_[0]{lts}[0]{hi}',
- analyzeSet  => $DICT_SET_FST,
+ analyzeSet  => $DICT_SET_FST_EQ,
+ eqIdWeight  => 0,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
 
 =back
