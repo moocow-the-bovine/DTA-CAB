@@ -32,13 +32,13 @@ our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 ##
 ##     ##-- Lookup options (new)
 ##     max_paths  => $max_paths,           ##-- sets $cl->max_paths()
-##     max_ops    => $max_ops,             ##-- sets $cl->max_ops()
+##     max_ops    => $max_ops_or_array,    ##-- sets $cl->max_ops()     ; default=16384
 ##     max_weight => $max_weight_or_array, ##-- sets $cl->max_weight()
-##                                         ##   + may also be specified as an ARRAY-ref [$a,$b]
-##                                         ##     to compute max-weight parameter on-the-fly as
-##                                         ##     the linear function:
-##                                         ##       $max_weight = $a * length($input_word) + $b
 ##    )
+## + $max_ops, $max_weight may also be specified as an ARRAY-ref [$a,$b]
+##   to compute the actual parameter on-the-fly as the linear function:
+##      $max_thingy = $a * length($input_word) + $b
+
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
@@ -48,7 +48,7 @@ sub new {
 			      ##-- lookup options
 			      #max_weight => 3e38,
 			      #max_paths  => 1,
-			      #max_ops    => -1,
+			      max_ops    => 16384,
 
 			      ##-- user args
 			      @_
@@ -76,22 +76,31 @@ sub clear {
 
 ## $aut = $aut->setLookupOptions(\%opts)
 ## + \%opts keys:
-##   max_weight => $w,
 ##   max_paths  => $n_paths,
-##   max_ops    => $n_ops,
+##   max_ops    => $n_ops_or_array,
+##   max_weight => $w_or_array,
 sub setLookupOptions {
   my ($aut,$opts) = @_;
   my $cl = $aut->{fst};
   return if (!defined($cl));
+
+  ##-- opts: max_weight
   if (UNIVERSAL::isa($opts->{max_weight},'ARRAY')) {
-    ##-- max weight: linear function of length
     $cl->max_weight($opts->{max_weight}[0] * length(($opts->{src}||'1')) + $opts->{max_weight}[1]);
   } elsif (defined($opts->{max_weight})) {
-    ##-- max weight: simple scalar
     $cl->max_weight($opts->{max_weight});
   }
+
+  ##-- opts: max_ops
+  if (UNIVERSAL::isa($opts->{max_ops},'ARRAY')) {
+    $cl->max_ops($opts->{max_ops}[0] * length(($opts->{src}||'1')) + $opts->{max_ops}[1]);
+  } elsif (defined($opts->{max_ops})) {
+    $cl->max_ops($opts->{max_ops});
+  }
+
+  ##-- opts: max_paths
   $cl->max_paths ($opts->{max_paths})  if (defined($opts->{max_paths}));
-  $cl->max_ops   ($opts->{max_ops})    if (defined($opts->{max_ops}));
+
   return $aut;
 }
 
