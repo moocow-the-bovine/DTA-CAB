@@ -7,6 +7,7 @@
 package DTA::CAB::Analyzer::MorphSafe;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Unify ':all';
 
 use Encode qw(encode decode);
 use IO::File;
@@ -27,7 +28,12 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
 ##    ##-- analysis selection
-##    #(nothing here)
+##    (nothing here)
+##
+##    ##-- Exception lexicon options
+##    dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
+##                              ##   + default=undef
+##    dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
 ##
 sub new {
   my $that = shift;
@@ -35,6 +41,10 @@ sub new {
 			   ##-- options
 			   label => 'msafe',
 			   aclass => undef, ##-- don't bless analysis at all (it's not a ref)
+
+			   ##-- dictionary stuff
+			   #dict=>undef
+			   dictClass=>'DTA::CAB::Analyzer::Dict',
 
 			   ##-- user args
 			   @_
@@ -45,14 +55,51 @@ sub new {
 ## Methods: I/O
 ##==============================================================================
 
-## $bool = $aut->ensureLoaded()
+## $bool = $msafe->ensureLoaded()
 ##  + ensures analysis data is loaded
-sub ensureLoaded { return 1; }
+sub ensureLoaded {
+  my $msafe = shift;
+  my $rc = 1;
+  ##-- ensure: dict
+  if ( (defined($msafe->{dictFile}) || ($msafe->{dict} && $msafe->{dict}{dictFile})) && !$msafe->dictOk ) {
+    $rc &&= $msafe->loadDict();
+  }
+  return $rc;
+}
+
+##--------------------------------------------------------------
+## Methods: I/O: Input: Dictionary
+
+## $bool = $msafe->dictOk()
+##  + should return false iff dict is undefined or "empty"
+sub dictOk { return $_[0]{dict} && $_[0]{dict}->dictOk; }
+
+## $msafe = $msafe->loadDict()
+## $msafe = $msafe->loadDict($dictfile)
+sub loadDict {
+  my ($msafe,$dictfile) = @_;
+  $dictfile = $msafe->{dictFile} if (!defined($dictfile));
+  $dictfile = $msafe->{dict}{dictFile} if (!defined($dictfile));
+  return $msafe if (!defined($dictfile)); ##-- no dict file to load
+  $msafe->info("loading exception lexicon from '$dictfile'");
+
+  ##-- sanitize dict object
+  my $dclass = (ref($msafe->{dict})||$msafe->{dictClass}||'DTA::CAB::Analyzer::Dict');
+  my $dict = $msafe->{dict} = bless(_unifyClobber($dclass->new,$msafe->{dict},undef), $dclass);
+  $dict->{label}    = $msafe->{label}."_dict"; ##-- force sub-analyzer label
+  $dict->{dictFile} = $dictfile;               ##-- clobber sub-analyzer file
+
+  ##-- load dict object
+  $dict->ensureLoaded();
+  return undef if (!$dict->dictOk);
+  return $msafe;
+}
 
 ##==============================================================================
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
+##-- TODO: move this to external dict file!
 our %badTypes =
   map {($_=>undef)}
   (
@@ -78,68 +125,74 @@ sub analyzeTypes {
   my $label   = $ms->{label};
   #my $srcKey = $ms->{analysisSrcKey};
   #my $auxkey = $ms->{auxSrcKey};
+
+  my $dict    = $ms->dictOk ? $ms->{dict}->dictHash : undef;
+
   my ($tok,$analyses,$safe);
   foreach $tok (values(%$types)) {
-    $analyses = $tok->{morph};
-    $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
+    if (!defined($dict) || !defined($safe=$dict->{$tok->{text}})) {
+      ##-- no dict entry: use morph heuristics
+      $analyses = $tok->{morph};
+      $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
 	     && $tok->{text} !~ m/\#/                      ##-- unless they contain '#' (placeholder for unrecognized char)
 	    );
     #$safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
-    $safe ||=
-      (
-       !exists($badTypes{$tok->{text}}) ##-- not a known bad type
-       && $analyses                 ##-- analyses defined & true
-       && @$analyses > 0            ##-- non-empty analysis set
-       && (
-	   grep {               ##-- at least one non-"unsafe" (i.e. "safe") analysis:
-	     ($_                     ##-- only "unsafe" if defined
-	      && $_->{hi}            ##-- only "unsafe" if upper labels are defined & non-empty
-	      && $_->{hi} !~ m(
-                   (?:               ##-- unsafe: regexes
-                       \[_FM\]       ##-- unsafe: tag: FM: foreign material
-                     | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
-                     | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
-                     #| \[_NE\]       ##-- unsafe: tag: NE: proper name: all
-		     #| \[_NE\]\[geoname\]     ##-- unsafe: tag: NE.geo
-		     #| \[_NE\]\[firstname\]   ##-- unsafe: tag: NE.first
-		     | \[_NE\]\[lastname\]     ##-- unsafe: tag: NE.last
-		     | \[_NE\]\[orgname\]      ##-- unsafe: tag: NE.org
-		     | \[_NE\]\[productname\]  ##-- unsafe: tag: NE.product
+      $safe ||=
+	(
+	 !exists($badTypes{$tok->{text}}) ##-- not a known bad type
+	 && $analyses			  ##-- analyses defined & true
+	 && @$analyses > 0		  ##-- non-empty analysis set
+	 && (
+	     grep { ##-- at least one non-"unsafe" (i.e. "safe") analysis:
+	       ($_  ##-- only "unsafe" if defined
+		&& $_->{hi} ##-- only "unsafe" if upper labels are defined & non-empty
+		&& $_->{hi} !~ m(
+				  (?:               ##-- unsafe: regexes
+				    \[_FM\]       ##-- unsafe: tag: FM: foreign material
+				  | \[_XY\]       ##-- unsafe: tag: XY: non-word (abbreviations, etc)
+				  | \[_ITJ\]      ##-- unsafe: tag: ITJ: interjection (?)
+				    #| \[_NE\]       ##-- unsafe: tag: NE: proper name: all
+				    #| \[_NE\]\[geoname\]     ##-- unsafe: tag: NE.geo
+				    #| \[_NE\]\[firstname\]   ##-- unsafe: tag: NE.first
+				  | \[_NE\]\[lastname\]     ##-- unsafe: tag: NE.last
+				  | \[_NE\]\[orgname\]      ##-- unsafe: tag: NE.org
+				  | \[_NE\]\[productname\]  ##-- unsafe: tag: NE.product
 
-		     ##-- unsafe: composita
-                     #| \/NE          ##-- unsafe: composita with NE
+				    ##-- unsafe: composita
+				    #| \/NE          ##-- unsafe: composita with NE
 
-                     ##-- unsafe: verb roots
-                     | \b te    (?:\/V|\~)
-                     | \b gel   (?:\/V|\~)
-                     | \b gell  (?:\/V|\~)
-                     | \b öl    (?:\/V|\~)
-                     | \b penn  (?:\/V|\~)
-                     | \b dau   (?:\/V|\~)
-		     | \b äs    (?:\/V|\~)
+				    ##-- unsafe: verb roots
+				  | \b te    (?:\/V|\~)
+				  | \b gel   (?:\/V|\~)
+				  | \b gell  (?:\/V|\~)
+				  | \b öl    (?:\/V|\~)
+				  | \b penn  (?:\/V|\~)
+				  | \b dau   (?:\/V|\~)
+				  | \b äs    (?:\/V|\~)
 
-                     ##-- unsafe: noun roots
-                     | \b Bus   (?:\/N|\[_NN\])
-                     | \b Ei    (?:\/N|\[_NN\])
-                     | \b Eis   (?:\/N|\[_NN\])
-                     | \b Gel   (?:\/N|\[_NN\])
-                     | \b Gen   (?:\/N|\[_NN\])
-                     | \b Öl    (?:\/N|\[_NN\])
-                     | \b Reh   (?:\/N|\[_NN\])
-                     | \b Tee   (?:\/N|\[_NN\])
-                     | \b Teig  (?:\/N|\[_NN\])
-                     | \b Zen   (?:\/N|\[_NN\])
-                     | \b Heu   (?:\/N|\[_NN\])
-                     | \b Szene (?:\/N|\[_NN\])
+				    ##-- unsafe: noun roots
+				  | \b Bus   (?:\/N|\[_NN\])
+				  | \b Ei    (?:\/N|\[_NN\])
+				  | \b Eis   (?:\/N|\[_NN\])
+				  | \b Gel   (?:\/N|\[_NN\])
+				  | \b Gen   (?:\/N|\[_NN\])
+				  | \b Öl    (?:\/N|\[_NN\])
+				  | \b Reh   (?:\/N|\[_NN\])
+				  | \b Tee   (?:\/N|\[_NN\])
+				  | \b Teig  (?:\/N|\[_NN\])
+				  | \b Zen   (?:\/N|\[_NN\])
+				  | \b Heu   (?:\/N|\[_NN\])
+				  | \b Szene (?:\/N|\[_NN\])
 
-                     ##-- unsafe: name roots
-		     | \b Thür  (?:\/NE|\[_NE\])
-		     | \b Loo(?:s?)  (?:\/NE|\[_NE\])
-		   )
-                 )x)
-	   } @$analyses
-	  )
-      );
+				    ##-- unsafe: name roots
+				  | \b Thür  (?:\/NE|\[_NE\])
+				  | \b Loo(?:s?)  (?:\/NE|\[_NE\])
+				  )
+			       )x)
+	     } @$analyses
+	    )
+	);
+    }
 
     ##-- output
     $tok->{$label} = $safe ? 1 : 0;

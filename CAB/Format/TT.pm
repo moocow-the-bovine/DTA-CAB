@@ -178,7 +178,7 @@ sub parseTTString {
 	  }
 	  $fkey = $f2key{$fkey} if (defined($f2key{$fkey}));
 	  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/) {
-	    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>$4});
+	    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)});
 	  } else {
 	    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 	  }

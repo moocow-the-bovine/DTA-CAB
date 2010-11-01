@@ -172,6 +172,8 @@ sub analyzeBlock {
   if ($doProfile) {
     $ntoks += $doc->nTokens;
     $nchrs += length($$inbufr);
+    ##-- show running profile information
+    showProfile();
   }
 }
 
@@ -263,14 +265,23 @@ sub si_str {
   return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);
   return sprintf("%.2f", $x);
 }
-if ($doProfile) {
-  my $elapsed = tv_interval($tv_started,[gettimeofday]);
+showProfile() if ($doProfile);
+
+sub showProfile {
+  my $elapsed = tv_interval($tv_started,[gettimeofday])+60;
   my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : 0);
   my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : 0);
-  print STDERR
-    (sprintf("%s: %d tok, %d chr in %.2f sec: %s tok/sec ~ %s chr/sec\n",
-	     $prog, $ntoks,$nchrs, $elapsed, $toksPerSec,$chrsPerSec));
+  my $d = int($elapsed/(60*60*24));
+  my $h = int($elapsed/(60*60)) % 24;
+  my $m = int($elapsed/60) % 60;
+  my $s = ($elapsed % 60) + ($elapsed-(60*int($elapsed/60))-($elapsed % 60));
+  my $timestr = sprintf("%dd %dh %dm %.2fs = %.2fs", $d,$h,$m,$s,$elapsed);
+  DTA::CAB::Logger->info(
+			 sprintf("%s: %d tok, %d chr in %s: %s tok/sec ~ %s chr/sec\n",
+				 $prog, $ntoks,$nchrs, $timestr, $toksPerSec,$chrsPerSec)
+			);
 }
+DTA::CAB::Logger->info("program exiting normally.");
 
 
 __END__
