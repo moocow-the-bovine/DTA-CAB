@@ -28,7 +28,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, new:
 ##    ##-- analysis selection
-##    (nothing here)
+##    allowTokenizerAnalyses => $bool, ##-- if true (default), tokenizer-analyzed tokens (as determined by $tok->{toka}) are "safe"
 ##
 ##    ##-- Exception lexicon options
 ##    dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
@@ -41,6 +41,7 @@ sub new {
 			   ##-- options
 			   label => 'msafe',
 			   aclass => undef, ##-- don't bless analysis at all (it's not a ref)
+			   allowTokenizerAnalyses => 1,
 
 			   ##-- dictionary stuff
 			   #dict=>undef
@@ -126,17 +127,19 @@ sub analyzeTypes {
   #my $srcKey = $ms->{analysisSrcKey};
   #my $auxkey = $ms->{auxSrcKey};
 
-  my $dict    = $ms->dictOk ? $ms->{dict}->dictHash : undef;
+  my $dict      = $ms->dictOk ? $ms->{dict}->dictHash : undef;
+  my $want_toka = $ms->{allowTokenizerAnalyses};
 
   my ($tok,$analyses,$safe);
   foreach $tok (values(%$types)) {
     if (!defined($dict) || !defined($safe=$dict->{$tok->{text}})) {
       ##-- no dict entry: use morph heuristics
       $analyses = $tok->{morph};
-      $safe = ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/ ##-- punctuation, digits are (almost) always "safe"
-	     && $tok->{text} !~ m/\#/                      ##-- unless they contain '#' (placeholder for unrecognized char)
-	    );
-    #$safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
+      $safe   = ($want_toka && $tok->{toka} && @{$tok->{toka}}); ##-- tokenizer-analyzed words are 'safe'
+      $safe ||= ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/   ##-- punctuation, digits are (almost) always "safe"
+		 && $tok->{text} !~ m/\#/                        ##-- unless they contain '#' (placeholder for unrecognized char)
+		);
+      #$safe ||= ($tok->{$auxkey} && @{$tok->{$auxkey}}) if ($auxkey); ##-- always consider 'aux' analyses (e.g. latin) "safe"
       $safe ||=
 	(
 	 !exists($badTypes{$tok->{text}}) ##-- not a known bad type

@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Analyzer::DmootSub.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: sub-analysis (Morph) of dmoot targets
+## Description: sub-analysis (Morph,toka) of dmoot targets
 
 ##==============================================================================
 ## Package: Analyzer::DmootSub
@@ -56,15 +56,19 @@ sub analyzeSentences {
     $dmtag = $dm->{tag};
     $dmtyp = $dmtypes->{$dmtag} = bless({ text=>$dmtag }, 'DTA::CAB::Token');
 
-    ##-- check for existing morph
+    ##-- check for existing analyses
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
-    if ($dmtag eq $txt) {
-      ##-- existing morph: from text
+    if    ($tok->{toka} && @{$tok->{toka}}) {
+      ##-- existing analyses: toka
+      $dmtyp->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
+    }
+    elsif ($dmtag eq $txt) {
+      ##-- existing analyses: morph: from text
       $dmtyp->{morph} = $tok->{morph};
     }
     else {
       foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
-	##-- existing morph: from rewrite
+	##-- existing analyses: morph: from rewrite
 	$dmtyp->{morph} = $_->{morph};
 	last;
       }

@@ -49,9 +49,9 @@ sub analyzeSentences {
 
     ##-- hack: bash NE analyses to raw (transliterated) text
     if ($t eq 'NE') {
-      $m->{word} = $m->{lemma} = (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text} : $tok->{text});
-      substr($m->{lemma},1) = lc(substr($m->{lemma},1));
-      $m->{lemma} =~ s/\s+/_/g;
+      $m->{word} = $l = (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text} : $tok->{text});
+      substr($l,1) = lc(substr($l,1)) if ($l ne '');
+      $l =~ s/\s+/_/g;
     }
     else {
       ##-- populate $tok->{moot}{lemma}
@@ -65,10 +65,11 @@ sub analyzeSentences {
       }
       if (!defined($l) || $l eq '') {
 	$l = $m->{word};
-	substr($l,1) = lc(substr($l,1));
+	substr($l,1) = lc(substr($l,1)) if ($l ne '');
       }
-      $m->{lemma} = $l;
     }
+    #$l = ucfirst($l) if ($t eq 'NE' || $t eq 'NN');
+    $m->{lemma} = $l;
   }
 
   ##-- return

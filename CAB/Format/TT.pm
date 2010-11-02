@@ -146,7 +146,7 @@ sub parseTTString {
       push(@$s, $tok=bless({text=>$text},'DTA::CAB::Token'));
       foreach $fieldi (0..$#fields) {
 	$field = $fields[$fieldi];
-	if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] off=(\d+) len=(\d+)$/)) {
+	if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] (?:off=)?(\d+) (?:len=)?(\d+)$/)) {
 	  ##-- token: field: loc
 	  $tok->{loc} = { off=>$1,len=>$2 };
 	}
@@ -195,8 +195,12 @@ sub parseTTString {
 	  ##-- token: field: moot/analysis|dmoot/analysis
 	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 	}
+	elsif ($field =~ m/^\[(toka)\]\s?(.*)$/) {
+	  ##-- token: field: other known list field: (toka)
+	  push(@{$tok->{$1}}, $2);
+	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
-	  ##-- token: field: unknown named field "+[$name] $val", parse into $tok->{other}{$name} = \@vals
+	  ##-- token: field: unknown named field "[$name] $val", parse into $tok->{other}{$name} = \@vals
 	  push(@{$tok->{other}{$1}}, $2);
 	}
 	else {
