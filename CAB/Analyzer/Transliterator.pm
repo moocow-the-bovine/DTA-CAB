@@ -107,7 +107,7 @@ sub analyzeTypes {
 	    $l  =~ m([^\x{00}-\x{ff}]) #)
 	   ) {
 	  ##-- sanity check
-	  $xlit->logwarn("analyzeToken(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
+	  $xlit->logwarn("analyzeTypes(): transliteration resulted in non-latin-1 string: '$l' for utf-8 '$w'");
 	}
 
 	##-- set properties
@@ -154,7 +154,6 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
   
  $bool = $xl->ensureLoaded();
  
- $xl->analyzeToken($tok);
 
 =cut
 

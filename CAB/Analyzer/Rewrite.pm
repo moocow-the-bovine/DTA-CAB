@@ -66,7 +66,6 @@ DTA::CAB::Analyzer::Rewrite - rewrite analysis via Gfsm::XL cascade
  
  $rw = DTA::CAB::Analyzer::Rewrite->new(%args);
  
- $rw->analyzeToken($tok);
 
 =cut
 

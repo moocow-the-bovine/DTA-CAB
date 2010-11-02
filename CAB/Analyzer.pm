@@ -9,8 +9,6 @@ use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
-use Data::Dumper;
-use XML::LibXML;
 use Carp;
 use strict;
 
