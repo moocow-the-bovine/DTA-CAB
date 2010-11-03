@@ -68,6 +68,12 @@ sub toDocument {
 }
 
 
+## $thingy = $obj->TO_JSON()
+##  + annoying wrapper for JSON::XS
+sub TO_JSON {
+  return { %{$_[0]} };
+}
+
 1; ##-- be happy
 
 __END__

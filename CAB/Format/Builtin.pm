@@ -14,11 +14,13 @@ use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Text;
 #use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;
+use DTA::CAB::Format::YAML;
+use DTA::CAB::Format::JSON;
 use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlNative; ##-- load first to avoid clobbering '.xml' extension
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
-use DTA::CAB::Format::XmlVz;
+#use DTA::CAB::Format::XmlVz;
 use strict;
 
 1; ##-- be happy

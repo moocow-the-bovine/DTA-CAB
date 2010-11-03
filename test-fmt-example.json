@@ -1,0 +1,149 @@
+{
+   "body" : [
+      {
+         "tokens" : [
+            {
+               "lts" : [
+                  {
+                     "w" : 0,
+                     "hi" : "vi"
+                  }
+               ],
+               "msafe" : "1",
+               "text" : "wie",
+               "xlit" : {
+                  "latin1Text" : "wie",
+                  "isLatin1" : "1",
+                  "isLatinExt" : "1"
+               },
+               "morph" : [
+                  {
+                     "w" : 0,
+                     "hi" : "wie[_ADV]"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "wie[_KON]"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "wie[_KOKOM]"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "wie[_KOUS]"
+                  }
+               ],
+               "eqpho" : [
+                  {
+                     "w" : 0,
+                     "hi" : "Wie"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "wie"
+                  }
+               ]
+            },
+            {
+               "lts" : [
+                  {
+                     "w" : 0,
+                     "hi" : "?2de"
+                  }
+               ],
+               "msafe" : "0",
+               "text" : "oede",
+               "xlit" : {
+                  "latin1Text" : "oede",
+                  "isLatin1" : "1",
+                  "isLatinExt" : "1"
+               },
+               "eqpho" : [
+                  {
+                     "w" : 0,
+                     "hi" : "Oede"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "Öde"
+                  },
+                  {
+                     "w" : 0,
+                     "hi" : "öde"
+                  }
+               ],
+               "rw" : [
+                  {
+                     "w" : "1",
+                     "hi" : "öde",
+                     "lts" : [
+                        {
+                           "w" : 0,
+                           "hi" : "?2de"
+                        }
+                     ],
+                     "morph" : [
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJD]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJA][pos][sg][nom]*[weak]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJA][pos][sg][nom][fem][strong_mixed]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJA][pos][sg][acc][fem]*"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJA][pos][sg][acc][neut][weak]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öde[_ADJA][pos][pl][nom_acc]*[strong]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öd~en[_VVFIN][first][sg][pres][ind]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öd~en[_VVFIN][first][sg][pres][subjI]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öd~en[_VVFIN][third][sg][pres][subjI]"
+                        },
+                        {
+                           "w" : 0,
+                           "hi" : "öd~en[_VVIMP][sg]"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "lts" : [
+                  {
+                     "w" : 0,
+                     "hi" : ""
+                  }
+               ],
+               "msafe" : "1",
+               "text" : "!",
+               "xlit" : {
+                  "latin1Text" : "!",
+                  "isLatin1" : "1",
+                  "isLatinExt" : "1"
+               }
+            }
+         ]
+      }
+   ]
+}
