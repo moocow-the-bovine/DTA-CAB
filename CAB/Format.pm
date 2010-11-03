@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Base class for datum I/O
 
 package DTA::CAB::Format;
@@ -795,21 +795,31 @@ Subclass documentation:
 
 convenience package: load all built-in DTA::CAB::Format subclasses
 
+=item L<DTA::CAB::Format::Storable|DTA::CAB::Format::JSON>
+
+Abstract datum parser|formatter for JSON I/O.
+If you have the JSON::XS module installed, this module provides
+the fastest I/O of all available human-readable parser|formatter classes.
+
 =item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
 
-Datum parser|formatter: perl code via Data::Dumper, eval()
+Datum parser|formatter: perl code via Data::Dumper, eval().
 
 =item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
 
-Datum parser using Storable::freeze() & co.
+Datum parser|formatter using Storable::freeze() & co.
 
 =item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
 
-Datum parser: verbose human-readable text
+Datum parser|formatter: verbose human-readable text (deprecated in favor of YAML)
 
 =item L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>
 
-Datum parser: one-token-per-line text
+Datum parser|formatter: "vertical" text, one token per line.
+
+=item L<DTA::CAB::Format::Storable|DTA::CAB::Format::YAML>
+
+Abstract datum parser|formatter for YAML I/O.
 
 =item L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>
 
@@ -827,7 +837,7 @@ Datum parser|formatter: XML (perl-like)
 
 =item L<DTA::CAB::Format::XmlRpc|DTA::CAB::Format::XmlRpc>
 
-Datum parser: XML-RPC using RPC::XML
+Datum parser|formatter: XML-RPC using RPC::XML
 
 =back
 
@@ -845,7 +855,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009, 2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,
