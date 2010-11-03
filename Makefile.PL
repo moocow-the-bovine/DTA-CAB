@@ -36,6 +36,7 @@ WriteMakefile
 		   'dta-cab-txt2tt.perl',
 		   'dta-cab-tt2txt.perl',
 		   'dta-cab-tt2csv.perl',
+		   'dta-cab-tw2cab.perl',
 		   'dta-cab-analyze.perl',
 		   'dta-cab-cachegen.perl',
 		   'dta-cab-convert.perl',
