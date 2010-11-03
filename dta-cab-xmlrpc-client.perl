@@ -272,23 +272,8 @@ else {
 $cli->disconnect();
 
 ##-- profiling
-sub si_str {
-  my $x = shift;
-  return sprintf("%.2fK", $x/10**3)  if ($x >= 10**3);
-  return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);
-  return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);
-  return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);
-  return sprintf("%.2f", $x);
-}
-if ($doProfile) {
-  profile_stop();
-  my $elapsed = profile_elapsed();
-  my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : 0);
-  my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : 0);
-  print STDERR
-    (sprintf("%s: %d tok, %d chr in %.2f sec: %s tok/sec ~ %s chr/sec\n",
-	     $prog, $ntoks,$nchrs, $elapsed, $toksPerSec,$chrsPerSec));
-}
+DTA::CAB::Logger->logProfile('info', profile_elapsed, $ntoks, $nchrs) if ($doProfile);
+DTA::CAB::Logger->trace("client exiting normally.");
 
 __END__
 =pod

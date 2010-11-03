@@ -8,6 +8,7 @@ use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
 use Getopt::Long qw(:config no_ignore_case);
+use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
 ##==============================================================================
@@ -35,6 +36,7 @@ our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
+our $doProfile   = 1;
 
 our $outfile = '-';
 
@@ -44,7 +46,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
-	   'profile|prof!' => \$doprofile, ##-- compatibility only
+	   'profile|prof!' => \$doProfile,
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
@@ -98,15 +100,42 @@ DTA::CAB->debug("using output format class ", ref($ofmt));
 ##======================================================
 ## Churn data
 
+##-- profiling
+our $ielapsed = 0;
+our $oelapsed = 0;
+
 our ($file,$doc);
+our ($ntoks,$nchrs) = (0,0);
 push(@ARGV,'-') if (!@ARGV);
 foreach $file (@ARGV) {
+
+  $t0 = [gettimeofday];
   $doc = $ifmt->parseFile($file)
     or die("$0: parse failed for input file '$file': $!");
-  $ofmt->putDocumentRaw($doc);
-}
-$ofmt->toFile($outfile);
+  $t1 = [gettimeofday];
 
+  $ofmt->putDocumentRaw($doc);
+
+  if ($doProfile) {
+    $ielapsed += tv_interval($t0,$t1);
+    $oelapsed  += tv_interval($t1,[gettimeofday]);
+
+    $ntoks += $doc->nTokens;
+    $nchrs += (-s $file) if ($file ne '-');
+  }
+}
+$t1 = [gettimeofday];
+$ofmt->toFile($outfile);
+$oelapsed  += tv_interval($t1,[gettimeofday]);
+
+##-- profiling
+if ($doProfile) {
+  $ifmt->info("Profile: input:");
+  $ifmt->logProfile('info', $ielapsed, $ntoks, $nchrs);
+
+  $ofmt->info("Profile: output:");
+  $ofmt->logProfile('info', $oelapsed, $ntoks, $nchrs);
+}
 
 __END__
 =pod
@@ -124,6 +153,7 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- set default log level
+  -profile , -noprofile           ##-- do/don't profile I/O classes (default=do)
 
  I/O Options
   -input-class CLASS              ##-- select input parser class (default: Text)

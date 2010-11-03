@@ -1,10 +1,11 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Logger.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: DTA::CAB logging (using Log::Log4perl)
 
 package DTA::CAB::Logger;
+use DTA::CAB::Utils ':profile';
 use Carp;
 use Log::Log4perl;
 use File::Basename;
@@ -272,6 +273,16 @@ sub cabLogOptions {
      'log-syslog|syslog|ls!' => \$defaultLogOpts{syslog},
     );
 }
+
+##==============================================================================
+## Utils: Profiling
+##==============================================================================
+
+## undef = $logger->logProfile($level, $elapsed_secs, $ntoks, $nchrs)
+sub logProfile {
+  $_[0]->vlog($_[1], profile_str(@_[2..$#_]));
+}
+
 
 1; ##-- be happy
 

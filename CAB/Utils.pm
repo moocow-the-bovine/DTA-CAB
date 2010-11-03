@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Utils.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: generic DTA::CAB utilities
 
 package DTA::CAB::Utils;
@@ -17,12 +17,13 @@ use strict;
 our @ISA = qw(Exporter);
 our @EXPORT= qw();
 our %EXPORT_TAGS =
-  (
-   xml  => [qw(xml_safe_string)],
-   data => [qw(path_value)],
-   encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
-  );
-our @EXPORT_OK = [map {@$_} values(%EXPORT_TAGS)];
+    (
+     xml  => [qw(xml_safe_string)],
+     data => [qw(path_value)],
+     encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
+     profile => [qw(si_str profile_str)],
+    );
+our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
 
 ##==============================================================================
@@ -143,6 +144,48 @@ sub path_value {
   }
   return $obj;
 }
+
+##======================================================
+## Profiling
+
+## $str = si_str($float)
+sub si_str {
+  my $x = shift;
+  return sprintf("%.2fY", $x/10**24) if ($x >= 10**24);  ##-- yotta
+  return sprintf("%.2fZ", $x/10**21) if ($x >= 10**21);  ##-- zetta
+  return sprintf("%.2fE", $x/10**18) if ($x >= 10**18);  ##-- exa
+  return sprintf("%.2fP", $x/10**15) if ($x >= 10**15);  ##-- peta
+  return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);  ##-- tera
+  return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);   ##-- giga
+  return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);   ##-- mega
+  return sprintf("%.2fk", $x/10**3)  if ($x >= 10**3);   ##-- kilo
+  return sprintf("%.2f",  $x)        if ($x >= 0);       ##-- (natural units)
+  return sprintf("%.2fm", $x*10**3)  if ($x >= 10**-3);  ##-- milli
+  return sprintf("%.2fu", $x*10**6)  if ($x >= 10**-6);  ##-- micro
+  return sprintf("%.2fn", $x*10**9)  if ($x >= 10**-9);  ##-- nano
+  return sprintf("%.2fp", $x*10**12) if ($x >= 10**-12); ##-- pico
+  return sprintf("%.2ff", $x*10**15) if ($x >= 10**-15); ##-- femto
+  return sprintf("%.2fa", $x*10**18) if ($x >= 10**-18); ##-- atto
+  return sprintf("%.2fz", $x*10**21) if ($x >= 10**-21); ##-- zepto
+  return sprintf("%.2fy", $x*10**24) if ($x >= 10**-24); ##-- yocto
+  return sprintf("%.2g", $x); ##-- default
+}
+
+## $str = profile_str($elapsed_secs, $ntoks, $nchrs)
+sub profile_str {
+  my ($elapsed,$ntoks,$nchrs) = @_;
+  my $toksPerSec = si_str($ntoks>0 && $elapsed>0 ? ($ntoks/$elapsed) : -0);
+  my $chrsPerSec = si_str($nchrs>0 && $elapsed>0 ? ($nchrs/$elapsed) : -0);
+  my $d = int($elapsed/(60*60*24));
+  my $h = int($elapsed/(60*60)) % 24;
+  my $m = int($elapsed/60) % 60;
+  my $s = ($elapsed % 60) + ($elapsed-(60*int($elapsed/60))-($elapsed % 60));
+  my $timestr = sprintf("%dd %dh %dm %.2fs (%.2fs)", $d,$h,$m,$s,$elapsed);
+  $timestr =~ s/^(?:0[dhm]\s*)+//;
+  return sprintf("%d tok, %d chr in %s: %s tok/sec ~ %s chr/sec\n",
+		 $ntoks,$nchrs, $timestr, $toksPerSec,$chrsPerSec);
+}
+
 
 1; ##-- be happy
 

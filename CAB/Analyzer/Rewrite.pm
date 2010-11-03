@@ -26,6 +26,8 @@ sub new {
 			      analyzeGet => '$_[0]{msafe} ? undef : ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text})',
 			      wantAnalysisLo => 0,
 			      tolowerNI => 1,
+			      attInput => 0,
+			      attOutput => 0,
 
 			      ##-- analysis parameters
 			      max_weight => 1e38,

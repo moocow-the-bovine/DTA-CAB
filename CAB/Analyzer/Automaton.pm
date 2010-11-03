@@ -73,9 +73,9 @@ our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
 ##     toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
 ##     bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
 ##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
+##     attOutput      => $bool, ##-- if true, generate AT&T escapes in output (default=1)
 ##     allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
 ##                              ##   : useful: /(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
-##     allowWordRegex => $re,   ##-- if defined, only source strings matching $re will be analyzed (default: none)
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -118,8 +118,8 @@ sub new {
 			      toupperI       => 0,
 			      bashWS         => '_',
 			      attInput       => 0,
+			      attOutput      => 1,
 			      allowTextRegex => undef, #'(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
-			      allowWordRegex => undef,
 
 			      ##-- analysis I/O
 			      analyzeSrc => 'text',
@@ -331,27 +331,16 @@ sub canAnalyze {
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
-##------------------------------------------------------------------------
-## Methods: Analysis: v1.x: Closure Utilities (optional)
 
-## $closure = $anl->getAnalyzeWordClosure()
-##  + re-computes closure $closure for analyzing single words
-##  + returned closure is callable as:
-##      $analyses = $closure->($textString,\%analyzeOpts)
-##  + returned analyses have the form:
-##      [ \%analysis1, ..., \%analysisN ]
-##    - each \%analysisI is a HASH:
-##      \%analysisI = { lo=>$analysisLowerString, hi=>$analysisUpperString, w=>$analysisWeight, ... }
-##    - if $opts->{wantAnalysisLo}    is true, 'lo'    key will be included in any %analysisI, otherwise not (default here=false)
-##    - if $opts->{wantAnalysisLemma} is true, 'lemma' key will be included in any %analysisI, otherwise not (default here=false)
-##  + implicitly loads analysis data (automaton and labels)
-sub getAnalyzeWordClosure {
-  my $aut = shift;
-
-  ##-- load
-  $aut->ensureLoaded();
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
+sub analyzeTypes {
+  my ($aut,$doc,$types,$opts) = @_;
+  $types = $doc->types if (!$types);
 
   ##-- setup common variables
+  my $aget   = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
+  my $aset   = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
   my $dict   = $aut->dictOk ? $aut->{dict}->dictHash : undef;
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
@@ -361,103 +350,125 @@ sub getAnalyzeWordClosure {
   my $laba   = $aut->{laba};
   my $labenc = $aut->{labenc};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
+  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
 
-  my $allowWordRegex = defined($aut->{allowWordRegex}) ? qr($aut->{allowWordRegex}) : undef;
+  ##-- object analysis options
+  my $check_symbols = $aut->{check_symbols};
+  my $auto_connect = $aut->{auto_connect};
+  my $tolower = $aut->{tolower};
+  my $tolowerNI = $aut->{tolowerNI};
+  my $toupperI = $aut->{toupperI};
+  my $bashWS = $aut->{bashWS};
+  my $attInput = $aut->{attInput};
+  my $attOutput = $aut->{attOutput};
+  my $wantAnalysisLo = $aut->{wantAnalysisLo};
+  my $wantAnalysisLemma = $aut->{wantAnalysisLemma};
 
   ##-- ananalysis options
-  my @analyzeOptionKeys = (qw(check_symbols auto_connect),
-			   qw(tolower tolowerNI toupperI bashWS attInput),
-			   qw(wantAnalysisLo wantAnalysisLemma),
-			   qw(max_paths max_weight max_ops),
-			  );
+  ##    + we use a local options hash \%wopts to safely clobber 'src' key, needed by setLookupOptions()
+  my @userOptions = (
+		     ##-- "safe" runtime options
+		     #(none)
+		    );
+  my @objectOptions = (
+		       #qw(check_symbols auto_connect),
+		       #qw(tolower tolowerNI toupperI bashWS attInput attOutput),
+		       #qw(wantAnalysisLo wantAnalysisLemma),
+		       qw(max_paths max_weight max_ops),
+		      );
 
-  my ($w,$opts,$uword,$ulword,@wlabs, $analyses,$lemma);
-  return sub {
-    ($w,$opts) = @_;
+  ##-- local options hash (we clobber 'src' key for use in setLookupOptions())
+  my $wopts    = { %{$opts||{}} };
+  $wopts->{$_} = $aut->{$_} foreach (@objectOptions, grep {!defined($opts->{$_})} @userOptions);
 
-    ##-- maybe ignore this token
-    return undef if (defined($allowWordRegex) && $w !~ $allowWordRegex);
+  my ($tok,@w,$w,$uword,$ulword,@wlabs,@wa,$ua,$lemma);
+  foreach $tok (values(%$types)) {
+    next if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex); ##-- text-sensitive regex
+    @w  = grep {defined($_)} $aget->($tok);
+    @wa = qw();
+    foreach $w (@w) {
+      ##-------- BEGIN analyzeWord
+      $wopts->{src} = $w;            ##-- set $wopts->{src} (hack for setLookupOptions())
+      $aut->setLookupOptions($wopts) if ($aut->can('setLookupOptions'));
 
-    $opts = $opts ? {%$opts} : {}; ##-- ensure $opts hash exists: copy / create
-    $opts->{src} = $w;             ##-- set $opts->{src} (hack for setLookupOptions())
+      ##---- analyze
+      ##-- normalize
+      $uword = $w;
+      if    ($tolower)   { $uword = lc($uword); }
+      elsif ($tolowerNI) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
+      if    ($toupperI)  { $uword = ucfirst($uword); }
+      if    (!defined($bashWS) || $bashWS) { $uword =~ s/\s+/$wopts->{bashWS}/g; }
 
-    ##-- set default options
-    $opts->{$_} = $aut->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-    $aut->setLookupOptions($opts) if ($aut->can('setLookupOptions'));
-    $analyses = [];
-
-    ##---- analyze
-    ##-- normalize word
-    $uword = $w;
-    if    ($opts->{tolower})   { $uword = lc($uword); }
-    elsif ($opts->{tolowerNI}) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
-    if    ($opts->{toupperI})  { $uword = ucfirst($uword); }
-    if    (defined($opts->{bashWS})) { $uword =~ s/\s+/$opts->{bashWS}/g; }
-
-    ##-- check for (normalized) word in dict
-    if ($dict && exists($dict->{$uword})) {
-      push(@$analyses,
-	   sort {($a->{w}||0) <=> ($b->{w}||0)}
-	   map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
-	   grep {$_ ne ''}
-	   split(/\t/,$dict->{$uword})
-	  );
-    }
-    elsif ($fst_ok) {
-      ##-- not in dict: fst lookup (if fst is kosher)
-
-      ##-- get labels
-      if ($opts->{attInput}) {
-	##-- get labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
-	$ulword = $uword;
-	utf8::downgrade($ulword);
-	@wlabs = (@{$lab->string_to_labels($ulword, $opts->{check_symbols}, 1)}, @eowlab);
+      ##-- dict lookup (normalized)
+      if ($dict && defined($ua=$dict->{$uword})) {
+	push(@wa,
+	     sort {($a->{w}||0) <=> ($b->{w}||0)}
+	     map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
+	     grep {$_ ne ''}
+	     split(/\t/,$ua)
+	    );
       }
-      elsif ($opts->{check_symbols}) {
-	##-- get labels: by character: verbose
-	@wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
-	foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
-	  $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+      elsif ($fst_ok) {
+	##-- fst lookup (if fst available and no dict analysis was found)
+
+	##-- fst: get labels
+	if ($attInput) {
+	  ##-- fst: labels: att-style (requires gfsm v0.0.10-pre11, gfsm-perl v0.0217)
+	  $ulword = $uword;
+	  utf8::downgrade($ulword);
+	  @wlabs = (@{$lab->string_to_labels($ulword, $check_symbols, 1)}, @eowlab);
 	}
-	@wlabs = grep {defined($_)} @wlabs;
-      }
-      else {
-	##-- get labels: by character: quiet
-	@wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
-      }
-
-      ##-- fst lookup
-      $aut->{fst}->lookup(\@wlabs, $result);
-      $result->_connect() if ($opts->{auto_connect});
-      #$result->_rmepsilon() if ($opts->{auto_rmeps});
-
-      ##-- parse analyses
-      push(@$analyses,
-	   map {
-	     {(
-	       ($opts->{wantAnalysisLo} ? (lo=>$uword) : qw()),
-	       'hi'=> (defined($labenc)
-		       ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
-		       : $lab->labels_to_string($_->{hi},0,1)),
-	       'w' => $_->{w},
-	      )}
-	   } @{$result->paths($Gfsm::LSUpper)}
-	  );
-
-    }
-    #else { ; } ##-- no dictionary entry and no FST: do nothing
-    return undef if (!@$analyses); ##-- check for empty analyses
-
-    ##-- parse lemmata
-    if ($opts->{wantAnalysisLemma}) {
-      foreach (@$analyses) {
-	$lemma = $_->{hi};
-	if (defined($lemma) && $lemma ne '') {
-	  $lemma =~ s/\[.*$//;  ##-- trim everything after first non-character symbol
-	  $lemma =~ s/(?:\/\w+)|(?:[\\\¬\~\|\=\+\#])//g;
-	  substr($lemma,1) = lc(substr($lemma,1));
+	elsif ($check_symbols) {
+	  ##-- fst: labels: by character: verbose
+	  @wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
+	  foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
+	    $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+	  }
+	  @wlabs = grep {defined($_)} @wlabs;
 	}
 	else {
+	  ##-- fst: labels: by character: quiet
+	  @wlabs = grep {defined($_)} (@$labc[unpack('U0U*',$uword)],@eowlab);
+	}
+
+	##-- fst: lookup
+	$aut->{fst}->lookup(\@wlabs, $result);
+	$result->_connect() if ($auto_connect);
+	#$result->_rmepsilon() if ($wopts->{auto_rmeps});
+
+	##-- parse analyses
+	push(@wa,
+	     map {
+	       {(
+		 ($wantAnalysisLo ? (lo=>$uword) : qw()),
+		 'hi'=> (defined($labenc)
+			 ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
+			 : $lab->labels_to_string($_->{hi},0,1)),
+		 'w' => $_->{w},
+		)}
+	     } @{$result->paths($Gfsm::LSUpper)}
+	    );
+
+      }
+    }##-- /foreach $w (@w)
+
+    ##-- un-escape output
+    if (!$attOutput) {
+      foreach (@wa) {
+	$_->{hi} =~ s/\\(.)/$1/g;
+	$_->{hi} =~ s/\[([^\]]+)\]/$1/g;
+      }
+    }
+
+    ##-- parse lemmata
+    if ($wantAnalysisLemma) {
+      foreach (@wa) {
+	$lemma = $_->{hi};
+	if (defined($lemma) && $lemma ne '') {
+	  $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
+	  $lemma =~ s/(?:\/\w+)|(?:[\\\¬\~\|\=\+\#])//g;
+	  substr($lemma,1) = lc(substr($lemma,1));
+	} else {
 	  $lemma = $uword;
 	}
 	$lemma =~ s/^\s*//;
@@ -466,39 +477,10 @@ sub getAnalyzeWordClosure {
 	$_->{lemma} = $lemma;
       }
     }
+    ##-------- END analyzeWord
 
-    ##-- return
-    return $analyses;
-  };
-}
-
-
-## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
-##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
-##  + calls $anl->getAnalyzeWordClosure()->($_) foreach values(%types)
-sub analyzeTypes {
-  my ($aut,$doc,$types,$opts) = @_;
-  $types = $doc->types if (!$types);
-
-  ##-- common variables
-  my $aword = $aut->analyzeClosure('Word') or return $doc; ##-- can't analyze?
-  my $aget  = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
-  my $aset  = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
-
-  my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
-
-  my ($tok,@w,$w,$wa,$a);
-  foreach $tok (values(%$types)) {
-    next if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex); ##-- text-sensitive regex
-    @w = grep {defined($_)} $aget->($tok);
-    next if (!@w);  ##-- accessor returned undef: skip this token
-    $a = [];
-    foreach $w (@w) {
-      $wa = $aword->($w,$opts);
-      push(@$a,@$wa) if ($wa);
-    }
-    undef($a) if (!@$a);
-    $aset->($tok,$a);
+    ##-- set analyses
+    $aset->($tok, (@wa ? [@wa] : undef));
   }
 
   return $doc;
