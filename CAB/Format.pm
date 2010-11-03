@@ -795,7 +795,7 @@ Subclass documentation:
 
 convenience package: load all built-in DTA::CAB::Format subclasses
 
-=item L<DTA::CAB::Format::Storable|DTA::CAB::Format::JSON>
+=item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
 If you have the JSON::XS module installed, this module provides
@@ -817,7 +817,7 @@ Datum parser|formatter: verbose human-readable text (deprecated in favor of YAML
 
 Datum parser|formatter: "vertical" text, one token per line.
 
-=item L<DTA::CAB::Format::Storable|DTA::CAB::Format::YAML>
+=item L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>
 
 Abstract datum parser|formatter for YAML I/O.
 
