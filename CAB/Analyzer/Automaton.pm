@@ -397,7 +397,7 @@ sub analyzeTypes {
       if    ($tolower)   { $uword = lc($uword); }
       elsif ($tolowerNI) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
       if    ($toupperI)  { $uword = ucfirst($uword); }
-      if    (!defined($bashWS) || $bashWS) { $uword =~ s/\s+/$wopts->{bashWS}/g; }
+      if    (defined($bashWS)) { $uword =~ s/\s+/$bashWS/g; }
 
       ##-- dict lookup (normalized)
       if ($dict && defined($ua=$dict->{$uword})) {
