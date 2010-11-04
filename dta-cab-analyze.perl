@@ -173,7 +173,7 @@ sub analyzeBlock {
     $ntoks += $doc->nTokens;
     $nchrs += length($$inbufr);
     ##-- show running profile information
-    showProfile();
+    DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
   }
 }
 
