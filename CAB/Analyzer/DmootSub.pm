@@ -54,22 +54,24 @@ sub analyzeSentences {
   foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (!defined($dm=$tok->{$dmkey}));
     $dmtag = $dm->{tag};
-    $dmtyp = $dmtypes->{$dmtag} = bless({ text=>$dmtag }, 'DTA::CAB::Token');
+    $dmtyp = $dmtypes->{$dmtag};
+    $dmtyp = $dmtypes->{$dmtag} = bless({ text=>$dmtag }, 'DTA::CAB::Token') if (!defined($dmtyp));
 
     ##-- check for existing analyses
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
     if    ($tok->{toka} && @{$tok->{toka}}) {
       ##-- existing analyses: toka
-      $dmtyp->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
+      $dm->{morph} = $dmtyp->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
+      $dm->{tag}   = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text}; ##-- force literal text for tokenizer-analyzed tokens
     }
     elsif ($dmtag eq $txt) {
       ##-- existing analyses: morph: from text
-      $dmtyp->{morph} = $tok->{morph};
+      $dm->{morph} = $dmtyp->{morph} = $tok->{morph};
     }
     else {
       foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
 	##-- existing analyses: morph: from rewrite
-	$dmtyp->{morph} = $_->{morph};
+	$dm->{morph} = $dmtyp->{morph} = $_->{morph};
 	last;
       }
     }
@@ -146,14 +148,24 @@ sub ensureLoaded {
 ## $bool = $ach->canAnalyze()
 ## $bool = $ach->canAnalyze(\%opts)
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
-##  + returns true if ANY analyzers in the chain do to
-sub canAnalyze {
+##  + override always returns 1 because of 'toka' hack
+sub canAnalyze { return 1; }
+
+sub canAnalyzeOLD {
   my $ach = shift;
   @{$ach->{chain}} = grep {$_ && $_->canAnalyze} @{$ach->chain(@_)};
   foreach (@{$ach->chain(@_)}) {
     return 1 if ($_->canAnalyze);
   }
   return 1;
+}
+
+## $bool = $anl->enabled(\%opts)
+##  + returns $anl->{enabled} and disjunction over all sub-analyzers
+##  + returns true if just $ach is enabled
+sub enabled {
+  my $ach = shift;
+  return $ach->DTA::CAB::Analyzer::enabled(@_); #&& scalar(grep {$_->enabled(@_)} @{$ach->subAnalyzers(@_)});
 }
 
 
