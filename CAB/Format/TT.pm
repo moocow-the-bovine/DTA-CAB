@@ -159,7 +159,7 @@ sub parseTTString {
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
 	}
 	elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
-	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|...)
+	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph)
 	  ($fkey,$fval) = ($1,$2);
 	  if ($fkey =~ s/^rw\///) {
 	    $tok->{rw} = [ {} ] if (!$tok->{rw});
@@ -282,6 +282,9 @@ sub putToken {
 
   ##-- character list
   #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
+
+  ##-- tokenizer-supplied analyses
+  $out .= join('', map {"\t[toka] $_"} grep {defined($_)} @{$tok->{toka}}) if ($tok->{toka});
 
   ##-- Transliterator ('xlit')
   $out .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
