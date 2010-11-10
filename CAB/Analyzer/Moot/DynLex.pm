@@ -164,7 +164,7 @@ BEGIN { *_parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
 sub parseDynAnalysesSafe {
   return
     ($_[0]{xlit} ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text'))
-      if ($_[0]{msafe});
+      if ($_[0]{msafe} || ($_[0]{toka} && @{$_[0]{toka}}));
   return
     (($_[0]{xlit}  ? (_parseAnalysis($_[0]{xlit}{latin1Text},src=>'xlit')) : _parseAnalysis($_[0]{text},src=>'text')),
      #($_[0]{eqpho} ? (map {_parseAnalysis($_,src=>'eqpho')} @{$_[0]{eqpho}}) : qw()),
