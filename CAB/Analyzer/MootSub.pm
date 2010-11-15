@@ -27,6 +27,14 @@ sub new {
   return $tp;
 }
 
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + override: only allow analyzeSentences()
+sub doAnalyze {
+  my $anl = shift;
+  return 0 if (defined($_[1]) && $_[1] ne 'Sentences');
+  return $anl->SUPER::doAnalyze(@_);
+}
+
 ## $doc = $anl->Sentences($doc,\%opts)
 ##  + post-processing for 'moot' object
 sub analyzeSentences {

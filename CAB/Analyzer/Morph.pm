@@ -23,7 +23,8 @@ sub new {
 			      ##-- analysis selection
 			      label => 'morph',
 			      wantAnalysisLo => 0,
-			      wantAnalysisLemma => 1,
+			      #wantAnalysisLemma => 1, ##-- default=0
+			      wantAnalysisLemma => 0, ##-- default=0
 
 			      ##-- user args
 			      @_

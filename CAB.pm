@@ -22,6 +22,8 @@ use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
 #use DTA::CAB::Analyzer::EqPho::Cascade;  ##-- via Gfsm::XL (unused)
 #use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
 
+use DTA::CAB::Analyzer::Lemmatizer; ##-- tagh-lemma extractor
+
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;

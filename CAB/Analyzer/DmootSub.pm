@@ -19,6 +19,7 @@ our @ISA = qw(DTA::CAB::Chain);
 ##     chain => [$a1, ..., $aN], ##-- sub-analysis chain (e.g. chain=>[$morph])
 ##  + new object structure:
 ##     dmootLabel => $label,        ##-- label of source dmoot object (default='dmoot')
+##     standalone => $bool,         ##-- if true, no sub-analysis or morph parsing will be done (default=false)
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
@@ -28,11 +29,20 @@ sub new {
 
 			       ##-- analysis selection
 			       dmootLabel => 'dmoot',
+			       standalone => 0,
 
 			       ##-- user args
 			       @_
 			      );
   return $asub;
+}
+
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + override: only allow analyzeSentences()
+sub doAnalyze {
+  my $anl = shift;
+  return 0 if (defined($_[1]) && $_[1] ne 'Sentences');
+  return $anl->SUPER::doAnalyze(@_);
 }
 
 ## $doc = $anl->Sentences($doc,\%opts)
@@ -47,6 +57,7 @@ sub analyzeSentences {
 
   ##-- get dmoot target types
   my $dmkey = $asub->{dmootLabel};
+  my $standalone = $asub->{standalone};
   my $dmtypes = {};
   my $udmtypes = {};
   my ($tok,$txt,$dm,$dmtag,$dmtyp);
@@ -54,53 +65,57 @@ sub analyzeSentences {
   foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (!defined($dm=$tok->{$dmkey}));
     $dmtag = $dm->{tag};
-    $dmtyp = $dmtypes->{$dmtag};
-    $dmtyp = $dmtypes->{$dmtag} = bless({ text=>$dmtag }, 'DTA::CAB::Token') if (!defined($dmtyp));
 
     ##-- check for existing analyses
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
     if    ($tok->{toka} && @{$tok->{toka}}) {
       ##-- existing analyses: toka
-      $dm->{morph} = $dmtyp->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
+      $dm->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
       $dm->{tag}   = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text}; ##-- force literal text for tokenizer-analyzed tokens
     }
-    elsif ($dmtag eq $txt) {
-      ##-- existing analyses: morph: from text
-      $dm->{morph} = $dmtyp->{morph} = $tok->{morph};
-    }
-    else {
-      foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
-	##-- existing analyses: morph: from rewrite
-	$dm->{morph} = $dmtyp->{morph} = $_->{morph};
-	last;
+    elsif (!$standalone) {
+      $dmtyp = $dmtypes->{$dmtag};
+      $dmtyp = $dmtypes->{$dmtag} = { text=>$dmtag } if (!defined($dmtyp));
+      next if ($dmtyp->{morph} && @{$dmtyp->{morph}});
+
+      if ($dmtag eq $txt) {
+	##-- existing analyses: morph: from text
+	$dm->{morph} = $dmtyp->{morph} = $tok->{morph};
       }
+      else {
+	foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
+	  ##-- existing analyses: morph: from rewrite
+	  $dm->{morph} = $dmtyp->{morph} = $_->{morph};
+	  last;
+	}
+      }
+      ##-- oops... might need to re-analyze
+      $udmtypes->{$dmtag} = $dmtyp if (!$dmtyp->{morph} || !@{$dmtyp->{morph}});
     }
-
-    ##-- oops... might need to re-analyze
-    $udmtypes->{$dmtag} = $dmtyp if (!$dmtyp->{morph} || !@{$dmtyp->{morph}});
   }
-
 
   ##-- analyze remaining dmoot types
-  my ($sublabel);
-  foreach (@{$asub->{chain}}) {
-    #$sublabel = $asub->{label}.'_'.$_->{label};
-    $sublabel = $asub->{label};
-    next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
-    $_->{label} =~ s/^\Q$asub->{label}_\E//;  ##-- sanitize label ("dmoot_morph" --> "morph"), because it's also used as output key
-    $_->analyzeTypes($doc,$udmtypes,$opts);
-    $_->{label} = $sublabel;
-  }
+  if (!$standalone) {
+    my ($sublabel);
+    foreach (@{$asub->{chain}}) {
+      #$sublabel = $asub->{label}.'_'.$_->{label};
+      $sublabel = $asub->{label};
+      next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
+      $_->{label} =~ s/^\Q$asub->{label}_\E//;  ##-- sanitize label ("dmoot_morph" --> "morph"), because it's also used as output key
+      $_->analyzeTypes($doc,$udmtypes,$opts);
+      $_->{label} = $sublabel;
+    }
 
-  ##-- delete rewrite target type 'text'
-  delete($_->{text}) foreach (values %$dmtypes);
+    ##-- delete rewrite target type 'text'
+    delete($_->{text}) foreach (values %$dmtypes);
 
-  ##-- re-expand dmoot target fields (morph)
-  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
-    next if (!defined($dm=$tok->{$dmkey}));
-    $dmtag = $dm->{tag};
-    $dmtyp = $dmtypes->{$dmtag};
-    @$dm{keys %$dmtyp} = values %$dmtyp;
+    ##-- re-expand dmoot target fields (morph): UNKNOWN ONLY
+    foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+      next if (!defined($dm=$tok->{$dmkey})
+	       || !defined($dmtag=$dm->{tag})
+	       || !defined($dmtyp=$udmtypes->{$dmtag}));
+      @$dm{keys %$dmtyp} = values %$dmtyp;
+    }
   }
 
   ##-- return
@@ -109,9 +124,10 @@ sub analyzeSentences {
 
 ## @keys = $anl->typeKeys()
 ##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
-##  + override returns $anl->{dmootLabel}
+##  + override returns empty list
 sub typeKeys {
-  return $_[0]{dmootLabel};
+  #return $_[0]{dmootLabel};
+  return qw();
 }
 
 

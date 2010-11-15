@@ -308,6 +308,14 @@ sub parseMorphAnalyses {
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
 
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + override: only allow analyzeSentences()
+sub doAnalyze {
+  my $anl = shift;
+  return 0 if (defined($_[1]) && $_[1] ne 'Sentences');
+  return $anl->SUPER::doAnalyze(@_);
+}
+
 ## $doc = $anl->analyzeSentences($doc,\%opts)
 ##  + perform sentence-wise analysis of all sentences $doc->{body}[$si]
 ##  + no default implementation
