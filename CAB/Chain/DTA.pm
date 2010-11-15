@@ -71,7 +71,7 @@ sub new {
 sub setupChains {
   my $ach = shift;
   $ach->{rwsub}{chain} = [@$ach{qw(lts morph)}];
-  $ach->{dmootsub}{chain} = [@$ach{qw(morph)}];
+  $ach->{dmootsub}{chain} = [@$ach{qw(morph mlatin)}];
   my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {

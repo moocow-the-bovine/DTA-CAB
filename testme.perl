@@ -26,32 +26,45 @@ BEGIN {
 ##==============================================================================
 ## test: transliterator
 
+sub tok2tt {
+  return DTA::CAB::Format::TT->new->putToken($_[0])->toString;
+}
+sub tok2txt {
+  return DTA::CAB::Format::Text->new->putToken($_[0])->toString;
+}
+
 sub test_xlit {
-  our $xlit = DTA::CAB::Analyzer::Transliterator->new();
+  our $xlit = DTA::CAB::Analyzer::Unicruft->new();
 
   our $w0 = decode('latin1', 'foo');   ##-- $w0: ascii:  +latin1,+latinx,+native
-  our $x0 = $xlit->analyze(toToken($w0));
+  our $x0 = $xlit->analyzeToken(toToken($w0));
   #print "$w0: xml: ", $x0->xmlNode->toString(1), "\n";
   #print "$w0: ", $xlit->analysisText($x0), "\n";
   #print "$w0: ", $xlit->analysisXmlNode($x0)->toString(1), "\n";
-  print "$w0: ", $x0->xmlNode->toString(1), "\n";
+  print "$w0: ", tok2tt($x0);
 
   our $w1 = decode('utf8', "b\x{e4}r");   ##-- $w1: latin1: +latin1,+latinx,+native
-  our $x1 = $xlit->analyze(toToken($w1));
-  print "$w1: ", $x1->xmlNode->toString(1), "\n";
+  our $x1 = $xlit->analyzeToken(toToken($w1));
+  print "$w1: ", tok2tt($x1);
 
   our $w2 = "\x{0153}";                ##-- $w2: oe ligature: -latin1,+latinx,-native
-  our $x2 = $xlit->analyze(toToken($w2));
+  our $x2 = $xlit->analyzeToken(toToken($w2));
 
   our $w3 = "\x{03c0}\x{03b5}";        ##-- $w2: \pi \varepsilon (~"pe") : -latin1,-latinx,-native
-  our $x3 = $xlit->analyze(toToken($w3));
+  our $x3 = $xlit->analyzeToken(toToken($w3));
 
   our $w4 = decode('latin1',"\x{00e6}"); ##-- $w2: ae ligature: (~"ae") : +latin1,+latinx,-native (no: this *is* native...)
-  our $x4 = $xlit->analyze(toToken($w4));
+  our $x4 = $xlit->analyzeToken(toToken($w4));
+
+  our $w5 = decode('utf8',"Ba\x{cc}\x{88}r"); ##-- $w5: combining e above: +latin1,+latinx
+  our $x5 = $xlit->analyzeToken(toToken($w5));
+
+  our $w6 = decode('utf8',"\x{c5}\x{bf}eyn"); ##-- $w6: long s: +latin1,+latinx
+  our $x6 = $xlit->analyzeToken(toToken($w6));
 
   print "done: test_xlit()\n";
 }
-#test_xlit();
+test_xlit();
 
 
 ##==============================================================================
@@ -62,7 +75,7 @@ sub test_mootm_dictonly {
   our $morph = DTA::CAB::Analyzer::Morph->new(fstFile=>undef, labFile=>'mootm-stts.lab', dictFile=>'mootm-tagh.dict');
   $morph->ensureLoaded();
   our $w = 'Hilfe';
-  our $x = $morph->analyze(toToken($w));
+  our $x = $morph->analyzeToken(toToken($w));
   print join("\t", $w, map {"$_->[0] <$_->[1]>"} @{$x->{morph}}), "\n";
   print map { "\t$w : $_->[0] <$_->[1]>\n" } @{$x->{morph}};
   print "[xml] : $w\n", $x->xmlNode->toString(1), "\n";
@@ -194,7 +207,7 @@ sub test_chain_v1 {
      "$0\[v1]:\n", $fmt->flush->putToken($tok1)->toString,
     );
 }
-test_chain_v1;
+#test_chain_v1;
 
 
 ##==============================================================================
@@ -296,7 +309,7 @@ sub test_formatters {
 
 ##==============================================================================
 ## test: eq class
-use DTA::CAB::Analyzer::EqClass;
+#use DTA::CAB::Analyzer::EqClass;
 sub test_eqclass {
   our $eqc = DTA::CAB::Analyzer::Dict::EqClass->new(
 						    dictFile=>'system/resources/dta-eqpho.dict.bin',

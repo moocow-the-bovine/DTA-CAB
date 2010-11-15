@@ -55,11 +55,17 @@ sub analyzeSentences {
 		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
 		     : $tok->{text}));
 
-    ##-- hack: bash NE analyses to raw (transliterated) text
     if ($t eq 'NE') {
+      ##-- hack: bash special analyses to raw (transliterated) text
       $m->{word} = $l = (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text} : $tok->{text});
-      substr($l,1) = lc(substr($l,1)) if ($l ne '');
       $l =~ s/\s+/_/g;
+      $l =~ s/^(.)(.*)$/$1\L$2\E/ if ($l =~ /[[:lower:]]/);
+    }
+    elsif ($t eq 'FM' || $t eq 'XY' || $t eq 'CARD') {
+      ##-- hack: bash FM,XY,CARD analyses to raw (possibly non-transliterated) text
+      $m->{word} = $l = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
+      $l =~ s/\s+/_/g;
+      $l =~ s/^(.)(.*)$/$1\L$2\E/ if ($l =~ /[[:lower:]]/);
     }
     else {
       ##-- populate $tok->{moot}{lemma}

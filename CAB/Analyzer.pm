@@ -318,7 +318,7 @@ sub clearTypes {
 sub analyzeToken {
   my ($anl,$tok,$opts) = @_;
   my $doc = toDocument([toSentence([toToken($tok)])]);
-  $anl->analyzeDocument($doc, {%$opts, doAnalyzeSentences=>0,doAnalyzeLocal=>0});
+  $anl->analyzeDocument($doc, { ($opts ? %$opts : qw()) , doAnalyzeSentences=>0,doAnalyzeLocal=>0});
   return $doc->{body}[0]{tokens}[0];
 }
 
@@ -330,7 +330,7 @@ sub analyzeSentence {
   $sent = [$sent] if (!UNIVERSAL::isa($sent,'ARRAY'));
   @$sent = map {toToken($_)} @$sent;
   my $doc = toDocument([toSentence($sent)]);
-  $anl->analyzeDocument($doc, {%$opts, doAnalyzeLocal=>0});
+  $anl->analyzeDocument($doc, { ($opts ? %$opts : qw()), doAnalyzeLocal=>0});
   return $doc->{body}[0];
 }
 

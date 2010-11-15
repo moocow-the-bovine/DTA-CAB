@@ -295,9 +295,13 @@ sub parseMorphAnalyses {
     (
      map {$_->{tag}=$TAGX{$_->{tag}} if (defined($TAGX{$_->{tag}})); $_}
      ($_[0]{dmoot}
-      ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}||[]})
+      ? (
+	 (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}||[]}),
+	 ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
+	)
       : (
 	 ($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
+	 ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
 	 ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
 		       map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
 	)),
