@@ -37,7 +37,7 @@ sub doAnalyze {
 
 ## $doc = $anl->Sentences($doc,\%opts)
 ##  + post-processing for 'moot' object
-our %LITERAL_WORD_TAGS = (map {($_=>undef)} qw(NE FM XY CARD));
+our %LITERAL_WORD_TAGS = (map {($_=>undef)} qw(FM XY CARD)); #NE
 sub analyzeSentences {
   my ($asub,$doc,$opts) = @_;
   return $doc if (!$asub->enabled($opts));
@@ -56,8 +56,8 @@ sub analyzeSentences {
 		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
 		     : $tok->{text}));
 
-    if (exists($LITERAL_WORD_TAGS{$t})) {
-      ##-- hack: bash NE,FM,XY,CARD-tagged elements to raw (possibly transliterated) text
+    if (exists($LITERAL_WORD_TAGS{$t}) || ($t eq 'NE' && !$tok->{msafe})) {
+      ##-- hack: bash FM,XY,CARD-tagged elements to raw (possibly transliterated) text
       $m->{word} = $l = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
       $l =~ s/\s+/_/g;
       $l =~ s/^(.)(.*)$/$1\L$2\E/ if ($l =~ /[[:lower:]]/);
