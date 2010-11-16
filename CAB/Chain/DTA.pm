@@ -33,6 +33,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- analyzers
+			   tokpp => DTA::CAB::Analyzer::TokPP->new(),
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   lts   => DTA::CAB::Analyzer::LTS->new(),
 			   ##
@@ -80,22 +81,23 @@ sub setupChains {
      'sub.expand'    =>[@$ach{qw(eqpho eqrw)}],
      'sub.sent'      =>[@$ach{qw(dmoot dmootsub moot)}],
      ##
+     'default.tokpp'  =>[@$ach{qw(tokpp)}],
      'default.xlit'  =>[@$ach{qw(xlit)}],
      'default.lts'   =>[@$ach{qw(xlit lts)}],
-     'default.eqphox'=>[@$ach{qw(xlit lts eqphox)}],
-     'default.morph' =>[@$ach{qw(xlit morph)}],
-     'default.msafe' =>[@$ach{qw(xlit morph msafe)}],
-     'default.rw'    =>[@$ach{qw(xlit rw)}],
-     'default.rw.safe'  =>[@$ach{qw(xlit morph msafe rw)}], #mlatin
-     'default.dmoot'    =>[@$ach{qw(xlit lts eqphox morph msafe rw dmoot)}],
-     'default.moot'     =>[@$ach{qw(xlit lts eqphox morph msafe rw dmoot dmootsub moot)}],
-     'default.base'     =>[@$ach{qw(xlit lts morph mlatin msafe)}],
-     'default.type'     =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
+     'default.eqphox'=>[@$ach{qw(tokpp xlit lts eqphox)}],
+     'default.morph' =>[@$ach{qw(tokpp xlit morph)}],
+     'default.msafe' =>[@$ach{qw(tokpp xlit morph msafe)}],
+     'default.rw'    =>[@$ach{qw(tokpp xlit rw)}],
+     'default.rw.safe'  =>[@$ach{qw(tokpp xlit morph msafe rw)}], #mlatin
+     'default.dmoot'    =>[@$ach{qw(tokpp xlit lts eqphox morph msafe rw dmoot)}],
+     'default.moot'     =>[@$ach{qw(tokpp xlit lts eqphox morph msafe rw dmoot dmootsub moot)}],
+     'default.base'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe)}],
+     'default.type'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
      ##
-     'noexpand'  =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub)}],
-     'expand'    =>[@$ach{qw(xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot mootsub)}],
-     'all'       =>[@$ach{qw(xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot mootsub)}],
+     'noexpand'  =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
+     'expand'    =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw eqpho eqrw)}],
+     'default'   =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot mootsub)}],
+     'all'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot mootsub)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 

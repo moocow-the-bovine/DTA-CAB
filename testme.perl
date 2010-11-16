@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+##-*- Mode: CPerl; coding: utf-8 -*-
 
 use lib qw(.);
 
@@ -11,12 +12,13 @@ use Encode qw(encode decode);
 use Benchmark qw(cmpthese timethese);
 use Storable;
 
-#use utf8;
+use utf8;
 
 BEGIN {
-#  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
-#  binmode(STDOUT,':utf8');
-#  binmode(STDERR,':utf8');
+  binmode($DB::OUT,':utf8') if (defined($DB::OUT));
+  binmode(STDIN,':utf8');
+  binmode(STDOUT,':utf8');
+  binmode(STDERR,':utf8');
   DTA::CAB::Logger->logInit();
 }
 
@@ -27,40 +29,53 @@ BEGIN {
 ## test: transliterator
 
 sub tok2tt {
-  return DTA::CAB::Format::TT->new->putToken($_[0])->toString;
+  return decode('utf8',DTA::CAB::Format::TT->new->putToken($_[0])->toString);
 }
 sub tok2txt {
-  return DTA::CAB::Format::Text->new->putToken($_[0])->toString;
+  return decode('utf8',DTA::CAB::Format::Text->new->putToken($_[0])->toString);
 }
 
 sub test_xlit {
   our $xlit = DTA::CAB::Analyzer::Unicruft->new();
 
-  our $w0 = decode('latin1', 'foo');   ##-- $w0: ascii:  +latin1,+latinx,+native
+  our $w0 = 'foo';   ##-- $w0: ascii:  +latin1,+latinx,+native
   our $x0 = $xlit->analyzeToken(toToken($w0));
   #print "$w0: xml: ", $x0->xmlNode->toString(1), "\n";
   #print "$w0: ", $xlit->analysisText($x0), "\n";
   #print "$w0: ", $xlit->analysisXmlNode($x0)->toString(1), "\n";
   print "$w0: ", tok2tt($x0);
 
-  our $w1 = decode('utf8', "b\x{e4}r");   ##-- $w1: latin1: +latin1,+latinx,+native
+  our $w1 = "b\x{e4}r";   ##-- $w1: latin1: +latin1,+latinx,+native
   our $x1 = $xlit->analyzeToken(toToken($w1));
   print "$w1: ", tok2tt($x1);
 
   our $w2 = "\x{0153}";                ##-- $w2: oe ligature: -latin1,+latinx,-native
   our $x2 = $xlit->analyzeToken(toToken($w2));
+  print tok2tt($x2);
 
   our $w3 = "\x{03c0}\x{03b5}";        ##-- $w2: \pi \varepsilon (~"pe") : -latin1,-latinx,-native
   our $x3 = $xlit->analyzeToken(toToken($w3));
+  print tok2tt($x3);
 
-  our $w4 = decode('latin1',"\x{00e6}"); ##-- $w2: ae ligature: (~"ae") : +latin1,+latinx,-native (no: this *is* native...)
+  our $w4 = "\x{00e6}"; ##-- $w2: ae ligature: (~"ae") : +latin1,+latinx,-native (no: this *is* native...)
   our $x4 = $xlit->analyzeToken(toToken($w4));
+  print tok2tt($x4);
 
-  our $w5 = decode('utf8',"Ba\x{cc}\x{88}r"); ##-- $w5: combining e above: +latin1,+latinx
+  our $w5 = "Ba\x{364}r"; ##-- $w5: combining e above: +latin1,+latinx
   our $x5 = $xlit->analyzeToken(toToken($w5));
+  print tok2tt($x5);
 
-  our $w6 = decode('utf8',"\x{c5}\x{bf}eyn"); ##-- $w6: long s: +latin1,+latinx
+  our $w6 = "\x{17f}eyn"; ##-- $w6: long s: +latin1,+latinx
   our $x6 = $xlit->analyzeToken(toToken($w6));
+  print tok2tt($x6);
+
+  our $w7 = "Con¬ſpirirt";
+  our $x7 = $xlit->analyzeToken(toToken($w7));
+  print tok2tt($x7);
+
+  our $w8 = "וְאֵת"; ##-- hebrew
+  our $x8 = $xlit->analyzeToken(toToken($w8));
+  print tok2tt($x8);
 
   print "done: test_xlit()\n";
 }
@@ -543,7 +558,7 @@ sub xrpc_checktxt {
 
 sub test_xmlrpc_storable {
   $RPC::XML::ENCODING = "UTF-8";   ##-- hack
-  my $txt = decode('latin1','On�');
+  my $txt = decode('latin1','Onö');
   my $tok = toToken($txt);
   my $snt = toSentence([$tok]);
   my $doc = toDocument([$snt]);
@@ -646,14 +661,14 @@ sub test_dict {
   my ($w);
   $w = $dic->analyzeToken('Hilfe');
   $w = $dic->analyzeToken('der');
-  $w = $dic->analyzeToken('B�r');
+  $w = $dic->analyzeToken('Bär');
 
   my $bin_dictfile = "${tt_dictfile}.bin";
   $dic = ref($dic)->new(analyzeDst=>'morph', dictFile=>$bin_dictfile);
   $dic->ensureLoaded;
   $w = $dic->analyzeToken('Hilfe');
   $w = $dic->analyzeToken('der');
-  $w = $dic->analyzeToken('B�r');
+  $w = $dic->analyzeToken('Bär');
 
   my $old_dictfile = "mootm-tagh.dict.new"; ##-- requires prefix-insertion, e.g. with 'dta-cab-dict-convert.perl' hack
   $dic = ref($dic)->new(analyzeDst=>'morph', dictFile=>$old_dictfile);
@@ -705,7 +720,7 @@ sub bench_lab2str {
   my @csyms = grep {defined($_) && length($_)==1} @$laba;
   my $labc  = [];
   @$labc[map {ord($_)} @csyms] = @$labh{@csyms};
-  my $str_in   = decode('latin1','Ab�nderungsvorschl�ge');
+  my $str_in   = decode('latin1','Abänderungsvorschläge');
   ##--
   #my $labs_in_len = 32;
   #my @labs_in  = map {int(rand($asize))} (1..$lablen);

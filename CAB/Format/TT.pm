@@ -195,8 +195,8 @@ sub parseTTString {
 	  ##-- token: field: moot/analysis|dmoot/analysis
 	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 	}
-	elsif ($field =~ m/^\[(toka)\]\s?(.*)$/) {
-	  ##-- token: field: other known list field: (toka)
+	elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
+	  ##-- token: field: other known list field: (toka|tokpüp)
 	  push(@{$tok->{$1}}, $2);
 	}
 	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
@@ -282,6 +282,9 @@ sub putToken {
 
   ##-- character list
   #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
+
+  ##-- cab token-preprocessor analyses
+  $out .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
 
   ##-- tokenizer-supplied analyses
   $out .= join('', map {"\t[toka] $_"} grep {defined($_)} @{$tok->{toka}}) if ($tok->{toka});

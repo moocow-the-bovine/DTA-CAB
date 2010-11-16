@@ -68,9 +68,12 @@ sub analyzeSentences {
 
     ##-- check for existing analyses
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
-    if    ($tok->{toka} && @{$tok->{toka}}) {
-      ##-- existing analyses: toka
-      $dm->{morph} = [map { {hi=>$_,w=>0} } @{$tok->{toka}}];
+    if    (($tok->{toka} && @{$tok->{toka}}) || ($tok->{tokpp} && @{$tok->{tokpp}})) {
+      ##-- existing analyses: toka|tokpp
+      $dm->{morph} = [map { {hi=>$_,w=>0} }
+		      ($tok->{toka} ? @{$tok->{toka}} : qw()),
+		      ($tok->{tokpp} ? @{$tok->{tokpp}} : qw()),
+		     ];
       $dm->{tag}   = $tok->{xlit} && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text}; ##-- force literal text for tokenizer-analyzed tokens
     }
     elsif (!$standalone) {
