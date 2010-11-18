@@ -12,6 +12,7 @@ use DTA::CAB::Analyzer::EqPhoX;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Analyzer::MootSub;
+use DTA::CAB::Analyzer::EqLemma;
 
 use IO::File;
 use Carp;
@@ -52,6 +53,8 @@ sub new {
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),  ##-- moot n-gram disambiguator: sub-morph
 			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger (on dmoot output)
 			   mootsub => DTA::CAB::Analyzer::MootSub->new(),    ##-- moot tagger, post-processing hacks
+			   ##
+			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),   ##-- eqlemma (best only)
 
 			   ##-- user args
 			   @_,
@@ -94,10 +97,11 @@ sub setupChains {
      'default.base'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
      ##
-     'noexpand'  =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
-     'expand'    =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw eqpho eqrw)}],
-     'default'   =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqphox dmoot dmootsub moot mootsub)}],
-     'all'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqphox eqpho eqrw dmoot moot mootsub)}],
+     'expand'        =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw)}], ##-- old type-wise expander, called from hacked dta ddc
+     'expand.bytype' =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
+     'expand.all'    =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
+     'default'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],
+     'all'           =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 
