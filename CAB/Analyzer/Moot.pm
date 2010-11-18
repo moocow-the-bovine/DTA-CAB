@@ -294,18 +294,18 @@ sub parseMorphAnalyses {
   return
     (
      map {$_->{tag}=$TAGX{$_->{tag}} if (defined($TAGX{$_->{tag}})); $_}
+     (
+      ##-- common
+      ($_[0]{toka} ? (map {parseAnalysis($_,src=>"toka")} @{$_[0]{toka}}) : qw()),
+      ($_[0]{tokpp} ? (map {parseAnalysis($_,src=>"tokpp")} @{$_[0]{tokpp}}) : qw()),
+      ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
+     ),
      ($_[0]{dmoot}
       ? (
-	 ($_[0]{toka} ? (map {parseAnalysis($_,src=>"toka")} @{$_[0]{toka}}) : qw()),
-	 ($_[0]{tokpp} ? (map {parseAnalysis($_,src=>"tokpp")} @{$_[0]{tokpp}}) : qw()),
-	 ($_[0]{morph} ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}}) : qw()),
-	 ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
+	 ($_[0]{dmoot}{morph} ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}}) : qw()),
 	)
       : (
-	 ($_[0]{toka} ? (map {parseAnalysis($_,src=>"toka")} @{$_[0]{toka}}) : qw()),
-	 ($_[0]{tokpp} ? (map {parseAnalysis($_,src=>"tokpp")} @{$_[0]{tokpp}}) : qw()),
 	 ($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
-	 ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
 	 ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
 		       map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
 	)),

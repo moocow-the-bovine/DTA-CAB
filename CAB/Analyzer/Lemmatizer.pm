@@ -26,7 +26,17 @@ our $GET_DMOOT_MORPH = '$tok->{dmoot} ? $tok->{dmoot}{morph} : undef';
 ## $GET_TEXT
 ##  + code string: get text for analysis $_
 ##  + available vars: $tok, $tokm (array of analyses), $ma (current analysis), $lz (analyzer obj),
-our $GET_TEXT = '$tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};';
+our $GET_TEXT = '$tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text}';
+
+## $GET_MOOT_ANALYSES
+##  + code string: \@morph_analyses = "$GET_DMOOT_MORPH"->()
+##  + available vars: $tok, $lz
+our $GET_MOOT_ANALYSES = '$tok->{moot} ? $tok->{moot}{analyses} : undef';
+
+## $GET_MOOT_TEXT
+##  + code string: get text for analysis $_
+##  + available vars: $tok, $tokm (array of analyses), $ma (current analysis), $lz (analyzer obj),
+our $GET_MOOT_TEXT = '$tok->{moot} ? $tok->{moot}{word} : ('.$GET_TEXT.')';
 
 
 ## $obj = CLASS_OR_OBJ->new(%args)
@@ -34,11 +44,13 @@ our $GET_TEXT = '$tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};';
 ##     analyzeGet   => $code,    ##-- pseudo-accessor: @morph_analyses = "$code"->(\@toks)
 ##     analyzeWhich => $which,   ##-- e.g. 'Types','Tokens','Sentences','Local': default=Types
 ##                               ##   + the underlying analysis is always performed by the analyzeTypes() method! (default='Types')
+##     analyzeLabel => $label,   ##-- ouput label (default='lemma')
 sub new {
   my $that = shift;
   my $lz = $that->SUPER::new(
 			     ##-- analysis selection
 			     label => 'lemma',
+			     analyzeLabel => 'lemma',
 			     analyzeGet => $GET_MORPH,
 			     analyzeGetText => $GET_TEXT,
 			     analyzeWhich => 'Types',
@@ -73,6 +85,7 @@ sub _analyzeGuts {
 
   ##-- common vars
   my $lab = $lz->{label};
+  my $alab = defined($lz->{analyzeLabel}) ? $lz->{analyzeLabel} : $lab;
   my $lab_txt = $lab."_text";
   my $lab_key = $lab."_key";
 
@@ -84,7 +97,7 @@ sub _analyzeGuts {
        next if (!($tokm='.$lz->{analyzeGet}.'));
        foreach (grep {defined($_)} @$tokm) {
          $txt = $_->{$lab_txt} = '.$lz->{analyzeGetText}.';
-         $key = $_->{$lab_key} = $txt."\t".$_->{hi};
+         $key = $_->{$lab_key} = $txt."\t".(defined($_->{hi}) ? $_->{hi} : $_->{details});
          next if (exists($key2a->{$key}));
          $key2a->{$key} = $_;
        }
@@ -96,19 +109,18 @@ sub _analyzeGuts {
   ##-- lemmatize, type-wise by (text+analysis)-pair
   my ($lemma);
   foreach (values %$key2a) {
-    $lemma = $_->{hi};
+    $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
       $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
       $lemma =~ s/(?:\/\w+)|(?:[\\\¬\~\|\=\+\#])//g;
-      $lemma =~ s/^(.)(.*)$/$1\L$2\E/ if ($lemma =~ /[[:lower:]]/);
-      ;
     } else {
       $lemma = $_->{$lab_txt};
     }
+    $lemma =~ s/^(.)(.*)$/$1\L$2\E/; #if (length($lemma) > 3 && $lemma =~ /[[:lower:]]/);
     $lemma =~ s/^\s+//;
     $lemma =~ s/\s+$//;
     $lemma =~ s/\s+/_/g;
-    $_->{$lab} = $lemma;
+    $_->{$alab} = $lemma;
   }
 
   ##-- postprocessing: re-expand types
@@ -116,7 +128,7 @@ sub _analyzeGuts {
     'foreach $tok (@$toks) {
        next if (!($tokm='.$lz->{analyzeGet}.'));
        foreach (grep {defined($_)} @$tokm) {
-         $_->{$lab} = $key2a->{$_->{$lab_key}}{$lab};
+         $_->{$alab} = $key2a->{$_->{$lab_key}}{$alab};
          delete(@$_{$lab_key,$lab_txt});
        }
      }';

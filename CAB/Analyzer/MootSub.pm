@@ -7,6 +7,7 @@
 
 package DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Lemmatizer;
 use Carp;
 use strict;
 our @ISA = qw(DTA::CAB::Analyzer);
@@ -14,17 +15,23 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, %args:
 ##     mootLabel => $label,    ##-- label for Moot tagger object (default='moot')
+##     lz => $lemmatizer,      ##-- DTA::CAB::Analyzer::Lemmatizer sub-object
 sub new {
   my $that = shift;
-  my $tp = $that->SUPER::new(
+  my $asub = $that->SUPER::new(
 			     ##-- analysis selection
 			     label => 'mootsub',
 			     mootLabel => 'moot',
+			     lz => DTA::CAB::Analyzer::Lemmatizer->new(analyzeGet    =>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_ANALYSES,
+								       analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
+								       analyzeWhich  =>'Sentences',
+								      ),
 
 			     ##-- user args
 			     @_
 			    );
-  return $tp;
+  $asub->{lz}{label} = $asub->{label}."_lz";
+  return $asub;
 }
 
 ## $bool = $anl->doAnalyze(\%opts, $name)
@@ -42,43 +49,48 @@ sub analyzeSentences {
   my ($asub,$doc,$opts) = @_;
   return $doc if (!$asub->enabled($opts));
 
-  ##-- get dmoot target types
+  ##-- common variables
   my $mlabel = $asub->{mootLabel};
+  my $lz     = $asub->{lz};
+  my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
-  my ($tok,$m,$t,$l);
-  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+  ##-- Step 1: populate $tok->{moot}{word}
+  my ($tok,$m);
+  foreach $tok (@$toks) {
     ##-- ensure that $tok->{moot}, $tok->{moot}{tag} are defined
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
-    $t = $m->{tag} = '@UNKNOWN' if (!defined($t=$m->{tag}));
+    $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
 
     ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
     $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
 		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
 		     : $tok->{text}));
+  }
 
-    if (exists($LITERAL_WORD_TAGS{$t}) || ($t eq 'NE' && !$tok->{msafe})) {
+  ##-- Step 2: run lemmatizer (populates $tok->{moot}{analyses}[$i]{lemma}
+  $lz->_analyzeGuts($toks,$opts) if ($lz->enabled($opts));
+
+  ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
+  my ($t,$l,@a);
+  foreach $tok (@$toks) {
+    $m = $tok->{$mlabel};
+    $t = $m->{tag};
+    @a = $m->{analyses} ? grep {$_->{tag} eq $t} @{$m->{analyses}} : qw();
+    if (!@a
+	|| exists($LITERAL_WORD_TAGS{$t})
+        #|| ($t eq 'NE' && !$tok->{msafe})
+        ) {
+
       ##-- hack: bash FM,XY,CARD-tagged elements to raw (possibly transliterated) text
-      $m->{word} = $l = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
+      $l = $m->{word} = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
       $l =~ s/\s+/_/g;
-      $l =~ s/^(.)(.*)$/$1\L$2\E/ if ($l =~ /[[:lower:]]/);
+      $l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
+      $m->{lemma} = $l;
     }
     else {
-      ##-- populate $tok->{moot}{lemma}
-      $l = undef;
-      foreach (sort {$a->{cost} <=> $b->{cost}} grep {defined($_->{tag}) && $_->{tag} eq $t} @{$m->{analyses}||[]}) {
-	next if (!defined($l = $_->{details}));
-	$l =~ s/^\s*\~\s*//;
-	$l =~ s/\s* \@ .*$//;
-	$l =~ s/\s+/_/g;
-	last if (defined($l) && $l ne '');
-      }
-      if (!defined($l) || $l eq '') {
-	$l = $m->{word};
-	$l =~ s/^(.)(.*)$/$1\L$2\E/ if ($l =~ /[[:lower:]]/);
-      }
+      ##-- extract lemma from best analysis
+      $m->{lemma} = (sort {$a->{cost}<=>$b->{cost} || $a->{lemma} cmp $b->{lemma}} @a)[0]{lemma};
     }
-    #$l = ucfirst($l) if ($t eq 'NE' || $t eq 'NN');
-    $m->{lemma} = $l;
   }
 
   ##-- return

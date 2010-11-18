@@ -347,6 +347,24 @@ sub putToken {
 	       } @{$tok->{rw}})
     if ($tok->{rw});
 
+  ##-- dmoot
+  if ($tok->{dmoot}) {
+    ##-- dmoot/tag
+    $out .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
+
+    ##-- dmoot/morph
+    $out .= join('', map {("\t[dmoot/morph] "
+			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
+			   ."$_->{hi} <$_->{w}>"
+			  )} @{$tok->{dmoot}{morph}})
+      if ($tok->{dmoot}{morph});
+
+    ##-- dmoot/analyses
+    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
+      if ($tok->{dmoot}{analyses});
+  }
+
   ##-- moot
   if ($tok->{moot}) {
     ##-- moot/word
@@ -367,27 +385,21 @@ sub putToken {
       if ($tok->{moot}{morph});
 
     ##-- moot/analyses
-    $out .= join('', map {("\t[moot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">")} @{$tok->{moot}{analyses}})
+    $out .= join('', map {("\t[moot/analysis] $_->{tag}"
+			   .(defined($_->{lemma}) ? " \@ $_->{lemma}" : '')
+			   ." ~ $_->{details} <".($_->{cost}||0).">"
+			  )} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
   }
 
-  ##-- dmoot
-  if ($tok->{dmoot}) {
-    ##-- dmoot/tag
-    $out .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
+  ##-- lemma equivalents
+  $out .= join('', map {("\t[eqlemma] "
+			 .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			 .$_->{hi}
+			 .(defined($_->{w}) ? " <$_->{w}>" : '')
+			)} grep {defined($_)} @{$tok->{eqlemma}})
+    if ($tok->{eqlemma});
 
-    ##-- dmoot/morph
-    $out .= join('', map {("\t[dmoot/morph] "
-			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
-			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
-			   ."$_->{hi} <$_->{w}>"
-			  )} @{$tok->{dmoot}{morph}})
-      if ($tok->{dmoot}{morph});
-
-    ##-- dmoot/analyses
-    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
-      if ($tok->{dmoot}{analyses});
-  }
 
   ##-- unparsed fields (pass-through)
   if ($tok->{other}) {

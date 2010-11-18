@@ -43,6 +43,7 @@ use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer 
 #use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander (obsolete, removed)
 
 use DTA::CAB::Analyzer::TokPP;
+use DTA::CAB::Analyzer::EqLemma;
 
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
 #use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocClassify
