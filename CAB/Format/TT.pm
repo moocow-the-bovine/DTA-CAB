@@ -347,6 +347,10 @@ sub putToken {
 	       } @{$tok->{rw}})
     if ($tok->{rw});
 
+  ##-- Rewrite Equivalents ('eqrw')
+  $out .= join('', map { "\t[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqrw}})
+    if ($tok->{eqrw});
+
   ##-- dmoot
   if ($tok->{dmoot}) {
     ##-- dmoot/tag

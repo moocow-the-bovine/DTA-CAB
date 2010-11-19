@@ -35,7 +35,10 @@ our @ISA = qw(DTA::CAB::Server);
 ##     procNamePrefix => $prefix, ##-- default: 'dta.cab.'
 ##     ##
 ##     ##-- hacks
-##     encoding => $enc,   ##-- sets $RPC::XML::ENCODING on prepare(), used by underlying server
+##     encoding => $enc,          ##-- sets $RPC::XML::ENCODING on prepare(), used by underlying server
+##     ##
+##     ##-- security
+##     allowUserOptions => $bool, ##-- allow user options? (default: true)
 ##     ##
 ##     ##-- logging
 ##     logRegisterProc => $level, ##-- log xml-rpc procedure registration at $level (default='trace')
@@ -71,6 +74,9 @@ sub new {
 			   ##
 			   ##-- hacks
 			   encoding => 'UTF-8',
+			   ##
+			   ##-- security
+			   allowUserOptions => 1,
 			   ##
 			   ##-- logging
 			   logRegisterProc => 'trace',
@@ -161,9 +167,8 @@ sub prepareLocal {
   $xsrv->add_proc( DTA::CAB::Server::XmlRpc::Procedure->new($listproc) );
   $srv->vlog($srv->{logRegisterProc},"registered XML-RPC listing procedure $listproc->{name}()\n");
 
-  ##-- propagate logging options to underlying server
-  $xsrv->{logCall}     = $srv->{logCall};
-  $xsrv->{logCallData} = $srv->{logCallData};
+  ##-- propagate security and logging options to underlying server
+  $xsrv->{$_} = $srv->{$_} foreach (qw(allowUserOptions logCall logCallData));
 
   return 1;
 }
@@ -224,8 +229,8 @@ sub call {
   if (@_ > 3) {
     return $_[0]->SUPER::call(@_[1..($#_-1)],
 			      bless({
-				     ($_[0]{opts} ? (%{$_[0]{opts}}) : qw()),
-				     ($_[$#_]     ? (%{$_[$#_]})     : qw()),
+				     ($_[0]{opts}                        ? (%{$_[0]{opts}}) : qw()),
+				     ($_[1]{allowUserOptions} && $_[$#_] ? (%{$_[$#_]})     : qw()),
 				    },'RPC::XML::struct'),
 			     );
   }

@@ -166,7 +166,7 @@ sub canAnalyze { return 1; }
 ##  + alias for $anl->can("analyze${name}") && (!exists($opts{"doAnalyze${name}"}) || $opts{"doAnalyze${name}"})
 sub doAnalyze {
   my ($anl,$opts,$name) = @_;
-  return $anl->can("analyze${name}") && (!$opts || !exists($opts->{"doAnalyze${name}"}) || $opts->{"doAnalze${name}"});
+  return $anl->can("analyze${name}") && (!$opts || !exists($opts->{"doAnalyze${name}"}) || $opts->{"doAnalyze${name}"});
 }
 
 ## $bool = $anl->enabled(\%opts)
@@ -195,7 +195,7 @@ sub autoEnable {
     $_->autoEnable(@_);
   }
   return $anl->{enabled} if (defined($anl->{enabled}));
-  return $anl->{enabled} = $anl->canAnalyze(@_);
+  return $anl->{enabled} = $anl->canAnalyze(@_) ? 1 : 0;
 }
 sub autoDisable { return $_[0]->autoEnable(@_[1..$#_]); }
 

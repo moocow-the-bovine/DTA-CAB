@@ -13,6 +13,7 @@ use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
+use DTA::CAB::Analyzer::DTAClean;
 
 use IO::File;
 use Carp;
@@ -44,9 +45,9 @@ sub new {
 			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
 			   rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
 			   ##
-			   eqphox => DTA::CAB::Analyzer::EqPhoX->new(),     ##-- default (cascade)
-			   eqpho => DTA::CAB::Analyzer::EqPho->new(),       ##-- default (FST)
-			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),        ##-- default (FST)
+			   eqphox => DTA::CAB::Analyzer::EqPhoX->new(),
+			   eqpho => DTA::CAB::Analyzer::EqPho->new(),
+			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),
 			   ##
 			   ##
 			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
@@ -55,6 +56,12 @@ sub new {
 			   mootsub => DTA::CAB::Analyzer::MootSub->new(),    ##-- moot tagger, post-processing hacks
 			   ##
 			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),   ##-- eqlemma (best only)
+			   ##
+			   clean => DTA::CAB::Analyzer::DTAClean->new(),
+
+			   ##-- security
+			   autoClean => 0,  ##-- always run 'clean' analyzer regardless of options; checked in both doAnalyze(), analyzeClean()
+			   defaultChain => 'default',
 
 			   ##-- user args
 			   @_,
@@ -72,6 +79,11 @@ sub new {
 ## $ach = $ach->setupChains()
 ##  + setup default named sub-chains in $ach->{chains}
 ##  + override
+##  + dta ddc and django cab demo both call 'all' chain:
+##    - ddc web search: (client = 194.95.188.36 = services.dwds.de)
+##        2010-11-19 13:15:42 [24194] (DEBUG) DTA.CAB.Server.XmlRpc.Procedure: dta.cab.all.analyzeToken(): client=194.95.188.36
+##    - django cab demo (client = 194.95.188.22 = www.deutschestextchiv.de)
+##        2010-11-19 13:15:09 [24194] (DEBUG) DTA.CAB.Server.XmlRpc.Procedure: dta.cab.all.analyzeToken(): client=194.95.188.22
 sub setupChains {
   my $ach = shift;
   $ach->{rwsub}{chain} = [@$ach{qw(lts morph)}];
@@ -81,7 +93,7 @@ sub setupChains {
     {
      (map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
      ##
-     'sub.expand'    =>[@$ach{qw(eqpho eqrw)}],
+     'sub.expand'    =>[@$ach{qw(eqpho eqrw eqlemma)}],
      'sub.sent'      =>[@$ach{qw(dmoot dmootsub moot)}],
      ##
      'default.tokpp'  =>[@$ach{qw(tokpp)}],
@@ -97,13 +109,15 @@ sub setupChains {
      'default.base'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
      ##
-     'expand'        =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw)}], ##-- old type-wise expander, called from hacked dta ddc
+     'expand'        =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw)}],
      'expand.bytype' =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
      'expand.all'    =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
-     'default'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],
-     'all'           =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
+     'default'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],  
+     'all'           =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}], ##-- dta clients use 'all'!
+     'clean'         =>[@$ach{qw(clean)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
+  $chains->{'norm'} = $chains->{default}; ##-- alias: 'norm'
 
   ##-- sanitize chains
   foreach (values %{$ach->{chains}}) {
@@ -111,7 +125,7 @@ sub setupChains {
   }
 
   ##-- set default chain
-  $ach->{chain} = $ach->{chains}{default};
+  $ach->{chain} = $ach->{chains}{$ach->{defaultChain}};
 
   ##-- force default labels
   $ach->{$_}{label} = $_ foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach));
@@ -181,6 +195,19 @@ sub ensureLoaded {
 ##==============================================================================
 
 ##------------------------------------------------------------------------
+## Methods: Analysis: v1.x: Utils
+
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + alias for $anl->can("analyze${name}") && (!exists($opts{"doAnalyze${name}"}) || $opts{"doAnalyze${name}"})
+##  + override checks $anl->{autoClean} flag
+sub doAnalyze {
+  my ($anl,$opts,$name) = @_;
+  return 1 if ($anl->{autoClean} && $name eq 'Clean');
+  return $anl->SUPER::doAnalyze($opts,$name);
+}
+
+
+##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
 
 ## $doc = $ach->analyzeDocument($doc,\%opts)
@@ -212,7 +239,13 @@ sub ensureLoaded {
 ##  + cleanup any temporary data associated with $doc
 ##  + Chain default calls $a->analyzeClean for each analyzer $a in the chain,
 ##    then superclass Analyzer->analyzeClean
-##  + INHERITED from DTA::CAB::Chain
+sub analyzeClean {
+  my ($ach,$doc,$opts) = @_;
+  $ach->SUPER::analyzeClean($doc,$opts);                                    ##-- inherited from DTA::CAB::Chain (chain-local cleanup)
+  return $doc if (!$ach->{autoClean} && !exists($opts->{doAnalyzeClean}));  ##-- don't clean by default
+  return $ach->{clean}->analyzeClean($doc,$opts);
+}
+
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: Wrappers

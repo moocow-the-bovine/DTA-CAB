@@ -55,8 +55,8 @@ GetOptions(##-- General
 
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
-	   'analysis-option|analyze-option|ao|aO|O=s' => \%analyzeOpts,
-	   'analyzer-class|analysis-class|analyze-class|ac|a=s' => \$analyzeClass,
+	   'analyzer-class|analyze-class|analysis-class||ac|a=s' => \$analyzeClass,
+	   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => \%analyzeOpts,
 	   'profile|p!' => \$doProfile,
 
 	   ##-- I/O: input
@@ -105,6 +105,7 @@ binmode(STDOUT,':utf8');
 binmode(STDERR,':utf8');
 
 ##-- analyzer
+$analyzeClass = "DTA::CAB::Analyzer::$analyzeClass" if ($analyzeClass !~ /\:\:/);
 eval "use $analyzeClass;";
 die("$prog: could not load analyzer class '$analyzeClass': $@") if ($@);
 our ($cab);
@@ -278,6 +279,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
  Analysis Options
   -config PLFILE                  ##-- load analyzer config file PLFILE
+  -analysis-class  CLASS          ##-- set analyzer class (if -config is not specified)
   -analysis-option OPT=VALUE      ##-- set analysis option
   -profile , -noprofile           ##-- do/don't report profiling information (default: do)
 

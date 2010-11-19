@@ -26,7 +26,7 @@ sub new {
   return $that->SUPER::new(
 			   ##-- options
 			   label       => 'eqrw',
-			   analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
+			   analyzeGet  => '($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}), ($_[0]{rw} ? (map {$_->{hi}} @{$_[0]{rw}}) : qw())',
 			   analyzeSet  => $DICT_SET_FST_EQ,
 			   eqIdWeight  => 0,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
