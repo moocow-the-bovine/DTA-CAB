@@ -109,15 +109,18 @@ sub setupChains {
      'default.base'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub)}],
      ##
-     'expand'        =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw)}],
-     'expand.bytype' =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
+     'expand.old'    =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw)}],
+     'expand.ext'    =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
      'expand.all'    =>[@$ach{qw(      xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
      'default'       =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],  
      'all'           =>[@$ach{qw(tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}], ##-- dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
-  $chains->{'norm'} = $chains->{default}; ##-- alias: 'norm'
+
+  ##-- chain aliases
+  $chains->{'norm'}   = $chains->{'default'};
+  $chains->{'expand'} = $chains->{'expand.all'};
 
   ##-- sanitize chains
   foreach (values %{$ach->{chains}}) {
