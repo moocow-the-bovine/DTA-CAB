@@ -37,6 +37,11 @@ our @ISA = qw(DTA::CAB::Server);
 ##     ##-- hacks
 ##     encoding => $enc,   ##-- sets $RPC::XML::ENCODING on prepare(), used by underlying server
 ##     ##
+##     ##-- logging
+##     logRegisterProc => $level, ##-- log xml-rpc procedure registration at $level (default='trace')
+##     logCall => $level,         ##-- log client IP and procedure at $level (default='debug')
+##     logCallData => $bool,      ##-- log client data queries at $level (default=undef: none)
+##     ##
 ##     ##-- (inherited from DTA::CAB::Server)
 ##     as  => \%analyzers,    ##-- ($name=>$cab_analyzer_obj, ...)
 ##     aos => \%anlOptions,   ##-- ($name=>\%analyzeOptions, ...) : %opts passed to $anl->analyzeXYZ($xyz,%opts)
@@ -66,6 +71,11 @@ sub new {
 			   ##
 			   ##-- hacks
 			   encoding => 'UTF-8',
+			   ##
+			   ##-- logging
+			   logRegisterProc => 'trace',
+			   logCall => 'debug',
+			   logCallData => undef,
 			   ##
 			   ##-- user args
 			   @_
@@ -141,7 +151,7 @@ sub prepareLocal {
 		    " + RPC::XML::Server error: $xp\n",
 		   );
       } else {
-	$srv->trace("registered XML-RPC procedure $_->{name}() for analyzer '$aname'\n");
+	$srv->vlog($srv->{logRegisterProc},"registered XML-RPC procedure $_->{name}() for analyzer '$aname'\n");
       }
     }
   }
@@ -149,7 +159,11 @@ sub prepareLocal {
   ##-- register 'listAnalyzers' method
   my $listproc = $srv->listAnalyzersProc;
   $xsrv->add_proc( DTA::CAB::Server::XmlRpc::Procedure->new($listproc) );
-  $srv->info("registered XML-RPC listing procedure $listproc->{name}()\n");
+  $srv->vlog($srv->{logRegisterProc},"registered XML-RPC listing procedure $listproc->{name}()\n");
+
+  ##-- propagate logging options to underlying server
+  $xsrv->{logCall}     = $srv->{logCall};
+  $xsrv->{logCallData} = $srv->{logCallData};
 
   return 1;
 }
@@ -190,13 +204,23 @@ sub listAnalyzersProc {
 package DTA::CAB::Server::XmlRpc::Procedure;
 use RPC::XML::Procedure;
 use strict;
+use Data::Dumper;
 our @ISA = ('RPC::XML::Procedure','DTA::CAB::Logger');
 
 ## $proc = CLASS->new(\%methodHash)
 
 ## $rv = $proc->call($XML_RPC_SERVER, @PARAMLIST)
 sub call {
-  $_[0]->debug("$_[0]{name}(): client=".($_[1]{peerhost}||'(unavailable)').")"); #:$_[1]{peerport}
+  if (defined($_[1]{logCall})) {
+    $_[0]->vlog($_[1]{logCall}, "$_[0]{name}(): client=".($_[1]{peerhost}||'(unavailable)')); #:$_[1]{peerport}
+  }
+  if (defined($_[1]{logCallData})) {
+    local $Data::Dumper::Purity = 1;
+    local $Data::Dumper::Pad = "\t";
+    local $Data::Dumper::Terse = 0;
+    local $Data::Dumper::Indent = 1;
+    $_[0]->vlog($_[1]{logCallData}, "call:\n", Data::Dumper->Dump([ $_[1]{peerhost}, $_[0]{name}, [@_[2..$#_]]], [qw(CLIENT PROC PARAMS)]));
+  }
   if (@_ > 3) {
     return $_[0]->SUPER::call(@_[1..($#_-1)],
 			      bless({

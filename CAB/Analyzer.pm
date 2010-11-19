@@ -29,6 +29,7 @@ our @ISA = qw(DTA::CAB::Persistent);
 ##     aclass => $class,   ##-- analysis class (optional; see $anl->analysisClass() method; default=undef)
 ##     typeKeys => \@keys, ##-- analyzer type keys for $anl->typeKeys()
 ##     enabled => $bool,   ##-- set to false, non-undef value to disable this analyzer
+##     initQuiet => $bool, ##-- if true, initInfo() will not print any output
 ##    )
 sub new {
   my $that = shift;
@@ -201,9 +202,11 @@ sub autoDisable { return $_[0]->autoEnable(@_[1..$#_]); }
 ## undef = $anl->initInfo()
 ##  + logs initialization info
 ##  + default method reports values of {label}, enabled()
+##  + sets $anl->{initQuiet}=1 (don't report multiple times)
 sub initInfo {
   my $anl = shift;
-  $anl->info("initInfo($anl->{label}): enabled=", ($anl->enabled(@_) ? 1 : 0));
+  $anl->info("initInfo($anl->{label}): enabled=", ($anl->enabled(@_) ? 1 : 0)) if (!$anl->{initQuiet});
+  $anl->{initQuiet}=1;
 }
 
 ## \@analyzers = $anl->subAnalyzers()
@@ -339,7 +342,7 @@ sub analyzeSentence {
 ##  + wrapper for $anl->analyzeDocument()
 sub analyzeData {
   require RPC::XML;
-  my ($anl,$doc,$opts) = @_;
+  my ($anl,$doc0,$opts) = @_;
 
   ##-- parsing & formatting options
   my $reader = $opts && $opts->{reader} ? $opts->{reader} : {}; ##-- reader options
@@ -350,7 +353,7 @@ sub analyzeData {
   my $ofmt = DTA::CAB::Format->newWriter(class=>ref($ifmt), %$writer);
 
   ##-- parse, analyze, format
-  $doc = $ifmt->parseString($_[0]);
+  my $doc = $ifmt->parseString($doc0);
   #$doc = DTA::CAB::Utils::deep_decode('UTF-8', $doc); ##-- this should NOT be necessary!
   $doc = $anl->analyzeDocument($doc,$opts);
   my $str = $ofmt->flush->putDocument($doc)->toString;

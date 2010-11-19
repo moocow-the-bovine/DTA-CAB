@@ -171,9 +171,11 @@ sub enabled {
 ##  + default method reports values of {label}, enabled()
 sub initInfo {
   my $anl = shift;
-  $anl->SUPER::initInfo(@_);
-  $_->initInfo(@_) foreach (@{$anl->subAnalyzers(@_)});
-  return $anl;
+  if (!$anl->{initQuiet}) {
+    $anl->SUPER::initInfo(@_);
+    $_->initInfo(@_) foreach (@{$anl->subAnalyzers(@_)});
+    $anl->{initQuiet}=1;
+  }
 }
 
 
