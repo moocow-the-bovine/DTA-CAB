@@ -128,10 +128,11 @@ sub expandTypeKeys {
   my ($doc,$keys,$types) = @_;
   $types = $doc->{types} if (!$types);
   return $doc if (!$types || !$keys || !@$keys); ##-- no {types} key, or no keys to expand
-  my ($typ);
-  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
-    $typ = $types->{$_->{text}};
-    @$_{@$keys} = @$typ{@$keys};
+  my ($typ,$tok);
+  foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
+    $typ = $types->{$tok->{text}};
+    @$tok{@$keys} = @$typ{@$keys};
+    #delete(@$tok{grep {!defined($tok->{$_})} @$keys});
   }
   return $doc;
 }

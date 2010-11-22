@@ -438,7 +438,7 @@ sub analyzeSentences {
       $tmoot = {
 		#text => decode($hmmEnc,$mtok->{text}),
 		tag  => decode($hmmEnc,$mtok->{tag}),
-		($wantTaggedWord ? (word=>$text) : qw()),
+		($wantTaggedWord ? (word=>decode($hmmEnc,$mtok->{text})) : qw()),
 	       };
 
       ##-- unwrap analyses
