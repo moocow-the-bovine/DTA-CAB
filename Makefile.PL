@@ -32,19 +32,7 @@ WriteMakefile
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
 		   },
 
-   EXE_FILES   => [
-		   'dta-cab-txt2tt.perl',
-		   'dta-cab-tt2txt.perl',
-		   'dta-cab-tt2csv.perl',
-		   'dta-cab-tw2cab.perl',
-		   'dta-cab-analyze.perl',
-		   'dta-cab-cachegen.perl',
-		   'dta-cab-convert.perl',
-		   'dta-cab-compile.perl',
-		   'dta-cab-dict-convert.perl',
-		   'dta-cab-xmlrpc-server.perl',
-		   'dta-cab-xmlrpc-client.perl',
-		  ],
+   EXE_FILES   => [glob('dta-cab-*.perl')],
   );
 
 

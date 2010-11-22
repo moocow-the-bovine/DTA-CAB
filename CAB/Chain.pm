@@ -196,7 +196,7 @@ sub initInfo {
 sub analyzeTypes {
   my ($ach,$doc,$types,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeTypes($doc,$types,$opts);
+    $_->analyzeTypes($doc,$types,$opts) if ($_->doAnalyze($opts,'Types'));
   }
   return $doc;
 }
@@ -212,7 +212,7 @@ sub analyzeTypes {
 sub analyzeSentences {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeSentences($doc,$opts);
+    $_->analyzeSentences($doc,$opts) if ($_->doAnalyze($opts,'Sentences'));
   }
   return $doc;
 }
@@ -223,7 +223,7 @@ sub analyzeSentences {
 sub analyzeLocal {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeLocal($doc,$opts);
+    $_->analyzeLocal($doc,$opts) if ($_->doAnalyze($opts,'Local'));
   }
   return $doc;
 }
@@ -235,9 +235,9 @@ sub analyzeLocal {
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeClean($doc,$opts);
+    $_->analyzeClean($doc,$opts) if ($_->doAnalyze($opts,'Clean'));
   }
-  return $ach->SUPER::analyzeClean($doc,$opts);
+  return $ach->SUPER::analyzeClean($doc,$opts) if ($ach->doAnalyze($opts,'Clean'));
 }
 
 ##------------------------------------------------------------------------

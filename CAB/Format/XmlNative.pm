@@ -314,6 +314,8 @@ sub parseDocument {
       ##-- token: moot
       foreach $anod ($fmt->{mootElt} ? @{ $wnod->findnodes("./$fmt->{mootElt}\[last()]") } : qw()) {
 	$tok->{moot}{tag} = $anod->getAttribute($fmt->{mootTagAttr}) if ($fmt->{mootTagAttr});
+	$tok->{moot}{word} = $anod->getAttribute('word');
+	$tok->{moot}{lemma} = $anod->getAttribute('lemma');
 	foreach ($fmt->{mootAnalysisElt} ? @{ $anod->findnodes("./$fmt->{mootAnalysisElt}") } : qw()) {
 	  push(@{$tok->{moot}{analyses}}, {tag=>$_->getAttribute('tag'), details=>$_->getAttribute('details')});
 	}
@@ -483,6 +485,8 @@ sub tokenNode {
     $nod->removeChild($_) foreach (@{$nod->findnodes("./$fmt->{mootElt}")});
     $anod = $nod->addNewChild(undef,$fmt->{mootElt});
     $anod->setAttribute($fmt->{mootTagAttr}, $tok->{moot}{tag});
+    $anod->setAttribute('word', $tok->{moot}{word}) if (defined($tok->{moot}{word}));
+    $anod->setAttribute('lemma', $tok->{moot}{lemma}) if (defined($tok->{moot}{lemma}));
     foreach ($tok->{moot}{analyses} ? @{$tok->{moot}{analyses}} : qw()) {
       $aanod = $anod->addNewChild(undef,$fmt->{mootAnalysisElt});
       $aanod->setAttribute('tag',$_->{tag}) if (defined($_->{tag}));

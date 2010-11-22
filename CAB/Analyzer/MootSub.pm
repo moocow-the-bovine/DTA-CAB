@@ -64,7 +64,7 @@ sub analyzeSentences {
     ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
     $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
 		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
-		     : $tok->{text}));
+		     : $tok->{text})) if (!defined($m->{word}));
   }
 
   ##-- Step 2: run lemmatizer (populates $tok->{moot}{analyses}[$i]{lemma}
@@ -76,6 +76,7 @@ sub analyzeSentences {
     $m = $tok->{$mlabel};
     $t = $m->{tag};
     @a = $m->{analyses} ? grep {$_->{tag} eq $t} @{$m->{analyses}} : qw();
+    @a = ($m->{analyses}[0]) if (!@a && $m->{analyses} && @{$m->{analyses}}); ##-- hack: any analysis is better than none!
     if (!@a
 	|| exists($LITERAL_WORD_TAGS{$t})
         #|| ($t eq 'NE' && !$tok->{msafe})

@@ -105,7 +105,7 @@ sub analyzeSentences {
     my ($sublabel);
     foreach (@{$asub->{chain}}) {
       #$sublabel = $asub->{label}.'_'.$_->{label};
-      $sublabel = $asub->{label};
+      $sublabel = $_->{label};
       next if (defined($opts->{$sublabel}) && !$opts->{$sublabel});
       $_->{label} =~ s/^\Q$asub->{label}_\E//;  ##-- sanitize label ("dmoot_morph" --> "morph"), because it's also used as output key
       $_->analyzeTypes($doc,$udmtypes,$opts);

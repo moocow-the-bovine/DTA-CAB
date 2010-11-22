@@ -125,6 +125,13 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + override returns text/yaml
+sub mimeType { return 'text/yaml'; }
+
+##--------------------------------------------------------------
 ## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()

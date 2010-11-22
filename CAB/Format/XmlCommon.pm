@@ -115,6 +115,13 @@ sub fromString {
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + override returns text/xml
+sub mimeType { return 'text/xml'; }
+
+##--------------------------------------------------------------
 ## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()

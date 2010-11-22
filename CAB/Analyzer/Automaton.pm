@@ -37,7 +37,7 @@ our $DEFAULT_ANALYZE_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}'
 ##      $_[1] => blessed analyses (array-ref, maybe blessed)
 ##  + closure vars:
 ##      $anl  => analyzer (automaton)
-our $DEFAULT_ANALYZE_SET = '$_[0]{$anl->{label}}=$_[1]';
+our $DEFAULT_ANALYZE_SET = 'delete($_[0]{$anl->{label}}); $_[0]{$anl->{label}}=$_[1] if (defined($_[1]));';
 
 ##==============================================================================
 ## Constructors etc.

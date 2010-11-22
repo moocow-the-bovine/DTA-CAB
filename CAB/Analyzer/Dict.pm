@@ -55,6 +55,7 @@ our $DICT_SET_FST = q(
 			  map {split(/\t/,$_)}
 			  grep {defined($_)}
 			  values(%{$_[1]})];
+  delete($_[0]{$anl->{label}}) if (!@{$_[0]{$anl->{label}}});
 );
 
 ## $DICT_SET_FST_EQ

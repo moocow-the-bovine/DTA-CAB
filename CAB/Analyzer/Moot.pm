@@ -334,7 +334,7 @@ sub analyzeSentences {
   $doc = toDocument($doc);
 
   ##-- setup common variables
-  my $atag_srcs  = $moot->{analyzeTagSrcs};
+
   my $adst   = $moot->{label};
   my $prune  = $moot->{prune};
   my $uniqa  = $moot->{uniqueAnalyses};

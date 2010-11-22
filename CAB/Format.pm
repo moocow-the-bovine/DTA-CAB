@@ -267,6 +267,13 @@ sub forceDocument {
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + default returns text/plain
+sub mimeType { return 'text/plain'; }
+
+##--------------------------------------------------------------
 ## Methods: Output: accessors
 
 ## $lvl = $fmt->formatLevel()

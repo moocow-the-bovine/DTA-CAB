@@ -1,0 +1,1 @@
+../../gbooks/test-gbooks2.perl
