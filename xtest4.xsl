@@ -1,62 +1,4 @@
-## -*- Mode: CPerl -*-
-##
-## File: DTA::CAB::Format::XmlNative.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: Datum parser|formatter: XML (native)
-
-package DTA::CAB::Format::XmlNative;
-use DTA::CAB::Format::XmlCommon;
-use DTA::CAB::Format::XmlXsl;
-use DTA::CAB::Datum ':all';
-use XML::LibXML;
-#use XML::LibXML::Iterator;
-use IO::File;
-use Carp;
-use strict;
-
-##==============================================================================
-## Globals
-##==============================================================================
-
-our @ISA = qw(DTA::CAB::Format::XmlXsl);
-
-BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml)|xml)$/);
-}
-
-##==============================================================================
-## Constructors etc.
-##==============================================================================
-
-## $fmt = CLASS_OR_OBJ->new(%args)
-##  + object structure: HASH ref
-##    {
-##     ##-- input
-##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
-##     xprs => $xprs,                          ##-- XML::LibXML parser
-##
-##     ##-- output
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
-##     level => $level,                        ##-- output formatting level (default=0)
-##
-##     ##-- common: safety
-##     safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
-##    }
-sub new {
-  my $that = shift;
-  my $fmt = $that->SUPER::new(@_);
-  $fmt->initStyles();
-  return $fmt;
-}
-
-## $fmt = $fmt->initStyles()
-sub initStyles {
-  my $fmt = shift;
-
-  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ## stylesheet: input
-  $fmt->{iwhich} = 'string';
-  $fmt->{ixsl} = q(<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
 		xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 		xmlns:cab="http://www.deutschestextarchiv.de/cab/1.0/xsl"
@@ -120,7 +62,6 @@ sub initStyles {
     <xsl:element name="{$hashElt}">
       <xsl:if test="$useTypes"><xsl:attribute name="ref">DTA::CAB::Token</xsl:attribute></xsl:if>
       <xsl:attribute name="key">w</xsl:attribute>
-      <xsl:attribute name="attr">1</xsl:attribute>
       <xsl:apply-templates select="@*|*|text()"/>
     </xsl:element>
   </xsl:template>
@@ -197,17 +138,3 @@ sub initStyles {
   </xsl:template>
 
 </xsl:stylesheet>
-);
-
-  ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  ## stylesheet: output
-  $fmt->{owhich} = 'string';
-  $fmt->{oxsl} = q(
-);
-
-  return $fmt;
-}
-
-1; ##-- be happy
-
-__END__

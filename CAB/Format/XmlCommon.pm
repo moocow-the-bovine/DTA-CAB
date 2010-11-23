@@ -190,8 +190,69 @@ sub putDocument { $_[0]->logconfess("putDocument(): not implemented"); }
 
 ## $nod = $fmt->defaultXmlNode($value,\%opts)
 ##  + default XML node generator
-##  + \%opts is unused
+##  + \%opts:
+##     hashElt => $elt,                        ##-- output hash element (default='HASH')
+##     listElt => $elt,                        ##-- ouput list element (default='ARRAY')
+##     atomElt => $elt,                        ##-- ouput atom element (default='VALUE')
+our $HASH_ELT = 'HASH';
+our $LIST_ELT = 'ARRAY';
+our $ATOM_ELT = 'VALUE';
 sub defaultXmlNode {
+  my ($fmt,$val,$opts) = @_;
+  my $hashElt = $opts->{hashElt}||$fmt->{hashElt}||$HASH_ELT;
+  my $listElt = $opts->{listElt}||$fmt->{listElt}||$LIST_ELT;
+  my $atomElt = $opts->{atomElt}||$fmt->{atomElt}||$ATOM_ELT;
+  my ($vnod);
+  if (UNIVERSAL::can($val,'xmlNode') && UNIVERSAL::can($val,'xmlNode') ne \&defaultXmlNode) {
+    ##-- xml-aware object (avoiding circularities): $val->xmlNode()
+    return $val->xmlNode(@_[2..$#_]);
+  }
+  elsif (!ref($val)) {
+    ##-- non-reference: <ATOM>$val</ATOM> or <VALUE undef="1"/>
+    $vnod = XML::LibXML::Element->new($atomElt);
+    if (defined($val)) {
+      $vnod->appendText($val);
+    } else {
+      $vnod->setAttribute("undef","1");
+    }
+  }
+  elsif (UNIVERSAL::isa($val,'HASH')) {
+    ##-- HASH ref: <HASH ref="$ref"> ... <ENTRY key="$eltKey">defaultXmlNode($eltVal)</ENTRY> ... </HASH>
+    $vnod = XML::LibXML::Element->new($hashElt);
+    $vnod->setAttribute("ref",ref($val)) if (ref($val) ne 'HASH');
+    foreach (keys(%$val)) {
+      my $enod = $fmt->defaultXmlNode($val->{$_},$opts);
+      $enod->setAttribute("key",$_);
+      $vnod->addChild($enod);
+    }
+  }
+  elsif (UNIVERSAL::isa($val,'ARRAY')) {
+    ##-- ARRAY ref: <ARRAY ref="$ref"> ... xmlNode($eltVal) ... </ARRAY>
+    $vnod = XML::LibXML::Element->new($listElt);
+    $vnod->setAttribute("ref",ref($val)) if (ref($val) ne 'ARRAY');
+    foreach (@$val) {
+      $vnod->addChild($fmt->defaultXmlNode($_));
+    }
+  }
+#  elsif (UNIVERSAL::isa($val,'SCALAR')) {
+#    ##-- SCALAR ref: <SCALAR ref="$ref"> xmlNode($$val) </SCALAR>
+#    $vnod = XML::LibXML::Element->new("SCALAR");
+#    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'SCALAR');
+#    $vnod->addChild($fmt->defaultXmlNode($$val));
+#  }
+  else {
+    ##-- other reference (CODE,etc.): <VALUE ref="$ref" unknown="1">"$val"</VALUE>
+    $fmt->logcarp("defaultXmlNode(): default node generator clause called for value '$val'");
+    $vnod = XML::LibXML::Element->new($atomElt);
+    $vnod->setAttribute("ref",ref($val));
+    $vnod->setAttribute("unknown","1");
+    $vnod->appendText("$val");
+  }
+  return $vnod;
+}
+
+
+sub defaultXmlNode__old {
   my ($fmt,$val) = @_;
   my ($vnod);
   if (UNIVERSAL::can($val,'xmlNode') && UNIVERSAL::can($val,'xmlNode') ne \&defaultXmlNode) {

@@ -18,7 +18,9 @@ our @ISA = qw(Exporter);
 our @EXPORT= qw();
 our %EXPORT_TAGS =
     (
-     xml  => [qw(xml_safe_string)],
+     xml  => [qw(xml_safe_string xml_escape)],
+     libxml => [qw(libxml_parser libxml_doc)],
+     libxslt => [qw(xsl_stylesheet)],
      data => [qw(path_value)],
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
      profile => [qw(si_str profile_str)],
@@ -36,6 +38,17 @@ sub xml_safe_string {
   my $s = shift;
   $s =~ s/\:\:/\./g;
   $s =~ s/[\s\/\\]/_/g;
+  return $s;
+}
+
+## $xmlstr = xml_escape($str)
+sub xml_escape {
+  my $s = shift;
+  $s =~ s/\&(?![\w\#]+\;)/\&amp;/g;
+  $s =~ s/\'/\&apos;/g;
+  $s =~ s/\"/\&quot;/g;
+  $s =~ s/\</\&lt;/g;
+  $s =~ s/\>/\&gt;/g;
   return $s;
 }
 
@@ -184,6 +197,100 @@ sub profile_str {
   $timestr =~ s/^(?:0[dhm]\s*)+//;
   return sprintf("%d tok, %d chr in %s: %s tok/sec ~ %s chr/sec\n",
 		 $ntoks,$nchrs, $timestr, $toksPerSec,$chrsPerSec);
+}
+
+##==============================================================================
+## Utils: XML::LibXML
+##==============================================================================
+
+## %LIBXML_PARSERS
+##  + XML::LibXML parsers, keyed by parser attribute strings (see libxml_parser())
+our %LIBXML_PARSERS = qw();
+
+## $parser = libxml_parser(%opts)
+##  + %opts:
+##     line_numbers => $bool,  ##-- default: 1
+##     load_ext_dtd => $bool,  ##-- default: 0
+##     validation   => $bool,  ##-- default: 0
+##     keep_blanks  => $bool,  ##-- default: 1
+##     expand_entities => $bool, ##-- default: 1
+##     recover => $bool,         ##-- default: 1
+sub libxml_parser {
+  require XML::LibXML;
+  my %opts = @_;
+  my %defaults = (
+		  line_numbers => 1,
+		  load_ext_dtd => 0,
+		  validation => 0,
+		  keep_blanks => 1,
+		  expand_entities => 1,
+		  recover => 1,
+		 );
+  %opts = (%defaults,%opts);
+  my $key  = join(', ', map {"$_=>".($opts{$_} ? 1 : 0)} sort(keys(%defaults)));
+  return $LIBXML_PARSERS{$key} if ($LIBXML_PARSERS{$key});
+
+  my $parser = $LIBXML_PARSERS{$key} = XML::LibXML->new();
+  $parser->keep_blanks($opts{keep_blanks}||0);     ##-- do we want blanks kept?
+  $parser->expand_entities($opts{expand_ents}||0); ##-- do we want entities expanded?
+  $parser->line_numbers($opts{line_numbers}||0);
+  $parser->load_ext_dtd($opts{load_ext_dtd}||0);
+  $parser->validation($opts{validation}||0);
+  $parser->recover($opts{recover}||0);
+  return $parser;
+}
+
+## $doc = libxml_doc($which=>$src, %parserOpts)
+##  + $which is one of 'file', 'string', 'fh', or 'doc'
+sub libxml_doc {
+  my ($which,$src,%opts) = @_;
+  my $parser = libxml_parser(%opts);
+  if ($which eq 'file') {
+    return $parser->parse_file($src);
+  } elsif ($which eq 'fh') {
+    return $parser->parse_fh($src);
+  } elsif ($which eq 'string') {
+    return $parser->parse_string($src);
+  } elsif ($which eq 'doc') {
+    return $src;
+  }
+  confess(__PACKAGE__, "::libxml_doc() unknown source type '$which'!");
+  return undef;
+}
+
+##==============================================================================
+## Utils: XML::LibXSLT
+##==============================================================================
+
+## $XSLT
+##  + package-global shared XML::LibXSLT object (or undef)
+our $XSLT = undef;
+
+## $xslt = PACKAGE::xsl_xslt()
+##  + returns XML::LibXSLT object
+sub xsl_xslt {
+  require XML::LibXML;
+  require XML::LibXSLT;
+  $XSLT = XML::LibXSLT->new() if (!$XSLT);
+  return $XSLT;
+}
+
+## $stylesheet = PACKAGE::xsl_stylesheet(file=>$xsl_file)
+## $stylesheet = PACKAGE::xsl_stylesheet(fh=>$xsl_fh)
+## $stylesheet = PACKAGE::xsl_stylesheet(doc=>$xsl_doc)
+## $stylesheet = PACKAGE::xsl_stylesheet(string=>$xsl_string)
+sub xsl_stylesheet {
+  require XML::LibXML;
+  require XML::LibXSLT;
+  my ($which,$src) = @_;
+  my $xsldoc = libxml_doc($which=>$src, line_numbers=>1);
+  confess(__PACKAGE__, "::xsl_stylesheet: could not parse XSL $which source as XML: $!") if (!$xsldoc);
+
+  my $xslt = xsl_xslt();
+  my $stylesheet = $xslt->parse_stylesheet($xsldoc)
+    or confess(__PACKAGE__, "::xsl_stylesheet(): could not parse XSL $which document as stylesheet: $!");
+
+  return $stylesheet;
 }
 
 

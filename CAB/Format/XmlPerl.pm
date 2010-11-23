@@ -7,6 +7,7 @@
 package DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Datum ':all';
+use DTA::CAB::Utils ':libxml';
 use XML::LibXML;
 use IO::File;
 use Carp;
@@ -36,6 +37,9 @@ BEGIN {
 ##     ##-- output
 ##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
+##     hashElt => $elt,                        ##-- output hash element (default='m')
+##     listElt => $elt,                        ##-- ouput list element (default='l')
+##     atomElt => $elt,                        ##-- ouput atom element (default='a')
 ##
 ##     ##-- common
 ##    )
@@ -44,11 +48,15 @@ sub new {
   return $that->SUPER::new(
 			   ##-- input
 			   #xdoc => undef,
-			   #xprs => XML::LibXML->new,
+			   xprs => libxml_parser(keep_blanks=>0),
 
 			   ##-- output
 			   encoding => 'UTF-8',
 			   level    => 0,
+
+			   hashElt => 'm',
+			   listElt => 'l',
+			   atomElt => 'a',
 
 			   ##-- common
 
@@ -80,42 +88,43 @@ sub noSaveKeys {
 ## Methods: Input: Local
 
 ## $obj = $fmt->parseNode($nod)
-##  + Returns the perl object represented by the XML::LibXML::Node $nod.
+##  + Returns the perl object represented by the XML::LibXML::Node $nod
+our %atomNames = map {($_=>undef)} (qw(VALUE value v ATOM atom a), '#text');
+our %hashNames = map {($_=>undef)} qw(HASH H hash h MAP M map m);
+our %listNames = map {($_=>undef)} qw(ARRAY array   LIST L list l);
+our %allNames  = (%atomNames,%hashNames,%listNames);
 sub parseNode {
   my ($fmt,$nod) = @_;
+  return undef if (!defined($nod));
   my $nodname = $nod->nodeName;
   my ($val,$ref);
-  if ($nodname eq 'VALUE') {
-    ##-- non-reference: <VALUE>$val</VALUE> or <VALUE undef="1"/>
-    $val = $nod->getAttribute('undef') ? undef : $nod->textContent;
+  if (exists($atomNames{$nodname})) {
+    ##-- non-reference: <VALUE>$val</VALUE> or <VALUE undef="1"/> or plain text
+    $val = $nod->can('getAttribute') && $nod->getAttribute('undef') ? undef : $nod->textContent;
   }
-  elsif ($nodname eq 'HASH') {
+  elsif (exists($hashNames{$nodname})) {
     ##-- HASH ref: <HASH ref="$ref"> ... <ENTRY key="$eltKey">defaultXmlNode($eltVal)</ENTRY> ... </HASH>
     $ref = $nod->getAttribute('ref');
     $val = {};
     $val = bless($val,$ref) if ($ref && $ref ne 'HASH');
-    foreach (grep {$_->nodeName eq 'ENTRY'} $nod->childNodes) {
-      $val->{ $_->getAttribute('key') } = $fmt->parseNode(grep {ref($_) eq 'XML::LibXML::Element'} $_->childNodes);
+    foreach (grep {ref($_) eq 'XML::LibXML::Element' && $_->hasAttribute('key')} $nod->childNodes) {
+      $val->{ $_->getAttribute('key') } = $fmt->parseNode($_);
     }
   }
-  elsif ($nodname eq 'ARRAY') {
+  elsif (exists($listNames{$nodname})) {
     ##-- ARRAY ref: <ARRAY ref="$ref"> ... xmlNode($eltVal) ... </ARRAY>
     $ref = $nod->getAttribute('ref');
     $val = [];
     $val = bless($val,$ref) if ($ref && $ref ne 'ARRAY');
-    foreach (grep {ref($_) eq 'XML::LibXML::Element'} $nod->childNodes) {
+    foreach ($nod->childNodes) {
       push(@$val, $fmt->parseNode($_));
     }
   }
-  elsif ($nodname eq 'SCALAR') {
-    ##-- SCALAR ref: <SCALAR ref="$ref"> xmlNode($$val) </SCALAR>
-    my $val0 = $fmt->parseNode( grep {ref($_) eq 'XML::LibXML::Element'} $_->childNodes );
-    $ref = $nod->getAttribute('ref');
-    $val = \$val0;
-    $val = bless($val,$ref) if ($ref && $ref ne 'SCALAR');
+  elsif ($nodname =~ /^\#/) {
+    ;##-- special node, e.g. #cdata-section, #comment, etc.: skip
   }
   else {
-    ##-- unknown : skip
+    $fmt->logwarn("cannot handle node with name=$nodname - skipping");
   }
   return $val;
 }
@@ -160,15 +169,13 @@ sub documentNode { return $_[0]->defaultXmlNode($_[1]); }
 ##  + gets or creates buffered body array node
 sub xmlBodyNode {
   my $fmt = shift;
-  my $root = $fmt->xmlRootNode($fmt->{documentElt});
-  my ($body) = $root->findnodes('./ENTRY[@key="body"][last()]');
+  my $root = $fmt->xmlRootNode('doc');
+  my ($body) = $root->findnodes('./*[@key="body"][last()]');
   if (!defined($body)) {
-    $body = $root->addNewChild(undef,"ENTRY");
+    $body = $root->addNewChild(undef,$fmt->{listElt});
     $body->setAttribute('key','body');
   }
-  my ($ary) = $body->findnodes("./ARRAY[last()]");
-  return $ary if (defined($ary));
-  return $body->addNewChild(undef,"ARRAY");
+  return $body;
 }
 
 ## $sentence_array_node = $fmt->xmlSentenceNode()
@@ -178,19 +185,15 @@ sub xmlSentenceNode {
   my $body = $fmt->xmlBodyNode();
   my ($snod) = $body->findnodes('./*[@ref="DTA::CAB::Sentence"][last()]');
   if (!defined($snod)) {
-    $snod = $body->addNewChild(undef,"HASH");
+    $snod = $body->addNewChild(undef,$fmt->{hashElt});
     $snod->setAttribute("ref","DTA::CAB::Sentence");
   }
-  my ($toks) = $snod->findnodes('./ENTRY[@key="tokens"][last()]');
+  my ($toks) = $snod->findnodes('./'.$fmt->{listElt}.'[@key="tokens"][last()]');
   if (!defined($toks)) {
-    $toks = $body->addNewChild(undef,"ENTRY");
+    $toks = $body->addNewChild(undef,$fmt->{listElt});
     $toks->setAttribute("key","tokens");
   }
-  my ($ary) = $toks->findnodes("./ARRAY[last()]");
-  if (!defined($ary)) {
-    $ary = $toks->addNewChild(undef,'ARRAY');
-  }
-  return $ary;
+  return $toks;
 }
 
 ##--------------------------------------------------------------
@@ -220,7 +223,7 @@ sub putDocument {
     $xdoc->setDocumentElement($docnod);
   } else {
     my $body = $fmt->xmlBodyNode();
-    $body->addChild($_) foreach ($docnod->findnodes('./ENTRY[@key="body"]/ARRAY/*'));
+    $body->addChild($_) foreach ($docnod->findnodes('./'.$fmt->{listElt}.'[@key="body"]/*'));
   }
   return $fmt;
 }
