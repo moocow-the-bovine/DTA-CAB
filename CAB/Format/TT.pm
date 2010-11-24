@@ -121,13 +121,13 @@ sub parseTTString {
 
   while ($src =~ m/^(.*)$/mg) {
     $line = $1;
-    if ($line =~ /^\%\% xml\:base=(.*)$/) {
+    if ($line =~ /^\%\% (?:xml\:)?base=(.*)$/) {
       ##-- special comment: document attribute: xml:base
-      $doca{xmlbase} = $1;
+      $doca{'base'} = $1;
     }
     elsif ($line =~ /^\%\% Sentence (.*)$/) {
       ##-- special comment: sentence attribute: xml:id
-      $sa{xmlid} = $1;
+      $sa{'id'} = $1;
     }
     elsif ($line =~ /^\%\%(.*)$/) {
       ##-- generic line: add to _cmts
@@ -138,7 +138,7 @@ sub parseTTString {
       ##-- blank line: eos
       push(@$sents, { %sa, tokens=>$s }) if (@$s || %sa);
       $s   = [];
-      %sa = qw();
+      %sa  = qw();
     }
     else {
       ##-- token
@@ -150,10 +150,10 @@ sub parseTTString {
 	  ##-- token: field: loc
 	  $tok->{loc} = { off=>$1,len=>$2 };
 	}
-#	elsif ($field =~ m/^\[(xmlid|chars)\] (.*)$/) {
-#	  ##-- token: field: DTA::TokWrap special field
-#	  $tok->{$1} = $2;
-#	}
+	elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
+	  ##-- token: field: DTA::TokWrap special field
+	  $tok->{$1} = $2;
+	}
 	elsif ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
 	  ##-- token: field: xlit
 	  $tok->{xlit} = { isLatin1=>$1, isLatinExt=>$2, latin1Text=>$3 };
@@ -278,7 +278,7 @@ sub putToken {
   $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
 
   ##-- xml-id
-  #$out .= "\t[xmlid] $tok->{xmlid}" if (defined($tok->{xmlid}));
+  $out .= "\t[id] ".$tok->{'id'} if (defined($tok->{id}));
 
   ##-- character list
   #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
@@ -430,7 +430,7 @@ sub putToken {
 sub putSentence {
   my ($fmt,$sent) = @_;
   $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}}) if ($sent->{_cmts});
-  $fmt->{outbuf} .= "%% Sentence $sent->{xmlid}\n" if (defined($sent->{xmlid}));
+  $fmt->{outbuf} .= "%% Sentence $sent->{id}\n" if (defined($sent->{id}));
   $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{outbuf} .= "\n";
   return $fmt;
@@ -441,7 +441,7 @@ sub putSentence {
 sub putDocument {
   my ($fmt,$doc) = @_;
   $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}}) if ($doc->{_cmts});
-  $fmt->{outbuf} .= "%% xml:base=$doc->{xmlbase}\n\n" if (defined($doc->{xmlbase}));
+  $fmt->{outbuf} .= "%% base=$doc->{base}\n\n" if (defined($doc->{base}));
   $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
   return $fmt;
 }

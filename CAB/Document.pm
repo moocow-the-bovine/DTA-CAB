@@ -26,7 +26,7 @@ our @ISA = qw(DTA::CAB::Datum);
 ##     types => \%text2tok,  ##-- maps token text type-wise to Token objects (optional)
 ##     ##
 ##     ##-- special attributes
-##     noTypeKeys => \@keys, ##-- token keys which should not be mapped to/from types (default='_xmlnod')
+##     #noTypeKeys => \@keys, ##-- token keys which should not be mapped to/from types (default='_xmlnod')
 ##     ##
 ##     ##-- dta-tokwrap attributes
 ##     xmlbase => $base,
@@ -34,7 +34,7 @@ our @ISA = qw(DTA::CAB::Datum);
 sub new {
   return bless({
 		body => ($#_>=1 ? $_[1] : []),
-		noTypeKeys => [qw(_xmlnod)],
+		#noTypeKeys => [qw(_xmlnod)],
 		@_[2..$#_],
 	       }, ref($_[0])||$_[0]);
 }

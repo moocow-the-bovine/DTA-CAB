@@ -37,9 +37,9 @@ BEGIN {
 ##     ##-- output
 ##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
-##     hashElt => $elt,                        ##-- output hash element (default='m')
-##     listElt => $elt,                        ##-- ouput list element (default='l')
-##     atomElt => $elt,                        ##-- ouput atom element (default='a')
+##     hashElt => $elt,                        ##-- output hash element (default='map')
+##     listElt => $elt,                        ##-- ouput list element (default='list')
+##     atomElt => $elt,                        ##-- ouput atom element (default='val')
 ##
 ##     ##-- common
 ##    )
@@ -71,9 +71,7 @@ sub new {
 
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
-sub noSaveKeys {
-  return qw(xdoc xprs);
-}
+##  + inherited from XmlCommon
 
 
 ##=============================================================================
@@ -81,15 +79,11 @@ sub noSaveKeys {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Input: Input selection
-
-
-##--------------------------------------------------------------
 ## Methods: Input: Local
 
 ## $obj = $fmt->parseNode($nod)
 ##  + Returns the perl object represented by the XML::LibXML::Node $nod
-our %atomNames = map {($_=>undef)} (qw(VALUE value v ATOM atom a), '#text');
+our %atomNames = map {($_=>undef)} (qw(VALUE VAL V value val v ATOM atom a), '#text');
 our %hashNames = map {($_=>undef)} qw(HASH H hash h MAP M map m);
 our %listNames = map {($_=>undef)} qw(ARRAY array   LIST L list l);
 our %allNames  = (%atomNames,%hashNames,%listNames);
@@ -102,7 +96,7 @@ sub parseNode {
     ##-- non-reference: <VALUE>$val</VALUE> or <VALUE undef="1"/> or plain text
     $val = $nod->can('getAttribute') && $nod->getAttribute('undef') ? undef : $nod->textContent;
   }
-  elsif (exists($hashNames{$nodname})) {
+  elsif (exists($hashNames{$nodname})){
     ##-- HASH ref: <HASH ref="$ref"> ... <ENTRY key="$eltKey">defaultXmlNode($eltVal)</ENTRY> ... </HASH>
     $ref = $nod->getAttribute('ref');
     $val = {};

@@ -7,6 +7,7 @@
 package DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
+use DTA::CAB::Utils ':libxml';
 use XML::LibXML;
 use IO::File;
 use Carp;
@@ -39,7 +40,7 @@ sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- input
-		   xprs => XML::LibXML->new,
+		   xprs => libxml_parser(),
 		   xdoc => undef,
 
 		   ##-- output
