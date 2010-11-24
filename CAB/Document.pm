@@ -132,7 +132,8 @@ sub expandTypeKeys {
   foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
     $typ = $types->{$tok->{text}};
     @$tok{@$keys} = @$typ{@$keys};
-    #delete(@$tok{grep {!defined($tok->{$_})} @$keys});
+    #$tok{$_}=$typ->{$_} foreach (grep {defined($typ->{$_})} @$keys); ##-- don't put undef keys into tok in the first place
+    #delete(@$tok{grep {!defined($tok->{$_})} @$keys}); ##-- ... or remove undef keys from tok after the fact
   }
   return $doc;
 }

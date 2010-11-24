@@ -54,7 +54,7 @@ sub new {
 
 			     fmts => [
 				      {key=>'csv',  class=>'DTA::CAB::Format::CSV', label=>'CSV'},
-				      {key=>'json', class=>'DTA::CAB::Format::JSON', label=>'JSON', level=>0},
+				      {key=>'json', class=>'DTA::CAB::Format::JSON', label=>'JSON', level=>1},
 				      {key=>'perl', class=>'DTA::CAB::Format::Perl', label=>'Perl', level=>2},
 				      {key=>'text', class=>'DTA::CAB::Format::Text', label=>'Text'},
 				      {key=>'tt',   class=>'DTA::CAB::Format::TT', label=>'TT'},
@@ -171,12 +171,22 @@ sub fetchResults {
   $qdoc  = $wr->parseQueryDoc() if (!$qdoc);
   $qopts = $wr->parseQueryOpts() if (!$qopts);
 
+  #my $fmt = DTA::CAB::Format::JSON->new;
+  my $fmt = DTA::CAB::Format::YAML->new;
+  my $qstr = $fmt->putDocument($qdoc)->toString
+    or return $wr->set_error(ref($fmt)."::putDocument() failed");
+  $qopts->{reader} = $qopts->{writer} = {class=>ref($fmt)};
+
   $wr->connect()
     or return $wr->set_error("connect() failed: $!");
-  my $rdoc = $wr->analyzeDocument($qa,$qdoc,$qopts)
-    or return $wr->set_error("analyzeDocument() failed: $!");
-
+  #my $rdoc = $wr->analyzeDocument($qa,$qdoc,$qopts) or return $wr->set_error("analyzeData() failed: $!");
+  my $rstr = $wr->analyzeData($qa,$qstr,$qopts)
+    or return $wr->set_error("analyzeData() failed: $!");
   $wr->disconnect();
+
+  my $rdoc  = $fmt->flush->fromString($rstr)->parseDocument()
+    or return $wr->set_error(ref($fmt)."::parseDocument() failed");
+
   return $rdoc;
 }
 
