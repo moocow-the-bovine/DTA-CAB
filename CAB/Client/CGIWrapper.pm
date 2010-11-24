@@ -8,8 +8,12 @@ use DTA::CAB::Format;
 use DTA::CAB::Format::Builtin;
 use DTA::CAB::Datum ':all';
 
-use CGI qw(); #qw(:standard :cgi-lib);
+use CGI qw(:standard :cgi-lib);
 #use LWP::UserAgent;
+use HTTP::Status;
+use HTTP::Response;
+
+
 use URI::Escape;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
@@ -50,12 +54,13 @@ sub new {
 
 			     fmts => [
 				      {key=>'csv',  class=>'DTA::CAB::Format::CSV', label=>'CSV'},
-				      {key=>'json', class=>'DTA::CAB::Format::JSON', label=>'JSON', level=>1},
+				      {key=>'json', class=>'DTA::CAB::Format::JSON', label=>'JSON', level=>0},
 				      {key=>'perl', class=>'DTA::CAB::Format::Perl', label=>'Perl', level=>2},
 				      {key=>'text', class=>'DTA::CAB::Format::Text', label=>'Text'},
 				      {key=>'tt',   class=>'DTA::CAB::Format::TT', label=>'TT'},
-				      {key=>'xml',  class=>'DTA::CAB::Format::XmlNative', label=>'XML (Native)', level=>1},
-				      {key=>'xmlrpc',  class=>'DTA::CAB::Format::XmlRpc', label=>'XML-RPC', level=>1},
+				      {key=>'xml',  class=>'DTA::CAB::Format::XmlNative', label=>'XML (Native)', level=>0},
+				      {key=>'xmlperl', class=>'DTA::CAB::Format::XmlPerl', label=>'XML (Perl)', level=>0},
+				      {key=>'xmlrpc',  class=>'DTA::CAB::Format::XmlRpc', label=>'XML-RPC', level=>0},
 				      {key=>'yaml', class=>'DTA::CAB::Format::YAML', label=>'YAML', level=>0},
 				     ],
 
@@ -81,66 +86,81 @@ sub new {
 ## undef = $wr->run(\%cgi_param_hash)
 sub run {
   my $wr   = shift;
-  my $q    = $wr->{q}  = CGI->new(@_);
-  $q->charset('UTF-8');
-  my $qv = $wr->{qv} = $q->Vars;
+  my $q    = $wr->{q} = CGI->new(@_);
+  $q->charset('utf-8');
+  my $qv   = $wr->{qv} = $wr->cgiDecode(scalar($q->Vars));
 
-  ##-- auto-decode some vars
-  my @u8keys = qw(q);
-  my (@u8vals,$key);
-  foreach $key (grep {exists $qv->{$_}} @u8keys) {
-    @u8vals = $q->param($key);
-    foreach (@u8vals) {
-      $_ = decode('utf8', $_);
-    }
-    if (@u8vals<=1) {
-      $qv->{$key} = $u8vals[0];
-    } else {
-      $qv->{$key} = [@u8vals];
+  my ($contentType,$content) = ('text/html',''); ##-- default content type
+  my ($rdoc,$ofkey,$ofdat,$of);
+
+  ##-- get content
+  if (defined($qv->{q}) && $qv->{q} ne '') {
+    ##-- query given: fetch the results
+    $rdoc = $wr->fetchResults()
+      || return $wr->http_error();
+    #print $q->pre(Data::Dumper->Dump([$rdoc],['rdoc'])); ##-- debug
+
+    ##-- format
+    $ofkey = $qv->{format} || $wr->{fmts}[0]{key};
+    $ofdat = $wr->{fmtsh}{$ofkey};
+    return $wr->http_error("unknown format: $ofkey") if (!$ofdat);
+    $of    = $ofdat->{class}->new(level=>$ofdat->{level},encoding=>'UTF-8');
+    $content = $of->putDocumentRaw($rdoc)->toString;
+    $content = decode('utf8',$content) if (!utf8::is_utf8($content));
+    $contentType = $of->mimeType;
+
+    if ($contentType ne 'text/html') {
+      print
+	($q->header(-type=>($contentType =~ /\/(?:xml|plain)$/ ? $contentType : 'text/plain'),
+		    -status=>'200 OK',
+		    -charset => 'utf-8'),
+	 $content);
+      return $wr->finish();
     }
   }
 
-  ##-- html headers (debug)
+  ##-- no query: just print html form
   print
     ($wr->html_header,
      $wr->html_qform,
      #$wr->html_vars, ##-- debug
+     ($content ne ''
+      ? $q->div({id=>'section'},
+		$q->h2("Results (", $q->tt($ofdat->{class}), ")"),
+		$content
+	       )
+      : ''),
+     $wr->html_footer,
     );
+}
 
-  ##-- fetch query results
-  if (defined($qv->{q}) && $qv->{q} ne '') {
-    my $rdoc = $wr->fetchResults();
-    #print $q->pre(Data::Dumper->Dump([$rdoc],['rdoc'])); ##-- debug
-
-    ##-- format
-    if ($rdoc) {
-      my $ofkey = $qv->{of} || $wr->{fmts}[0]{key};
-      my $ofdat = $wr->{fmtsh}{$ofkey};
-      my $of    = $ofdat->{class}->new(level=>$ofdat->{level},encoding=>'UTF-8');
-      my $os    = $of->putDocumentRaw($rdoc)->toString;
-      $os = decode('utf8',$os) if (!utf8::is_utf8($os));
-
-      print
-	($q->div({id=>'section'},
-		 $q->h2("Results (", $q->tt($ofdat->{class}). ")"),
-		 $q->pre(htmlesc($os)),
-		));
-
-    } else {
-      print $wr->html_error;
-    }
-  }
-
-  ##-- footer
-  print $wr->html_footer;
-
-  ##-- cleanup & return
+## undef = $wr->finish()
+##  + cleanup after ourselves
+sub finish {
+  my $wr = shift;
+  $wr->disconnect;
   delete @$wr{qw(q qv error)};
   return;
 }
 
 ##==============================================================================
 ## Methods: Generic
+
+## \%vars = $wr->cgiDecode(\%vars)
+##  + decodes cgi params in \%vars
+sub cgiDecode {
+  my ($wr,$qv) = @_;
+  ##-- auto-decode some vars
+  my @u8keys = qw(q);
+  my ($vr);
+  foreach (grep {exists $qv->{$_}} @u8keys) {
+    $vr = \$qv->{$_};
+    foreach (ref($$vr) ? @{$$vr} : $$vr) {
+      $_ = decode('utf8',$_) if (!utf8::is_utf8($_));
+    }
+  }
+  return $qv;
+}
 
 ## $rdoc_or_undef = $wr->fetchResults()
 ## $rdoc_or_undef = $wr->fetchResults($analyzer,$qdoc,\%qopts)
@@ -222,26 +242,54 @@ sub set_error {
 ##  + returns error string for $wr->{error}
 sub html_error {
   my $wr = shift;
-  my $q  = $wr->{q};
-  return ($q->h2('Error'),
-	  $q->tt(htmlesc($wr->{error} || '???')),
-	  $q->br,
+  return (span({style=>'font-size: large; color: #ff0000;'},
+	       b('Error: '), htmlesc($wr->{error} || '???')),
+	  br,
 	 );
 }
+
+## @http = $wr->http_error()
+## @http = $wr->http_error(@msg)
+##  + prints HTTP headers & error string for $wr->{error}
+sub http_error {
+  my $wr = shift;
+  $wr->set_error(@_) if (@_);
+  print
+    (header(-type=>'text/html',
+	    -charset=>'utf-8',
+	    -status=>'500 Internal Server Error'),
+     start_html(-title => (__PACKAGE__ . " Error"),
+		-style=>{'src'=>'taxi.css'},
+	       ),
+     $wr->html_error,
+     ##
+     $wr->html_begin_content(),
+     $wr->html_qform,
+     $wr->html_footer,
+     end_html,
+    );
+  return $wr->finish;
+}
+
 
 ## @html = $wr->html_header()
 sub html_header {
   my $wr = shift;
-  my $q = $wr->{q};
   return
-    ($q->header,
-     $q->start_html(-title=>'DTA::CAB Client Wrapper',
-		    -style=>{'src'=>'taxi.css'},
-		   ),
-     openTag('div',{id=>'outer'}),
-     $q->div({id=>'headers'},
-	     $q->h1("DTA::CAB Client Wrapper"),
-	    ),
+    (header(-type=>'text/html', -charset=>'utf-8'),
+     start_html(-title=>'DTA::CAB Client Wrapper',
+		-style=>{'src'=>'taxi.css'},
+	       ),
+     $wr->html_begin_content(),
+    );
+}
+
+## @html = html_begin_content($h1_title_text)
+sub html_begin_content {
+  my $wr = shift;
+  return
+    (openTag('div',{id=>'outer'}),
+     div({id=>'headers'}, h1(@_ ? @_ : 'DTA::CAB Client Wrapper')),
      openTag('div',{id=>'content'}),
     );
 }
@@ -300,7 +348,7 @@ sub html_qform {
 				 ##
 				 $q->Tr(
 					$q->td({id=>'searchLabelE'}, "Format:"),
-					$q->td($q->popup_menu({-name=>'of',
+					$q->td($q->popup_menu({-name=>'format',
 							       -values=>[ map {$_->{key}} @{$wr->{fmts}} ],
 							       -default=>'DTA::CAB::Format::TT',
 							       -labels => { map {($_->{key}=>$_->{label})} @{$wr->{fmts}} },

@@ -230,9 +230,12 @@ sub xmlNode {
     ($val,$key,$mom) = @{shift @queue};
     $key = $key2xml->{$key} if (defined($key2xml->{$key}));
 
-    if (!ref($val)) {
+    if (!defined($val)) {
+      ;##-- undefined: skip it
+    }
+    elsif (!ref($val)) {
       ##-- scalar: raw text
-      $val = '' if (!defined($val));
+      #$val = '' if (!defined($val));
       if ($key eq '#text') {
 	$mom->appendText($val);
       } else {
@@ -250,7 +253,7 @@ sub xmlNode {
       $nod->appendWellBalancedChunk($val->{_xmldata}) if (defined($val->{_xmldata}));
       while (($skey,$sval)=each(%$val)) {
 	$skey = $key2xml->{$skey} if (defined($key2xml->{$skey}));
-	if ($skey eq '_xmldata') {
+	if ($skey eq '_xmldata' || !defined($sval)) {
 	  next;
 	} elsif (!ref($sval)) {
 	  $nod->setAttribute($skey,$sval);
@@ -284,8 +287,6 @@ sub xmlNode {
   return $topnod;
 }
 
-##
-
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
@@ -303,6 +304,10 @@ sub putDocument {
   return $fmt;
 }
 
+##==============================================================================
+## Package: Xml (alias)
+package DTA::CAB::Format::Xml;
+our @ISA = qw(DTA::CAB::Format::XmlNative);
 
 1; ##-- be happy
 

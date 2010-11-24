@@ -10,6 +10,7 @@ use DTA::CAB::Datum ':all';
 use RPC::XML;
 use RPC::XML::Parser;
 use IO::File;
+use Encode qw(encode decode);
 use Carp;
 use strict;
 

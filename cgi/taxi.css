@@ -232,7 +232,7 @@ h1, h2, h3 {
   padding-left: 2em;
   /*font-size: large;*/
 }
-#matchedToken, .matchedToken, .hitMatch {
+#matchedToken, .matchedToken, .hitMatch, .error {
  color: #ff0000;
  /*color: #0000ff;*/
  font-weight: bold;
