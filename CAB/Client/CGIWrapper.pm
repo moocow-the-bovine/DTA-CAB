@@ -37,7 +37,9 @@ our @ISA = qw(DTA::CAB::Client::XmlRpc);
 ##   sysid   => "$id str"           ##-- default __PACKAGE__ . " v$DTA::CAB::VERSION"
 ##   analyzers => \@analyzers,      ##-- supported analyzers (undef to query)
 ##   fmts => [{class=>$class,label=>$label,level=>$level},...], ##-- supported output formats
+##   defaultFmt => $name,           ##-- default format key
 ##   autoClean => $bool,            ##-- always set 'doAnalyzeClean=1' upstream analysis option
+##   debug     => $bool,            ##-- default to debug mode?
 ##   ##
 ##   ##-- INHERITED from DTA::CAB::Client::XmlRpc
 ##   serverURL => $url,             ##-- default: localhost:8000
@@ -51,6 +53,7 @@ sub new {
 			     sysid => (__PACKAGE__ . " v$DTA::CAB::VERSION"),
 			     analyzers => [qw(dta.cab.norm dta.cab.expand)],
 			     autoClean => 0,
+			     debug => 0,
 
 			     fmts => [
 				      {key=>'csv',  class=>'DTA::CAB::Format::CSV', label=>'CSV'},
@@ -63,6 +66,7 @@ sub new {
 				      {key=>'xmlrpc',  class=>'DTA::CAB::Format::XmlRpc', label=>'XML-RPC', level=>0},
 				      {key=>'yaml', class=>'DTA::CAB::Format::YAML', label=>'YAML', level=>0},
 				     ],
+			     defaultFmt => 'text',
 
 			     ##-- user args
 			     @_,
@@ -101,7 +105,7 @@ sub run {
     #print $q->pre(Data::Dumper->Dump([$rdoc],['rdoc'])); ##-- debug
 
     ##-- format
-    $ofkey = $qv->{format} || $wr->{fmts}[0]{key};
+    $ofkey = $qv->{format} || $wr->{defaultFmt};
     $ofdat = $wr->{fmtsh}{$ofkey};
     return $wr->http_error("unknown format: $ofkey") if (!$ofdat);
     $of    = $ofdat->{class}->new(level=>$ofdat->{level},encoding=>'UTF-8');
@@ -205,7 +209,7 @@ sub parseQueryOpts {
   $qv = $wr->{qv} if (!$qv);
   return {
 	  ##-- autoClean
-	  ($wr->{autoclean} || $qv->{clean} ? (doAnalyzeClean=>1) : qw()),
+	  ($wr->{autoClean} || !$qv->{debug} ? (doAnalyzeClean=>1) : qw()),
 
 	  ##-- format
 	 }
@@ -341,41 +345,44 @@ sub html_qform {
 
   return
     (
-     $q->div({id=>'section'},
-	     #$q->h2('Query'),
-	     $q->start_form(-method=>'GET', -id=>'queryForm'),
-	     $q->table({class=>'sep'},
-		       $q->tbody(
-				 $q->Tr($q->td({id=>'searchLabel'}, "Query:"),
-					$q->td({colspan=>3}, $q->textfield(-name=>'q',-size=>64,-id=>'searchText')),
-				       ),
-				 ##
-				 $q->Tr($q->td({id=>'searchLabel'}, "Analyzer:"),
-					$q->td($q->popup_menu({-name=>'analyzer',
-							       -values=>[ @{$wr->{analyzers}} ],
-							       -default=>($wr->{analyzers}[0] || 'dta.cab.default')
-							      }))),
-				 ##
-				 $q->Tr(
-					$q->td({id=>'searchLabelE'}, "Format:"),
-					$q->td($q->popup_menu({-name=>'format',
-							       -values=>[ map {$_->{key}} @{$wr->{fmts}} ],
-							       -default=>'DTA::CAB::Format::TT',
-							       -labels => { map {($_->{key}=>$_->{label})} @{$wr->{fmts}} },
-							      }))),
-				 ##
-				 $q->Tr(
-					$q->td({id=>'searchLabelE'}, "Auto-clean:"),
-					$q->td($q->checkbox(-name=>'clean', checked=>($wr->{autoClean} ? 1 : 0), value=>1, label=>'',
-							    ($wr->{autoClean} ? (-disabled=>1) : qw()))),
-				       ),
-				 ##
-				 $q->Tr($q->td(),
-					$q->td($q->submit(-name=>'submit',-value=>'submit')),
-				       ),
-				)),
-	     $q->end_form,
-	    ),
+     div({id=>'section'},
+	 #h2('Query'),
+	 start_form(-method=>'GET', -id=>'queryForm'),
+	 table({class=>'sep'},
+	       tbody(
+		     Tr(td({id=>'searchLabel'}, "Query:"),
+			td({colspan=>3}, textfield(-name=>'q',-size=>64,-id=>'searchText')),
+		       ),
+		     ##
+		     Tr(td({id=>'searchLabel'}, "Analyzer:"),
+			td(popup_menu({-name=>'analyzer',
+				       -values=>[ @{$wr->{analyzers}} ],
+				       -default=>($wr->{analyzers}[0] || 'dta.cab.default')
+				      }))),
+		     ##
+		     Tr(
+			td({id=>'searchLabelE'}, "Format:"),
+			td(popup_menu({-name=>'format',
+				       -values=>[ map {$_->{key}} @{$wr->{fmts}} ],
+				       -default=>$wr->{defaultFmt},
+				       -labels => { map {($_->{key}=>$_->{label})} @{$wr->{fmts}} },
+				      }))),
+		     ##
+		     Tr(
+			td({id=>'searchLabelE'}, "Debug:"),
+			td(checkbox(-name=>'debug',
+				    -checked=>($wr->{autoClean} || !$wr->{debug} ? 0 : 1),
+				    -value=>1,
+				    -label=>'',
+				    ($wr->{autoClean} ? (-disabled=>1) : qw()))),
+		       ),
+		     ##
+		     Tr(td(),
+			td(submit(-name=>'submit',-value=>'submit')),
+		       ),
+		    )),
+	 end_form,
+	),
     );
 }
 

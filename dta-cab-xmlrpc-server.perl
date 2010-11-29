@@ -175,8 +175,12 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (internal config only)
+  -log-file LOGFILE               ##-- log to file LOGFILE (default: none)
+  -log-stserr , -nolog-stderr     ##-- do/don't log to stderr (default: do)
+  -log-rotate , -no-rotate        ##-- do/don't auto-rotate logs (default: if available)
+  -log-syslog , -no-syslog        ##-- do/don't log to syslog (default: don't)
   -log-config L4PFILE             ##-- override log4perl config file
-  -log-watch , -nowatch           ##-- do/don't watch log4perl config file
+  -log-watch , -nowatch           ##-- override: do/don't watch L4PFILE
 
 =cut
 

@@ -92,6 +92,7 @@ log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename(\"$::0\")
 ##-- Appender: AppStderr
 log4perl.appender.AppStderr = Log::Log4perl::Appender::Screen
 log4perl.appender.AppStderr.stderr = 1
+log4perl.appender.AppStderr.binmode = :utf8
 log4perl.appender.AppStderr.layout = Log::Log4perl::Layout::PatternLayout
 log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P] %p: %c: %m%n
 ";
@@ -112,22 +113,25 @@ log4perl.appender.AppSyslog.layout.ConversionPattern = (%p) %c: %m%n
 
   if ($opts{file} && $opts{rotate}) {
     ##-- rotating file appender
+    eval 'use Log::Dispatch::FileRotate;';
+    die "could not use Log::Dispatch::FileRotate: $@" if ($@);
     $cfg .= "
 ##-- Appender: AppFile: rotating file appender
-log4perl.appender.AppFileR = Log::Dispatch::FileRotate
-log4perl.appender.AppFileR.min_level = debug
-log4perl.appender.AppFileR.filename = $opts{file}
-log4perl.appender.AppFileR.mode = append
-log4perl.appender.AppFileR.size = 10485760
-log4perl.appender.AppFileR.max  = 10
-log4perl.appender.AppFileR.layout = Log::Log4perl::Layout::PatternLayout
-log4perl.appender.AppFileR.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
+log4perl.appender.AppFile = Log::Dispatch::FileRotate
+log4perl.appender.AppFile.min_level = debug
+log4perl.appender.AppFile.filename = $opts{file}
+log4perl.appender.AppFile.binmode = :utf8
+log4perl.appender.AppFile.mode = append
+log4perl.appender.AppFile.size = 10485760
+log4perl.appender.AppFile.max  = 10
+log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
 ";
   }
   elsif ($opts{file}) {
     ##-- raw file appender
     $cfg .= "
-##-- Appender: AppFile: raw file appender
+##-- Appender: AppFile: raw file appender (no automatic log rotation)
 log4perl.appender.AppFile = Log::Log4perl::Appender::File
 log4perl.appender.AppFile.filename = $opts{file}
 log4perl.appender.AppFile.mode = append
@@ -143,9 +147,9 @@ log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P
 ## $bool = CLASS::haveFileRotate()
 ##  + returns true if Log::Dispatch::FileRotate is available
 sub haveFileRotate {
-  return 1 if (defined($Log::Dispatch::FileRotate));
+  return 1 if (defined($Log::Dispatch::FileRotate::VERSION));
   eval "use Log::Dispatch::FileRotate;";
-  return 1 if (defined($Log::Dispatch::FileRotate) && !$@);
+  return 1 if (defined($Log::Dispatch::FileRotate::VERSION) && !$@);
   $@='';
   return 0;
 }
@@ -153,9 +157,9 @@ sub haveFileRotate {
 ## $bool = CLASS::haveSyslog()
 ##  + returns true if Log::Dispatch::Syslog is available
 sub haveSyslog {
-  return 1 if (defined($Log::Dispatch::Syslog));
+  return 1 if (defined($Log::Dispatch::Syslog::VERSION));
   eval "use Log::Dispatch::Syslog;";
-  return 1 if (defined($Log::Dispatch::Syslog) && !$@);
+  return 1 if (defined($Log::Dispatch::Syslog::VERSION) && !$@);
   $@='';
   return 0;
 }
@@ -174,6 +178,7 @@ sub logInit {
   if (!defined($opts{l4pfile})) {
     my $confstr = $that->defaultLogConf(%opts);
     Log::Log4perl::init(\$confstr);
+    binmode(\*STDERR,':utf8');
   } elsif (defined($opts{watch})) {
     Log::Log4perl::init_and_watch($opts{l4pfile},$opts{watch});
   } else {

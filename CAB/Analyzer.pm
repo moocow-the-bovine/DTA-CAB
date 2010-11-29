@@ -465,7 +465,10 @@ sub xmlRpcMethods {
 	  {
 	   ##-- Analyze: Token (v1.x)
 	   name      => "${prefix}analyzeToken",
-	   code      => sub { $anl->analyzeToken($_[0],$anl->mergeOptions($opts,$_[1])) },
+	   code      => sub {
+	     #$anl->trace("analyzeToken(", (ref($_[0]) ? $_[0]{text} : $_[0]), ")"); ##-- DEBUG
+	     $anl->analyzeToken($_[0],$anl->mergeOptions($opts,$_[1]));
+	   },
 	   signature => [ 'struct string', 'struct string struct',  ## string ?opts -> struct
 			  'struct struct', 'struct struct struct',  ## struct ?opts -> struct
 			],
