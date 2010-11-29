@@ -99,6 +99,8 @@ log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P] %p: %c: %m%n
 
   ##-- appender: syslog
   if ($opts{syslog}) {
+    eval 'use Log::Dispatch::Syslog;';
+    die "could not use Log::Dispatch::Syslog: $@" if ($@);
     $cfg .= "
 log4perl.appender.AppSyslog = Log::Dispatch::Syslog
 log4perl.appender.AppSyslog.name = $opts{sysName}
@@ -175,14 +177,18 @@ sub haveSyslog {
 sub logInit {
   my $that = shift;
   my %opts = (%defaultLogOpts,@_);
+  binmode(\*STDERR,':utf8');
   if (!defined($opts{l4pfile})) {
     my $confstr = $that->defaultLogConf(%opts);
     Log::Log4perl::init(\$confstr);
-    binmode(\*STDERR,':utf8');
-  } elsif (defined($opts{watch})) {
-    Log::Log4perl::init_and_watch($opts{l4pfile},$opts{watch});
   } else {
-    Log::Log4perl::init($opts{l4pfile});
+    eval 'use Log::Dispatch::Syslog;';
+    eval 'use Log::Dispatch::FileRotate;';
+    if (defined($opts{watch})) {
+      Log::Log4perl::init_and_watch($opts{l4pfile},$opts{watch});
+    } else {
+      Log::Log4perl::init($opts{l4pfile});
+    }
   }
   #__PACKAGE__->info("initialized logging facility");
 }
