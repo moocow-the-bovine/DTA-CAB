@@ -97,17 +97,22 @@ sub prepare {
 ##  + initialize signal handlers
 sub prepareSignalHandlers {
   my $srv = shift;
-  my $catcher = sub {
+  $SIG{'__DIE__'} = sub {
+    $srv->finish();
+    $srv->logcluck("something die()d in here - exiting: ", @_);
+    exit(255);
+  };
+  my $sig_catcher = sub {
     my $signame = shift;
     $srv->finish();
-    $srv->fatal("caught signal SIG$signame - exiting");
+    $srv->logcluck("caught signal SIG$signame - exiting");
     exit(255);
   };
   my ($sig);
-  foreach $sig (qw(HUP TERM KILL __DIE__)) {
-    $SIG{$sig} = $catcher;
+  foreach $sig (qw(HUP TERM KILL)) {
+    $SIG{$sig} = $sig_catcher;
   }
-  return $catcher;
+  return $sig_catcher;
 }
 
 ## $rc = $srv->prepareLocal(@args_to_prepare)
@@ -121,7 +126,6 @@ sub prepareLocal { return 1; }
 sub run {
   my $srv = shift;
   $srv->logcroak("run() method not implemented!");
-  
   $srv->finish(); ##-- cleanup
 }
 

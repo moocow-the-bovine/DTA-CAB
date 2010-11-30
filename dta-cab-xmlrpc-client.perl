@@ -8,6 +8,7 @@ use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
+use IO::File;
 use Pod::Usage;
 
 ##==============================================================================
@@ -30,11 +31,12 @@ our ($help,$man,$version,$verbose);
 ##-- Log options
 our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Logger::ensureLog()
 
-##-- Server Options
+##-- Client Options
 our $serverURL  = 'http://localhost:8088';
 our $serverEncoding = 'UTF-8';
 our $localEncoding  = 'UTF-8';
 our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
+our $test_connect = 1;
 
 ##-- Analysis & Action Options
 our $analyzer = 'dta.cab.default';
@@ -50,6 +52,7 @@ our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
 
 our $bench_iters = 1; ##-- number of benchmark iterations for -bench mode
+our $trace_request_file = undef; ##-- trace request to file?
 
 ##==============================================================================
 ## Command-line
@@ -58,11 +61,12 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 
-	   ##-- Server Options
+	   ##-- Client Options
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
 	   'local-encoding|le=s'  => \$localEncoding,
 	   'server-encoding|se=s' => \$serverEncoding,
 	   'timeout|T=i' => \$timeout,
+	   'test-connect|tc!' => \$test_connect,
 
 	   ##-- Analysis Options
 	   'analyzer|a=s' => \$analyzer,
@@ -72,7 +76,8 @@ GetOptions(##-- General
 	   'token|t|word|w' => sub { $action='token'; },
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
-	   'raw|r|data|D' => sub { $action='raw'; }, ##-- server-side parsing
+	   'data|D' => sub { $action='data'; }, ##-- server-side parsing
+	   'raw|r' => sub { $action='raw'; },
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O: input
@@ -85,6 +90,9 @@ GetOptions(##-- General
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
+
+	   ##-- debugging
+	   'trace-request|trace|request|tr=s' => \$trace_request_file,
 
 	   ##-- Log4perl
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
@@ -116,11 +124,20 @@ if ($serverURL =~ m|([^:]+://[^/:]*)(/[^:]*)$|) {
   $serverURL = "$1:8088$2";
 }
 
+##-- trace request file?
+our $tracefh = undef;
+if (defined($trace_request_file)) {
+  $tracefh = IO::File->new(">$trace_request_file")
+    or die("$0: open failed for trace file '$trace_request_file': $!");
+}
+
 ##-- create client object
 our $cli = DTA::CAB::Client::XmlRpc->new(
 					 serverURL=>$serverURL,
 					 serverEncoding=>$serverEncoding,
 					 timeout=>$timeout,
+					 tracefh=>$tracefh,
+					 testConnect => $test_connect,
 					);
 $cli->connect() or die("$0: connect() failed: $!");
 
@@ -213,8 +230,8 @@ elsif ($action eq 'document') {
   }
   $ofmt->toFh($outfh);
 }
-elsif ($action eq 'raw') {
-  ##-- action: 'generic': do server-side parsing
+elsif ($action eq 'data') {
+  ##-- action: 'data': do server-side parsing
   our ($s_in,$s_out);
   %analyzeOpts = (
 		  %analyzeOpts,
@@ -243,6 +260,10 @@ elsif ($action eq 'raw') {
       profile_start();
     }
   }
+}
+elsif ($action eq 'raw') {
+  ##-- action: 'raw': use raw request
+  die("$0: -raw option not yet implemented!");
 }
 elsif ($action eq 'bench') {
   $doProfile=1;
@@ -292,11 +313,12 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- set default log level
 
- Server Options:
+ Client Options:
   -server URL                     ##-- set server URL (default: http://localhost:8088)
   -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
+  -test-connect , -notest-connect ##-- do/don't send a test query to the server (default: do)
 
  Analysis Options:
   -list                           ##-- just list registered analyzers (default)

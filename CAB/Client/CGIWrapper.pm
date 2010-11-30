@@ -194,8 +194,8 @@ sub fetchResults {
   return $rdoc;
 }
 
-## $qopts = $wr->parseQueryOpts()
-##  + currently just returns 'dta.cab.all'
+## $qopts = $wr->parseQueryAnalyzer()
+##  + currently just returns 'dta.cab.default'
 sub parseQueryAnalyzer {
   return $_[0]{qv}{analyzer} if ($_[0]{qv} && $_[0]{qv}{analyzer});
   return 'dta.cab.default';

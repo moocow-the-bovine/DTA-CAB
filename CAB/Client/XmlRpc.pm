@@ -32,6 +32,10 @@ our @ISA = qw(DTA::CAB::Client);
 ##     serverEncoding => $encoding,   ##-- default: UTF-8
 ##     timeout => $timeout,           ##-- timeout in seconds, default: 300 (5 minutes)
 ##
+##     ##-- debugging
+##     tracefh => $fh,                ##-- dump requests to $fh if defined (default=undef)
+##     testConnect => $bool,          ##-- if true connected() will send a test query (default=true)
+##
 ##     ##-- underlying RPC::XML client
 ##     xcli => $xcli,                 ##-- RPC::XML::Client object
 ##    }
@@ -42,6 +46,7 @@ sub new {
 			   serverURL      => 'http://localhost:8000',
 			   serverEncoding => 'UTF-8', ##-- default server encoding
 			   timeout => 300,
+			   testConnect => 1,
 			   ##
 			   ##-- RPC::XML stuff
 			   xcli => undef,
@@ -65,6 +70,7 @@ sub new {
 sub connected {
   my $cli = shift;
   return 0 if (!$cli->{xcli});
+  return 1 if (!$cli->{testConnect});
 
   ##-- send a test query (system.identity())
   my $req = $cli->newRequest('system.identity');
@@ -115,6 +121,8 @@ sub request {
 
   $cli->connect() if (!$cli->{xcli});
   $req = DTA::CAB::Utils::deep_encode($cli->{serverEncoding}, $req) if ($doRecode);
+  $cli->{tracefh}->print($req->as_string) if (defined($cli->{tracefh})); ##-- trace
+
   my $rsp = $cli->{xcli}->send_request( $req );
   if (!ref($rsp)) {
     $cli->error("RPC::XML::Client::send_request() failed:");
