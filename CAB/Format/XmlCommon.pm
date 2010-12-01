@@ -122,6 +122,10 @@ sub fromString {
 ##  + override returns text/xml
 sub mimeType { return 'text/xml'; }
 
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.xml'; }
+
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 

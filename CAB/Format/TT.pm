@@ -232,6 +232,17 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + default returns text/plain
+sub mimeType { return 'text/plain'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.tt'; }
+
+##--------------------------------------------------------------
 ## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()
@@ -246,6 +257,7 @@ sub flush {
 ##  + flush buffered output document to byte-string
 ##  + default implementation just encodes string in $fmt->{outbuf}
 sub toString {
+  $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
   return encode($_[0]{encoding},$_[0]{outbuf})
     if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
   return $_[0]{outbuf};

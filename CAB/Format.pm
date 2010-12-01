@@ -273,6 +273,11 @@ sub forceDocument {
 ##  + default returns text/plain
 sub mimeType { return 'text/plain'; }
 
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format (default='.cab')
+sub defaultExtension { return '.cab'; }
+
+
 ##--------------------------------------------------------------
 ## Methods: Output: accessors
 

@@ -14,5 +14,6 @@ use DTA::CAB::Server::HTTP::Handler::File;
 use DTA::CAB::Server::HTTP::Handler::Directory;
 use DTA::CAB::Server::HTTP::Handler::Response;
 use DTA::CAB::Server::HTTP::Handler::CGI;
+use DTA::CAB::Server::HTTP::Handler::AnalyzerCGI;
 
 1; ##-- be happy

@@ -133,6 +133,18 @@ sub parseDocument { return $_[0]->forceDocument( $_[0]{doc} ); }
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + default returns text/plain
+sub mimeType { return 'application/octet-stream'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.bin'; }
+
+
+##--------------------------------------------------------------
 ## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()

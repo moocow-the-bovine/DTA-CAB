@@ -128,8 +128,12 @@ sub parseDocument { return $_[0]{doc}; }
 ## Methods: Output: MIME
 
 ## $type = $fmt->mimeType()
-##  + default returns application/json
+##  + override
 sub mimeType { return 'application/json'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.json'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection

@@ -100,6 +100,17 @@ sub parseDocument { return DTA::CAB::Document->new; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + default returns text/plain
+sub mimeType { return 'text/plain'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.null'; }
+
+##--------------------------------------------------------------
 ## Methods: Output: output selection
 
 ## $fmt = $fmt->flush()

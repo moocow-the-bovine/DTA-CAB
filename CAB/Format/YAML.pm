@@ -129,7 +129,12 @@ sub parseDocument { return $_[0]{doc}; }
 
 ## $type = $fmt->mimeType()
 ##  + override returns text/yaml
-sub mimeType { return 'text/yaml'; }
+#sub mimeType { return 'text/yaml'; }
+sub mimeType { return 'text/x-yaml'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.yml'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
@@ -144,11 +149,12 @@ sub flush {
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
-##  + default implementation removes typing if ($level < 1)
+##  + default implementation removes typing if ($level <= 1)
 sub toString {
   $_[0]->formatLevel($_[1]) if (defined($_[1]));
-  if (!$_[0]{level} || $_[0]{level} < 1) {
-    $_[0]{outbuf} =~ s/(?<!^\-\-\- )!!perl\/\w+\:[\w\:]+\n\s*//sg;  ##-- remove yaml typing
+  if (!$_[0]{level} || $_[0]{level} >= 2) {
+    #$_[0]{outbuf} =~ s/^\-\-\- !!perl\/\w+\:[\w\:]+\n/---\n/sg;     ##-- remove yaml typing on doc borders
+    $_[0]{outbuf} =~ s/(?<!^\-\-\- )!!perl\/\w+\:[\w\:]+\n\s*//sg;  ##-- remove yaml typing on content
   }
   return $_[0]{outbuf};
 }

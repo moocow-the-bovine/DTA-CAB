@@ -98,8 +98,9 @@ sub prepare {
 sub prepareSignalHandlers {
   my $srv = shift;
   $SIG{'__DIE__'} = sub {
+    die @_ if ($^S);  ##-- normal operation if executing inside an eval{} block
     $srv->finish();
-    $srv->logcluck("something die()d in here - exiting: ", @_);
+    $srv->logcluck("__DIE__ handler called - exiting: ", @_);
     exit(255);
   };
   my $sig_catcher = sub {

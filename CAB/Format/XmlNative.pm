@@ -167,11 +167,11 @@ sub parseNode {
       ##-- Text
       if (isa($cur,'HASH')) {
 	##-- Text: to hash: append to _xmldata
-	$cur->{'_xmldata'} .= $nod->nodeValue;
+	$cur->{'_xmldata'} .= $nod->toString;
       }
       elsif (isa($cur,'ARRAY')) {
 	##-- Text: to array: append to array
-	push(@$cur,$nod->nodeValue);
+	push(@$cur,$nod->toString);
       }
     }
     else {

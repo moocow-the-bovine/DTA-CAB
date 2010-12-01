@@ -173,6 +173,18 @@ sub parseDocument { return $_[0]{doc}; }
 ##  + nothing here
 ##==============================================================================
 
+##--------------------------------------------------------------
+## Methods: Output: MIME
+
+## $type = $fmt->mimeType()
+##  + default returns text/plain
+sub mimeType { return 'text/plain'; }
+
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format
+sub defaultExtension { return '.raw'; }
+
+
 ##==============================================================================
 ## Initialization
 BEGIN {

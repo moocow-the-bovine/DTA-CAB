@@ -135,6 +135,7 @@ sub run {
   $srv->info("server starting on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
 
   my ($csock,$chost);
+ http_accept:
   while (defined($csock=$daemon->accept)) {
     $chost = $csock->peerhost();
 
@@ -164,7 +165,7 @@ sub run {
     }
 
     ##-- pass request to handler
-    if (!$handler->run($srv,$csock,$localPath,$hreq)) {
+    if (!$handler->run($srv,$localPath,$csock,$hreq)) {
       $srv->logwarn("handler failed for client $chost request ", $hreq->method, " ", $hreq->uri);
     }
 
@@ -221,7 +222,7 @@ sub getPathHandler {
   my ($handler);
   do {
     $localPath =~ s/\/*$//;
-    return ($handler,$localPath) if (defined($handler=$srv->{uris}{$localPath}));
+    return ($handler,$localPath) if (defined($handler=$srv->{paths}{$localPath}));
     $localPath =~ s/(?:\/*)(?:[^\/]*)$//;
   } while ($localPath ne '');
   return ($handler,$localPath);
@@ -273,6 +274,8 @@ sub clientError {
     $csock->shutdown(2);
   }
   $csock->close();
+  $@ = undef;     ##-- unset eval error
+  return undef;
 }
 
 
