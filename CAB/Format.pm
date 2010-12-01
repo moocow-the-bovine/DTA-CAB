@@ -802,6 +802,10 @@ Subclass documentation:
 
 convenience package: load all built-in DTA::CAB::Format subclasses
 
+=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
+
+Null-op parser/formatter for debugging and testing purposes.
+
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
@@ -815,6 +819,10 @@ Datum parser|formatter: perl code via Data::Dumper, eval().
 =item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
 
 Datum parser|formatter using Storable::freeze() & co.
+
+=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Raw>
+
+Input-only parser for quick and dirty parsing of raw untokenized input.
 
 =item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
 

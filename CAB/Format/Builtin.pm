@@ -1,17 +1,18 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Builtin
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Load known DTA::CAB::Format subclasses
 
 package DTA::CAB::Format::Builtin;
 use DTA::CAB::Format;
 
 #use DTA::CAB::Format::Freeze;
+use DTA::CAB::Format::CSV;
 use DTA::CAB::Format::Null;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;
-use DTA::CAB::Format::CSV;
+use DTA::CAB::Format::Raw;      ##-- raw untokenized (input only)
 use DTA::CAB::Format::Text;
 #use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;
