@@ -24,7 +24,7 @@ BEGIN {
 }
 
 ##--------------------------------------------------------------
-## $uri = $class_or_obj->new(%options)
+## $h = $class_or_obj->new(%options)
 ##  + options:
 ##     contentType => $mimeType,    ##-- default: text/plain
 ##     file => $filename,           ##-- filename to return
@@ -36,28 +36,14 @@ sub new {
 ## $bool = $obj->prepare($srv)
 sub prepare { return (-r $_[0]{file}); }
 
-## $rc = $uri->run($server, $localPath, $clientSocket)
+## $rsp = $h->run($server, $localPath, $clientConn, $httpRequest)
 sub run {
-  my ($uri,$srv,$path,$csock) = @_;
-  if (!-r $uri->{file}) {
-    $srv->clientError($csock,RC_NOT_FOUND);
-    return 1;
-  }
-  my $ioh  = IO::File->new("<$uri->{file}");
-  my ($data);
-  {
-    local $/ = undef;
-    $data = <$ioh>;
-  }
-  $ioh->close;
-  $csock->send_response(RC_OK,
-			undef,
-			HTTP::Headers->new(
-					   'Content-Type'=>$uri->{contentType},
-					  ),
-			$data
-		       );
-  return 0;
+  my ($h,$srv,$path,$csock,$hreq) = @_;
+  return $h->error($csock,(-e $h->{file} ? RC_FORBIDDEN : RC_NOT_FOUND)) if (!-r $h->{file});
+
+  $csock->send_file_response($h->{file});
+  $csock->shutdown(2);
+  return undef;
 }
 
 

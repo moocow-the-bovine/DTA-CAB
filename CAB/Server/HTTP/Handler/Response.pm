@@ -26,7 +26,7 @@ BEGIN {
 ##--------------------------------------------------------------
 ## Methods
 
-## $handler = $class_or_obj->new(%options)
+## $h = $class_or_obj->new(%options)
 ##  + %options
 ##     response => $obj,  ##-- HTTP::Response object
 sub new {
@@ -34,15 +34,11 @@ sub new {
   return bless { response=>undef, @_ }, ref($that)||$that;
 }
 
-## $bool = $handler->run($server, $localPath, $clientSocket)
+## $rsp = $h->run($server, $localPath, $clientConn, $hreq)
 sub processClientRequest {
-  my ($handler,$srv,$path,$csock) = @_;
-  if (!defined($handler->{response})) {
-    $srv->clientError($csock,RC_NOT_FOUND);
-    return 1;
-  }
-  $csock->send_response($handler->{response});
-  return 1;
+  my ($h,$srv,$path,$csock,$hreq) = @_;
+  return $h->cerror($csock, RC_NOT_FOUND) if (!defined($h->{response}));
+  return $h->{response};
 }
 
 

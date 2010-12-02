@@ -29,60 +29,60 @@ BEGIN {
 ##--------------------------------------------------------------
 ## Methods
 
-## $handler = $class_or_obj->new(%options)
+## $h = $class_or_obj->new(%options)
 ## + %options:
 ##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##
-## + runtime %$handler data:
+## + runtime %$h data:
 ##     cgi => $cgiobj,                ##-- CGI object (after cgiParse())
 ##     vars => \%vars,                ##-- CGI variables (after cgiParse())
 ##     cgisrc => $cgisrc,             ##-- CGI source (after cgiParse())
 sub new {
   my $that = shift;
-  my $handler =  bless {
+  my $h =  bless {
 			encoding=>'UTF-8', ##-- default CGI parameter encoding
 			allowGet=>1,
 			allowPost=>1,
 			@_
 		       }, ref($that)||$that;
-  return $handler;
+  return $h;
 }
 
-## $bool = $handler->prepare($server)
+## $bool = $h->prepare($server)
 sub prepare { return 1; }
 
-## \%vars = $handler->decodeVars(\%vars,%opts)
-##  + decodes cgi-style variables using $handler->decodeString($str,%opts)
+## \%vars = $h->decodeVars(\%vars,%opts)
+##  + decodes cgi-style variables using $h->decodeString($str,%opts)
 ##  + %opts:
 ##     vars    => \@vars,      ##-- list of vars to decode (default=keys(%vars))
-##     someKey => $someVal,    ##-- passed to $handler->decodeString()
+##     someKey => $someVal,    ##-- passed to $h->decodeString()
 sub decodeVars {
-  my ($handler,$vars,%opts) = @_;
+  my ($h,$vars,%opts) = @_;
   return undef if (!defined($vars));
   my $keys = $opts{vars} || [keys %$vars];
   my ($vref);
   foreach (grep {exists $vars->{$_}} @$keys) {
     $vref = \$vars->{$_};
     if (ref($$vref)) {
-      $_ = $handler->decodeString($_,%opts) foreach (@{$$vref});
+      $_ = $h->decodeString($_,%opts) foreach (@{$$vref});
     } else {
-      $$vref = $handler->decodeString($$vref,%opts);
+      $$vref = $h->decodeString($$vref,%opts);
     }
   }
   return $vars;
 }
 
-## $str = $handler->decodeString($string,%opts)
-##  + decodes string as $handler->{encoding}, optionally handling HTML-style escapes
+## $str = $h->decodeString($string,%opts)
+##  + decodes string as $h->{encoding}, optionally handling HTML-style escapes
 ##  + %opts:
 ##     allowHtmlEscapes => $bool,    ##-- whether to handle HTML escapes (default=false)
-##     encoding         => $enc,     ##-- source encoding (default=$handler->{encoding})
+##     encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
 sub decodeString {
-  my ($handler,$str,%opts) = @_;
+  my ($h,$str,%opts) = @_;
   return $str if (!defined($str));
-  $str = decode(($opts{encoding}||$handler->{encoding}), $str) if (!utf8::is_utf8($str) && ($opts{encoding}||$handler->{encoding}));
+  $str = decode(($opts{encoding}||$h->{encoding}), $str) if (!utf8::is_utf8($str) && ($opts{encoding}||$h->{encoding}));
   if ($opts{allowHtmlEscapes}) {
     $str =~ s/\&\#(\d+)\;/pack('U',$1)/eg;
     $str =~ s/\&\#x([[:xdigit:]]+)\;/pack('U',hex($1))/eg;
@@ -90,45 +90,162 @@ sub decodeString {
   return $str;
 }
 
-## $cgi_obj = $handler->cgiParse($srv,$localPath,$clientSocket,$httpRequest)
-##  + parses cgi parameters from client request
-##  + sets following $handler fields:
-##     cgi    => $cgi_obj,
-##     vars   => \%cgi_vars,
-##     cgisrc => $cgi_src_str,
-##  + returns undef on error
-sub cgiParse {
-  my ($handler,$srv,$localPath,$csock,$hreq) = @_;
+## \%vars = $h->trimVars(\%vars,%opts)
+##  + trims leading and trailing whitespace from selected values in \%vars
+##  + %opts:
+##     vars    => \@vars,      ##-- list of vars to trim (default=keys(%vars))
+sub trimVars {
+  my ($h,$vars,%opts) = @_;
+  return undef if (!defined($vars));
+  my $keys = $opts{vars} || [keys %$vars];
+  my ($vref);
+  foreach (grep {exists $vars->{$_}} @$keys) {
+    $vref = \$vars->{$_};
+    if (ref($$vref)) {
+      foreach (@{$$vref}) {
+	$_ =~ s/^\s+//;
+	$_ =~ s/\s+$//;
+      }
+    } else {
+      $$vref =~ s/^\s+//;
+      $$vref =~ s/\s+$//;
+    }
+  }
+  return $vars;
+}
 
-  my ($cgisrc);
+## \%vars = $h->pushVars(\%vars,\%push)
+##  + CGI-like variable push; destructively pushes \%push onto \%vars
+sub pushVars {
+  my ($h,$vars,$push) = @_;
+  foreach (grep {defined($push->{$_})} keys %$push) {
+    if (!exists($vars->{$_})) {
+      $vars->{$_} = $push->{$_};
+    } else {
+      $vars->{$_} = [ $vars->{$_} ] if (!ref($vars->{$_}));
+      push(@{$vars->{$_}}, ref($push->{$_}) ? @{$push->{$_}} : $push->{$_});
+    }
+  }
+  return $vars;
+}
+
+## \%params = $h->uriParams($hreq,%opts)
+##  + gets GET-style parameters from $hreq->uri
+##  + %opts:
+##      #(none)
+sub uriParams {
+  my ($h,$hreq) = @_;
+  if ($hreq->uri =~ m/\=(.*)$/) {
+    return scalar(CGI->new($1)->Vars);
+  }
+  return {};
+}
+
+## \%params = $h->contentParams($hreq,%opts)
+##  + gets POST-style content parameters from $hreq
+##  + if content-type is neither 'application/x-www-form-urlencoded' nor 'multipart/form-data',
+##    but content is present, returns $hreq
+##  + %opts:
+##      defaultName => $name,       ##-- default parameter name (default='POSTDATA')
+##      defaultCharset => $charset, ##-- default charset
+sub contentParams {
+  my ($h,$hreq,%opts) = @_;
+  $opts{defaultName} = 'POSTDATA' if (!defined($opts{defaultName}));
+  $opts{defaultCharset} = $h->{encoding} if (!defined($opts{defaultCharset}));
+  if ($hreq->content_type eq 'application/x-www-form-urlencoded') {
+    ##-- x-www-form-urlencoded: parse with CGI module
+    return scalar(CGI->new($hreq->content)->Vars);
+  }
+  elsif ($hreq->content_type eq 'multipart/form-data') {
+    ##-- multipart/form-data: parse by hand
+    my $vars = {};
+    my ($part,$name);
+    foreach $part ($hreq->parts) {
+      my $dis = $part->header('Content-Disposition');
+      if ($dis =~ /^form-data\b/) {
+	##-- multipart/form-data: part: form-data
+	if ($dis =~ /\bname=[\"\']?([\w\-\.\,\+]*)[\'\"]?/) {
+	  ##-- multipart/form-data: part: form-data; name="PARAMNAME"
+	  $h->pushVars($vars, { $1 => $part->decoded_content(default_charset=>$opts{defaultCharset}) });
+	} else {
+	  ##-- multipart/form-data: part: form-data
+	  $h->pushVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$opts{defaultCharset}) });
+	}
+      }
+      else {
+	##-- multipart/form-data: part: anything other than 'form-data'
+	$h->pushVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$opts{defaultCharset}) });
+      }
+    }
+    return $vars;
+  }
+  elsif ($hreq->content_length > 0) {
+    ##-- unknown content: use default data key
+    return { $opts{defaultName} => $hreq->decoded_content(default_charset=>$opts{defaultCharset}) };
+  }
+  return {}; ##-- no parameters at all
+}
+
+## \%params = $h->params($hreq,%opts)
+## + wrapper for $h->pushVars($h->uriParams(),$h->contentParams())
+## + %opts are passed to uriParams, contentParams
+sub params {
+  my ($h,$hreq,%opts) = @_;
+  my $vars = $h->uriParams($hreq,%opts);
+  $h->pushVars($vars, $h->contentParams($hreq,%opts));
+  return $vars;
+}
+
+
+## \%vars = $h->cgiParams($srv,$clientConn,$httpRequest, %opts)
+##  + parses cgi parameters from client request
+##  + only handles GET or POST requests
+##  + wrapper for $h->uriParams(), $h->contentParams()
+##  + %opts are passed to uriParams, contentParams
+sub cgiParams {
+  my ($h,$csock,$hreq,%opts) = @_;
+
   if ($hreq->method eq 'GET') {
     ##-- HTTP request: GET
-    return $srv->clientError($csock, RC_METHOD_NOT_ALLOWED, "(CGI) GET method not allowed") if (!$handler->{allowGet});
-    if ($hreq->uri =~ m/\?(.*)$/) {
-      $cgisrc = $1;
-    } else {
-      #$srv->clientError($csock, RC_NOT_FOUND, ("(CGI) Server::HTTP::Handler ".$hreq->uri." not found."));
-      #$srv->clientError($csock, RC_INTERNAL_SERVER_ERROR, ("(CGI) Server::HTTP::Handler ".$hreq->uri.": no parameters specified!"));
-      #return undef;
-      $cgisrc = '';
-    }
+    return $h->cerror($csock, RC_METHOD_NOT_ALLOWED, "CGI::cgiParams(): GET method not allowed") if (!$h->{allowGet});
+    return $h->uriParams($hreq,%opts);
   }
   elsif ($hreq->method eq 'POST') {
     ##-- HTTP request: POST
-    return $srv->clientError($csock, RC_METHOD_NOT_ALLOWED, "(CGI) POST method not allowed") if (!$handler->{allowPost});
-    $cgisrc = $hreq->content;
+    return $h->cerror($csock, RC_METHOD_NOT_ALLOWED, "CGI::cgiParams(): POST method not allowed") if (!$h->{allowPost});
+    return $h->params($hreq,%opts);
   }
   else {
     ##-- HTTP request: unknown
-    return $srv->clientError($csock, RC_METHOD_NOT_ALLOWED, ("(CGI) method not allowed: ".$hreq->method));
+    return $h->cerror($csock, RC_METHOD_NOT_ALLOWED, ("CGI::cgiParams(): method not allowed: ".$hreq->method));
   }
 
-  ##-- parse CGI parameters
-  my $cgi = $handler->{cgi} = CGI->new($cgisrc || '');
-  $handler->{vars}   = $cgi->Vars();
-  $handler->{cgisrc} = $cgisrc;
+  return {};
+}
 
-  return $cgi;
+## $enc = $h->requestEncoding($httpRequest)
+##  + attempts to guess request encoding from (in order of descending priority):
+##    - CGI param 'encoding', from $h->{vars}{encoding}
+##    - HTTP header Content-Type charset variable
+##    - HTTP header Content-Encoding
+##    - $h->{encoding}
+sub requestEncoding {
+  my ($h,$hreq) = @_;
+  return $h->{vars}{encoding} if ($h->{vars} && $h->{vars}{encoding});
+  my $ctype = $hreq->content_type;
+  return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
+  return $hreq->content_encoding if (defined($hreq->content_encoding));
+  return $h->{encoding};
+}
+
+
+## undef = $h->finish($server, $clientSocket)
+##  + clean up handler state after run()
+##  + override deletes @$h{qw(cgi vars cgisrc)}
+sub finish {
+  my $h = shift;
+  delete(@$h{qw(cgi vars cgisrc)});
+  return;
 }
 
 

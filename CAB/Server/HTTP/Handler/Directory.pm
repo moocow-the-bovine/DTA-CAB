@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
-## File: DTA::CAB::Server::HTTP::Handler::dummy.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## File: DTA::CAB::Server::HTTP::Handler::Directory.pm
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description:
 ##  + DTA::CAB::Server::HTTP::Handler class: Directory
 ##======================================================================
@@ -30,35 +30,33 @@ BEGIN {
 ##--------------------------------------------------------------
 ## Methods
 
-## $handler = $class_or_obj->new(%options)
+## $h = $class_or_obj->new(%options)
 ##  + options:
 ##     dir => $baseDirectory,  ##-- default='.'
 ##     logLevel => $level,     ##-- debug log level (defaul=undef (none))
 sub new {
   my $that = shift;
-  my $handler =  bless { dir=>'.', @_ }, ref($that)||$that;
-  $handler->{dir} =~ s|/$||g;
-  return $handler;
+  my $h =  bless { dir=>'.', @_ }, ref($that)||$that;
+  $h->{dir} =~ s|/$||g;
+  return $h;
 }
 
-## $bool = $handler->prepare($server)
+## $bool = $h->prepare($server)
 sub prepare { return (-d $_[0]{dir} && -r $_[0]{dir}); }
 
-## $rc = $handler->run($server, $localPath, $clientSocket, $httpRequest)
+## $rsp = $h->run($server, $localPath, $clientConn, $httpRequest)
 sub run {
-  my ($handler,$srv,$path,$csock,$hreq) = @_;
+  my ($h,$srv,$path,$csock,$hreq) = @_;
   my $path_matched = $path;
   my $path_full    = $hreq->uri->path();
   my $file         = $path_full;
   $file            =~ s/^\Q$path_matched\E\/?//;
-  $file            = $handler->{dir}.'/'.$file;
-  $handler->vlog($handler->{logLevel}, "run(", $csock->peerhost, "): file=$file");
-  if (!-r $file) {
-    $srv->clientError($csock,RC_NOT_FOUND);
-    return 1;
-  }
+  $file            = $h->{dir}.'/'.$file;
+  $h->vlog($h->{logLevel}, "run(", $csock->peerhost, "): file=$file");
+  return $h->error($csock,(-e $file ? RC_FORBIDDEN : RC_NOT_FOUND)) if (!-r $file);
   $csock->send_file_response($file);
-  return 1;
+  $csock->shutdown(2);
+  return undef;
 }
 
 1; ##-- be happy

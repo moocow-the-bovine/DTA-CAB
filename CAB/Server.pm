@@ -100,13 +100,13 @@ sub prepareSignalHandlers {
   $SIG{'__DIE__'} = sub {
     die @_ if ($^S);  ##-- normal operation if executing inside an eval{} block
     $srv->finish();
-    $srv->logcluck("__DIE__ handler called - exiting: ", @_);
+    $srv->logconfess("__DIE__ handler called - exiting: ", @_);
     exit(255);
   };
   my $sig_catcher = sub {
     my $signame = shift;
     $srv->finish();
-    $srv->logcluck("caught signal SIG$signame - exiting");
+    $srv->logwarn("caught signal SIG$signame - exiting");
     exit(255);
   };
   my ($sig);

@@ -134,9 +134,9 @@ sub run {
   my $daemon = $srv->{daemon};
   $srv->info("server starting on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
 
-  my ($csock,$chost);
- http_accept:
+  my ($csock,$chost,$hreq,$handler,$localPath,$rsp);
   while (defined($csock=$daemon->accept)) {
+    ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();
 
     ##-- access control
@@ -147,31 +147,45 @@ sub run {
     }
 
     ##-- serve client: parse HTTP request
-    my $hreq = $csock->get_request();
+    $hreq = $csock->get_request();
     if (!$hreq) {
       $srv->clientError($csock, "could not parse HTTP request");
       next;
     }
+
+    ##-- log basic request, and possibly request data
+    $srv->vlog($srv->{logConnect}, "client $chost: ", $hreq->method, " ", $hreq->uri);
     $srv->vlog($srv->{logRequestData}, "client $chost: HTTP::Request={\n", $hreq->as_string, "}");
 
-    ##-- log basic request
-    $srv->vlog($srv->{logConnect}, "client $chost: ", $hreq->method, " ", $hreq->uri);
-
     ##-- map request to handler
-    my ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
+    ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
     if (!defined($handler)) {
       $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", $hreq->uri);
       next;
     }
 
     ##-- pass request to handler
-    if (!$handler->run($srv,$localPath,$csock,$hreq)) {
-      $srv->logwarn("handler failed for client $chost request ", $hreq->method, " ", $hreq->uri);
+    eval {
+      $rsp = $handler->run($srv,$localPath,$csock,$hreq);
+    };
+    if ($@) {
+      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died: $@");
+      next;
+    }
+    elsif (!defined($rsp)) {
+      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
+      next;
     }
 
-    ##-- close client connection
+    ##-- ... and dump response to client
+    $csock->send_response($rsp) if ($csock->opened);
+  }
+  continue {
+    ##-- cleanup after client
     $srv->vlog($srv->{logClose}, "closing connection to client $chost");
     $csock->shutdown(2) if ($csock->opened);
+    $handler->finish($srv,$csock) if (defined($handler));
+    $hreq=$handler=$localPath=$rsp=undef;
   }
 
 
@@ -273,12 +287,10 @@ sub clientError {
     }
     $csock->shutdown(2);
   }
-  $csock->close();
+  $csock->close() if (UNIVERSAL::can($csock,'close'));
   $@ = undef;     ##-- unset eval error
   return undef;
 }
-
-
 
 1; ##-- be happy
 

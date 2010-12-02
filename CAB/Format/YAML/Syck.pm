@@ -273,7 +273,7 @@ Constructor.
  dumper => $dumper,              ##-- underlying Data::Dumper object
  ##
  ##---- INHERITED from DTA::CAB::Format
- #encoding => $encoding,         ##-- n/a
+ #encoding => $encoding,         ##-- n/a: always utf-8
  level     => $formatLevel,      ##-- sets Data::Dumper->Indent() option
  outbuf    => $stringBuffer,     ##-- buffered output
 

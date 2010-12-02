@@ -1,12 +1,12 @@
 ##-*- Mode: CPerl -*-
 
-## File: DTA::CAB::Server::HTTP::Handler::AnalyzerCGI.pm
+## File: DTA::CAB::Server::HTTP::Handler::Query.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description:
 ##  + DTA::CAB::Server::HTTP::Handler class: analyzer CGI
 ##======================================================================
 
-package DTA::CAB::Server::HTTP::Handler::AnalyzerCGI;
+package DTA::CAB::Server::HTTP::Handler::Query;
 use DTA::CAB::Server::HTTP::Handler::CGI;
 use HTTP::Status;
 use URI::Escape qw(uri_escape uri_escape_utf8);
@@ -33,7 +33,7 @@ BEGIN {
 ## Aliases
 BEGIN {
   DTA::CAB::Server::HTTP::Handler->registerAlias(
-						 'AnalyzerCGI' => __PACKAGE__,
+						 'Query' => __PACKAGE__,
 						 'analyzerCGI' => __PACKAGE__,
 						 'analyzercgi' => __PACKAGE__,
 						);
@@ -42,14 +42,14 @@ BEGIN {
 ##--------------------------------------------------------------
 ## Methods: API
 
-## $handler = $class_or_obj->new(%options)
+## $h = $class_or_obj->new(%options)
 ## + %options:
 ##     ##-- INHERITED from Handler::CGI
 ##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##     ##
-##     ##-- NEW in Handler::AnalyzerCGI
+##     ##-- NEW in Handler::Query
 ##     allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
 ##     defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
 ##     allowFormats => \%formats,     ##-- allowed formats: ($fmtAlias => $formatClassName, ...)
@@ -57,26 +57,23 @@ BEGIN {
 ##     forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
 ##     returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
 ##
-## + runtime %$handler data:
-##     ##-- INHERITED from Handler::CGI
-##     cgi => $cgiobj,                ##-- CGI object (after cgiParse())
-##     vars => \%vars,                ##-- CGI variables (after cgiParse())
-##     cgisrc => $cgisrc,             ##-- CGI source (after cgiParse())
+## + runtime %$h data:
+##     ##-- INHERITED from Handler::CGI (none)
 ##
 ## + CGI parameters:
 ##     ##-- query data, in order of preference
-##     d => $docData,                 ##-- document data (for analyzeDocument())
-##     q => $rawQuery,                ##-- raw untokenized query string (for analyzeDocument())
+##     data => $docData,              ##-- document data (for analyzeDocument())
+##     q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
 ##     ##
 ##     ##-- misc
 ##     a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
-##     fmt => $format,                ##-- I/O format
+##     format => $format,             ##-- I/O format
 ##     encoding => $enc,              ##-- I/O encoding
 ##     pretty => $level,              ##-- pretty-printing level
-##     raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$handler->{returnRaw})
+##     raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 sub new {
   my $that = shift;
-  my $handler =  $that->SUPER::new(
+  my $h =  $that->SUPER::new(
 				   encoding=>'UTF-8', ##-- default CGI parameter encoding
 				   allowGet=>1,
 				   allowPost=>1,
@@ -88,57 +85,61 @@ sub new {
 				   returnRaw => 0,
 				   @_,
 				  );
-  return $handler;
+  return $h;
 }
 
-## $bool = $handler->prepare($server)
-##  + sets $handler->{allowAnalyzers} if not already defined
+## $bool = $h->prepare($server)
+##  + sets $h->{allowAnalyzers} if not already defined
 sub prepare {
-  my ($handler,$srv) = @_;
-  $handler->{allowAnalyzers} = { map {($_=>1)} keys %{$srv->{as}} } if (!$handler->{allowAnalyzers});
+  my ($h,$srv) = @_;
+  $h->{allowAnalyzers} = { map {($_=>1)} keys %{$srv->{as}} } if (!$h->{allowAnalyzers});
   return 1;
 }
 
 ## $bool = $path->run($server, $localPath, $clientSocket, $httpRequest)
 ##  + local processing
 sub run {
-  my ($handler,$srv,$path,$csock,$hreq) = @_;
+  my ($h,$srv,$path,$c,$hreq) = @_;
+
+  ##-- check for HEAD
+  return $h->headResponse() if ($hreq->method eq 'HEAD');
 
   ##-- parse query parameters
-  my $cgi  = $handler->cgiParse($srv,$path,$csock,$hreq) or return undef;
-  my $vars = $handler->{vars};
-  my $enc  = $vars->{encoding} || $handler->{encoding};
+  my $vars = $h->cgiParams($c,$hreq,defaultName=>'data') or return undef;
+  return $h->cerror($c, undef, "no query parameters specified!") if (!$vars || !%$vars);
+
+  my $enc  = $h->requestEncoding($hreq);
+  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+
+  ##-- pre-process query parameters
+  #$h->decodeVars($vars,[qw(d s w q a format)], $enc);
+  $h->decodeVars($vars, vars=>[qw(data q a format)], encoding=>$enc, allowHtmlEscapes=>0);
+  $h->trimVars($vars,  vars=>[qw(q a format)]);
 
   ##-- get analyzer $a
-  my $akey = $vars->{'a'} || $handler->{defaultAnalyzer};
-  if ($handler->{allowAnalyzers} && !$handler->{allowAnalyzers}{$akey}) {
-    return $srv->clientError($csock, RC_FORBIDDEN, "access denied for analyzer '$akey'");
+  my $akey = $vars->{'a'} || $h->{defaultAnalyzer};
+  if ($h->{allowAnalyzers} && !$h->{allowAnalyzers}{$akey}) {
+    return $h->cerror($c, RC_FORBIDDEN, "access denied for analyzer '$akey'");
   }
   elsif (!defined($a=$srv->{as}{$akey})) {
-    return $srv->clientError($csock, RC_NOT_FOUND, "unknown analyzer '$akey'");
+    return $h->cerror($c, RC_NOT_FOUND, "unknown analyzer '$akey'");
   }
   my $ao = $srv->{aos}{$akey} || {};
-
-  ##-- decode query parameters
-  #$handler->decodeVars($vars,[qw(d s w q a fmt)], $enc);
-  $handler->decodeVars($vars,[qw(d q a fmt)], $enc);
 
   ##-- local vars
   my ($fclass,$fmt, $qdoc,$ostr);
   eval {
-    #local $SIG{__DIE__} = sub { goto cgirun_end; };
-
     ##-- get formatter
-    if (defined($vars->{fmt}) && !defined($fclass=$handler->{allowFormats}{$vars->{fmt}})) {
-      return $srv->clientError($csock, RC_NOT_FOUND, "unknown format '$vars->{fmt}'");
+    if (defined($vars->{format}) && !defined($fclass=$h->{allowFormats}{$vars->{format}})) {
+      return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "unknown format '$vars->{format}'");
     }
-    $fclass = $handler->{defaultFormat} if (!defined($fclass));
+    $fclass = $h->{defaultFormat} if (!defined($fclass));
     $fmt = $fclass->new(level=>$vars->{pretty}, encoding=>$enc);
-    return $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$fmt);
+    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$fmt);
 
     ##-- parse input query
     if (defined($vars->{d})) {
-      $qdoc = $fmt->parseString($vars->{d}) or $fmt->logwarn("parseString() failed for document query parameter 'd'");
+      $qdoc = $fmt->parseString($vars->{d}) or $fmt->logwarn("parseString() failed for data query paramater 'data'");
     }
 #    elsif (defined($vars->{s})) {
 #      $qdoc = $fmt->parseString($vars->{s}) or $fmt->logconfess("parseString() failed for sentence query parameter 's'");
@@ -156,38 +157,29 @@ sub run {
       my $ifmt = DTA::CAB::Format::Raw->new;
       $qdoc = $ifmt->parseString($qsrc) or $ifmt->logwarn("parseString() failed for raw query parameter 'q'");
     }
-    return $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$qdoc);
+    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$qdoc);
 
     ##-- analyze
-    $qdoc = $a->analyzeDocument($qdoc, {%$ao, ($handler->{forceClean} ? (doAnalyzeClean=>1) : qw())})
-      or return $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"could not analyze query document");
+    $qdoc = $a->analyzeDocument($qdoc, {%$ao, ($h->{forceClean} ? (doAnalyzeClean=>1) : qw())})
+      or return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not analyze query document");
 
     ##-- format
     $ostr = $fmt->flush->putDocument($qdoc)->toString;
     $fmt->flush;
     $ostr = encode($enc,$ostr) if (utf8::is_utf8($ostr));
-    return $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"could format output document: $@") if (!defined($ostr));
-  cgirun_end:
+    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "could format output document: $@") if (!defined($ostr));
   };
-  return $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"could not process query: $@") if ($@ || !defined($ostr));
+  return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "could not process query: $@") if ($@ || !defined($ostr));
 
   ##-- dump to client
-  my $contentType = $fmt->mimeType || 'text/plain';
-  my $returnRaw   = defined($vars->{raw}) ? $vars->{raw} : $handler->{returnRaw};
-  $csock->print(
-		header('-nph' => 1,
-		       '-status' => '200 OK',
-		       '-charset' => $enc,
-		       '-content-encoding' => $enc,
-		       '-content-length'   => length($ostr),
-		       ($returnRaw
-			? ('-type' => 'text/plain')
-			: ('-type' => $contentType, '-attachment' => ("cab".$fmt->defaultExtension))
-		       )
-		      ),
-		$ostr,
-	       );
-  return 1;
+  my $returnRaw   = defined($vars->{raw}) ? $vars->{raw} : $h->{returnRaw};
+  my $contentType = ($returnRaw ? 'text/plain' : ($fmt->mimeType||'text/plain'));
+  $contentType   .= "; charset=$enc" if ($contentType !~ m|application/octet-stream|);
+  ##
+  my $rsp = $h->response(RC_OK);
+  $rsp->content_type($contentType);
+  $rsp->content_ref(\$ostr);
+  return $rsp;
 }
 
 
