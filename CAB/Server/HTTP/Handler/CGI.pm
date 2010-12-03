@@ -34,19 +34,21 @@ BEGIN {
 ##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
+##     pushMode => $mode,             ##-- push mode for addVars (dfefault='push')
 ##
 ## + runtime %$h data:
-##     cgi => $cgiobj,                ##-- CGI object (after cgiParse())
-##     vars => \%vars,                ##-- CGI variables (after cgiParse())
-##     cgisrc => $cgisrc,             ##-- CGI source (after cgiParse())
+##     #cgi => $cgiobj,                ##-- CGI object (after cgiParse())
+##     #vars => \%vars,                ##-- CGI variables (after cgiParse())
+##     #cgisrc => $cgisrc,             ##-- CGI source (after cgiParse())
 sub new {
   my $that = shift;
   my $h =  bless {
-			encoding=>'UTF-8', ##-- default CGI parameter encoding
-			allowGet=>1,
-			allowPost=>1,
-			@_
-		       }, ref($that)||$that;
+		  encoding=>'UTF-8', ##-- default CGI parameter encoding
+		  allowGet=>1,
+		  allowPost=>1,
+		  pushMode => 'push',
+		  @_
+		 }, ref($that)||$that;
   return $h;
 }
 
@@ -114,20 +116,34 @@ sub trimVars {
   return $vars;
 }
 
-## \%vars = $h->pushVars(\%vars,\%push)
-##  + CGI-like variable push; destructively pushes \%push onto \%vars
-sub pushVars {
-  my ($h,$vars,$push) = @_;
-  foreach (grep {defined($push->{$_})} keys %$push) {
-    if (!exists($vars->{$_})) {
-      $vars->{$_} = $push->{$_};
-    } else {
-      $vars->{$_} = [ $vars->{$_} ] if (!ref($vars->{$_}));
-      push(@{$vars->{$_}}, ref($push->{$_}) ? @{$push->{$_}} : $push->{$_});
+## \%vars = $h->addVars(\%vars,\%push,$mode='push')
+##  + CGI-like variable push; destructively adds\%push onto \%vars
+##  + if $mode is 'push', dups are treated as array push
+##  + if $mode is 'clobber', dups in %push clobber values in %vars
+##  + if $mode is 'keep', dups in %push are ignored
+sub addVars {
+  my ($h,$vars,$push,$mode) = @_;
+  $mode = $h->{pushMode} if (!defined($mode));
+  $mode = 'push' if (!defined($mode));
+  if ($mode eq 'clobber') {
+    @$vars{keys %$push} = values %$push;
+  }
+  elsif ($mode eq 'keep') {
+    $vars->{$_} = $push->{$_} foreach (grep {!exists $vars->{$_}} keys %$push);
+  }
+  else {
+    foreach (grep {defined($push->{$_})} keys %$push) {
+      if (!exists($vars->{$_})) {
+	$vars->{$_} = $push->{$_};
+      } else {
+	$vars->{$_} = [ $vars->{$_} ] if (!ref($vars->{$_}));
+	push(@{$vars->{$_}}, ref($push->{$_}) ? @{$push->{$_}} : $push->{$_});
+      }
     }
   }
   return $vars;
 }
+
 
 ## \%params = $h->uriParams($hreq,%opts)
 ##  + gets GET-style parameters from $hreq->uri
@@ -135,7 +151,7 @@ sub pushVars {
 ##      #(none)
 sub uriParams {
   my ($h,$hreq) = @_;
-  if ($hreq->uri =~ m/\=(.*)$/) {
+  if ($hreq->uri =~ m/\?(.*)$/) {
     return scalar(CGI->new($1)->Vars);
   }
   return {};
@@ -150,8 +166,8 @@ sub uriParams {
 ##      defaultCharset => $charset, ##-- default charset
 sub contentParams {
   my ($h,$hreq,%opts) = @_;
-  $opts{defaultName} = 'POSTDATA' if (!defined($opts{defaultName}));
-  $opts{defaultCharset} = $h->{encoding} if (!defined($opts{defaultCharset}));
+  my $dkey = defined($opts{defaultName}) ? $opts{defaultName} : 'POSTDATA';
+  my $denc = defined($opts{defaultCharset}) ? $opts{defaultCharset} : $h->requestEncoding($hreq);
   if ($hreq->content_type eq 'application/x-www-form-urlencoded') {
     ##-- x-www-form-urlencoded: parse with CGI module
     return scalar(CGI->new($hreq->content)->Vars);
@@ -159,29 +175,31 @@ sub contentParams {
   elsif ($hreq->content_type eq 'multipart/form-data') {
     ##-- multipart/form-data: parse by hand
     my $vars = {};
-    my ($part,$name);
+    my ($part,$name,$penc);
     foreach $part ($hreq->parts) {
       my $dis = $part->header('Content-Disposition');
+      $penc = $h->messageEncoding($part);
+      $penc = $denc if (!defined($penc));
       if ($dis =~ /^form-data\b/) {
 	##-- multipart/form-data: part: form-data
 	if ($dis =~ /\bname=[\"\']?([\w\-\.\,\+]*)[\'\"]?/) {
 	  ##-- multipart/form-data: part: form-data; name="PARAMNAME"
-	  $h->pushVars($vars, { $1 => $part->decoded_content(default_charset=>$opts{defaultCharset}) });
+	  $h->addVars($vars, { $1 => $part->decoded_content(default_charset=>$penc) });
 	} else {
 	  ##-- multipart/form-data: part: form-data
-	  $h->pushVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$opts{defaultCharset}) });
+	  $h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
 	}
       }
       else {
 	##-- multipart/form-data: part: anything other than 'form-data'
-	$h->pushVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$opts{defaultCharset}) });
+	$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
       }
     }
     return $vars;
   }
   elsif ($hreq->content_length > 0) {
     ##-- unknown content: use default data key
-    return { $opts{defaultName} => $hreq->decoded_content(default_charset=>$opts{defaultCharset}) };
+    return { $opts{defaultName} => $hreq->decoded_content(default_charset=>$denc) };
   }
   return {}; ##-- no parameters at all
 }
@@ -192,7 +210,7 @@ sub contentParams {
 sub params {
   my ($h,$hreq,%opts) = @_;
   my $vars = $h->uriParams($hreq,%opts);
-  $h->pushVars($vars, $h->contentParams($hreq,%opts));
+  $h->addVars($vars, $h->contentParams($hreq,%opts));
   return $vars;
 }
 
@@ -223,19 +241,32 @@ sub cgiParams {
   return {};
 }
 
-## $enc = $h->requestEncoding($httpRequest)
+## $enc = $h->messageEncoding($httpMessage,$defaultEncoding)
+##  + attempts to guess messagencoding from (in order of descending priority):
+##    - HTTP::Message header Content-Type charset variable
+##    - HTTP::Message header Content-Encoding
+##    - $defaultEncoding (default=undef)
+sub messageEncoding {
+  my ($h,$msg,$default) = @_;
+  my $ctype = $msg->header('Content-Type'); ##-- note: $msg->content_type() truncates after ';' !
+  ##-- see also HTTP::Message::decoded_content() for a better way to parse header parameters!
+  ##
+  return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
+  $ctype    = $msg->header('Content-Encoding');
+  return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
+  return $ctype if (defined($ctype));
+  return $default;
+}
+
+## $enc = $h->requestEncoding($httpRequest,\%vars)
 ##  + attempts to guess request encoding from (in order of descending priority):
-##    - CGI param 'encoding', from $h->{vars}{encoding}
-##    - HTTP header Content-Type charset variable
-##    - HTTP header Content-Encoding
+##    - CGI param 'encoding', from $vars->{encoding}
+##    - HTTP::Message encoding via $h->messageEncoding($httpRequest)
 ##    - $h->{encoding}
 sub requestEncoding {
-  my ($h,$hreq) = @_;
-  return $h->{vars}{encoding} if ($h->{vars} && $h->{vars}{encoding});
-  my $ctype = $hreq->content_type;
-  return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
-  return $hreq->content_encoding if (defined($hreq->content_encoding));
-  return $h->{encoding};
+  my ($h,$hreq,$vars) = @_;
+  return $vars->{encoding} if ($vars && $vars->{encoding});
+  return $h->messageEncoding($hreq,$h->{encoding});
 }
 
 

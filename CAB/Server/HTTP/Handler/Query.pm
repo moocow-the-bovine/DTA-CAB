@@ -48,6 +48,7 @@ BEGIN {
 ##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
+##     pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
 ##     ##
 ##     ##-- NEW in Handler::Query
 ##     allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
@@ -74,17 +75,18 @@ BEGIN {
 sub new {
   my $that = shift;
   my $h =  $that->SUPER::new(
-				   encoding=>'UTF-8', ##-- default CGI parameter encoding
-				   allowGet=>1,
-				   allowPost=>1,
-				   allowAnalyzers=>undef,
-				   defaultAnalyzer=>'default',
-				   allowFormats => {%allowFormats},
-				   defaultFormat => $DTA::CAB::Format::CLASS_DEFAULT,
-				   forceClean => 0,
-				   returnRaw => 0,
-				   @_,
-				  );
+			     encoding=>'UTF-8', ##-- default CGI parameter encoding
+			     allowGet=>1,
+			     allowPost=>1,
+			     pushMode => 'keep',
+			     allowAnalyzers=>undef,
+			     defaultAnalyzer=>'default',
+			     allowFormats => {%allowFormats},
+			     defaultFormat => $DTA::CAB::Format::CLASS_DEFAULT,
+			     forceClean => 0,
+			     returnRaw => 0,
+			     @_,
+			    );
   return $h;
 }
 
@@ -107,8 +109,9 @@ sub run {
   ##-- parse query parameters
   my $vars = $h->cgiParams($c,$hreq,defaultName=>'data') or return undef;
   return $h->cerror($c, undef, "no query parameters specified!") if (!$vars || !%$vars);
+  $h->vlog('debug', "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
 
-  my $enc  = $h->requestEncoding($hreq);
+  my $enc  = $h->requestEncoding($hreq,$vars);
   return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
   ##-- pre-process query parameters
@@ -138,8 +141,8 @@ sub run {
     return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$fmt);
 
     ##-- parse input query
-    if (defined($vars->{d})) {
-      $qdoc = $fmt->parseString($vars->{d}) or $fmt->logwarn("parseString() failed for data query paramater 'data'");
+    if (defined($vars->{data})) {
+      $qdoc = $fmt->parseString($vars->{data}) or $fmt->logwarn("parseString() failed for data query paramater 'data'");
     }
 #    elsif (defined($vars->{s})) {
 #      $qdoc = $fmt->parseString($vars->{s}) or $fmt->logconfess("parseString() failed for sentence query parameter 's'");
