@@ -5,12 +5,13 @@
 ## Description: DTA::CAB generic HTTP server clients
 
 package DTA::CAB::Client::HTTP;
-use DTA::CAB::Client::HTTP::XmlRpc;
+#use DTA::CAB::Client::XmlRpc;
 use DTA::CAB;
 use DTA::CAB::Client;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Utils ':all';
 use LWP::UserAgent;
+use HTTP::Status;
 use URI::Escape qw(uri_escape_utf8);
 use Carp;
 use strict;
@@ -38,7 +39,7 @@ BEGIN {
 ##     serverEncoding => $encoding,   ##-- default: UTF-8
 ##     timeout => $timeout,           ##-- timeout in seconds, default: 300 (5 minutes)
 ##     mode => $queryMode,            ##-- query mode; one of 'get', 'post', 'xpost'; default='xpost' (post with get-like parameters)
-##     format => $fmtName,            ##-- DTA::CAB::Format name for transfer (default='JSON')
+##     format => $fmtName,            ##-- DTA::CAB::Format short name for transfer (default='json')
 ##
 ##     ##-- debugging
 ##     tracefh => $fh,                ##-- dump requests to $fh if defined (default=undef)
@@ -57,7 +58,7 @@ sub new {
 			   timeout => 300,
 			   testConnect => 1,
 			   mode => 'xpost',
-			   format => 'JSON',
+			   format => 'json',
 			   ##
 			   ##-- low-level stuff
 			   ua => undef,
@@ -102,10 +103,14 @@ sub disconnect {
 }
 
 ## @analyzers = $cli->analyzers()
+##  + appends '/list' to $cli->{serverURL} and parses returns
+##    list of raw text lines returned
+##  + die()s on error
 sub analyzers {
   my $cli = shift;
   my $rsp = $cli->uget($cli->{serverURL}.'/list');
-  return qw() if (!$rsp || $rsp->is_error);
+  $cli->logdie("analyzers(): GET $cli->{serverURL}/list failed: ", $rsp->status_line)
+    if (!$rsp || $rsp->is_error);
   my $content = $rsp->content;
   return grep {defined($_) && $_ ne ''} split(/\r?\n/,$content);
 }
@@ -113,6 +118,23 @@ sub analyzers {
 ##==============================================================================
 ## Methods: Utils
 ##==============================================================================
+
+## $uriStr = $cli->urlEncode(\%form)
+## $uriStr = $cli->urlEncode(\@form)
+sub urlEncode {
+  my ($cli,$form) = @_;
+  if (isa($form,'HASH')) {
+    return join('&', map { uri_escape_utf8($_)."=".uri_escape_utf8($form->{$_}) } keys(%$form));
+  }
+  elsif (isa($form,'ARRAY')) {
+    my ($i,@params);
+    for ($i=1; $i <= $#$form; $i += 2) {
+      push(@params, uri_escape_utf8($form->[$i-1]).'='.uri_escape_utf8($form->[$i]));
+    }
+    return join('&', @params);
+  }
+  return $form;
+}
 
 ## $agent = $cli->ua()
 ##  + gets underlying LWP::UserAgent object, caching if required
@@ -141,23 +163,6 @@ sub upost {
   return $_[0]->ua->post(@_[1..$#_]);
 }
 
-## $uriStr = $cli->urlEncode(\%form)
-## $uriStr = $cli->urlEncode(\@form)
-sub urlEncode {
-  my ($cli,$form) = @_;
-  if (isa($form,'HASH')) {
-    return join('&', map { uri_escape_utf8($_)."=".uri_escape_utf8($form->{$_}) } keys(%$form));
-  }
-  elsif (isa($form,'ARRAY')) {
-    my ($i,@params);
-    for ($i=1; $i <= $#$form; $i += 2) {
-      push(@params, uri_escape_utf8($form->[$i-1]).'='.uri_escape_utf8($form->[$i]));
-    }
-    return join('&', @params);
-  }
-  return $form;
-}
-
 ## $response = $cli->uget_form($url, \%form, $field_name=>$value, ...)
 ## $response = $cli->uget_form($url, \@form, $field_name=>$value, ...)
 sub uget_form {
@@ -178,6 +183,56 @@ sub uxpost {
 ##==============================================================================
 
 ##-- CONTINUE HERE!
+
+## $response = $cli->analyzeDataRef($analyzer, \$data_str, \%opts)
+##  + server-side %opts:
+##     ##-- query data, in order of preference
+##     data => $docData,              ##-- document data (for analyzeDocument())
+##     q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
+##     ##
+##     ##-- misc
+##     a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
+##     format => $format,             ##-- I/O format
+##     encoding => $enc,              ##-- I/O encoding
+##     pretty => $level,              ##-- pretty-printing level
+##     raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+sub analyzeDataRef {
+  my ($cli,$aname,$dataref,$opts) = @_;
+  my %form = (format=>$cli->{format},
+	      encoding=>$cli->{serverEncoding},
+	      %$opts,
+	      a=>$aname,
+	     );
+  delete(@form{qw(q data)});
+  my ($rsp);
+  if ($cli->{mode} eq 'get') {
+    $form{'q'} = $$dataref;
+    return $cli->uget_form($cli->{serverURL}, \%form);
+  }
+  elsif ($cli->{mode} eq 'post') {
+    $form{'data'} = $$dataref;
+    return $cli->upost($cli->{serverURL}, \%form);
+  }
+  elsif ($cli->{mode} eq 'xpost') {
+    return $cli->uxpost($cli->{serverURL}, \%form, $$dataref, 'Content-Type'=>($opts->{'Content-Type'}||'application/octet-stream'));
+  }
+
+  ##-- should never happen
+  return HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$cli->{mode}'");
+}
+
+
+
+## $data_str = $cli->analyzeData($analyzer, \$data_str, \%opts)
+##  + wrapper for analyzeDataRef()
+##  + die()s on error
+##  + you should pass $opts->{'Content-Type'} as some sensible value
+sub analyzeData {
+  my ($cli,$aname,$data,$opts) = @_;
+  my $rsp = $cli->analyzeDataRef($aname,\$data,$opts);
+  $cli->logdie("analyzeData() failed: " . $rsp->status_line) if ($rsp->is_error);
+  return $rsp->content;
+}
 
 ## $tok = $cli->analyzeToken($analyzer, $tok, \%opts)
 sub analyzeToken {
@@ -212,18 +267,6 @@ sub analyzeDocument {
 					   (defined($opts) ? $opts : qw())
 					  ));
   return ref($rsp) && !$rsp->is_fault ? toDocument($rsp->value) : $rsp;
-}
-
-## $data_str = $cli->analyzeData($analyzer, $input_str, \%opts)
-sub analyzeData {
-  my ($cli,$aname,$data,$opts) = @_;
-  my $rsp = $cli->request($cli->newRequest("$aname.analyzeData",
-					   RPC::XML::base64->new($data),
-					   (defined($opts) ? $opts : qw())
-					  ),
-			  0 ##-- no deep encode/decode
-			 );
-  return ref($rsp) && !$rsp->is_fault ? $rsp->value : $rsp;
 }
 
 1; ##-- be happy

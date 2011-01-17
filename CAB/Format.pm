@@ -104,7 +104,8 @@ sub newWriter {
 
 ## \%registered = $CLASS_OR_OBJ->registerFormat(%opts)
 ##  + %opts:
-##      name          => $basename,      ##-- basename for the class
+##      name          => $basename,      ##-- basename for the class (package name)
+##      short         => $shortname,     ##-- short name for the class (default = package name suffix, lower-cased)
 ##      readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
 ##      writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
 ##      filenameRegex => $regex,
@@ -113,6 +114,10 @@ sub registerFormat {
   $opts{name} = (ref($that)||$that) if (!defined($opts{name}));
   $opts{readerClass} = $opts{name} if (!defined($opts{readerClass}));
   $opts{writerClass} = $opts{name} if (!defined($opts{writerClass}));
+  if (!defined($opts{short})) {
+    $opts{short} = lc($opts{name});
+    $opts{short} =~ s/.*\:\://;
+  }
   my $reg = {%opts};
   @classreg = grep { $_->{name} ne $opts{name} } @classreg; ##-- un-register any old class by this name
   unshift(@classreg, $reg);
@@ -142,6 +147,29 @@ sub fileWriterClass {
   my ($that,$filename) = @_;
   my $reg = $that->guessFilenameFormat($filename);
   return defined($reg) ? $reg->{writerClass} : undef;
+}
+
+## $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname)
+sub short2reg {
+  my ($that,$short) = @_;
+  foreach (@classreg) {
+    return $_ if ($short eq $_->{short});
+  }
+  return undef;
+}
+
+## $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname)
+sub shortReaderClass {
+  my ($that,$short) = @_;
+  my $reg = $that->short2reg($short);
+  return $reg ? $reg->{readerClass} : undef;
+}
+
+## $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname)
+sub shortWriterClass {
+  my ($that,$short) = @_;
+  my $reg = $that->short2reg($short);
+  return $reg ? $reg->{writerClass} : undef;
 }
 
 ##==============================================================================
@@ -267,7 +295,7 @@ sub forceDocument {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: MIME & HTTP stuff
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -277,6 +305,15 @@ sub mimeType { return 'text/plain'; }
 ##  + returns default filename extension for this format (default='.cab')
 sub defaultExtension { return '.cab'; }
 
+## $short = $fmt->formatName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  my $short = shift;
+  $short = ref($short) || $short;
+  $short =~ s/^.*\:\://;
+  return lc($short);
+}
 
 ##--------------------------------------------------------------
 ## Methods: Output: accessors

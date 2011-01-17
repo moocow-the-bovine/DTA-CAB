@@ -18,7 +18,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:yaml|yml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:yaml|yml)$/);
 }
 
 our $WRAP_CLASS = undef;
@@ -135,6 +135,13 @@ sub mimeType { return 'text/x-yaml'; }
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format
 sub defaultExtension { return '.yml'; }
+
+## $short = $fmt->formatName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'yaml';
+}
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection

@@ -19,7 +19,7 @@ our @ISA = qw(DTA::CAB::Format);
 
 our $WRAP_CLASS = undef;
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:json|jsn)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/);
 }
 
 foreach my $pmfile (map {"DTA/CAB/Format/JSON/$_.pm"} qw(XS Syck JSON)) {
@@ -134,6 +134,14 @@ sub mimeType { return 'application/json'; }
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format
 sub defaultExtension { return '.json'; }
+
+## $short = $fmt->formatName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'json';
+}
+
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
