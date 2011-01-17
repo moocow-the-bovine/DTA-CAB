@@ -124,7 +124,7 @@ sub prepareLocal {
   ##-- get RPC::XML object
   my $xsrv = $srv->{xsrv} = RPC::XML::Server->new(%{$srv->{xopt}});
   if (!ref($xsrv)) {
-    $srv->logcroak("could not create underlying server object: $xsrv\n");
+    $srv->logcroak("could not create underlying RPC::XML::Server object: $xsrv\n");
   }
 
   ##-- hack: set server encoding

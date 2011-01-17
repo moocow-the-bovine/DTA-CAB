@@ -15,5 +15,6 @@ use DTA::CAB::Server::HTTP::Handler::Directory;
 use DTA::CAB::Server::HTTP::Handler::Response;
 use DTA::CAB::Server::HTTP::Handler::CGI;
 use DTA::CAB::Server::HTTP::Handler::Query;
+use DTA::CAB::Server::HTTP::Handler::XmlRpc;
 
 1; ##-- be happy

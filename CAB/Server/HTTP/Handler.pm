@@ -27,11 +27,14 @@ sub new {
 ## $bool = $h->prepare($server,$path)
 sub prepare { return 1; }
 
-## $rsp = $path->run($server, $localPath, $clientConn, $httpRequest)
+## $rsp = $h->run($server, $localPath, $clientConn, $httpRequest)
 ##  + perform local processing
 ##  + should return a HTTP::Response object to pass to the client
 ##  + if the call die()s or returns undef, an error response will be
 ##    sent to the client instead if it the connection is still open
+##  + this method may return the data to the client itself; if so,
+##    it should close the client connection ($csock->shutdown(2); $csock->close())
+##    and return undef to prevent bogus error messages.
 sub run {
   my ($h,$srv,$path,$csock,$hreq) = @_;
   $h->logdie("run() method not implemented");

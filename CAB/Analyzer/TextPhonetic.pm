@@ -54,7 +54,8 @@ sub ensureLoaded {
     return 0;
   }
   $tp->info("using Text::Phonetic version ", ($Text::Phonetic::VERSION || '-undef-'));
-  $tp->{tpo} = "Text::Phonetic::$tp->{alg}"->new();
+  $tp->{tpo} = "Text::Phonetic::$tp->{alg}"->new()
+    or $tp->logwarn("cannot create Text::Phonetic::$tp->{alg} object");
   return $tp;
 }
 

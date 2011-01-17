@@ -182,6 +182,12 @@ sub run {
   my $rsp = $h->response(RC_OK);
   $rsp->content_type($contentType);
   $rsp->content_ref(\$ostr);
+  if (!$returnRaw) {
+    my $filename = defined($vars->{q}) ? $vars->{q} : 'data';
+    $filename =~ s/\W.*$/_/;
+    $filename .= $fmt->defaultExtension;
+    $rsp->header('Content-Disposition' => "attachment; filename=\"$filename\"");
+  }
   return $rsp;
 }
 

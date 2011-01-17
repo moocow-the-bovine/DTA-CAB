@@ -33,6 +33,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new()
 ##     paths      => \%path2handler, ##-- maps local URL paths to configs
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon object
+##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
 ##     ##
 ##     ##-- security
 ##     allowUserOptions => $bool, ##-- allow user options? (default: true)
@@ -67,6 +68,7 @@ sub new {
 					  LocalPort=>8088,
 					  ReuseAddr=>1,
 					 },
+			   #cxsrv => undef,
 
 			   ##-- path config
 			   paths => {},
