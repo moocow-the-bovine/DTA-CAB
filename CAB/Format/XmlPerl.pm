@@ -20,7 +20,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-perl|perl[\-\.]xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)perl|perl(?:[\-\.]?)xml)$/);
 }
 
 ##==============================================================================
@@ -144,6 +144,16 @@ sub parseDocument {
 ##=============================================================================
 ## Methods: Output
 ##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Output: MIME & HTTP stuff
+
+## $short = $fmt->formatName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'xmlperl';
+}
 
 ##--------------------------------------------------------------
 ## Methods: Output: Local: Nodes

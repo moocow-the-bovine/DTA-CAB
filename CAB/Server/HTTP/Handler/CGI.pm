@@ -70,7 +70,7 @@ sub decodeVars {
     if (ref($$vref)) {
       $_ = $h->decodeString($_,%opts) foreach (@{$$vref});
     } else {
-      $$vref = $h->decodeString($$vref,%opts);
+      $$vref = $h->decodeString($$vref,%opts); ##-- BUG here with YAML data (test-pp.t.yaml) UTF-8 flag not set after call!
     }
   }
   return $vars;

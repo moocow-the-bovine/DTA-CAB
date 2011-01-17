@@ -213,6 +213,16 @@ sub parseDocument {
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## Methods: Output: MIME & HTTP stuff
+
+## $short = $fmt->formatName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'xml';
+}
+
+##--------------------------------------------------------------
 ## Methods: Output: Local
 
 ## $nod = $fmt->xmlNode($thingy,$name)
