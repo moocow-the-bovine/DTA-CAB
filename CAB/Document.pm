@@ -50,6 +50,14 @@ sub nTokens {
   return $ntoks;
 }
 
+## $n = $doc->nChars()
+##  + total number of token text characters
+sub nChars {
+  my $nchars = 0;
+  $nchars += length($_->{text}) foreach (map {@{$_->{tokens}}} @{$_[0]->{body}});
+  return $nchars;
+}
+
 ## \%types = $doc->types()
 ##  + get hash \%types = ($typeText => $typeToken, ...) mapping token text to
 ##    basic token objects (with only 'text' key defined)

@@ -101,7 +101,7 @@ sub parseYamlString {
   $YAML::Syck::LoadCode        = 0;  # don't automatically eval embedded perl code
   $doc = YAML::Syck::Load($_[0])
     or $fmt->warn("ParseYamlString(): YAML::Syck::Load() failed: $!");
-  $fmt->{doc} = $fmt->forceDocument($doc);
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;
 }
 

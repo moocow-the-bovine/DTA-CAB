@@ -37,6 +37,7 @@ BEGIN {
 ##     #level    => $formatLevel,      ##-- n/a
 ##
 ##     ##-- Common
+##     raw => $bool,                   ##-- attempt to load/save raw data
 ##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
@@ -456,6 +457,12 @@ sub putDocument {
   $fmt->{outbuf} .= "%% base=$doc->{base}\n\n" if (defined($doc->{base}));
   $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
   return $fmt;
+}
+
+## $fmt = $fmt->putData($data)
+##  + puts raw data (uses forceDocument())
+sub putData {
+  $_[0]->putDocument($_[0]->forceDocument($_[1]));
 }
 
 

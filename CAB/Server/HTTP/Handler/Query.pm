@@ -48,6 +48,7 @@ BEGIN {
 ##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
+##     allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
 ##     pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
 ##     ##
 ##     ##-- NEW in Handler::Query
@@ -57,9 +58,13 @@ BEGIN {
 ##     defaultFormat => $class,       ##-- default format (default=$DTA::CAB::Format::CLASS_DEFAULT)
 ##     forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
 ##     returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
+##     logVars => $level,             ##-- log-level for variable expansion (default=undef: none)
 ##
 ## + runtime %$h data:
 ##     ##-- INHERITED from Handler::CGI (none)
+##
+## + path sensitivity
+##   - if path ends in '/list', a newline-separated list of analyzers will be returned
 ##
 ## + CGI parameters:
 ##     ##-- query data, in order of preference
@@ -78,6 +83,8 @@ sub new {
 			     encoding=>'UTF-8', ##-- default CGI parameter encoding
 			     allowGet=>1,
 			     allowPost=>1,
+			     allowList=>1,
+			     logVars => undef,
 			     pushMode => 'keep',
 			     allowAnalyzers=>undef,
 			     defaultAnalyzer=>'default',
@@ -106,18 +113,24 @@ sub run {
   ##-- check for HEAD
   return $h->headResponse() if ($hreq->method eq 'HEAD');
 
+  ##-- check for LIST
+  my @upath = $hreq->uri->path_segments;
+  return $h->runList($srv,$path,$c,$hreq) if ($upath[$#upath] eq 'list');
+
   ##-- parse query parameters
   my $vars = $h->cgiParams($c,$hreq,defaultName=>'data') or return undef;
   return $h->cerror($c, undef, "no query parameters specified!") if (!$vars || !%$vars);
-  $h->vlog('debug', "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
+  $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars'])) if ($h->{logVars});
 
   my $enc  = $h->requestEncoding($hreq,$vars);
   return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
   ##-- pre-process query parameters
   #$h->decodeVars($vars,[qw(d s w q a format)], $enc);
-  $h->decodeVars($vars, vars=>[qw(data q a format)], encoding=>$enc, allowHtmlEscapes=>0);
+  #$h->decodeVars($vars, vars=>[qw(data q a format)], encoding=>$enc, allowHtmlEscapes=>0);
+  $h->decodeVars($vars, vars=>[qw(a format)], encoding=>$enc, allowHtmlEscapes=>0);
   $h->trimVars($vars,  vars=>[qw(q a format)]);
+
 
   ##-- get analyzer $a
   my $akey = $vars->{'a'} || $h->{defaultAnalyzer};
@@ -138,7 +151,7 @@ sub run {
     }
     $fclass = $h->{defaultFormat} if (!defined($fclass));
     $fmt = $fclass->new(level=>$vars->{pretty}, encoding=>$enc);
-    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$fmt);
+    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not format parser for class '$fclass': $@") if (!$fmt);
 
     ##-- parse input query
     if (defined($vars->{data})) {
@@ -175,22 +188,95 @@ sub run {
   return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "could not process query: $@") if ($@ || !defined($ostr));
 
   ##-- dump to client
-  my $returnRaw   = defined($vars->{raw}) ? $vars->{raw} : $h->{returnRaw};
-  my $contentType = ($returnRaw ? 'text/plain' : ($fmt->mimeType||'text/plain'));
-  $contentType   .= "; charset=$enc" if ($contentType !~ m|application/octet-stream|);
+  my $filename = defined($vars->{q}) ? $vars->{q} : 'data';
+  $filename =~ s/\W.*$/_/;
+  $filename .= $fmt->defaultExtension;
+  return $h->dumpResponse(\$ostr,
+			  raw=>$vars->{raw},
+			  type=>$fmt->mimeType,
+			  charset=>$enc,
+			  filename=>$filename);
+}
+
+## $rsp = $h->dumpResponse(\$contentRef, %opts)
+##  + %opts:
+##     raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
+##     type => $mimetype, ##-- mime type if not raw mode
+##     charset => $enc,   ##-- character set, if not raw mode
+##     filename => $file, ##-- attachment name, if not raw mode
+sub dumpResponse {
+  my ($h,$dataref,%vars) = @_;
+  my $returnRaw   = defined($vars{raw}) ? $vars{raw} : $h->{returnRaw};
+  my $contentType = ($returnRaw || !$vars{type} ? 'text/plain' : $vars{type});
+  $contentType   .= "; charset=$vars{charset}" if ($vars{charset} && $contentType !~ m|application/octet-stream|);
   ##
   my $rsp = $h->response(RC_OK);
   $rsp->content_type($contentType);
-  $rsp->content_ref(\$ostr);
-  if (!$returnRaw) {
-    my $filename = defined($vars->{q}) ? $vars->{q} : 'data';
-    $filename =~ s/\W.*$/_/;
-    $filename .= $fmt->defaultExtension;
-    $rsp->header('Content-Disposition' => "attachment; filename=\"$filename\"");
-  }
+  $rsp->content_ref($dataref) if (defined($dataref));
+  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename});
   return $rsp;
 }
 
+## $response = $h->runList($h,$srv,$path,$c,$hreq)
+sub runList {
+  my ($h,$srv,$path,$c,$hreq) = @_;
+
+  ##-- check for LIST
+  return $h->cerror($c,RC_NOT_FOUND,"/list path disabled") if (!$h->{allowList});
+
+  ##-- parse list query parameters
+  my $vars = $h->cgiParams($c,$hreq) or return undef;
+  $h->vlog('debug', "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
+
+  my $enc  = $h->requestEncoding($hreq,$vars);
+  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+
+  $h->decodeVars($vars, vars=>[qw(q format)], encoding=>$enc, allowHtmlEscapes=>0);
+  $h->trimVars($vars,  vars=>[qw(q format)]);
+
+  ##-- get matching analyzers
+  my $qre = defined($vars->{q}) ? qr/$vars->{q}/ : qr//;
+  my @as  = (grep {$_ =~ $qre} 
+	     grep {!defined($h->{allowAnalyzers}) || $h->{allowAnalyzers}{$_}}
+	     sort keys(%{$srv->{as}}));
+
+  ##-- get format
+  my ($fclass,$fmt);
+  if (defined($vars->{format}) && !defined($fclass=$h->{allowFormats}{$vars->{format}})) {
+    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "unknown format '$vars->{format}'");
+  }
+  $fclass = $h->{defaultFormat} if (!defined($fclass));
+  $fmt = $fclass->new(level=>$vars->{pretty}, encoding=>$enc);
+  return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not create formatter of class '$fclass': $@") if (!$fmt);
+
+  ##-- dump analyzers
+  $fmt->{raw} = 1;
+  my ($ostr);
+  if ($fmt->isa('DTA::CAB::Format::TT')) {
+    $ostr = join("\n", @as,'');
+  }
+  elsif ($fmt->isa('DTA::CAB::Format::XmlNative')) {
+    $fmt->{arrayEltKeys}{tokens} = 'a';
+    $fmt->{key2xml}{text} = 'name';
+    $fmt->putDocument({tokens=>[map {{text=>$_}} @as]});
+    my $odoc = $fmt->xmlDocument;
+    $odoc->documentElement->setNodeName('analyzers');
+    ##
+    $ostr = $fmt->toString;
+  }
+  else {
+    $ostr = $fmt->putData(\@as)->toString;
+  }
+  $ostr = encode($enc,$ostr) if (utf8::is_utf8($ostr));
+
+  ##-- dump response
+  return $h->dumpResponse(\$ostr,
+			  raw=>$vars->{raw},
+			  type=>$fmt->mimeType,
+			  charset=>$enc,
+			  filename=>("analyzers".$fmt->defaultExtension),
+			 );
+}
 
 ##--------------------------------------------------------------
 ## Methods: Local

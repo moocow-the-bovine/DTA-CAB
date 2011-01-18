@@ -24,9 +24,17 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 
 our $CLASS_DEFAULT = 'DTA::CAB::Format::TT'; ##-- default class for newFormat()
 
-## @classreg
+## @classreg = (\%registeredClass1, ... )
 ## + registered classes: see $CLASS->registerFormat()
 our @classreg = qw();
+
+## %short2reg = ($shortName => \%registeredClass, ...)
+## + registered short classes; see $CLASS->registerFormat()
+our %short2reg = qw();
+
+## %base2reg = ($baseName => \%registeredClass, ...)
+## + registered long (base) classes; see $CLASS->registerFormat()
+our %base2reg = qw();
 
 ##==============================================================================
 ## Constructors etc.
@@ -65,10 +73,12 @@ sub new {
   return $fmt;
 }
 
-## $fmt = CLASS->newFormat($class_or_class_suffix, %opts)
+## $fmt = CLASS->newFormat($class_or_short_or_class_suffix, %opts)
 ##  + allows additional opt 'filename'
 sub newFormat {
   my ($that,$class,%opts) = @_;
+  $class = $short2reg{lc($class)}{name} if ($short2reg{lc($class)});
+  $class = $base2reg{$class}{name} if ($base2reg{$class});
   $class = "DTA::CAB::Format::${class}"
     if (!UNIVERSAL::isa($class,'DTA::CAB::Format'));
   $that->logconfess("newFormat(): cannot create unknown format class '$class'")
@@ -119,8 +129,10 @@ sub registerFormat {
     $opts{short} =~ s/.*\:\://;
   }
   my $reg = {%opts};
-  @classreg = grep { $_->{name} ne $opts{name} } @classreg; ##-- un-register any old class by this name
+  #@classreg = grep { $_->{name} ne $opts{name} } @classreg; ##-- un-register any old class by this name
   unshift(@classreg, $reg);
+  $short2reg{$opts{short}} = $reg;
+  $base2reg{$opts{name}} = $reg;
   return $reg;
 }
 
@@ -151,25 +163,25 @@ sub fileWriterClass {
 
 ## $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname)
 sub short2reg {
-  my ($that,$short) = @_;
-  foreach (@classreg) {
-    return $_ if ($short eq $_->{short});
-  }
-  return undef;
+  return $short2reg{$_[1]};
 }
+
+## $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename)
+sub base2reg {
+  return $base2reg{$_[1]};
+}
+
 
 ## $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname)
 sub shortReaderClass {
   my ($that,$short) = @_;
-  my $reg = $that->short2reg($short);
-  return $reg ? $reg->{readerClass} : undef;
+  return $short2reg{$short} ? $short2reg{$short}{readerClass} : undef;
 }
 
 ## $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname)
 sub shortWriterClass {
   my ($that,$short) = @_;
-  my $reg = $that->short2reg($short);
-  return $reg ? $reg->{writerClass} : undef;
+  return $short2reg{$short} ? $short2reg{$short}{writerClass} : undef;
 }
 
 ##==============================================================================
@@ -251,6 +263,8 @@ sub parseFh {
   return $_[0]->fromFh($_[1])->parseDocument;
 }
 
+
+
 ##--------------------------------------------------------------
 ## Methods: Input: Utilties
 
@@ -299,6 +313,7 @@ sub forceDocument {
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
+BEGIN { *contentType = \&mimeType; }
 sub mimeType { return 'text/plain'; }
 
 ## $ext = $fmt->defaultExtension()
@@ -410,6 +425,12 @@ sub putDocument {
 ##  + may copy plain $doc reference
 sub putDocumentRaw { return $_[0]->putDocument($_[1]); }
 
+
+## $fmt = $fmt->putData($data)
+##  + put arbitrary raw data (e.g. for YAML, JSON, XmlPerl)
+sub putData {
+  $_[0]->logconfess("putData() not implemented!");
+}
 
 1; ##-- be happy
 

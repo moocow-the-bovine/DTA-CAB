@@ -68,29 +68,43 @@ sub decodeVars {
   foreach (grep {exists $vars->{$_}} @$keys) {
     $vref = \$vars->{$_};
     if (ref($$vref)) {
-      $_ = $h->decodeString($_,%opts) foreach (@{$$vref});
+      $h->decodeStringRef(\$_,%opts) foreach (@{$$vref});
     } else {
-      $$vref = $h->decodeString($$vref,%opts); ##-- BUG here with YAML data (test-pp.t.yaml) UTF-8 flag not set after call!
+      #$$vref = $h->decodeString($$vref,%opts); ##-- BUG here with YAML data (test-pp.t.yaml) UTF-8 flag not set after call!
+      $h->decodeStringRef($vref,%opts);
     }
   }
   return $vars;
 }
 
-## $str = $h->decodeString($string,%opts)
+## \$string = $h->decodeString(\$string,%opts); ##-- decodes in-place
+## $decoded = $h->decodeString( $string,%opts); ##-- decode by copy
 ##  + decodes string as $h->{encoding}, optionally handling HTML-style escapes
 ##  + %opts:
 ##     allowHtmlEscapes => $bool,    ##-- whether to handle HTML escapes (default=false)
 ##     encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
 sub decodeString {
   my ($h,$str,%opts) = @_;
-  return $str if (!defined($str));
-  $str = decode(($opts{encoding}||$h->{encoding}), $str) if (!utf8::is_utf8($str) && ($opts{encoding}||$h->{encoding}));
-  if ($opts{allowHtmlEscapes}) {
-    $str =~ s/\&\#(\d+)\;/pack('U',$1)/eg;
-    $str =~ s/\&\#x([[:xdigit:]]+)\;/pack('U',hex($1))/eg;
-  }
-  return $str;
+  return $h->decodeStringRef($str,%opts) if (ref($str));
+  return ${$h->decodeStringRef(\$str,%opts)};
 }
+
+## \$string = $h->decodeStringRef(\$string,%opts); ##-- decodes in-place
+##  + decodes string in-place as $h->{encoding}, optionally handling HTML-style escapes
+##  + %opts:
+##     allowHtmlEscapes => $bool,    ##-- whether to handle HTML escapes (default=false)
+##     encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
+sub decodeStringRef {
+  my ($h,$sref,%opts) = @_;
+  return $sref if (!defined($sref) || !ref($sref));
+  $$sref = decode(($opts{encoding}||$h->{encoding}), $$sref) if (!utf8::is_utf8($$sref) && ($opts{encoding}||$h->{encoding}));
+  if ($opts{allowHtmlEscapes}) {
+    $$sref =~ s/\&\#(\d+)\;/pack('U',$1)/eg;
+    $$sref =~ s/\&\#x([[:xdigit:]]+)\;/pack('U',hex($1))/eg;
+  }
+  return $$sref;
+}
+
 
 ## \%vars = $h->trimVars(\%vars,%opts)
 ##  + trims leading and trailing whitespace from selected values in \%vars
@@ -149,9 +163,15 @@ sub addVars {
 ##  + gets GET-style parameters from $hreq->uri
 ##  + %opts:
 ##      #(none)
-sub uriParams {
+BEGIN { *uriParams = \&uriParams_uri; }
+sub uriParams_uri {
+  my ($h,$hreq) = @_;
+  return {$hreq->uri->query_form};
+}
+sub uriParams_CGI {
   my ($h,$hreq) = @_;
   if ($hreq->uri =~ m/\?(.*)$/) {
+    ##-- see also: $hreq->uri->query_form(), also URI::QueryParam
     return scalar(CGI->new($1)->Vars);
   }
   return {};
@@ -169,8 +189,9 @@ sub contentParams {
   my $dkey = defined($opts{defaultName}) ? $opts{defaultName} : 'POSTDATA';
   my $denc = defined($opts{defaultCharset}) ? $opts{defaultCharset} : $h->requestEncoding($hreq);
   if ($hreq->content_type eq 'application/x-www-form-urlencoded') {
-    ##-- x-www-form-urlencoded: parse with CGI module
-    return scalar(CGI->new($hreq->content)->Vars);
+    ##-- x-www-form-urlencoded
+    #return scalar(CGI->new($hreq->content)->Vars); ##-- : parse with CGI module
+    return {URI->new('?'.$hreq->content)->query_form};
   }
   elsif ($hreq->content_type eq 'multipart/form-data') {
     ##-- multipart/form-data: parse by hand
@@ -184,22 +205,28 @@ sub contentParams {
 	##-- multipart/form-data: part: form-data
 	if ($dis =~ /\bname=[\"\']?([\w\-\.\,\+]*)[\'\"]?/) {
 	  ##-- multipart/form-data: part: form-data; name="PARAMNAME"
-	  $h->addVars($vars, { $1 => $part->decoded_content(default_charset=>$penc) });
+	  #$h->addVars($vars, { $1 => $part->decoded_content(default_charset=>$penc) });
+	  $h->addVars($vars, { $1 => $part->content });
 	} else {
 	  ##-- multipart/form-data: part: form-data
-	  $h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
+	  #$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
+	  $h->addVars($vars, { $opts{defaultName} => $part->content });
 	}
       }
       else {
 	##-- multipart/form-data: part: anything other than 'form-data'
-	$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
+	#$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
+	$h->addVars($vars, { $opts{defaultName} => $part->content });
       }
     }
     return $vars;
   }
   elsif ($hreq->content_length > 0) {
     ##-- unknown content: use default data key
-    return { $opts{defaultName} => $hreq->decoded_content(default_charset=>$denc) };
+    return {
+	    #$opts{defaultName} => $hreq->decoded_content(default_charset=>$denc)
+	    $opts{defaultName} => $hreq->content
+	   };
   }
   return {}; ##-- no parameters at all
 }

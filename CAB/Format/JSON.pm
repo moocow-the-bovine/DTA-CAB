@@ -40,6 +40,7 @@ $WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 ##    (
 ##     ##---- Input
 ##     doc => $doc,                    ##-- buffered input document
+##     raw => $bool,                   ##-- if true, format parses raw data
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
 ##     #encoding => $encoding,         ##-- n/a: always UTF-8 octets
@@ -54,6 +55,7 @@ sub new {
   my $fmt = bless({
 		   ##-- I/O common
 		   encoding => undef,
+		   raw => 0,
 
 		   ##-- Input
 		   #doc => undef,
@@ -107,8 +109,9 @@ sub fromString {
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseJsonString($str)
+## $fmt = $fmt->parseJsonString($str, raw=>$rawMode)
 ##  + must be defined by child classes!
+##  + if $rawMode is true, no document massaging will be performed
 sub parseJsonString {
   my $fmt = shift;
   $fmt->logconfess("parseJsonString() not implemented!");
@@ -188,6 +191,11 @@ sub putDocument {
   $_[0]->logconfess("putDocument() not implemented!");
 }
 
+## $fmt = $fmt->putData($data)
+##  + puts raw data
+sub putData {
+  return $_[0]->putDocument($_[1]);
+}
 
 1; ##-- be happy
 

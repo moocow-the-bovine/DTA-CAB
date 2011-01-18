@@ -107,9 +107,10 @@ sub close {
 sub parseJsonString {
   my $fmt = shift;
   my ($doc);
-  $doc = $fmt->{jxs}->decode($_[0])
+  #$doc = $fmt->{jxs}->decode($_[0])
+  $doc = $fmt->{jxs}->decode(utf8::is_utf8($_[0]) ? Encode::encode_utf8($_[0]) : $_[0])
     or $fmt->warn("parseJsonString(): JSON::XS::decode() failed: $!");
-  $fmt->{doc} = $fmt->forceDocument($doc);
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;
 }
 
@@ -165,6 +166,13 @@ sub putDocument {
   $_[0]{outbuf} .= $_[0]{jxs}->encode($_[1]);
   return $_[0];
 }
+
+## $fmt = $fmt->putData($data)
+sub putData {
+  $_[0]{outbuf} .= $_[0]{jxs}->encode($_[1]);
+  return $_[0];
+}
+
 
 
 1; ##-- be happy

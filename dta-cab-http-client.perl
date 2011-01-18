@@ -4,6 +4,7 @@ use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Client::HTTP;
 use DTA::CAB::Utils ':all';
+use DTA::CAB::Datum ':all';
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
@@ -34,25 +35,27 @@ our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Lo
 ##-- Client Options
 our $defaultPort = 9099;
 our $defaultPath = '/cgi';
-our $serverURL  = "http://localhost:${defaultPort}${defaultPath}";
-our $serverEncoding = 'UTF-8';
-our $localEncoding  = 'UTF-8';
-our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
-our $test_connect = 1;
-our $client_mode = 'xpost';
+our $serverURL   = "http://localhost:${defaultPort}${defaultPath}";
+our %clientOpts = (
+		   timeout=>65535, ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
+		   testConnect=>1,
+		   mode => 'xpost',
+		   post => 'urlencoded',
+		  );
 
 ##-- Analysis & Action Options
-our $analyzer = 'dta.cab.default';
-our $action = 'list';
-our %analyzeOpts = qw();    ##-- currently unused
+our $analyzer = 'default';
+our $action = 'document';
+our %analyzeOpts = (pretty=>1);    ##-- currently unused
 our $doProfile = undef;
 
 ##-- I/O Options
 our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
-our %inputOpts   = (encoding=>undef);
-our %outputOpts  = (encoding=>undef,level=>0);
 our $outfile     = '-';
+our %formatOpts  = qw();
+our $encoding = 'UTF-8';
+our ($ifmt,$ofmt);
 
 our $bench_iters = 1; ##-- number of benchmark iterations for -bench mode
 our $trace_request_file = undef; ##-- trace request to file?
@@ -66,11 +69,13 @@ GetOptions(##-- General
 
 	   ##-- Client Options
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
-	   'local-encoding|le=s'  => \$localEncoding,
-	   'server-encoding|se=s' => \$serverEncoding,
-	   'timeout|T=i' => \$timeout,
-	   'test-connect|tc!' => \$test_connect,
-	   'mode|m=s' => \$client_mode,
+	   'timeout|T=i' => \$clientOpts{timeout},
+	   'test-connect|tc!' => \$clientOpts{testConnect},
+	   'get' => sub { $clientOpts{mode}='get'; },
+	   'post' => sub { $clientOpts{mode}='post'; },
+	   'multipart|multi!' => sub { $clientOpts{post}=$_[1] ? 'multipart' : 'urlencoded'; },
+	   'xpost' => sub { $clientOpts{mode}='xpost'; },
+	   'xmlrpc' => sub { $clientOpts{mode}='xmlrpc'; },
 
 	   ##-- Analysis Options
 	   'analyzer|a=s' => \$analyzer,
@@ -81,22 +86,19 @@ GetOptions(##-- General
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'data|D' => sub { $action='data'; }, ##-- server-side parsing
-	   'raw|r' => sub { $action='raw'; },
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
-	   ##-- I/O: input
-	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
-	   'input-option|io|parser-option|po=s'     => \%inputOpts,
+	   ##-- I/O: common
+	   'format-class|fc=s'   => \$formatClass,
+	   'format-option|fo=s'  => \%formatOpts,
+	   'format-level|fl|output-level|ol|pretty=s' => \$analyzeOpts{pretty},
+	   'format-encoding|encoding|e=s' => \$encoding,
 
 	   ##-- I/O: output
-	   'output-class|oc|format-class|fc=s'        => \$outputClass,
-	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
-	   'output-option|oo=s'                       => \%outputOpts,
-	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
-	   'output-file|output|o=s' => \$outfile,
+	   'format-file|ff|output-file|output|o=s' => \$outfile,
 
 	   ##-- debugging
-	   'trace-request|trace|request|tr=s' => \$trace_request_file,
+	   'trace-request|trace|request|tr=s' => \$trace_request_file, ##-- not implemented here
 
 	   ##-- Log4perl
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
@@ -136,31 +138,38 @@ if (defined($trace_request_file)) {
 }
 
 ##-- create client object
-our $cli = DTA::CAB::Client::HTTP->new(
-				       serverURL=>$serverURL,
-				       serverEncoding=>$serverEncoding,
-				       mode => $client_mode,
-				       timeout=>$timeout,
+our $cli = DTA::CAB::Client::HTTP->new(%clientOpts,
+				       serverURL => $serverURL,
+				       encoding => $encoding,
 				       tracefh=>$tracefh,
-				       testConnect => $test_connect,
 				      );
 $cli->connect() or die("$0: connect() failed: $!");
-
 
 ##======================================================
 ## Input & Output Formats
 
-$inputOpts{encoding} = $localEncoding if (!defined($inputOpts{encoding}) && $localEncoding);
-$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,($action =~ m(raw|doc) ? (file=>$ARGV[0]) : qw()),%inputOpts)
-  or die("$0: could not create input parser of class $inputClass: $!");
+our $isFileAction = ($action =~ m(data|doc|bench));
+$formatOpts{encoding} = $encoding;
 
-$outputOpts{encoding}=$localEncoding if (!defined($outputOpts{encoding}) && $localEncoding);
-$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,($action !~ m(list) ? (file=>$outfile) : qw()),%outputOpts)
-  or die("$0: could not create output formatter of class $outputClass: $!");
+$ifmt = DTA::CAB::Format->newReader(class=>$formatClass, ($isFileAction ? (file=>$ARGV[0]) : qw()),%formatOpts)
+  or die("$0: could not create input parser of class $formatClass: $!");
+
+if (defined($formatClass) || $outfile ne '-') {
+  $ofmt = DTA::CAB::Format->newWriter(class=>$formatClass, file=>$outfile, %formatOpts);
+} else {
+  $ofmt = $ifmt;
+}
+die("$0: could not create output formatter of class $formatClass: $!") if (!$ofmt);
 
 DTA::CAB->debug("using input format class ", ref($ifmt));
 DTA::CAB->debug("using output format class ", ref($ofmt));
+
+##-- analysis options
+$analyzeOpts{format} = $ifmt->shortName;
+$analyzeOpts{contentType} = $ifmt->mimeType;
+
+##-- input file
+push(@ARGV,'-') if (!@ARGV && $isFileAction);
 
 ##-- output file
 our $outfh = IO::File->new(">$outfile")
@@ -171,6 +180,7 @@ our $outfh = IO::File->new(">$outfile")
 
 our $ntoks = 0;
 our $nchrs = 0;
+our $cunit = 'chr';
 
 our @tv_values = qw();
 sub profile_start {
@@ -206,7 +216,7 @@ if ($action eq 'list') {
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
   $doProfile = 0;
-  foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
+  foreach $tokin (map {DTA::CAB::Utils::deep_decode($encoding,$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     $ofmt->putTokenRaw($tokout);
   }
@@ -215,46 +225,24 @@ elsif ($action eq 'token') {
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   $doProfile = 0;
-  our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
+  our $s_in  = DTA::CAB::Utils::deep_decode($encoding, toSentence([map {toToken($_)} @ARGV]));
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   $ofmt->putSentenceRaw($s_out);
   $ofmt->toFh($outfh);
 }
-elsif ($action eq 'document') {
-  ##-- action: 'document': interpret args as filenames & parse 'em!
-  our ($d_in,$d_out,$s_out);
-  foreach $doc_filename (@ARGV) {
-    $d_in = $ifmt->parseFile($doc_filename)
-      or die("$0: parse failed for input file '$doc_filename': $!");
-    $d_out = $cli->analyzeDocument($analyzer, $d_in, \%analyzeOpts);
-    $ofmt->putDocumentRaw($d_out);
-    if ($doProfile) {
-      $ntoks += $d_out->nTokens();
-      $nchrs += (-s $doc_filename);
-    }
-  }
-  $ofmt->toFh($outfh);
-}
-elsif ($action eq 'data') {
+elsif ($action eq 'data' || $action eq 'document') {
+  $cunit = 'bytes';
+
   ##-- action: 'data': do server-side parsing
   our ($s_in,$s_out);
-  %analyzeOpts = (
-		  %analyzeOpts,
-		  format => $ifmt->shortName,
-		 );
-
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
     {
       local $/=undef;
       $s_in = <DOC>;
+      close(DOC);
     }
-    $s_in = decode($ifmt->{encoding}, $s_in)
-      if (0 && $ifmt->{encoding} && defined($ifmt->new->{encoding}));
-    close(DOC);
     $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts});
-    $s_out = encode($ofmt->{encoding}, $s_out)
-      if (0 && $ofmt->{encoding} && utf8::is_utf8($s_out) && defined($ofmt->new->{encoding}));
     $outfh->print( $s_out );
     if ($doProfile) {
       $nchrs += length($s_in);
@@ -265,10 +253,6 @@ elsif ($action eq 'data') {
     }
   }
 }
-elsif ($action eq 'raw') {
-  ##-- action: 'raw': use raw request
-  die("$0: -raw option not yet implemented!");
-}
 elsif ($action eq 'bench') {
   $doProfile=1;
   our ($bench_i);
@@ -277,17 +261,17 @@ elsif ($action eq 'bench') {
   foreach $doc_filename (@ARGV) {
     $d_in = $ifmt->parseFile($doc_filename)
       or die("$0: parse failed for input file '$doc_filename': $!");
-      foreach $bench_i (1..$bench_iters) {
-	profile_start();
-	foreach $w_in (map {@{$_->{tokens}}} @{$d_in->{body}}) {
-	  $w_out = $cli->analyzeToken($analyzer, $w_in, \%analyzeOpts);
-	}
-	profile_stop();
+    foreach $bench_i (1..$bench_iters) {
+      profile_start();
+      foreach $w_in (map {@{$_->{tokens}}} @{$d_in->{body}}) {
+	$w_out = $cli->analyzeToken($analyzer, $w_in, \%analyzeOpts);
       }
+      profile_stop();
+    }
     #$ofmt->putDocumentRaw($d_out);
     if ($doProfile) {
       $ntoks += $bench_iters * $d_in->nTokens();
-      $nchrs += $bench_iters * (-s $doc_filename);
+      $nchrs += $bench_iters * $d_in->nChars();
     }
   }
 }
@@ -305,7 +289,7 @@ __END__
 
 =head1 NAME
 
-dta-cab-http-client.perl - Generic HTTP client for DTA::CAB server queries
+dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP queries
 
 =head1 SYNOPSIS
 
@@ -319,28 +303,29 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB server queries
 
  Client Options:
   -server URL                     ##-- set server URL (default: http://localhost:9099)
-  -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
-  -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
-  -test-connect , -notest-connect ##-- do/don't send a test query to the server (default: do)
+  -test-connect , -notest-connect ##-- do/don't send a test request to the server (default: do)
+  -trace FILE                     ##-- trace request(s) sent to the server to FILE
+  -get                            ##-- query server using URL-only GET requests
+  -post                           ##-- query server using use content-only POST requests
+  -xpost                          ##-- query server using URL+content POST requests (default)
+  -xmlrpc                         ##-- query server using XML-RPC requests
 
  Analysis Options:
-  -list                           ##-- just list registered analyzers (default)
-  -analyzer NAME                  ##-- set analyzer name (default: 'dta.cab.default')
+  -list                           ##-- just list registered analyzers
+  -analyzer NAME                  ##-- set analyzer name (default: 'default')
   -analyze-option OPT=VALUE       ##-- set analysis option (default: none)
   -profile , -noprofile           ##-- do/don't report profiling information (default: do)
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
-  -document                       ##-- ARGUMENTS are filenames, analyzed as documents
-  -raw                            ##-- ARGUMENTS are filenames, server-side parsing & formatting
+  -document                       ##-- ARGUMENTS are filenames, analyzed as documents (default)
+  -data                           ##-- ARGUMENTS are filenames, analyzed as documents (same as '-document')
 
  I/O Options:
-  -input-class CLASS              ##-- select input parser class (default: Text)
-  -input-option OPT=VALUE         ##-- set input parser option
-  -output-class CLASS             ##-- select output formatter class (default: Text)
-  -output-option OPT=VALUE        ##-- set output formatter option
-  -output-encoding ENCODING       ##-- override output encoding (default: -local-encoding)
-  -output-level LEVEL             ##-- override output formatter level (default: 1)
+  -format-class CLASS             ##-- select I/O format class (default: TT)
+  -format-option OPT=VALUE        ##-- set I/O format option
+  -format-encoding ENCODING       ##-- override I/O encoding (default: 'UTF-8')
+  -format-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
 
 =cut
@@ -352,12 +337,12 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB server queries
 
 =head1 DESCRIPTION
 
-dta-cab-xmlrpc-client.perl is a command-line client for L<DTA::CAB|DTA::CAB>
+dta-cab-http-client.perl is a command-line client for L<DTA::CAB|DTA::CAB>
 analysis of token(s), sentence(s), and/or document(s) by
-querying a running L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc> server
-with the L<DTA::CAB::Client::XmlRpc|DTA::CAB::Client::XmlRpc> module.
+querying a running L<DTA::CAB::Server::HTTP|DTA::CAB::Server::HTTP> server
+with the L<DTA::CAB::Client::HTTP|DTA::CAB::Client::HTTP> module.
 
-See L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl> for a
+See L<dta-cab-http-server.perl(1)|dta-cab-http-server.perl> for a
 corresponding server.
 
 =cut
@@ -400,10 +385,10 @@ Set default log level (trace|debug|info|warn|error|fatal).
 =cut
 
 ##==============================================================================
-## Options: Server Options
+## Options: Client Options
 =pod
 
-=head2 Server Options
+=head2 Client Options
 
 =over 4
 
@@ -411,21 +396,22 @@ Set default log level (trace|debug|info|warn|error|fatal).
 
 Set server URL (default: localhost:8000).
 
-=item -server-encoding ENCODING
-
-Set server encoding (default: UTF-8).
-
-=item -local-encoding ENCODING
-
-Set local encoding (default: UTF-8).
-
 =item -timeout SECONDS
 
 Set server timeout in seconds (default: lots).
 
+=item -test-connect , -notest-connect
+
+Do/don't send a test HEAD request to the server (default: do).
+
+=item -trace FILE
+
+If specified, all client requests will be logged to FILE.
+
 =back
 
 =cut
+
 
 ##==============================================================================
 ## Options: Analysis Options
@@ -440,11 +426,10 @@ Set server timeout in seconds (default: lots).
 Don't actually perform any analysis;
 rather,
 just print a list of analyzers registered with the server.
-This is the default action.
 
 =item -analyzer NAME
 
-Request analysis by the analyzer registered under name NAME (default: 'dta.cab.default').
+Request analysis by the analyzer registered under name NAME (default: 'default').
 
 =item -analyze-option OPT=VALUE
 
@@ -468,17 +453,11 @@ Interpret ARGUMENTS as a sentence (list of tokens).
 =item -document
 
 Interpret ARGUMENTS as filenames, to be analyzed as documents.
+This is the default action.
 
-=item -raw
+=item -data
 
-Interpret ARGUMENTS as filenames (as for L</-document>),
-but file contents are passed as raw strings to the server,
-which then becomes responsible for parsing and formatting.
-
-This is the recommended way to analyze large documents,
-because of the large overhead
-involved when the L</-document> option is used
-(slow translations to and from complex XML-RPC structures).
+Currently just an alias for -document.
 
 =back
 
@@ -492,32 +471,24 @@ involved when the L</-document> option is used
 
 =over 4
 
-=item -input-class CLASS
+=item -format-class CLASS
 
-Select input parser class (default: Text)
+Select I/O format class B<CLASS>.  Default is TT.
+B<CLASS> may be any alias supported by
+L<DTA::CAB::Format::newFormat|DTA::CAB::Format/newFormat>.
 
-=item -input-option OPT=VALUE
+=item -format-option OPT=VALUE
 
-Set an arbitrary input parser option.
+Set an arbitrary I/O format option.
 May be multiply specified.
 
-=item -output-class CLASS
+=item -format-encoding ENCODING
 
-Select output formatter class (default: Text)
-May be multiply specified.
+Set I/O encoding; default=UTF-8.
 
-=item -output-option OPT=VALUE
+=item -format-level LEVEL
 
-Set an arbitrary output formatter option.
-May be multiply specified.
-
-=item -output-encoding ENCODING
-
-Override output encoding (default: -local-encoding).
-
-=item -output-level LEVEL
-
-Override output formatter level (default: 1).
+Override output format level (default: 1).
 
 =item -output-file FILE
 
@@ -545,10 +516,10 @@ Bryan Jurish E<lt>moocow@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2010 by Bryan Jurish
 
 This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.7 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
@@ -556,6 +527,8 @@ at your option, any later version of Perl 5 you may have available.
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
 L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
 L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-http-server.perl(1)|dta-cab-http-server.perl>,
+L<dta-cab-http-client.perl(1)|dta-cab-http-client.perl>,
 L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
 L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
 L<DTA::CAB(3pm)|DTA::CAB>,

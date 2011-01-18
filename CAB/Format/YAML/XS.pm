@@ -96,10 +96,10 @@ sub close {
 sub parseYamlString {
   my $fmt = shift;
   my ($doc);
-  #$doc = YAML::XS::Load(utf8::is_utf8($_[0]) ? Encode::encode_utf8($_[0]) : $_[0])
-  $doc = YAML::XS::Load($_[0])
+  #$doc = YAML::XS::Load($_[0])
+  $doc = YAML::XS::Load(utf8::is_utf8($_[0]) ? Encode::encode_utf8($_[0]) : $_[0])
     or $fmt->warn("ParseYamlString(): YAML::XS::Load() failed: $!");
-  $fmt->{doc} = $fmt->forceDocument($doc);
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;
 }
 

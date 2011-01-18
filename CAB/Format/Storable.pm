@@ -125,7 +125,9 @@ sub fromString_freeze {
 
 ## $doc = $fmt->parseDocument()
 ##   + just returns buffered object in $fmt->{doc}
-sub parseDocument { return $_[0]->forceDocument( $_[0]{doc} ); }
+sub parseDocument {
+  return $_[0]{raw} ? $_[0]{doc} : $_[0]->forceDocument( $_[0]{doc} );
+}
 
 
 ##==============================================================================
@@ -231,6 +233,9 @@ sub putDocumentRaw {
   }
   return $fmt;
 }
+
+## $fmt = $fmt->putData($data)
+sub putData { return $_[0]->putDocument($_[1]); }
 
 ##==============================================================================
 ## Package Aliases

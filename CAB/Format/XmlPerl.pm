@@ -232,6 +232,12 @@ sub putDocument {
   return $fmt;
 }
 
+## $fmt = $fmt->putData($data)
+sub putData {
+  $_[0]->putDocument($_[1]);
+}
+
+
 
 1; ##-- be happy
 

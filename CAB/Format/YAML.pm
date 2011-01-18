@@ -40,6 +40,7 @@ $WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 ##    (
 ##     ##---- Input
 ##     doc => $doc,                    ##-- buffered input document
+##     raw => $bool,                   ##-- if true, parse/print raw data (no document massaging)
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
 ##     #encoding => $encoding,         ##-- n/a: always UTF-8 octets
@@ -192,6 +193,10 @@ sub putDocument {
   $_[0]->logconfess("putDocument() not implemented!");
 }
 
+## $fmt = $fmt->putData($data)
+sub putData {
+  $_[0]->putDocument($_[1]);
+}
 
 1; ##-- be happy
 

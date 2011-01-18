@@ -99,8 +99,8 @@ sub parseJsonString {
   $JSON::Syck::ImplicitUnicode = 1;  # automagically set utf8 flag for valid utf8 sequences
   $JSON::Syck::LoadCode        = 0;  # don't automatically eval embedded perl code
   $doc = JSON::Syck::Load($_[0])
-    or $fmt->warn("ParseYamlString(): JSON::Syck::Load() failed: $!");
-  $fmt->{doc} = $fmt->forceDocument($doc);
+    or $fmt->logwarn("ParseJsonString(): JSON::Syck::Load() failed: $!");
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;
 }
 
