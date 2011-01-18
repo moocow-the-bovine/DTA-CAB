@@ -229,20 +229,19 @@ sub registerPathHandler {
 }
 
 
-## ($handler,$localPath) = $srv->getPathHandler($hreq_uri_string)
+## ($handler,$localPath) = $srv->getPathHandler($hreq_uri)
 sub getPathHandler {
-  my ($srv,$fullPath) = @_;
+  my ($srv,$uri) = @_;
 
-  my $localPath = $fullPath;
-  $localPath    =~ s/\?.*$//;
-  my ($handler);
-  do {
-    $localPath =~ s/\/*$//;
-    return ($handler,$localPath) if (defined($handler=$srv->{paths}{$localPath}));
-    $localPath =~ s/(?:\/*)(?:[^\/]*)$//;
-  } while ($localPath ne '');
-  return ($handler,$localPath);
+  my @segs = $uri->canonical->path_segments;
+  my ($i,$path,$handler);
+  for ($i=$#segs; $i >= 0; $i--) {
+    $path = join('/',@segs[0..$i]);
+    return ($handler,$path) if (defined($handler=$srv->{paths}{$path}));
+  }
+  return ($handler,$path);
 }
+
 
 
 ##==============================================================================
