@@ -1,19 +1,19 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Transliterator.pm
+## File: DTA::CAB::Analyzer::Unidecode.pm
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: latin-1 approximator (old)
 
-package DTA::CAB::Analyzer::Transliterator;
+package DTA::CAB::Analyzer::Unidecode;
 
 use DTA::CAB::Analyzer;
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Token;
 
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
-use Unicode::UCD;       ##-- unicode character names, info, etc.
-use Unicode::CharName;  ##-- ... faster access to character name, block
 use Text::Unidecode;    ##-- last-ditch effort: transliterate to ASCII
+#use Unicode::UCD;       ##-- unicode character names, info, etc.
+#use Unicode::CharName;  ##-- ... faster access to character name, block
 
 use Encode qw(encode decode);
 use IO::File;
@@ -138,7 +138,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implementation)
+DTA::CAB::Analyzer::Unidecode - latin-1 approximator (old, pure-perl implementation)
 
 =cut
 
@@ -148,9 +148,9 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Transliterator;
+ use DTA::CAB::Analyzer::Unidecode;
  
- $xl = DTA::CAB::Analyzer::Transliterator->new(%args);
+ $xl = DTA::CAB::Analyzer::Unidecode->new(%args);
   
  $bool = $xl->ensureLoaded();
  
@@ -166,7 +166,7 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Unidecode: Globals
 =pod
 
 =head2 Globals
@@ -175,7 +175,7 @@ DTA::CAB::Analyzer::Transliterator - latin-1 approximator (old, pure-perl implem
 
 =item @ISA
 
-DTA::CAB::Analyzer::Transliterator
+DTA::CAB::Analyzer::Unidecode
 inherits from
 L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
@@ -184,7 +184,7 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Unidecode: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -204,7 +204,7 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Transliterator: Methods: I/O
+## DESCRIPTION: DTA::CAB::Analyzer::Unidecode: Methods: I/O
 =pod
 
 =head2 Methods: I/O

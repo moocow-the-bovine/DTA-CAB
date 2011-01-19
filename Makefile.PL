@@ -1,25 +1,28 @@
 use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
+## Constants
+my $VERSION = 1.12;
+
+##----------------------------------------------------------------------
 ## MAIN
 ##----------------------------------------------------------------------
 WriteMakefile
   (
    NAME		=> 'DTA::CAB',
-   AUTHOR       => 'Bryan Jurish <moocow@bbaw.de>',
-   ABSTRACT	=> '"Cascaded Analysis Broker" for robust morphological analysis',
-   VERSION_FROM	=> 'CAB.pm',
+   AUTHOR       => 'Bryan Jurish <jurish@bbaw.de>',
+   ABSTRACT	=> '"Cascaded Analysis Broker" for robust linguistic analysis',
+   VERSION	=> $VERSION,
 
    PREREQ_PM    => {
 		    'Gfsm'     => 0.0216,
 		    'Gfsm::XL' => 0.03, ##-- 0.02 works too, but doesn't support binary storage of analyzer configs
 		    'Unicruft' => 0.03,
 		    'moot' => 0.02,
-		    'Lingua::LangId' => 0.01,
 		    'Lingua::TT' => 0.06,
 		    ##--
+		    'Unicode::Normalize' => undef, # 1.02
 		    'Encode'=>undef,
-		    'Tie::Cache'=>undef,
 		    'File::Basename'=>undef,
 		    'Getopt::Long'=>undef,
 		    'Pod::Usage'=>undef,
@@ -27,10 +30,17 @@ WriteMakefile
 		    'Time::HiRes'=>undef,
 		    ##--
 		    'Log::Log4perl' => 1.07,
-		    'Text::Unidecode' => 0.04,
 		    'Unicode::CharName' => 1.07,
 		    'RPC::XML' => 0.59,
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
+		    ##--
+		    #'DocClassify' => 0.04,
+		    #'Lingua::LangId' => 0.01,
+		    ##--
+		    #'Text::Unidecode' => 0.04,
+		    #'Tie::Cache'=>undef,
+		    #'Unicode::UCD' => undef,
+		    #'Unicode::CharName' => undef,
 		   },
 
    EXE_FILES   => [glob('dta-cab-*.perl')],
@@ -59,16 +69,20 @@ sub MY::depend {
   package MY;
   my $inherited = shift->SUPER::depend(@_);
   $inherited .= (
-		 ###-- depends -> README.txt
+		 ###-- depends -> README.txt, CAB/Version.pm
 		 "\n\n"
-		 ."dist: README.txt\n"
+		 ."dist: README.txt CAB/Version.pm\n"
 		 ."\n"
-		 ."create_distdir: README.txt\n"
-		 #."distdir_am: README.txt\n"
+		 ."create_distdir: README.txt CAB/Version.pm\n"
+		 #."distdir_am: README.txt CAB/Version.pm\n"
 		 ."\n"
-		 ."distcheck: README.txt\n"
+		 ."distcheck: README.txt CAB/Version.pm\n"
 		 ."\n"
-		 ."manicheck: README.txt\n"
+		 ."manicheck: README.txt CAB/Version.pm\n"
+		 ."\n"
+		 ."Makefile: CAB/Version.pm\n"
+		 ."\n"
+		 ."blibdirs: CAB/Version.pm\n"
 		 ."\n"
 		);
   return $inherited;
@@ -101,6 +115,22 @@ sub MY::special_targets {
 \tpod2text \$< \$@
 
 ";
+
+  ##-- special rules for CAB/Version.pm
+  $inherited .= "
+CAB/Version.pm: Makefile.PL
+\t".q($(ECHO) "package DTA::CAB::Version;" > $@)."
+\t".q($(ECHO) "\$$DTA::CAB::VERSION = '$(VERSION)';" >> $@)."
+\t".(''
+     .q($(ECHO) "\$$DTA::CAB::SVNVERSION = ')
+     .q(`svn info . | $(PERL) -ne 'print $$1 if (/^URL\: (.*)$$/)'`)
+     .q( @ `svnversion .`)
+     .q(';" >> $@)
+    )."
+\t".q($(ECHO) "1;" >> $@)."
+
+";
+
   return $inherited;
 }
 

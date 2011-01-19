@@ -12,9 +12,9 @@ use DTA::CAB::Token;
 
 use Unicruft;
 use Unicode::Normalize; ##-- compatibility decomposition 'KD' (see Unicode TR #15)
-use Unicode::UCD;       ##-- unicode character names, info, etc.
-use Unicode::CharName;  ##-- ... faster access to character name, block
-use Text::Unidecode;    ##-- last-ditch effort: transliterate to ASCII
+#use Unicode::UCD;       ##-- unicode character names, info, etc.
+#use Unicode::CharName;  ##-- ... faster access to character name, block
+#use Text::Unidecode;    ##-- last-ditch effort: transliterate to ASCII
 
 use Encode qw(encode decode);
 use IO::File;

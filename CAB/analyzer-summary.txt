@@ -1,0 +1,49 @@
+Analyzer/Alias.pm:	letter-to-sound analysis via Gfsm automata
+Analyzer/Automaton.pm:	generic analysis automaton API
+Analyzer/Automaton/Dyn.pm:	generic analysis automaton API
+Analyzer/Automaton/Gfsm.pm:	generic analysis automaton API: Gfsm automata
+Analyzer/Automaton/Gfsm/XL.pm:	Gfsm::XL::Cascade-based transductions
+Analyzer/Common.pm:	common analyzers for DTA::CAB suite
+Analyzer/DTAClean.pm:	
+Analyzer/Dict.pm:	
+Analyzer/Dict/DB.pm:	
+Analyzer/DmootSub.pm:	
+Analyzer/DocClassify.pm:	
+Analyzer/Dyn.pm:	
+Analyzer/EqLemma.pm:	default rewrite equivalence class expander
+Analyzer/EqLemma/DB.pm:	DB dictionary-based lemma-equivalence expander
+Analyzer/EqPho.pm:	phonetic equivalence class expander
+Analyzer/EqPho/Cascade.pm:	
+Analyzer/EqPho/DB.pm:	dictionary-based phonetic form expander
+Analyzer/EqPho/Dict.pm:	dictionary-based phonetic form expander
+Analyzer/EqPho/FST.pm:	FST-based phonetic form expander
+Analyzer/EqPhoX.pm:	phonetic equivalence class expander
+Analyzer/EqRW.pm:	default rewrite equivalence class expander
+Analyzer/EqRW/DB.pm:	DB dictionary-based rewrite-equivalence expander
+Analyzer/EqRW/Dict.pm:	dictionary-based rewrite-equivalence expander
+Analyzer/EqRW/FST.pm:	FST-based rewrite-equivalence expander
+Analyzer/Extra.pm:	"Cascaded Analysis Broker" for robust morphological analysis, etc.
+Analyzer/Koeln.pm:	
+Analyzer/LTS.pm:	letter-to-sound analysis via Gfsm automata
+Analyzer/LangId.pm:	
+Analyzer/Lemmatizer.pm:	
+Analyzer/Metaphone.pm:	
+Analyzer/Moot.pm:	generic Moot analysis API
+Analyzer/Moot/DynLex.pm:	Moot analysis API for word n-gram disambiguation using dynamic lexicon
+Analyzer/MootSub.pm:	
+Analyzer/Morph.pm:	morphological analysis via Gfsm automata
+Analyzer/Morph/Latin.pm:	latin pesudo-morphology analysis (wrapper)
+Analyzer/Morph/Latin/DB.pm:	auxilliary latin word recognizer via external full-form dictionary
+Analyzer/Morph/Latin/Dict.pm:	auxilliary latin word recognizer via external full-form dictionary
+Analyzer/Morph/Latin/FST.pm:	auxilliary morphological analysis via Gfsm automata
+Analyzer/MorphSafe.pm:	safety checker for analyses output by DTA::CAB::Analyzer::Morph (TAGH)
+Analyzer/Null.pm:	
+Analyzer/Phonem.pm:	
+Analyzer/Phonix.pm:	
+Analyzer/Rewrite.pm:	rewrite analysis via Gfsm::XL cascade
+Analyzer/RewriteSub.pm:	
+Analyzer/Soundex.pm:	
+Analyzer/TextPhonetic.pm:	
+Analyzer/TokPP.pm:	
+Analyzer/Transliterator.pm:	latin-1 approximator (old, pure-perl implementation)
+Analyzer/Unicruft.pm:	latin-1 approximator using libunicruft

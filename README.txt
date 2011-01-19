@@ -1,7 +1,7 @@
     README for DTA::CAB
 
 ABSTRACT
-    DTA::CAB - "Cascaded Analysis Broker" for error-tolerant morphological
+    DTA::CAB - "Cascaded Analysis Broker" for error-tolerant linguistic
     analysis
 
 REQUIREMENTS

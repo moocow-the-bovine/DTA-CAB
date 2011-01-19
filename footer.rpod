@@ -9,21 +9,22 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
 L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
-L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
+L<dta-cab-http-server.perl(1)|dta-cab-http-server.perl>,
+L<dta-cab-http-client.perl(1)|dta-cab-http-client.perl>,
 L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
 L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
-L<RPC::XML(3pm)|RPC::XML>,
 L<perl(1)|perl>,
 ...
 
