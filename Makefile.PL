@@ -16,6 +16,7 @@ WriteMakefile
 		    'Unicruft' => 0.03,
 		    'moot' => 0.02,
 		    'Lingua::LangId' => 0.01,
+		    'Lingua::TT' => 0.06,
 		    ##--
 		    'Encode'=>undef,
 		    'Tie::Cache'=>undef,
