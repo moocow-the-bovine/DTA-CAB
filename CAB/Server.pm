@@ -227,6 +227,7 @@ L<DTA::CAB::Logger|DTA::CAB::Logger>.
 
  ##-- supported analyzers
  as => \%analyzers,     ##-- ($name => $cab_analyzer_obj, ...)
+ aos => \%anlOptions,   ##-- ($name=>\%analyzeOptions, ...) : passed to $as{$name}->analyzeXYZ($xyz,%analyzeOptions)
  ##
  ##-- daemon mode support
  pidfile => $pidfile,   ##-- write PID to file on prepare()
@@ -255,20 +256,23 @@ Called to initialize new objects after new()
  $rc = $srv->prepare();
 
 Prepare server $srv to run.
-Default implementation initializes logger, writes $pidfile (if defined), and pre-loads all analyzers.
+Default implementation initializes logger, writes $pidfile (if defined), and pre-loads
+each analyzer in values(%{$srv-E<gt>{as}}) by calling that analyzers
+L<prepare()|DTA::CAB::Analyzer/prepare> method.
 
 =item prepareSignalHandlers
 
  $rc = $srv->prepareSignalHandlers();
 
 Initialize signal handlers.
+Default implementation handles SIGHUP, SIGTERM, SIGKILL, and __DIE__.
 
 =item prepareLocal
 
  $rc = $srv->prepareLocal(@args_to_prepare);
 
 Dummy method for subclass-local initialization,
-called by L</prepare>/( after default L</prepare>() guts have run.
+called by L</prepare>() after default L</prepare>() guts have run.
 
 =item run
 
@@ -303,10 +307,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

@@ -22,6 +22,8 @@ use strict;
 ## Constants
 ##==============================================================================
 
+our @ISA = qw(DTA::CAB::Logger); ##-- for compatibility
+
 1; ##-- be happy
 
 __END__
