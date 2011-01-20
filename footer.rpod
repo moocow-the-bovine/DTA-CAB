@@ -23,9 +23,10 @@ L<dta-cab-http-server.perl(1)|dta-cab-http-server.perl>,
 L<dta-cab-http-client.perl(1)|dta-cab-http-client.perl>,
 L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
 L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB::Server(3pm)|DTA::CAB::Server>,
+L<DTA::CAB::Client(3pm)|DTA::CAB::Client>,
 L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<perl(1)|perl>,
 ...
 
-=cut

@@ -3,6 +3,33 @@ use ExtUtils::MakeMaker;
 ##----------------------------------------------------------------------
 ## Constants
 my $VERSION = 1.12;
+my ($SVNVERSION);
+{
+  no warnings;
+  my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `nosvn info . 2>/dev/null`)[0];
+  my $svnversion = `nosvnversion .`;
+  chomp($svnroot);
+  chomp($svnversion);
+
+  if ($svnroot && $svnversion) {
+    $SVNVERSION = "$svnroot @ $svnversion";
+  } else {
+    $SVNVERSION = '$Id: $';
+  }
+}
+
+##----------------------------------------------------------------------
+## write CAB/Version.pm
+open(VERSION_PM,">CAB/Version.pm")
+  or die("$0: could not open CAB/Version.pm for write: $!");
+print VERSION_PM <<EOF;
+##-- automatically generated file: DO NOT EDIT!
+package DTA::CAB::Version;
+\$DTA::CAB::VERSION = "$VERSION";
+\$DTA::CAB::SVNVERSION = "$SVNVERSION";
+1;
+EOF
+
 
 ##----------------------------------------------------------------------
 ## MAIN
@@ -71,19 +98,17 @@ sub MY::depend {
   $inherited .= (
 		 ###-- depends -> README.txt, CAB/Version.pm
 		 "\n\n"
-		 ."dist: README.txt CAB/Version.pm\n"
+		 ."dist: README.txt\n"
 		 ."\n"
-		 ."create_distdir: README.txt CAB/Version.pm\n"
+		 ."create_distdir: README.txt\n"
 		 #."distdir_am: README.txt CAB/Version.pm\n"
 		 ."\n"
-		 ."distcheck: README.txt CAB/Version.pm\n"
+		 ."distcheck: README.txt\n"
 		 ."\n"
-		 ."manicheck: README.txt CAB/Version.pm\n"
+		 ."manicheck: README.txt\n"
 		 ."\n"
-		 ."Makefile: CAB/Version.pm\n"
-		 ."\n"
-		 ."blibdirs: CAB/Version.pm\n"
-		 ."\n"
+		 #."blibdirs: CAB/Version.pm\n"
+		 #."\n"
 		);
   return $inherited;
 }
@@ -113,21 +138,6 @@ sub MY::special_targets {
 
 .rpod.txt:
 \tpod2text \$< \$@
-
-";
-
-  ##-- special rules for CAB/Version.pm
-  $inherited .= "
-CAB/Version.pm: Makefile.PL
-\t".q($(ECHO) "package DTA::CAB::Version;" > $@)."
-\t".q($(ECHO) "\$$DTA::CAB::VERSION = '$(VERSION)';" >> $@)."
-\t".(''
-     .q($(ECHO) "\$$DTA::CAB::SVNVERSION = ')
-     .q(`svn info . | $(PERL) -ne 'print $$1 if (/^URL\: (.*)$$/)'`)
-     .q( @ `svnversion .`)
-     .q(';" >> $@)
-    )."
-\t".q($(ECHO) "1;" >> $@)."
 
 ";
 

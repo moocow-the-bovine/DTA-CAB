@@ -128,10 +128,11 @@ DTA::CAB::Client - abstract class for DTA::CAB server clients
  ##========================================================================
  ## Methods: Generic Client API: Queries
  
- $tok = $cli->analyzeToken($analyzer, $tok, \%opts);
+ $tok  = $cli->analyzeToken($analyzer, $tok, \%opts);
  $sent = $cli->analyzeSentence($analyzer, $sent, \%opts);
- $doc = $cli->analyzeDocument($analyzer, $doc, \%opts);
- $doc = $cli->analyzeData($analyzer, $doc, \%opts);
+ $doc  = $cli->analyzeDocument($analyzer, $doc, \%opts);
+ $str  = $cli->analyzeData($analyzer, $str, \%opts);
+ 
 
 =cut
 
@@ -141,7 +142,7 @@ DTA::CAB::Client - abstract class for DTA::CAB server clients
 
 =head1 DESCRIPTION
 
-Abstract base class / API specification.
+Abstract base class / API specification for generic L<DTA::CAB|DTA::CAB> clients.
 
 =cut
 
@@ -156,7 +157,7 @@ Abstract base class / API specification.
 =item Variable: @ISA
 
 DTA::CAB::Client inherits from
-L<DTA::CAB::Logger|/DTA::CAB::Logger>.
+L<DTA::CAB::Logger|DTA::CAB::Logger>.
 
 =back
 
@@ -239,7 +240,7 @@ Default implementation just returns an empty list.
 
  $tok = $cli->analyzeToken($analyzer, $tok, \%opts);
 
-Server-side token analysis.
+Server-side token (type) analysis.
 $analyzer is the name of an analyzer known to the server.
 
 Default implementation just croak()s.
@@ -264,10 +265,13 @@ Default implementation just croak()s.
 
 =item analyzeData
 
- $doc = $cli->analyzeData($analyzer, $data, \%opts);
+ $data = $cli->analyzeData($analyzer, $data, \%opts);
 
 Server-side raw data analysis.
-$analyzer is the name of an analyzer known to the server.
+C<$analyzer> is the name of an analyzer known to the server,
+and C<$data> is a string buffer to be analyzed, in some format
+parseable by the server.  Depending on the client and server
+used, the data format must be specified in C<%opts>.
 
 Default implementation just croak()s.
 
