@@ -349,6 +349,7 @@ Constructor.
  ##
  ##-- (inherited from DTA::CAB::Server)
  as => \%analyzers,         ##-- ($name => $cab_analyzer_obj, ...)
+ aos => \%name2options,     ##-- ($name => \%analyzerOptions, ...)
 
 =back
 
@@ -435,10 +436,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2010 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 
