@@ -5,32 +5,32 @@ use ExtUtils::MakeMaker;
 my $VERSION = 1.12;
 my ($SVNVERSION);
 {
+  ##-- write CAB/Version.pm
   no warnings;
-  my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `nosvn info . 2>/dev/null`)[0];
-  my $svnversion = `nosvnversion .`;
+  my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info .`)[0];
+  my $svnversion = `svnversion .`;
   chomp($svnroot);
   chomp($svnversion);
 
   if ($svnroot && $svnversion) {
     $SVNVERSION = "$svnroot @ $svnversion";
-  } else {
-    $SVNVERSION =
-      ('$HeadURL$'
-       .' $Id$');
-  }
-}
 
-##----------------------------------------------------------------------
-## write CAB/Version.pm
-open(VERSION_PM,">CAB/Version.pm")
-  or die("$0: could not open CAB/Version.pm for write: $!");
-print VERSION_PM <<EOF;
+    open(VERSION_PM,">CAB/Version.pm")
+      or die("$0: could not open CAB/Version.pm for write: $!");
+    print VERSION_PM <<EOF;
 ##-- automatically generated file: DO NOT EDIT!
 package DTA::CAB::Version;
 \$DTA::CAB::VERSION = '$VERSION';
 \$DTA::CAB::SVNVERSION = '$SVNVERSION';
 1;
 EOF
+  }
+  elsif (0) {
+    $SVNVERSION =
+      ('$HeadURL$'
+       .' $Id$');
+  }
+}
 
 
 ##----------------------------------------------------------------------
