@@ -1,0 +1,302 @@
+
+##========================================================================
+## BEGIN <podindex.perl
+=pod
+
+=over 4
+
+=item L<DTA::CAB|DTA::CAB>
+
+"Cascaded Analysis Broker" for robust linguistic analysis
+
+=item L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
+
+generic analyzer API for DTA::CAB
+
+=item L<DTA::CAB::Analyzer::Automaton|DTA::CAB::Analyzer::Automaton>
+
+generic analysis automaton API
+
+=item L<DTA::CAB::Analyzer::Automaton::Dyn|DTA::CAB::Analyzer::Automaton::Dyn>
+
+generic analysis automaton API
+
+=item L<DTA::CAB::Analyzer::Automaton::Gfsm|DTA::CAB::Analyzer::Automaton::Gfsm>
+
+generic analysis automaton API: Gfsm automata
+
+=item L<DTA::CAB::Analyzer::Automaton::Gfsm::XL|DTA::CAB::Analyzer::Automaton::Gfsm::XL>
+
+Gfsm::XL::Cascade-based transductions
+
+=item L<DTA::CAB::Analyzer::Common|DTA::CAB::Analyzer::Common>
+
+common analyzers for DTA::CAB suite
+
+=item L<DTA::CAB::Analyzer::EqLemma::DB|DTA::CAB::Analyzer::EqLemma::DB>
+
+DB dictionary-based lemma-equivalence expander
+
+=item L<DTA::CAB::Analyzer::EqPho|DTA::CAB::Analyzer::EqPho>
+
+phonetic equivalence class expander
+
+=item L<DTA::CAB::Analyzer::EqPho|DTA::CAB::Analyzer::EqPho>
+
+phonetic equivalence class expander
+
+=item L<DTA::CAB::Analyzer::EqPho::DB|DTA::CAB::Analyzer::EqPho::DB>
+
+dictionary-based phonetic form expander
+
+=item L<DTA::CAB::Analyzer::EqPho::Dict|DTA::CAB::Analyzer::EqPho::Dict>
+
+dictionary-based phonetic form expander
+
+=item L<DTA::CAB::Analyzer::EqPho::FST|DTA::CAB::Analyzer::EqPho::FST>
+
+FST-based phonetic form expander
+
+=item L<DTA::CAB::Analyzer::EqRW|DTA::CAB::Analyzer::EqRW>
+
+default rewrite equivalence class expander
+
+=item L<DTA::CAB::Analyzer::EqRW::DB|DTA::CAB::Analyzer::EqRW::DB>
+
+DB dictionary-based rewrite-equivalence expander
+
+=item L<DTA::CAB::Analyzer::EqRW::Dict|DTA::CAB::Analyzer::EqRW::Dict>
+
+dictionary-based rewrite-equivalence expander
+
+=item L<DTA::CAB::Analyzer::EqRW::FST|DTA::CAB::Analyzer::EqRW::FST>
+
+FST-based rewrite-equivalence expander
+
+=item L<DTA::CAB::Analyzer::Eqlemma|DTA::CAB::Analyzer::Eqlemma>
+
+default rewrite equivalence class expander
+
+=item L<DTA::CAB::Analyzer::Extra|DTA::CAB::Analyzer::Extra>
+
+extra bonus analyzers for DTA::CAB suite
+
+=item L<DTA::CAB::Analyzer::LTS|DTA::CAB::Analyzer::LTS>
+
+letter-to-sound analysis via Gfsm automata
+
+=item L<DTA::CAB::Analyzer::LTS|DTA::CAB::Analyzer::LTS>
+
+letter-to-sound analysis via Gfsm automata
+
+=item L<DTA::CAB::Analyzer::Moot|DTA::CAB::Analyzer::Moot>
+
+generic Moot analysis API
+
+=item L<DTA::CAB::Analyzer::Moot::DynLex|DTA::CAB::Analyzer::Moot::DynLex>
+
+Moot analysis API for word n-gram disambiguation using dynamic lexicon
+
+=item L<DTA::CAB::Analyzer::Morph|DTA::CAB::Analyzer::Morph>
+
+morphological analysis via Gfsm automata
+
+=item L<DTA::CAB::Analyzer::Morph::Latin|DTA::CAB::Analyzer::Morph::Latin>
+
+latin pesudo-morphology analysis (wrapper)
+
+=item L<DTA::CAB::Analyzer::Morph::Latin::DB|DTA::CAB::Analyzer::Morph::Latin::DB>
+
+auxilliary latin word recognizer via external full-form dictionary
+
+=item L<DTA::CAB::Analyzer::Morph::Latin::Dict|DTA::CAB::Analyzer::Morph::Latin::Dict>
+
+auxilliary latin word recognizer via external full-form dictionary
+
+=item L<DTA::CAB::Analyzer::Morph::Latin::FST|DTA::CAB::Analyzer::Morph::Latin::FST>
+
+auxilliary morphological analysis via Gfsm automata
+
+=item L<DTA::CAB::Analyzer::MorphSafe|DTA::CAB::Analyzer::MorphSafe>
+
+safety checker for analyses output by DTA::CAB::Analyzer::Morph (TAGH)
+
+=item L<DTA::CAB::Analyzer::Rewrite|DTA::CAB::Analyzer::Rewrite>
+
+rewrite analysis via Gfsm::XL cascade
+
+=item L<DTA::CAB::Analyzer::Unicruft|DTA::CAB::Analyzer::Unicruft>
+
+latin-1 approximator using libunicruft
+
+=item L<DTA::CAB::Analyzer::Unidecode|DTA::CAB::Analyzer::Unidecode>
+
+latin-1 approximator (old, pure-perl implementation)
+
+=item L<DTA::CAB::Client|DTA::CAB::Client>
+
+abstract class for DTA::CAB server clients
+
+=item L<DTA::CAB::Client::CGIWrapper|DTA::CAB::Client::CGIWrapper>
+
+CGI wrapper for DTA::CAB::Client::XmlRpc
+
+=item L<DTA::CAB::Client::HTTP|DTA::CAB::Client::HTTP>
+
+generic HTTP server client for DTA::CAB
+
+=item L<DTA::CAB::Client::XmlRpc|DTA::CAB::Client::XmlRpc>
+
+DTA::CAB XML-RPC server clients
+
+=item L<DTA::CAB::Common|DTA::CAB::Common>
+
+common dependencies for DTA::CAB suite
+
+=item L<DTA::CAB::Datum|DTA::CAB::Datum>
+
+generic API for data (tokens,sentences,documents,...) passed to/from DTA::CAB::Analyzer
+
+=item L<DTA::CAB::Document|DTA::CAB::Document>
+
+generic API for whole documents passed to/from DTA::CAB::Analyzer
+
+=item L<DTA::CAB::Format|DTA::CAB::Format>
+
+Base class for DTA::CAB::Datum I/O
+
+=item L<DTA::CAB::Format::Builtin|DTA::CAB::Format::Builtin>
+
+load built-in DTA::CAB::Format subclasses
+
+=item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
+
+Datum parser|formatter: JSON code (generic)
+
+=item L<DTA::CAB::Format::JSON::Syck|DTA::CAB::Format::JSON::Syck>
+
+Datum parser|formatter: JSON code via JSON::Syck
+
+=item L<DTA::CAB::Format::JSON::XS|DTA::CAB::Format::JSON::XS>
+
+Datum parser|formatter: JSON code via JSON::XS
+
+=item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
+
+Datum parser|formatter: perl code via Data::Dumper, eval()
+
+=item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
+
+Datum parser using Storable::freeze() & co.
+
+=item L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>
+
+Datum parser: one-token-per-line text
+
+=item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
+
+Datum parser: verbose human-readable text
+
+=item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
+
+Datum parser: verbose human-readable text
+
+=item L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>
+
+Datum parser|formatter: XML: base class
+
+=item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
+
+Datum parser|formatter: XML (perl-like)
+
+=item L<DTA::CAB::Format::XmlRpc|DTA::CAB::Format::XmlRpc>
+
+Datum parser: XML-RPC using RPC::XML
+
+=item L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>
+
+Datum parser|formatter: YAML code (generic)
+
+=item L<DTA::CAB::Format::YAML::Syck|DTA::CAB::Format::YAML::Syck>
+
+Datum parser|formatter: YAML code via YAML::Syck
+
+=item L<DTA::CAB::Format::YAML::XS|DTA::CAB::Format::YAML::XS>
+
+Datum parser|formatter: YAML::XS code via YAML::XS
+
+=item L<DTA::CAB::Logger|DTA::CAB::Logger>
+
+DTA::CAB logging facility using Log::Log4perl
+
+=item L<DTA::CAB::Persistent|DTA::CAB::Persistent>
+
+abstract class for persistent & configurable objects
+
+=item L<DTA::CAB::Sentence|DTA::CAB::Sentence>
+
+generic API for sentences passed to/from DTA::CAB::Analyzer
+
+=item L<DTA::CAB::Server|DTA::CAB::Server>
+
+abstract class for DTA::CAB servers
+
+=item L<DTA::CAB::Server::HTTP|DTA::CAB::Server::HTTP>
+
+DTA::CAB standalone HTTP server using HTTP::Daemon
+
+=item L<DTA::CAB::Server::HTTP::Handler|DTA::CAB::Server::HTTP::Handler>
+
+abstract handler API class for DTA::CAB::Server::HTTP
+
+=item L<DTA::CAB::Server::HTTP::Handler::Builtin|DTA::CAB::Server::HTTP::Handler::Builtin>
+
+DTA::CAB::Server::HTTP::Handler: built-in classes
+
+=item L<DTA::CAB::Server::HTTP::Handler::CGI|DTA::CAB::Server::HTTP::Handler::CGI>
+
+DTA::CAB::Server::HTTP::Handler class: CGI form processing
+
+=item L<DTA::CAB::Server::HTTP::Handler::Directory|DTA::CAB::Server::HTTP::Handler::Directory>
+
+CAB HTTP Server: request handler: directory
+
+=item L<DTA::CAB::Server::HTTP::Handler::File|DTA::CAB::Server::HTTP::Handler::File>
+
+CAB HTTP Server: request handler: static file
+
+=item L<DTA::CAB::Server::HTTP::Handler::Query|DTA::CAB::Server::HTTP::Handler::Query>
+
+CAB HTTP Server: request handler: analyzer queries by CGI form
+
+=item L<DTA::CAB::Server::HTTP::Handler::Response|DTA::CAB::Server::HTTP::Handler::Response>
+
+CAB HTTP Server: request handler: static response
+
+=item L<DTA::CAB::Server::HTTP::Handler::XmlRpc|DTA::CAB::Server::HTTP::Handler::XmlRpc>
+
+CAB HTTP Server: request handler: XML-RPC queries (backwards-compatible)
+
+=item L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::XmlRpc>
+
+DTA::CAB XML-RPC server using RPC::XML
+
+=item L<DTA::CAB::Token|DTA::CAB::Token>
+
+generic API for tokens passed to/from DTA::CAB::Analyzer
+
+=item L<DTA::CAB::Unify|DTA::CAB::Unify>
+
+DTA::CAB unification utiltities
+
+=item L<DTA::CAB::Utils|DTA::CAB::Utils>
+
+generic DTA::CAB utilities
+
+=back
+
+=cut
+
+## END <podindex.perl
+##========================================================================
+

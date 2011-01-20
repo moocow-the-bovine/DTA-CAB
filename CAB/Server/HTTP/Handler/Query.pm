@@ -3,7 +3,7 @@
 ## File: DTA::CAB::Server::HTTP::Handler::Query.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description:
-##  + DTA::CAB::Server::HTTP::Handler class: analyzer CGI
+##  + CAB HTTP Server: request handler: analyzer queries by CGI form
 ##======================================================================
 
 package DTA::CAB::Server::HTTP::Handler::Query;
@@ -43,40 +43,24 @@ BEGIN {
 ## Methods: API
 
 ## $h = $class_or_obj->new(%options)
-## + %options:
-##     ##-- INHERITED from Handler::CGI
-##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
-##     allowGet => $bool,             ##-- allow GET requests? (default=1)
-##     allowPost => $bool,            ##-- allow POST requests? (default=1)
-##     allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
-##     pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
-##     ##
-##     ##-- NEW in Handler::Query
-##     allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
-##     defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
-##     allowFormats => \%formats,     ##-- allowed formats: ($fmtAlias => $formatClassName, ...)
-##     defaultFormat => $class,       ##-- default format (default=$DTA::CAB::Format::CLASS_DEFAULT)
-##     forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
-##     returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
-##     logVars => $level,             ##-- log-level for variable expansion (default=undef: none)
-##
-## + runtime %$h data:
-##     ##-- INHERITED from Handler::CGI (none)
-##
-## + path sensitivity
-##   - if path ends in '/list', a newline-separated list of analyzers will be returned
-##
-## + CGI parameters:
-##     ##-- query data, in order of preference
-##     data => $docData,              ##-- document data (for analyzeDocument())
-##     q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
-##     ##
-##     ##-- misc
-##     a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
-##     format => $format,             ##-- I/O format
-##     encoding => $enc,              ##-- I/O encoding
-##     pretty => $level,              ##-- pretty-printing level
-##     raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+## %$h, %options:
+##  (
+##   ##-- INHERITED from Handler::CGI
+##   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+##   allowGet => $bool,             ##-- allow GET requests? (default=1)
+##   allowPost => $bool,            ##-- allow POST requests? (default=1)
+##   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
+##   pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
+##   ##
+##   ##-- NEW in Handler::Query
+##   allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
+##   defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
+##   allowFormats => \%formats,     ##-- allowed formats: ($fmtAlias => $formatClassName, ...)
+##   defaultFormat => $class,       ##-- default format (default=$DTA::CAB::Format::CLASS_DEFAULT)
+##   forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
+##   returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
+##   logVars => $level,             ##-- log-level for variable expansion (default=undef: none)
+##  )
 sub new {
   my $that = shift;
   my $h =  $that->SUPER::new(
@@ -106,7 +90,25 @@ sub prepare {
 }
 
 ## $bool = $path->run($server, $localPath, $clientSocket, $httpRequest)
-##  + local processing
+## + process $httpRequest as CGI form-encoded query
+##
+## + analyzer list
+##   if $localPath ends in '/list', a list of analyzers will be returned,
+##   encoded accroding to the 'format' form variable.
+##
+## + CGI form parameters:
+##   (
+##    ##-- query data, in order of preference
+##    data => $docData,              ##-- document data (for analyzeDocument())
+##    q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
+##    ##
+##    ##-- misc
+##    a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
+##    format => $format,             ##-- I/O format
+##    encoding => $enc,              ##-- I/O encoding
+##    pretty => $level,              ##-- pretty-printing level
+##    raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+##   )
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -198,26 +200,8 @@ sub run {
 			  filename=>$filename);
 }
 
-## $rsp = $h->dumpResponse(\$contentRef, %opts)
-##  + %opts:
-##     raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
-##     type => $mimetype, ##-- mime type if not raw mode
-##     charset => $enc,   ##-- character set, if not raw mode
-##     filename => $file, ##-- attachment name, if not raw mode
-sub dumpResponse {
-  my ($h,$dataref,%vars) = @_;
-  my $returnRaw   = defined($vars{raw}) ? $vars{raw} : $h->{returnRaw};
-  my $contentType = ($returnRaw || !$vars{type} ? 'text/plain' : $vars{type});
-  $contentType   .= "; charset=$vars{charset}" if ($vars{charset} && $contentType !~ m|application/octet-stream|);
-  ##
-  my $rsp = $h->response(RC_OK);
-  $rsp->content_type($contentType);
-  $rsp->content_ref($dataref) if (defined($dataref));
-  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename});
-  return $rsp;
-}
-
 ## $response = $h->runList($h,$srv,$path,$c,$hreq)
+##  + guts for analyzer list
 sub runList {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -278,7 +262,220 @@ sub runList {
 			 );
 }
 
+## $rsp = $h->dumpResponse(\$contentRef, %opts)
+##  + Create and return a new data-dump response.
+##    Known %opts:
+##    (
+##     raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
+##     type => $mimetype, ##-- mime type if not raw mode
+##     charset => $enc,   ##-- character set, if not raw mode
+##     filename => $file, ##-- attachment name, if not raw mode
+##    )
+sub dumpResponse {
+  my ($h,$dataref,%vars) = @_;
+  my $returnRaw   = defined($vars{raw}) ? $vars{raw} : $h->{returnRaw};
+  my $contentType = ($returnRaw || !$vars{type} ? 'text/plain' : $vars{type});
+  $contentType   .= "; charset=$vars{charset}" if ($vars{charset} && $contentType !~ m|application/octet-stream|);
+  ##
+  my $rsp = $h->response(RC_OK);
+  $rsp->content_type($contentType);
+  $rsp->content_ref($dataref) if (defined($dataref));
+  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename});
+  return $rsp;
+}
+
 ##--------------------------------------------------------------
 ## Methods: Local
 
 1; ##-- be happy
+
+__END__
+
+##========================================================================
+## POD DOCUMENTATION, auto-generated by podextract.perl, edited
+
+##========================================================================
+## NAME
+=pod
+
+=head1 NAME
+
+DTA::CAB::Server::HTTP::Handler::Query - CAB HTTP Server: request handler: analyzer queries by CGI form
+
+=cut
+
+##========================================================================
+## SYNOPSIS
+=pod
+
+=head1 SYNOPSIS
+
+ ##========================================================================
+ ## PRELIMINARIES
+ 
+ use DTA::CAB::Server::HTTP::Handler::Query;
+ 
+ ##========================================================================
+ ## Methods: API
+ 
+ $h = $class_or_obj->new(%options);
+ $bool = $h->prepare($server);
+ $bool = $path->run($server, $localPath, $clientSocket, $httpRequest);
+ $response = $h->runList($h,$srv,$path,$c,$hreq);
+ $rsp = $h->dumpResponse(\$contentRef, %opts);
+ 
+
+=cut
+
+##========================================================================
+## DESCRIPTION
+=pod
+
+=head1 DESCRIPTION
+
+DTA::CAB::Server::HTTP::Handler::Query
+is a request handler class for use with a
+L<DTA::CAB::Server::HTTP|DTA::CAB::Server::HTTP> server
+which handles queries to selected server-supported analyzers
+submitted as CGI-style forms.
+
+=cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Server::HTTP::Handler::Query: Globals
+=pod
+
+=head2 Globals
+
+=over 4
+
+=item Variable: @ISA
+
+DTA::CAB::Server::HTTP::Handler::Query inherits from
+L<DTA::CAB::Server::HTTP::Handler::CGI> and implements the
+L<DTA::CAB::Server::HTTP::Handler> API.
+
+=item Variable: (%allowFormats);
+
+Default allowed formats.
+
+=back
+
+=cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Server::HTTP::Handler::Query: Methods: API
+=pod
+
+=head2 Methods: API
+
+=over 4
+
+=item new
+
+ $h = $class_or_obj->new(%options);
+
+%$h, %options:
+
+  (
+   ##-- INHERITED from Handler::CGI
+   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+   allowGet => $bool,             ##-- allow GET requests? (default=1)
+   allowPost => $bool,            ##-- allow POST requests? (default=1)
+   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
+   pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
+   ##
+   ##-- NEW in Handler::Query
+   allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
+   defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
+   allowFormats => \%formats,     ##-- allowed formats: ($fmtAlias => $formatClassName, ...)
+   defaultFormat => $class,       ##-- default format (default=$DTA::CAB::Format::CLASS_DEFAULT)
+   forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
+   returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
+   logVars => $level,             ##-- log-level for variable expansion (default=undef: none)
+  )
+
+=item prepare
+
+ $bool = $h->prepare($server);
+
+Sets $h-E<gt>{allowAnalyzers} if not already defined.
+
+=item run
+
+ $bool = $path->run($server, $localPath, $clientSocket, $httpRequest);
+
+Process $httpRequest matching $localPath as CGI form-encoded query.
+
+If $localPath ends in '/list', a list of analyzers will be returned,
+encoded accroding to the 'format' form variable (see L</runList>).
+
+Otherwise, the following CGI form parameters are supported:
+
+ (
+  ##-- query data, in order of preference
+  data => $docData,              ##-- document data (for analyzeDocument())
+  q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
+  ##
+  ##-- misc
+  a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
+  format => $format,             ##-- I/O format
+  encoding => $enc,              ##-- I/O encoding
+  pretty => $level,              ##-- pretty-printing level
+  raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+ )
+
+=item runList
+
+ $response = $h->runList($h,$srv,$path,$c,$hreq);
+
+Guts for '/list' requests.
+
+=item dumpResponse
+
+ $rsp = $h->dumpResponse(\$contentRef, %opts);
+
+Create and return a new data-dump response.
+Known %opts:
+
+ (
+  raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
+  type => $mimetype, ##-- mime type if not raw mode
+  charset => $enc,   ##-- character set, if not raw mode
+  filename => $file, ##-- attachment name, if not raw mode
+ )
+
+=back
+
+=cut
+
+##========================================================================
+## END POD DOCUMENTATION, auto-generated by podextract.perl
+
+##======================================================================
+## Footer
+##======================================================================
+=pod
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2010 by Bryan Jurish
+
+This package is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
+at your option, any later version of Perl 5 you may have available.
+
+=head1 SEE ALSO
+
+L<DTA::CAB::Server::HTTP::Handler::CGI(3pm)|DTA::CAB::Server::HTTP::Handler::CGI>,
+L<DTA::CAB::Server::HTTP::Handler(3pm)|DTA::CAB::Server::HTTP::Handler>,
+L<DTA::CAB::Server::HTTP(3pm)|DTA::CAB::Server::HTTP>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
+
+=cut
