@@ -15,8 +15,8 @@ my ($SVNVERSION);
     $SVNVERSION = "$svnroot @ $svnversion";
   } else {
     $SVNVERSION =
-      ('$HeadURL: svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/Makefile.PL$'
-       .' $Id: Makefile.PL 4759 2011-01-20 11:05:11Z moocow$');
+      ('$HeadURL$'
+       .' $Id$');
   }
 }
 
