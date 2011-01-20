@@ -15,8 +15,8 @@ my ($SVNVERSION);
     $SVNVERSION = "$svnroot @ $svnversion";
   } else {
     $SVNVERSION =
-      ('$HeadURL$'
-       .' $Id$');
+      ('$HeadURL: svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/Makefile.PL$'
+       .' $Id: Makefile.PL 4759 2011-01-20 11:05:11Z moocow$');
   }
 }
 
@@ -27,8 +27,8 @@ open(VERSION_PM,">CAB/Version.pm")
 print VERSION_PM <<EOF;
 ##-- automatically generated file: DO NOT EDIT!
 package DTA::CAB::Version;
-\$DTA::CAB::VERSION = "$VERSION";
-\$DTA::CAB::SVNVERSION = "$SVNVERSION";
+\$DTA::CAB::VERSION = '$VERSION';
+\$DTA::CAB::SVNVERSION = '$SVNVERSION';
 1;
 EOF
 
