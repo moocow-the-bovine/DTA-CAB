@@ -195,11 +195,11 @@ and has fields:
 
 =over 4
 
-=item token.morph[].w
+=item token.morph[i].w
 
 Analysis weight (float)
 
-=item token.morph[].hi
+=item token.morph[i].hi
 
 Analysis output string
 
@@ -219,10 +219,17 @@ of structs.  See L</token.morph> for the element format.
 
 =item token.eqpho
 
-Array of strings representing phonetically equivalent word types.
+Array of analysis structs a la L</token.morph>
+representing the set of phonetically equivalent indexed word types.
 Note that the notion of "phonetic equivalence" implicit in this analysis
 may or may not be consistent with actual identity of phonetic strings
 as returned in the L</token.lts> field.
+
+=item token.eqphox
+
+Array of strings representing the k-best phonetically equivalent word types known to
+the underlying (intensional) lexicon.  Differs from L</token.eqpho> in the set from
+which the phonetic equivalents are drawn.
 
 =item token.rw
 
@@ -231,6 +238,82 @@ and analyses are determined by a (canonicalizing) rewrite cascade.
 Each analysis struct may additionally have "lts" and/or "morph"
 fields of its own, representing the respective analyses of the
 rewrite I<target>.
+
+=item token.eqrw
+
+Array of analysis structs a la L</token.morph> representing the indexed word types
+which are "rewrite-equivalent"
+to the current token; i.e. which were rewritten to the same string as the
+current token.
+
+=item token.eqlemma
+
+Array of analysis structs a la L</token.morph> representing the indexed word types
+which are lemma-equivalent to the current token; i.e. which were assigned the same
+lemma as the current token during the most recent indexing run.
+See L</token.moot.lemma>.
+
+=item token.dmoot
+
+Canonicalization-disambiguator output, a struct containing sub-fields:
+
+=over 4
+
+=item token.dmoot.tag
+
+(required): string representing the optimal canonicalization of the token
+as returned by the HMM disambiguator.
+
+=item token.dmoot.morph
+
+(optional): morphological analyses for L</token.dmoot.tag>, in the same
+format as L</token.morph>.
+
+=item token.dmoot.analyses
+
+(optional): disambiguator input analyses, an array of structs representing the
+canonicalization candidates passed to the disambiguator.  Each element is a struct
+of the form
+
+=over 4
+
+=item token.dmoot.analyses[i].tag
+
+Canonicalization candidate for this analysis (string).
+
+=item token.dmoot.analyses[i].details
+
+Details for this canonicalizaion candidate (string).
+
+=item token.dmoot.analyses[i].cost
+
+Heuristic cost of this canonicalization candidate (float).
+
+=back
+
+=back
+
+
+=item token.moot
+
+Part-of-speech tagging output for this token,
+structured as for L</token.dmoot>, except that
+C<.tag> fields represent part-of-speech tags and
+C<.analyses> represents tagger-relevant morphological analyses for the token.
+The C<token.moot> may also have additional fields:
+
+=over 4
+
+=item token.moot.word
+
+String: the literal text of the token as it was passed to the part-of-speech tagger.
+Usually identical to L</token.dmoot.tag>.
+
+=item token.moot.lemma
+
+String: lemma of the token as guessed from canonicalization and tagger output.
+
+=back
 
 =back
 
@@ -364,10 +447,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.7 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

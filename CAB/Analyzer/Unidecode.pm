@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Unidecode.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: latin-1 approximator (old)
 
 package DTA::CAB::Analyzer::Unidecode;
@@ -138,7 +138,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Unidecode - latin-1 approximator (old, pure-perl implementation)
+DTA::CAB::Analyzer::Unidecode - latin-1 approximator using Text::Unidecode (old)
 
 =cut
 
@@ -162,6 +162,8 @@ DTA::CAB::Analyzer::Unidecode - latin-1 approximator (old, pure-perl implementat
 =pod
 
 =head1 DESCRIPTION
+
+B<UNMAINTAINED>
 
 =cut
 

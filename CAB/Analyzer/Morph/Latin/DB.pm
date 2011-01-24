@@ -50,7 +50,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via external full-form dictionary
+DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via external full-form DB
 
 =cut
 

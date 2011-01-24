@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Analyzer::EqPho
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: phonetic equivalence class expansion: default
+## Description: phonetic-equivalence class expander: default
 
 ##==============================================================================
 ## Package: Analyzer::Morph
@@ -43,9 +43,6 @@ DTA::CAB::Analyzer::EqPho - phonetic equivalence class expander
 =head1 SYNOPSIS
 
  use DTA::CAB::Analyzer::EqPho;
- 
- $eqp = DTA::CAB::Analyzer::EqPho->new(%args);
- $eqp->analyze($tok);
 
 =cut
 
@@ -80,6 +77,14 @@ Copyright (C) 2009-2010 by Bryan Jurish
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,
 at your option, any later version of Perl 5 you may have available.
+
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<DTA::CAB::Analyzer::EqPho::DB(3pm)|DTA::CAB::Analyzer::EqPho::DB>,
+L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
+L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
 
 =cut
 

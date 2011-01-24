@@ -179,7 +179,7 @@ Sub-analyzer for rewrite output.
 
 =item L<DTA::CAB::Analyzer::TokPP|DTA::CAB::Analyzer::TokPP>
 
-Type-level token pre-processor (rule-based analysis).
+Type-level heuristic token preprocessor (for punctuation etc)
 
 
 =item L<DTA::CAB::Analyzer::Unicruft|DTA::CAB::Analyzer::Unicruft>
@@ -213,10 +213,19 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2008-2010 by Bryan Jurish
+Copyright (C) 2008-2011 by Bryan Jurish
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
+
+=head1 SEE ALSO
+
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
+L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
 
 =cut

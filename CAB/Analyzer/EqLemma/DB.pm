@@ -140,6 +140,13 @@ DTA::CAB::Analyzer::EqLemma::DB - DB dictionary-based lemma-equivalence expander
  
  $eqlemma = DTA::CAB::Analyzer::EqLemma::DB->new(%args);
  
+ ##========================================================================
+ ## analysis overrides
+ 
+ $bool = $anl->doAnalyze(\%opts, $name);
+ $doc = $anl->analyzeTypes($doc,\%types,\%opts);
+ $doc = $anl->analyzeSentences($doc,\%opts);
+ 
 
 =cut
 
@@ -166,6 +173,26 @@ DB dictionary-based lemma equivalence-class expander.
 DTA::CAB::Analyzer::EqLemma::DB inherits from
 L<DTA::CAB::Analyzer::Dict::DB>.
 
+=item Variable: $ANALYZE_GET_MOOT
+
+(undocumented)
+
+=item Variable: $ANALYZE_GET_MORPH
+
+(undocumented)
+
+=item Variable: $ANALYZE_GET_RW_MORPH
+
+(undocumented)
+
+=item Variable: $ANALYZE_GET_ALL
+
+(undocumented)
+
+=item Variable: $ANALYZE_GET_DEFAULT
+
+(undocumented)
+
 =back
 
 =cut
@@ -185,6 +212,38 @@ L<DTA::CAB::Analyzer::Dict::DB>.
 Constructor.  Sets some default options.
 
 =back
+
+=cut
+
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Analyzer::EqLemma::DB: Analysis
+=pod
+
+=head2 Methods: Analysis
+
+=over 4
+
+=item doAnalyze
+
+ $bool = $anl->doAnalyze(\%opts, $name);
+
+(undocumented)
+
+=item analyzeTypes
+
+ $doc = $anl->analyzeTypes($doc,\%types,\%opts);
+
+Perform type-wise analysis of all (text) types in $doc-E<gt>{types};
+Override does nothing.
+
+=item analyzeSentences
+
+ $doc = $anl->analyzeSentences($doc,\%opts);
+
+Perform sentence-wise analysis of all sentences $doc-E<gt>{body}[$si].
+Override expands lemma equivalence at sentence level
+(i.e. only after canonical disambiguation and PoS-tagging).
 
 =cut
 

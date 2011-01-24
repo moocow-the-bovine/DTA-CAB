@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqPho::DB.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: dictionary-based equivalence-class expander, phonetic variant
 
 package DTA::CAB::Analyzer::EqPho::DB;
@@ -49,7 +49,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqPho::DB - dictionary-based phonetic form expander
+DTA::CAB::Analyzer::EqPho::DB - DB dictionary-based phonetic equivalence expander
 
 =cut
 

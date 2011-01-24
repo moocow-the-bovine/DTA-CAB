@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Analyzer::Morph::Latin::FST.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: morphological analysis via Gfsm automata, 'mlatin'
+## Description: morphological analysis via Gfsm automaton, 'mlatin'
 
 ##==============================================================================
 ## Package: Analyzer::Morph::Latin::FST
@@ -52,7 +52,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin::FST - auxilliary morphological analysis via Gfsm automata
+DTA::CAB::Analyzer::Morph::Latin::FST - auxilliary morphological analysis via Gfsm automaton
 
 =cut
 

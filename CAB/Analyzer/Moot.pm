@@ -481,7 +481,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Moot - generic Moot analysis API
+DTA::CAB::Analyzer::Moot - generic Moot HMM tagger/disambiguator analysis API
 
 =cut
 
@@ -506,6 +506,7 @@ DTA::CAB::Analyzer::Moot - generic Moot analysis API
  ## Methods: Generic
  
  $bool = $moot->hmmOk();
+ $class = $moot->hmmClass();
  
  ##========================================================================
  ## Methods: I/O
@@ -523,6 +524,14 @@ DTA::CAB::Analyzer::Moot - generic Moot analysis API
  ## Methods: Analysis
  
  $bool = $anl->canAnalyze();
+ $bool = $anl->doAnalyze(\%opts, $name);
+ $doc = $anl->analyzeSentences($doc,\%opts);
+ 
+ ##========================================================================
+ ## Methods: Analysis: Utilities
+ 
+ \%infoHash = CLASS::parseAnalysis(\%infoHash, %opts);
+ @analyses = CLASS::parseMorphAnalyses($tok);
  
 
 =cut
@@ -567,18 +576,41 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
 Object structure, %args:
 
-    (
-     ##-- Filename Options
-     hmmFile => $filename,     ##-- default: none
-     ##
-     ##-- Analysis Options
-     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
-     hmmEnc       => $enc,   ##-- encoding of model file (default='latin1')
-     prune          => $bool,  ##-- if true (default), prune analyses after tagging
-     ##
-     ##-- Analysis Objects
-     hmm            => $hmm,   ##-- a moot::HMM object
-    )
+ ##-- Filename Options
+ hmmFile => $filename,     ##-- default: none (REQUIRED)
+ ##
+ ##-- Analysis Options
+ hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
+ hmmEnc         => $enc,   ##-- encoding of model file(s) (default='UTF-8')
+ analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_ANALYZE_TEXT_GET)
+ analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
+ analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions
+                           ##     %fnc = ($akey=>$perlcode_str, ...)
+                           ##   + evaluates $perlcode_str as subroutine body to derive analysis
+                           ##     'weights' from source-key weights
+                           ##   + $perlcode_str may use variables:
+                           ##       $moot    ##-- current Analyzer::Moot object
+                           ##       $tag     ##-- source analysis tag
+                           ##       $details ##-- source analysis 'details' "$hi <$w>"
+                           ##       $cost    ##-- source analysis weight
+                           ##       $text    ##-- source token text
+                           ##   + Default just returns $cost (identity function)
+ label           =>$lab,   ##-- destination key (default='moot')
+ requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
+ prune          => $bool,  ##-- if true (default), prune analyses after tagging
+ uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
+ wantTaggedWord => $bool,  ##-- if true, output field will contain top-level 'word' element (default=true)
+ ##
+ ##-- Analysis Objects
+ hmm            => $hmm,   ##-- a moot::HMM object
+
+
+OBSOLETE fields (use analyzeTextGet, analyzeTagsGet pseudo-closure accessors):
+
+ #analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
+ #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
+ #analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default='dmootLiteral')
+ #analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='xlit')
 
 The 'hmmFile' argument can be specified in any format accepted by mootHMM::load_model().
 
@@ -606,6 +638,13 @@ Clears the object.
 
 Should return false iff HMM is undefined or "empty".
 Default version checks for non-empty 'lexprobs' and 'n_tags'
+
+=item hmmClass
+
+ $class = $moot->hmmClass();
+
+Returns class for $moot-E<gt>{hmm} object.
+Default just returns 'moot::HMM'.
 
 =back
 
@@ -667,23 +706,69 @@ Implicitly calls $obj-E<gt>clear()
 
 =over 4
 
+=item typeKeys
+
+ @keys = $anl->typeKeys(\%opts);
+
+Returns list of type-wise keys to be expanded for this analyzer by expandTypes().
+Override returns empty list.
+
 =item canAnalyze
 
  $bool = $anl->canAnalyze();
 
 Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
 
+=item doAnalyze
+
+ $bool = $anl->doAnalyze(\%opts, $name);
+
+Override: only allow analyzeSentences().
+
+=item analyzeSentences
+
+ $doc = $anl->analyzeSentences($doc,\%opts);
+
+Perform sentence-wise analysis of all sentences $doc-E<gt>{body}[$si].
+
 =back
 
 =cut
 
-##========================================================================
-## END POD DOCUMENTATION, auto-generated by podextract.perl
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Analyzer::Moot: Methods: Analysis: Utilities
 =pod
 
+=head2 Methods: Analysis: Utilities
 
+=over 4
+
+=item parseAnalysis
+
+ \%infoHash = CLASS::parseAnalysis(\%infoHash,         %opts);
+ \%infoHash = CLASS::parseAnalysis(\%fstAnalysisHash,  %opts)
+ \%infoHash = CLASS::parseAnalysis(\%xlitAnalysisHash, %opts)
+ \%infoHash = CLASS::parseAnalysis( $tagString,        %opts)
+
+Returns an info hash of the form
+
+ {%opts,tag=>$tag,details=>$details,cost=>$cost}
+
+for various analysis types.
+
+=item parseMorphAnalyses
+
+ @analyses = CLASS::parseMorphAnalyses($tok);
+
+Utility for PoS tagging using {dmoot}{morph}, {morph}, and {rw}{morph} analyses.
+
+=back
 
 =cut
+
+
+##========================================================================
+## END POD DOCUMENTATION, auto-generated by podextract.perl
 
 ##======================================================================
 ## Footer
@@ -705,12 +790,10 @@ at your option, any later version of Perl 5 you may have available.
 =head1 SEE ALSO
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
-L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
-L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
-L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
-L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
+L<DTA::CAB::Analyzer::Moot::DynLex(3pm)|DTA::CAB::Analyzer::Moot::DynLex>,
+L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
+L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
 L<DTA::CAB(3pm)|DTA::CAB>,
-L<RPC::XML(3pm)|RPC::XML>,
 L<perl(1)|perl>,
 L<mootutils(1)|mootutils>,
 L<moot(1)|moot>,

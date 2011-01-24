@@ -545,6 +545,9 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  ##========================================================================
  ## Methods: Analysis
  
+ $bool = $anl->canAnalyze();
+ $doc = $anl->analyzeTypes($doc,\%types,\%opts);
+ 
 
 =cut
 
@@ -591,29 +594,35 @@ Constuctor.
 %args, %$aut:
 
  ##-- Filename Options
- fstFile => $filename,    ##-- default: none
- labFile => $filename,    ##-- default: none
- dictFile=> $filename,    ##-- default: none (clobbers $aut->{dict}{dictFile} if defined)
+ fstFile => $filename,     ##-- source FST file (default: none)
+ labFile => $filename,     ##-- source labels file (default: none)
+ dictFile => $filename,    ##-- source dict file (default: none): clobbers $dict->{dictFile} if defined
+ ##
+ ##-- Exception lexicon options
+ dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
+                           ##   + default=undef
+ dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
  ##
  ##-- Analysis Output
- analysisClass  => $class, ##-- default: none (ARRAY)
- analyzeSrc     => $key,   ##-- source key for analysis (default: 'text')
- analyzeDst     => $key,   ##-- token output key (default: from __PACKAGE__)
- wantAnalysisLo => $bool,  ##-- set to true to include 'lo' keys in analyses (default: true)
+ analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
+ analyzeSet     => $code,  ##-- accessor: coderef or string: set analyses (default=$DEFAULT_ANALYZE_SET)
+ wantAnalysisLo => $bool,     ##-- set to true to include 'lo'    keys in analyses (default: true)
+ wantAnalysisLemma => $bool,  ##-- set to true to include 'lemma' keys in analyses (default: false)
  ##
  ##-- Analysis Options
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
  labenc         => $enc,  ##-- encoding of labels file (default='latin1')
- #dictenc        => $enc,  ##-- dictionary encoding (default='utf8') : prefer $aut->{dict}{encoding}
+ #dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8') (set $aut->{dict}{encoding} instead)
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
  toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
  bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
  attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
+ attOutput      => $bool, ##-- if true, generate AT&T escapes in output (default=1)
  allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
- ##
+                          ##   : useful: /(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
  ##-- Analysis objects
  fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
  lab  => $lab,       ##-- (child classes only) e.g. a Gfsm::Alphabet object (default=new)
@@ -621,7 +630,10 @@ Constuctor.
  laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
  labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
  result=>$resultfst, ##-- (child classes only) e.g. result fst
- dict => $dict,      ##-- exception lexicon / static cache as DTA::CAB::Analyzer::Dict object
+ ##
+ ##-- INHERITED from DTA::CAB::Analyzer
+ label => $label,    ##-- analyzer label (default: from analyzer class name)
+ typeKeys => \@keys, ##-- type-wise keys to expand
 
 =item clear
 
@@ -784,6 +796,12 @@ This implementation just returns:
 
  $anl->dictOk || ($anl->labOk && $anl->fstOk)
 
+=item analyzeTypes
+
+ $doc = $anl->analyzeTypes($doc,\%types,\%opts);
+
+Perform type-wise analysis of all (text) types in %types (= %{$doc-E<gt>{types}}).
+
 =back
 
 =cut
@@ -803,13 +821,19 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Bryan Jurish
+Copyright (C) 2009-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
-=cut
+=head1 SEE ALSO
 
+L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
+L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
+L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
+L<DTA::CAB(3pm)|DTA::CAB>,
+L<perl(1)|perl>,
+...
 
 =cut

@@ -1,0 +1,103 @@
+#Chain - ???
+#Chain::DTA - ???
+#Chain::Multi - ???
+#Chain::Tweet - ???
+DTA::CAB - "Cascaded Analysis Broker" for robust linguistic analysis
+DTA::CAB::Analyzer - generic analyzer API
+DTA::CAB::Analyzer::Alias - analyzer alias
+DTA::CAB::Analyzer::Automaton - generic analysis automaton API
+DTA::CAB::Analyzer::Automaton::Dyn - generic analysis automaton API
+DTA::CAB::Analyzer::Automaton::Gfsm - generic analysis automaton API: Gfsm automata
+DTA::CAB::Analyzer::Automaton::Gfsm::XL - Gfsm::XL::Cascade-based transductions
+DTA::CAB::Analyzer::Common - common analyzers for DTA::CAB suite
+DTA::CAB::Analyzer::DTAClean - Chain::DTA cleanup (prune sensitive and redundant data from document)
+DTA::CAB::Analyzer::Dict - generic analysis dictionary API using Lingua::TT::Dict
+DTA::CAB::Analyzer::Dict::DB - generic analysis dictionary API using Lingua::TT::DB::File
+DTA::CAB::Analyzer::DmootSub - sub-analysis (Morph,toka) of dmoot targets
+DTA::CAB::Analyzer::DocClassify - DocClassify::Mapper wrapper
+DTA::CAB::Analyzer::Dyn - generic analyzer API: dynamic code generation
+DTA::CAB::Analyzer::EqLemma - lemma-equivalence class expander: default
+DTA::CAB::Analyzer::EqLemma::DB - DB dictionary-based lemma-equivalence expander
+DTA::CAB::Analyzer::EqPho - phonetic equivalence class expander
+DTA::CAB::Analyzer::EqPho::Cascade - phonetic equivalence expander via Gfsm::XL cascade
+DTA::CAB::Analyzer::EqPho::DB - DB dictionary-based phonetic equivalence expander
+DTA::CAB::Analyzer::EqPho::Dict - dictionary-based phonetic form expander
+DTA::CAB::Analyzer::EqPho::FST - FST-based phonetic form expander
+DTA::CAB::Analyzer::EqPhoX - phonetic equivalence class expansion: intensional, via gfsmxl cascade
+DTA::CAB::Analyzer::EqRW - rewrite-equivalence class expander: default
+DTA::CAB::Analyzer::EqRW::DB - DB dictionary-based rewrite-equivalence expander
+DTA::CAB::Analyzer::EqRW::Dict - dictionary-based rewrite-equivalence expander
+DTA::CAB::Analyzer::EqRW::FST - FST-based rewrite-equivalence expander
+DTA::CAB::Analyzer::Extra - extra bonus analyzers for DTA::CAB suite
+DTA::CAB::Analyzer::Koeln - phonetic digest analysis using Text::Phonetic::Koeln
+DTA::CAB::Analyzer::LTS - letter-to-sound analysis via Gfsm automata
+DTA::CAB::Analyzer::LangId - Lingua::LangId::Map wrapper
+DTA::CAB::Analyzer::Lemmatizer - lemma extractor for TAGH analyses or bare text
+DTA::CAB::Analyzer::Metaphone - phonetic digest analysis using Text::Phonetic::Metaphone
+DTA::CAB::Analyzer::Moot - generic Moot HMM tagger/disambiguator analysis API
+DTA::CAB::Analyzer::Moot::DynLex - Moot analysis API for word n-gram disambiguation using dynamic lexicon
+DTA::CAB::Analyzer::MootSub - post-processing for moot PoS tagger in DTA chain
+DTA::CAB::Analyzer::Morph - morphological analysis via Gfsm automata
+DTA::CAB::Analyzer::Morph::Latin - latin pesudo-morphology analysis (wrapper)
+DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via external full-form DB
+DTA::CAB::Analyzer::Morph::Latin::Dict - auxilliary latin word recognizer via external full-form dictionary
+DTA::CAB::Analyzer::Morph::Latin::FST - auxilliary morphological analysis via Gfsm automaton
+DTA::CAB::Analyzer::MorphSafe - safety checker for analyses output by DTA::CAB::Analyzer::Morph (TAGH)
+DTA::CAB::Analyzer::Null - null analyzer (dummy)
+DTA::CAB::Analyzer::Phonem - phonetic digest analysis using Text::Phonetic::Phonem
+DTA::CAB::Analyzer::Phonix - phonetic digest analysis using Text::Phonetic::Phonix
+DTA::CAB::Analyzer::Rewrite - rewrite analysis via Gfsm::XL cascade
+DTA::CAB::Analyzer::RewriteSub - sub-analysis (LTS, Morph) of rewrite targets
+DTA::CAB::Analyzer::Soundex - phonetic digest analysis using Text::Phonetic::Soundex
+DTA::CAB::Analyzer::TextPhonetic - phonetic digest analysis using Text::Phonetic
+DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctuation etc)
+DTA::CAB::Analyzer::Unicruft - latin-1 approximator using libunicruft
+DTA::CAB::Analyzer::Unidecode - latin-1 approximator using Text::Unidecode (old)
+DTA::CAB::Client - abstract class for DTA::CAB server clients
+DTA::CAB::Client::CGIWrapper - CGI wrapper for DTA::CAB::Client::XmlRpc
+DTA::CAB::Client::HTTP - generic HTTP server client for DTA::CAB
+DTA::CAB::Client::XmlRpc - DTA::CAB XML-RPC server clients
+DTA::CAB::Common - common dependencies for DTA::CAB suite
+DTA::CAB::Datum - generic API for data (tokens,sentences,documents,...) passed to/from DTA::CAB::Analyzer
+DTA::CAB::Document - generic API for whole documents passed to/from DTA::CAB::Analyzer
+DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
+DTA::CAB::Format::Builtin - load built-in DTA::CAB::Format subclasses
+DTA::CAB::Format::JSON - Datum parser|formatter: JSON code (generic)
+DTA::CAB::Format::JSON::Syck - Datum parser|formatter: JSON code via JSON::Syck
+DTA::CAB::Format::JSON::XS - Datum parser|formatter: JSON code via JSON::XS
+DTA::CAB::Format::Perl - Datum parser|formatter: perl code via Data::Dumper, eval()
+DTA::CAB::Format::Storable - Datum parser using Storable::freeze() & co.
+DTA::CAB::Format::TT - Datum parser: one-token-per-line text
+DTA::CAB::Format::Text - Datum parser: verbose human-readable text
+DTA::CAB::Format::Text - Datum parser: verbose human-readable text
+DTA::CAB::Format::XmlCommon - Datum parser|formatter: XML: base class
+DTA::CAB::Format::XmlPerl - Datum parser|formatter: XML (perl-like)
+DTA::CAB::Format::XmlRpc - Datum parser: XML-RPC using RPC::XML
+DTA::CAB::Format::YAML - Datum parser|formatter: YAML code (generic)
+DTA::CAB::Format::YAML::Syck - Datum parser|formatter: YAML code via YAML::Syck
+DTA::CAB::Format::YAML::XS - Datum parser|formatter: YAML::XS code via YAML::XS
+DTA::CAB::Logger - DTA::CAB logging facility using Log::Log4perl
+DTA::CAB::Persistent - abstract class for persistent & configurable objects
+DTA::CAB::Sentence - generic API for sentences passed to/from DTA::CAB::Analyzer
+DTA::CAB::Server - abstract class for DTA::CAB servers
+DTA::CAB::Server::HTTP - DTA::CAB standalone HTTP server using HTTP::Daemon
+DTA::CAB::Server::HTTP::Handler - abstract handler API class for DTA::CAB::Server::HTTP
+DTA::CAB::Server::HTTP::Handler::Builtin - DTA::CAB::Server::HTTP::Handler: built-in classes
+DTA::CAB::Server::HTTP::Handler::CGI - DTA::CAB::Server::HTTP::Handler class: CGI form processing
+DTA::CAB::Server::HTTP::Handler::Directory - CAB HTTP Server: request handler: directory
+DTA::CAB::Server::HTTP::Handler::File - CAB HTTP Server: request handler: static file
+DTA::CAB::Server::HTTP::Handler::Query - CAB HTTP Server: request handler: analyzer queries by CGI form
+DTA::CAB::Server::HTTP::Handler::Response - CAB HTTP Server: request handler: static response
+DTA::CAB::Server::HTTP::Handler::XmlRpc - CAB HTTP Server: request handler: XML-RPC queries (backwards-compatible)
+DTA::CAB::Server::XmlRpc - DTA::CAB XML-RPC server using RPC::XML
+DTA::CAB::Token - generic API for tokens passed to/from DTA::CAB::Analyzer
+DTA::CAB::Unify - DTA::CAB unification utiltities
+DTA::CAB::Utils - generic DTA::CAB utilities
+#Datum::Comment - ???
+#Format::CSV - ???
+Format::Null - ???
+Format::Raw - ???
+Format::XmlNative - ???
+Format::XmlVz - ???
+Format::XmlXsl - ???
+#Version - ???
