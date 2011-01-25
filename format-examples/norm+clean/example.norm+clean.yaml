@@ -1,0 +1,33 @@
+--- !!perl/hash:DTA::CAB::Document
+body:
+- tokens:
+  - mlatin: ''
+    moot:
+      lemma: wie
+      tag: PWAV
+      word: wie
+    text: wie
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: wie
+  - mlatin: ''
+    moot:
+      lemma: blöd
+      tag: ADJD
+      word: blöd
+    text: bloed
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: bloed
+  - mlatin: ''
+    moot:
+      lemma: '!'
+      tag: $.
+      word: '!'
+    text: '!'
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: '!'

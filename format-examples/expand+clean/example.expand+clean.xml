@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+  <s>
+    <w text="wie" mlatin="">
+      <xlit isLatin1="1" latin1Text="wie" isLatinExt="1"/>
+      <eqrw>
+        <a w="0" hi="swie"/>
+        <a w="0" hi="wie"/>
+        <a w="1.00520467758179" hi="WIE"/>
+        <a w="5.00520467758179" hi="wei"/>
+        <a w="5.00520467758179" hi="wi"/>
+        <a w="5.00520467758179" hi="wieH"/>
+        <a w="5.00520467758179" hi="wier"/>
+        <a w="5.00520467758179" hi="wiu"/>
+        <a w="5.00520467758179" hi="wy"/>
+        <a w="5.00520467758179" hi="wye"/>
+        <a w="6.00520467758179" hi="Wei"/>
+        <a w="6.00520467758179" hi="Wier"/>
+      </eqrw>
+      <eqpho>
+        <a w="6" hi="wie"/>
+        <a w="8" hi="Wie"/>
+        <a w="18" hi="WIE"/>
+        <a w="18" hi="hwi"/>
+        <a w="18" hi="wieH"/>
+        <a w="18" hi="wih"/>
+      </eqpho>
+      <moot word="wie" lemma="wie" tag="PWAV"/>
+      <eqlemma>
+        <a w="0" hi="W'i" lo="wie"/>
+        <a w="0" hi="WIE" lo="wie"/>
+        <a w="0" hi="Wei" lo="wie"/>
+        <a w="0" hi="Wei¬" lo="wie"/>
+        <a w="0" hi="Wi'" lo="wie"/>
+        <a w="0" hi="Wi-" lo="wie"/>
+        <a w="0" hi="Wier" lo="wie"/>
+        <a w="0" hi="Wie¬" lo="wie"/>
+        <a w="0" hi="hwi" lo="wie"/>
+        <a w="0" hi="swie" lo="wie"/>
+        <a w="0" hi="wei" lo="wie"/>
+        <a w="0" hi="wei-" lo="wie"/>
+        <a w="0" hi="wei¬" lo="wie"/>
+        <a w="0" hi="wi" lo="wie"/>
+        <a w="0" hi="wi'" lo="wie"/>
+        <a w="0" hi="wie" lo="wie"/>
+        <a w="0" hi="wie-" lo="wie"/>
+        <a w="0" hi="wieH" lo="wie"/>
+        <a w="0" hi="wier" lo="wie"/>
+        <a w="0" hi="wie¬" lo="wie"/>
+        <a w="0" hi="wiu" lo="wie"/>
+        <a w="0" hi="wy" lo="wie"/>
+        <a w="0" hi="wye" lo="wie"/>
+        <a w="41" hi="Wie" lo="wie"/>
+      </eqlemma>
+    </w>
+    <w text="bloed" mlatin="">
+      <xlit isLatin1="1" latin1Text="bloed" isLatinExt="1"/>
+      <eqrw>
+        <a w="0" hi="blöd"/>
+        <a w="1.00633692741394" hi="bloed"/>
+        <a w="2.00633692741394" hi="Bloed"/>
+        <a w="5.00633668899536" hi="bloet"/>
+        <a w="6.00633668899536" hi="Bloet"/>
+      </eqrw>
+      <eqpho>
+        <a w="15" hi="blöd"/>
+        <a w="16" hi="bloet"/>
+        <a w="17" hi="Bloed"/>
+        <a w="17" hi="bloed"/>
+        <a w="18" hi="Bloet"/>
+        <a w="18" hi="Blöd"/>
+      </eqpho>
+      <moot word="blöd" lemma="blöd" tag="ADJD"/>
+      <eqlemma>
+        <a w="0" hi="Bloed" lo="blöd"/>
+        <a w="0" hi="Bloet" lo="blöd"/>
+        <a w="0" hi="Blöd" lo="blöd"/>
+        <a w="0" hi="Blöden" lo="blöd"/>
+        <a w="0" hi="Blödere" lo="blöd"/>
+        <a w="0" hi="Blödeste" lo="blöd"/>
+        <a w="0" hi="bloed" lo="blöd"/>
+        <a w="0" hi="bloede" lo="blöd"/>
+        <a w="0" hi="bloet" lo="blöd"/>
+        <a w="0" hi="blöd" lo="blöd"/>
+        <a w="0" hi="blöd'" lo="blöd"/>
+        <a w="0" hi="blöde" lo="blöd"/>
+        <a w="0" hi="blödem" lo="blöd"/>
+        <a w="0" hi="blöden" lo="blöd"/>
+        <a w="0" hi="blöder" lo="blöd"/>
+        <a w="0" hi="blödere" lo="blöd"/>
+        <a w="0" hi="blöderen" lo="blöd"/>
+        <a w="0" hi="blödes" lo="blöd"/>
+        <a w="0" hi="blödeste" lo="blöd"/>
+        <a w="0" hi="blödesten" lo="blöd"/>
+        <a w="0" hi="blödester" lo="blöd"/>
+        <a w="7" hi="Blöde" lo="blöd"/>
+      </eqlemma>
+    </w>
+    <w text="!" eqrw="" eqpho="" mlatin="">
+      <xlit isLatin1="1" latin1Text="!" isLatinExt="1"/>
+      <moot word="!" lemma="!" tag="$."/>
+      <eqlemma>
+        <a w="0" hi="!" lo="!"/>
+      </eqlemma>
+    </w>
+  </s>
+</doc>

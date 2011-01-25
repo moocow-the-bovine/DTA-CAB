@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+  <s>
+    <w msafe="1" mlatin="" text="wie" tokpp="" rw="">
+      <dmoot tag="wie">
+        <morph>
+          <a w="0" hi="wie[_ADV]"/>
+          <a w="0" hi="wie[_KOKOM]"/>
+          <a w="0" hi="wie[_KON]"/>
+          <a w="0" hi="wie[_KOUS]"/>
+        </morph>
+        <analyses>
+          <a cost="1.12996053695679" tag="wie" details=""/>
+        </analyses>
+      </dmoot>
+      <morph>
+        <a w="0" hi="wie[_ADV]"/>
+        <a w="0" hi="wie[_KOKOM]"/>
+        <a w="0" hi="wie[_KON]"/>
+        <a w="0" hi="wie[_KOUS]"/>
+      </morph>
+      <moot word="wie" lemma="wie" tag="PWAV">
+        <analyses>
+          <a cost="0" lemma="wie" tag="ADV" details="wie[_ADV]"/>
+          <a cost="0" lemma="wie" tag="KOUS" details="wie[_KOUS]"/>
+          <a cost="0" lemma="wie" tag="KOKOM" details="wie[_KOKOM]"/>
+          <a cost="0" lemma="wie" tag="KON" details="wie[_KON]"/>
+        </analyses>
+      </moot>
+      <lts>
+        <a w="0" hi="vi"/>
+      </lts>
+      <xlit isLatin1="1" latin1Text="wie" isLatinExt="1"/>
+      <eqphox>
+        <a w="0.0104093002155423" hi="wie"/>
+        <a w="2.51040935516357" hi="Wie"/>
+      </eqphox>
+    </w>
+    <w msafe="0" morph="" mlatin="" text="bloed" tokpp="">
+      <dmoot tag="blöd">
+        <morph>
+          <a w="0" hi="blöd[_ADJD][none]"/>
+        </morph>
+        <analyses>
+          <a cost="1.37039756774902" tag="blöd" details="blöd"/>
+          <a cost="1.25785827636719" tag="bloed" details=""/>
+          <a cost="1.34074866771698" tag="Blöd" details="Blöd"/>
+        </analyses>
+      </dmoot>
+      <moot word="blöd" lemma="blöd" tag="ADJD">
+        <analyses>
+          <a cost="0" lemma="blöd" tag="ADJD" details="blöd[_ADJD][none]"/>
+        </analyses>
+      </moot>
+      <lts>
+        <a w="0" hi="bl2t"/>
+      </lts>
+      <xlit isLatin1="1" latin1Text="bloed" isLatinExt="1"/>
+      <eqphox>
+        <a w="0.012673799879849" hi="blöd"/>
+        <a w="2.51267385482788" hi="Blöd"/>
+      </eqphox>
+      <rw>
+        <a w="1.00633692741394" hi="blöd"/>
+      </rw>
+    </w>
+    <w msafe="1" morph="" mlatin="" text="!" eqphox="" rw="">
+      <dmoot tag="!">
+        <morph>
+          <a w="0" hi="$."/>
+        </morph>
+        <analyses>
+          <a cost="0.75" tag="!" details=""/>
+        </analyses>
+      </dmoot>
+      <moot word="!" lemma="!" tag="$.">
+        <analyses>
+          <a cost="0" lemma="!" tag="$." details=""/>
+          <a cost="0" lemma="!" tag="$." details="$."/>
+        </analyses>
+      </moot>
+      <lts>
+        <a w="0" hi=""/>
+      </lts>
+      <xlit isLatin1="1" latin1Text="!" isLatinExt="1"/>
+      <tokpp>
+        <a>$.</a>
+      </tokpp>
+    </w>
+  </s>
+</doc>

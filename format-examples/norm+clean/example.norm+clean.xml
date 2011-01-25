@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc>
+  <s>
+    <w text="wie" mlatin="">
+      <xlit isLatin1="1" latin1Text="wie" isLatinExt="1"/>
+      <moot word="wie" lemma="wie" tag="PWAV"/>
+    </w>
+    <w text="bloed" mlatin="">
+      <xlit isLatin1="1" latin1Text="bloed" isLatinExt="1"/>
+      <moot word="blöd" lemma="blöd" tag="ADJD"/>
+    </w>
+    <w text="!" mlatin="">
+      <xlit isLatin1="1" latin1Text="!" isLatinExt="1"/>
+      <moot word="!" lemma="!" tag="$."/>
+    </w>
+  </s>
+</doc>
