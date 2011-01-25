@@ -22,7 +22,7 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/);
 }
 
-foreach my $pmfile (map {"DTA/CAB/Format/JSON/$_.pm"} qw(XS Syck JSON)) {
+foreach my $pmfile (map {"DTA/CAB/Format/JSON/$_.pm"} qw(XS Syck)) {
   if (eval {require($pmfile)} && !$@ && !defined($WRAP_CLASS)) {
     $WRAP_CLASS = $pmfile;
     $WRAP_CLASS =~ s/\//::/g;

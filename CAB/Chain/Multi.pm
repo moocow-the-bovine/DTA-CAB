@@ -294,6 +294,7 @@ DTA::CAB::Chain::Multi - serial multi-analyzer pipelines with name-based dispatc
  \%analyzerHash = $anl->xmlRpcAnalyzers();
  
 
+
 =cut
 
 ##========================================================================
@@ -328,6 +329,8 @@ at runtime.
  chain => undef,  ##-- default chain: see setupChains() method
 
 =back
+
+=cut
 
 ##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Chain::Multi: Methods: Chain selection

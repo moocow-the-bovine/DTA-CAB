@@ -77,7 +77,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009, 2010 by Bryan Jurish
+Copyright (C) 2009-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -320,7 +320,7 @@ sub mimeType { return 'text/plain'; }
 ##  + returns default filename extension for this format (default='.cab')
 sub defaultExtension { return '.cab'; }
 
-## $short = $fmt->formatName()
+## $short = $fmt->shortName()
 ##  + returns "official" short name for this format
 ##  + default just returns package suffix
 sub shortName {
@@ -460,23 +460,37 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
  ##========================================================================
  ## Constructors etc.
  
- $fmt = CLASS_OR_OBJ->new(%args);
- $fmt = CLASS->newFormat($class_or_class_suffix, %opts);
- $fmt = CLASS->newReader(%opts);
- $fmt = CLASS->newWriter(%opts);
+ $fmt = $CLASS_OR_OBJ->new(%args);
+ $fmt = $CLASS->newFormat($class_or_class_suffix, %opts);
+ $fmt = $CLASS->newReader(%opts);
+ $fmt = $CLASS->newWriter(%opts);
  
  ##========================================================================
  ## Methods: Child Class registration
  
  \%registered = $CLASS_OR_OBJ->registerFormat(%opts);
  \%registered_or_undef = $CLASS_OR_OBJ->guessFilenameFormat($filename);
+ 
  $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename);
  $readerClass_or_undef = $CLASS_OR_OBJ->fileWriterClass($filename);
+ 
+ $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname);
+ $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename);
+ 
+ $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname);
+ $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname);
  
  ##========================================================================
  ## Methods: Persistence
  
  @keys = $class_or_obj->noSaveKeys();
+ 
+ ##========================================================================
+ ## Methods: MIME
+ 
+ $short = $fmt->shortName();
+ $type = $fmt->mimeType();
+ $ext = $fmt->defaultExtension();
  
  ##========================================================================
  ## Methods: Input
@@ -509,6 +523,21 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
 =pod
 
 =head1 DESCRIPTION
+
+DTA::CAB::Format is an abstract base class and API specification
+for objects implementing an I/O format for the
+L<DTA::CAB::Datum|DTA::CAB::Datum> subhierarchy in general,
+and for L<DTA::CAB::Document|DTA::CAB::Document> objects in particular.
+
+Each I/O format (subclass) has a characteristic abstract `base class' as well as optional
+`reader' and `writer' subclasses which perform the actual I/O (although in
+the current implementation, all reader/writer classes are identical with
+their respective base classes).  Individual formats may be invoked
+either directly by their respective classes (SUBCLASS-E<gt>new(), etc.),
+or via the DTA::CAB::Format
+subclass registry (L</registerFormat>, L</newFormat>, L</newReader>, L</newWriter>, etc.).
+
+See L</SUBCLASSES> for a list of common built-in formats and their registry data.
 
 =cut
 
@@ -614,9 +643,11 @@ Registers a new format subclass.
 %opts:
 
  name          => $basename,      ##-- basename for the class
+ short         => $shortname,     ##-- short basename for the class (all lower-case)
+                                  ##   + default: lower-cased DTA::CAB::Format:: basename suffix
+ filenameRegex => $regex,         ##-- filename regex for guessFileNameFormat()
  readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
  writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
- filenameRegex => $regex,
 
 =item guessFilenameFormat
 
@@ -637,6 +668,30 @@ Attempts to guess reader class name from $filename.
 
 Attempts to guess writer class name from $filename
 
+=item short2reg
+
+ $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname);
+
+Gets the most recent subclass registry HASH ref for the short class name $shortname.
+
+=item base2reg
+
+ $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename);
+
+Gets the most recent subclass registry HASH ref for the claass basename name $basename.
+
+=item shortReaderClass
+
+ $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname);
+
+Guess appropriate reader class name from $shortname.
+
+=item shortWriterClass
+
+ $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname);
+
+Guess appropriate writer class name from $shortname.
+
 =back
 
 =cut
@@ -656,11 +711,42 @@ Attempts to guess writer class name from $filename
 
 Returns list of keys not to be saved
 This implementation ignores the key C<outbuf>,
-which is used by some many write subclasses.
+which is used by some many writer subclasses.
 
 =back
 
 =cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Format: Methods: MIME
+=pod
+
+=head2 Methods: MIME
+
+=over 4
+
+=item shortName
+
+ $short = $fmt->shortName();
+
+Get short name for $fmt.  Default just returns lower-cased DTA::CAB::Format:: class suffix.
+Short names are all lower-case by default.
+
+=item mimeType
+
+ $type = $fmt->mimeType();
+
+Returns MIME type for $fmt.
+Default returns 'text/plain'.
+
+=item defaultExtension
+
+ $ext = $fmt->defaultExtension();
+
+Returns default filename extension for $fmt (default='.cab').
+
+=back
+
 
 ##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Format: Methods: Input
@@ -855,67 +941,122 @@ Copy-by-reference version of L</putDocument>.
 ##======================================================================
 =pod
 
-=head1 SEE ALSO
+=head1 SUBCLASSES
 
-Subclass documentation:
+The following formats are provided by the default distribution.
+In some cases, external dependencies are also required which
+may not be available on all systems.
 
 =over 4
 
 =item L<DTA::CAB::Format::Builtin|DTA::CAB::Format::Builtin>
 
-convenience package: load all built-in DTA::CAB::Format subclasses
+Just a convenience package: load all built-in DTA::CAB::Format subclasses.
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
 
 Null-op parser/formatter for debugging and testing purposes.
+Registered as:
+
+ name=>__PACKAGE__
 
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
-If you have the JSON::XS module installed, this module provides
-the fastest I/O of all available human-readable parser|formatter classes.
+Transparently wraps one of the
+L<DTA::CAB::Format::JSON::XS|DTA::CAB::Format::JSON::XS>
+or
+L<DTA::CAB::Format::JSON::Syck|DTA::CAB::Format::JSON::Syck>
+classes, depending on the availability of the underlying Perl modules
+(L<JSON::XS|JSON::XS> and L<JSON::Syck|JSON::Syck>, respectively).
+If you have the L<JSON::XS|JSON::XS> module installed, this module provides
+the fastest I/O of all available human-readable format classes.
+Registered as:
+
+ name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/
 
 =item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
 
 Datum parser|formatter: perl code via Data::Dumper, eval().
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:prl|pl|perl|dump)$/
 
 =item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
 
-Datum parser|formatter using Storable::freeze() & co.
+Binary datum parser|formatter using the L<Storable|Storable> module.
+Very fast, but neither human-readable nor easily portable beyond Perl.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:sto|bin)$/
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Raw>
 
 Input-only parser for quick and dirty parsing of raw untokenized input.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:raw)$/
 
 =item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
 
-Datum parser|formatter: verbose human-readable text (deprecated in favor of YAML)
+Datum parser|formatter: verbose human-readable text
+(deprecated in favor of L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>).
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text|cab\-txt|cab\-text)$/
 
 =item L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>
 
 Datum parser|formatter: "vertical" text, one token per line.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:t|tt|ttt|cab\-t|cab\-tt|cab\-ttt)$/
 
 =item L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>
 
 Abstract datum parser|formatter for YAML I/O.
+Transparently wraps one of the
+L<DTA::CAB::Format::YAML::XS|DTA::CAB::Format::YAML::XS>,
+L<DTA::CAB::Format::YAML::Syck|DTA::CAB::Format::YAML::Syck>,
+or
+L<DTA::CAB::Format::YAML::Lite|DTA::CAB::Format::YAML::Lite>
+classes, depending on the availability of the underlying Perl modules
+(L<YAML::XS|YAML::XS>, L<YAML::Syck|YAML::Syck>, and L<YAML::Lite|YAML::Lite>, respectively).
+Registered as:
+
+ name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:yaml|yml)$/
 
 =item L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>
 
-Datum parser|formatter: XML: abstract base class
+Datum parser|formatter: XML: abstract base class.
 
 =item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
 
 Datum parser|formatter: XML (native).
 Should be compatible with C<.t.xml> files
 as created by L<dta-tokwrap.perl(1)|dta-tokwrap.perl>.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml)|xml)$/
+
+and aliased as:
+
+ name=>__PACKAGE__, short=>'xml'
 
 =item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
 
-Datum parser|formatter: XML (perl-like)
+Datum parser|formatter: XML (perl-like).  Not really reccommended.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)perl|perl(?:[\-\.]?)xml)$/
 
 =item L<DTA::CAB::Format::XmlRpc|DTA::CAB::Format::XmlRpc>
 
-Datum parser|formatter: XML-RPC using RPC::XML
+Datum parser|formatter: XML-RPC data structures using RPC::XML.  Much too bloated
+to be of any real practical use.
+Registered as:
+
+ name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)rpc|rpc(?:[\-\.]?)xml)$/
 
 =back
 
@@ -933,10 +1074,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009, 2010 by Bryan Jurish
+Copyright (C) 2009-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

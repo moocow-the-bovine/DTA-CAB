@@ -22,7 +22,7 @@ BEGIN {
 }
 
 our $WRAP_CLASS = undef;
-foreach my $pmfile (map {"DTA/CAB/Format/YAML/$_.pm"} qw(XS Syck Lite YAML)) {
+foreach my $pmfile (map {"DTA/CAB/Format/YAML/$_.pm"} qw(XS Syck Lite)) {
   if (eval {require($pmfile)} && !$@ && !defined($WRAP_CLASS)) {
     $WRAP_CLASS = $pmfile;
     $WRAP_CLASS =~ s/\//::/g;
