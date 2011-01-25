@@ -69,7 +69,7 @@ class now lives in L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>.
 ## DESCRIPTION: DTA::CAB: Constants
 =pod
 
-=head2 Constants
+=head2 Package Constants
 
 =over 4
 

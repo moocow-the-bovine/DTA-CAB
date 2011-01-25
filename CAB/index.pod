@@ -1,6 +1,29 @@
+##==============================================================================
+## PODS
+##==============================================================================
+=pod
 
-##========================================================================
-## BEGIN <podindex.perl
+=head1 NAME
+
+DTA::CAB::index - index of DTA::CAB sub-modules
+
+=cut
+
+##==============================================================================
+## LIST OF MODULES
+##==============================================================================
+=pod
+
+=head1 LIST OF MODULES
+
+=cut
+
+##----------------------------------------------------------------
+## BEGIN module list
+##  + created with:
+##     podindex.perl -pod -empty CAB.pm `find CAB -name '*.pm'` > CAB/index.pod.list
+##  + and edited (Version.pm tweaked in)
+
 =pod
 
 =over 4
@@ -11,7 +34,11 @@
 
 =item L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
 
-generic analyzer API for DTA::CAB
+generic analyzer API
+
+=item L<DTA::CAB::Analyzer::Alias|DTA::CAB::Analyzer::Alias>
+
+analyzer alias
 
 =item L<DTA::CAB::Analyzer::Automaton|DTA::CAB::Analyzer::Automaton>
 
@@ -33,6 +60,34 @@ Gfsm::XL::Cascade-based transductions
 
 common analyzers for DTA::CAB suite
 
+=item L<DTA::CAB::Analyzer::DTAClean|DTA::CAB::Analyzer::DTAClean>
+
+Chain::DTA cleanup (prune sensitive and redundant data from document)
+
+=item L<DTA::CAB::Analyzer::Dict|DTA::CAB::Analyzer::Dict>
+
+generic analysis dictionary API using Lingua::TT::Dict
+
+=item L<DTA::CAB::Analyzer::Dict::DB|DTA::CAB::Analyzer::Dict::DB>
+
+generic analysis dictionary API using Lingua::TT::DB::File
+
+=item L<DTA::CAB::Analyzer::DmootSub|DTA::CAB::Analyzer::DmootSub>
+
+sub-analysis (Morph,toka) of dmoot targets
+
+=item L<DTA::CAB::Analyzer::DocClassify|DTA::CAB::Analyzer::DocClassify>
+
+DocClassify::Mapper wrapper
+
+=item L<DTA::CAB::Analyzer::Dyn|DTA::CAB::Analyzer::Dyn>
+
+generic analyzer API: dynamic code generation
+
+=item L<DTA::CAB::Analyzer::EqLemma|DTA::CAB::Analyzer::EqLemma>
+
+lemma-equivalence class expander: default
+
 =item L<DTA::CAB::Analyzer::EqLemma::DB|DTA::CAB::Analyzer::EqLemma::DB>
 
 DB dictionary-based lemma-equivalence expander
@@ -41,13 +96,13 @@ DB dictionary-based lemma-equivalence expander
 
 phonetic equivalence class expander
 
-=item L<DTA::CAB::Analyzer::EqPho|DTA::CAB::Analyzer::EqPho>
+=item L<DTA::CAB::Analyzer::EqPho::Cascade|DTA::CAB::Analyzer::EqPho::Cascade>
 
-phonetic equivalence class expander
+phonetic equivalence expander via Gfsm::XL cascade
 
 =item L<DTA::CAB::Analyzer::EqPho::DB|DTA::CAB::Analyzer::EqPho::DB>
 
-dictionary-based phonetic form expander
+DB dictionary-based phonetic equivalence expander
 
 =item L<DTA::CAB::Analyzer::EqPho::Dict|DTA::CAB::Analyzer::EqPho::Dict>
 
@@ -57,9 +112,13 @@ dictionary-based phonetic form expander
 
 FST-based phonetic form expander
 
+=item L<DTA::CAB::Analyzer::EqPhoX|DTA::CAB::Analyzer::EqPhoX>
+
+phonetic equivalence class expansion: intensional, via gfsmxl cascade
+
 =item L<DTA::CAB::Analyzer::EqRW|DTA::CAB::Analyzer::EqRW>
 
-default rewrite equivalence class expander
+rewrite-equivalence class expander: default
 
 =item L<DTA::CAB::Analyzer::EqRW::DB|DTA::CAB::Analyzer::EqRW::DB>
 
@@ -73,29 +132,41 @@ dictionary-based rewrite-equivalence expander
 
 FST-based rewrite-equivalence expander
 
-=item L<DTA::CAB::Analyzer::Eqlemma|DTA::CAB::Analyzer::Eqlemma>
-
-default rewrite equivalence class expander
-
 =item L<DTA::CAB::Analyzer::Extra|DTA::CAB::Analyzer::Extra>
 
 extra bonus analyzers for DTA::CAB suite
 
+=item L<DTA::CAB::Analyzer::Koeln|DTA::CAB::Analyzer::Koeln>
+
+phonetic digest analysis using Text::Phonetic::Koeln
+
 =item L<DTA::CAB::Analyzer::LTS|DTA::CAB::Analyzer::LTS>
 
 letter-to-sound analysis via Gfsm automata
 
-=item L<DTA::CAB::Analyzer::LTS|DTA::CAB::Analyzer::LTS>
+=item L<DTA::CAB::Analyzer::LangId|DTA::CAB::Analyzer::LangId>
 
-letter-to-sound analysis via Gfsm automata
+Lingua::LangId::Map wrapper
+
+=item L<DTA::CAB::Analyzer::Lemmatizer|DTA::CAB::Analyzer::Lemmatizer>
+
+lemma extractor for TAGH analyses or bare text
+
+=item L<DTA::CAB::Analyzer::Metaphone|DTA::CAB::Analyzer::Metaphone>
+
+phonetic digest analysis using Text::Phonetic::Metaphone
 
 =item L<DTA::CAB::Analyzer::Moot|DTA::CAB::Analyzer::Moot>
 
-generic Moot analysis API
+generic Moot HMM tagger/disambiguator analysis API
 
 =item L<DTA::CAB::Analyzer::Moot::DynLex|DTA::CAB::Analyzer::Moot::DynLex>
 
 Moot analysis API for word n-gram disambiguation using dynamic lexicon
+
+=item L<DTA::CAB::Analyzer::MootSub|DTA::CAB::Analyzer::MootSub>
+
+post-processing for moot PoS tagger in DTA chain
 
 =item L<DTA::CAB::Analyzer::Morph|DTA::CAB::Analyzer::Morph>
 
@@ -107,7 +178,7 @@ latin pesudo-morphology analysis (wrapper)
 
 =item L<DTA::CAB::Analyzer::Morph::Latin::DB|DTA::CAB::Analyzer::Morph::Latin::DB>
 
-auxilliary latin word recognizer via external full-form dictionary
+auxilliary latin word recognizer via external full-form DB
 
 =item L<DTA::CAB::Analyzer::Morph::Latin::Dict|DTA::CAB::Analyzer::Morph::Latin::Dict>
 
@@ -115,15 +186,43 @@ auxilliary latin word recognizer via external full-form dictionary
 
 =item L<DTA::CAB::Analyzer::Morph::Latin::FST|DTA::CAB::Analyzer::Morph::Latin::FST>
 
-auxilliary morphological analysis via Gfsm automata
+auxilliary morphological analysis via Gfsm automaton
 
 =item L<DTA::CAB::Analyzer::MorphSafe|DTA::CAB::Analyzer::MorphSafe>
 
 safety checker for analyses output by DTA::CAB::Analyzer::Morph (TAGH)
 
+=item L<DTA::CAB::Analyzer::Null|DTA::CAB::Analyzer::Null>
+
+null analyzer (dummy)
+
+=item L<DTA::CAB::Analyzer::Phonem|DTA::CAB::Analyzer::Phonem>
+
+phonetic digest analysis using Text::Phonetic::Phonem
+
+=item L<DTA::CAB::Analyzer::Phonix|DTA::CAB::Analyzer::Phonix>
+
+phonetic digest analysis using Text::Phonetic::Phonix
+
 =item L<DTA::CAB::Analyzer::Rewrite|DTA::CAB::Analyzer::Rewrite>
 
 rewrite analysis via Gfsm::XL cascade
+
+=item L<DTA::CAB::Analyzer::RewriteSub|DTA::CAB::Analyzer::RewriteSub>
+
+sub-analysis (LTS, Morph) of rewrite targets
+
+=item L<DTA::CAB::Analyzer::Soundex|DTA::CAB::Analyzer::Soundex>
+
+phonetic digest analysis using Text::Phonetic::Soundex
+
+=item L<DTA::CAB::Analyzer::TextPhonetic|DTA::CAB::Analyzer::TextPhonetic>
+
+phonetic digest analysis using Text::Phonetic
+
+=item L<DTA::CAB::Analyzer::TokPP|DTA::CAB::Analyzer::TokPP>
+
+type-level heuristic token preprocessor (for punctuation etc)
 
 =item L<DTA::CAB::Analyzer::Unicruft|DTA::CAB::Analyzer::Unicruft>
 
@@ -131,7 +230,23 @@ latin-1 approximator using libunicruft
 
 =item L<DTA::CAB::Analyzer::Unidecode|DTA::CAB::Analyzer::Unidecode>
 
-latin-1 approximator (old, pure-perl implementation)
+latin-1 approximator using Text::Unidecode (old)
+
+=item L<DTA::CAB::Chain|DTA::CAB::Chain>
+
+serial multi-analyzer pipeline
+
+=item L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>
+
+Deutsches Textarchiv canonicalization chain class
+
+=item L<DTA::CAB::Chain::Multi|DTA::CAB::Chain::Multi>
+
+serial multi-analyzer pipelines with name-based dispatch
+
+=item L<DTA::CAB::Chain::Tweet|DTA::CAB::Chain::Tweet>
+
+tweet-munging multi-chain
 
 =item L<DTA::CAB::Client|DTA::CAB::Client>
 
@@ -148,6 +263,10 @@ generic HTTP server client for DTA::CAB
 =item L<DTA::CAB::Client::XmlRpc|DTA::CAB::Client::XmlRpc>
 
 DTA::CAB XML-RPC server clients
+
+=item L<DTA::CAB::Comment|DTA::CAB::Comment>
+
+DTA::CAB data: comments
 
 =item L<DTA::CAB::Common|DTA::CAB::Common>
 
@@ -169,6 +288,10 @@ Base class for DTA::CAB::Datum I/O
 
 load built-in DTA::CAB::Format subclasses
 
+=item L<DTA::CAB::Format::CSV|DTA::CAB::Format::CSV>
+
+Datum I/O: concise minimal-output human-readable text
+
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Datum parser|formatter: JSON code (generic)
@@ -181,9 +304,17 @@ Datum parser|formatter: JSON code via JSON::Syck
 
 Datum parser|formatter: JSON code via JSON::XS
 
+=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
+
+Datum parser|formatter (dummy)
+
 =item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
 
 Datum parser|formatter: perl code via Data::Dumper, eval()
+
+=item L<DTA::CAB::Format::Raw|DTA::CAB::Format::Raw>
+
+Document parser: raw untokenized text
 
 =item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
 
@@ -197,13 +328,13 @@ Datum parser: one-token-per-line text
 
 Datum parser: verbose human-readable text
 
-=item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
-
-Datum parser: verbose human-readable text
-
 =item L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>
 
 Datum parser|formatter: XML: base class
+
+=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
+
+Datum parser|formatter: XML (native)
 
 =item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
 
@@ -212,6 +343,14 @@ Datum parser|formatter: XML (perl-like)
 =item L<DTA::CAB::Format::XmlRpc|DTA::CAB::Format::XmlRpc>
 
 Datum parser: XML-RPC using RPC::XML
+
+=item L<DTA::CAB::Format::XmlVz|DTA::CAB::Format::XmlVz>
+
+Datum parser|formatter: XML (Vz)
+
+=item L<DTA::CAB::Format::XmlXsl|DTA::CAB::Format::XmlXsl>
+
+Datum parser|formatter: XML via XmlPerl and XSLT
 
 =item L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>
 
@@ -293,10 +432,34 @@ DTA::CAB unification utiltities
 
 generic DTA::CAB utilities
 
+=item L<DTA::CAB::Version|DTA::CAB::Version>
+
+version constants for DTA::CAB
+
 =back
 
 =cut
 
-## END <podindex.perl
-##========================================================================
+## END module list
+##----------------------------------------------------------------
 
+
+
+##==============================================================================
+## Footer
+##==============================================================================
+=pod
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2008-2011 by Bryan Jurish
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut
