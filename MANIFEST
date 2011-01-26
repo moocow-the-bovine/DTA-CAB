@@ -80,7 +80,6 @@ CAB/Format/Raw.pm
 CAB/Format/Storable.pm
 CAB/Format/TT.pm
 CAB/Format/Text.pm
-CAB/Format/Text1.pm
 CAB/Format/XmlCommon.pm
 CAB/Format/XmlNative.pm
 CAB/Format/XmlPerl.pm
