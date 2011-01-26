@@ -268,7 +268,7 @@ sub cgiParams {
   return {};
 }
 
-## $enc = $h->messageEncoding($httpMessage,$defaultEncoding)
+## $enc = $h->messageEncoding($httpMessage,$default)
 ##  + attempts to guess messagencoding from (in order of descending priority):
 ##    - HTTP::Message header Content-Type charset variable
 ##    - HTTP::Message header Content-Encoding
@@ -279,11 +279,36 @@ sub messageEncoding {
   ##-- see also HTTP::Message::decoded_content() for a better way to parse header parameters!
   ##
   return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
-  $ctype    = $msg->header('Content-Encoding');
-  return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
-  return $ctype if (defined($ctype));
+  #$ctype    = $msg->header('Content-Encoding');
+  #return $1 if (defined($ctype) && $ctype =~ /\bcharset=([\w\-]+)/);
+  #return $ctype if (defined($ctype));
   return $default;
 }
+
+## $enc = $h->getEncoding(@sources)
+##  + attempts to guess request encoding from the first defined
+##    encoding in @sources, each element $_ of which may be:
+##     - a HASH-ref             : encoding is $_->{encoding}
+##     - a HTTP::Message object : encoding is $h->messageEncoding($_)
+##     - a literal scalar       : encoding is $_
+sub getEncoding {
+  my $h = shift;
+  my ($enc);
+  foreach (@_) {
+    if (UNIVERSAL::isa($_,'HTTP::Message')) {
+      $enc = $h->messageEncoding($_,undef);
+    }
+    elsif (UNIVERSAL::isa($_,'HASH')) {
+      $enc = $_->{encoding};
+    }
+    elsif (!ref($_)) {
+      $enc = $_;
+    }
+    return $enc if ($enc);
+  }
+  return undef;
+}
+
 
 ## $enc = $h->requestEncoding($httpRequest,\%vars)
 ##  + attempts to guess request encoding from (in order of descending priority):
@@ -292,8 +317,7 @@ sub messageEncoding {
 ##    - $h->{encoding}
 sub requestEncoding {
   my ($h,$hreq,$vars) = @_;
-  return $vars->{encoding} if ($vars && $vars->{encoding});
-  return $h->messageEncoding($hreq,$h->{encoding});
+  return $h->getEncoding($vars->{encoding},$hreq,$h->{encoding});
 }
 
 

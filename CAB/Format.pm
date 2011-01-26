@@ -5,6 +5,7 @@
 ## Description: Base class for datum I/O
 
 package DTA::CAB::Format;
+use DTA::CAB::Format::Registry; ##-- registry
 use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
@@ -22,24 +23,25 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 
-our $CLASS_DEFAULT = 'DTA::CAB::Format::TT'; ##-- default class for newFormat()
+## $CLASS_DEFAULT
+##  + default format class for newFormat()
+our $CLASS_DEFAULT = 'DTA::CAB::Format::TT';
 
-## @classreg = (\%registeredClass1, ... )
-## + registered classes: see $CLASS->registerFormat()
-our @classreg = qw();
+## $REG
+##  + global format registry, a DTA::CAB::Format::Registry object
+our ($REG);
+BEGIN {
+  $REG = DTA::CAB::Format::Registry->new();
+}
 
-## %short2reg = ($shortName => \%registeredClass, ...)
-## + registered short classes; see $CLASS->registerFormat()
-our %short2reg = qw();
-
-## %base2reg = ($baseName => \%registeredClass, ...)
-## + registered long (base) classes; see $CLASS->registerFormat()
-our %base2reg = qw();
+BEGIN {
+  *isa = \&UNIVERSAL::isa;
+  *can = \&UNIVERSAL::can;
+}
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
-
 
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: assumed HASH
@@ -74,115 +76,69 @@ sub new {
 }
 
 ## $fmt = CLASS->newFormat($class_or_short_or_class_suffix, %opts)
-##  + allows additional opt 'filename'
+##  + wrapper for DTA::CAB::Format::Registry::newFormat(); accepts %opts qw(class file)
 sub newFormat {
   my ($that,$class,%opts) = @_;
-  $class = $short2reg{lc($class)}{name} if ($short2reg{lc($class)});
-  $class = $base2reg{$class}{name} if ($base2reg{$class});
-  $class = "DTA::CAB::Format::${class}"
-    if (!UNIVERSAL::isa($class,'DTA::CAB::Format'));
-  $that->logconfess("newFormat(): cannot create unknown format class '$class'")
-    if (!UNIVERSAL::isa($class,'DTA::CAB::Format'));
-  return $class->new(%opts);
+  return $REG->newFormat($class,%opts);
 }
 
 ## $fmt = CLASS->newReader(%opts)
-##  + special %opts:
-##     class => $class,    ##-- classname or DTA::CAB::Format:: suffix
-##     file  => $filename, ##-- attempt to guess format from filename
+##  + wraper for DTA::CAB::Format::Registry::newReader; accepts %opts qw(class file)
 sub newReader {
   my ($that,%opts) = @_;
-  my $class = $opts{file} && !$opts{class} ? $that->fileReaderClass($opts{file}) : $opts{class};
-  delete($opts{file});
-  return $that->newFormat( ($class||$CLASS_DEFAULT), %opts );
+  my $class = $REG->readerClass(undef,%opts);
+  return ($class||$CLASS_DEFAULT)->new(%opts);
 }
 
 ## $fmt = CLASS->newWriter(%opts)
-##  + special %opts:
-##     class => $class,    ##-- classname or DTA::CAB::Format suffix
-##     file  => $filename, ##-- attempt to guess format from filename
+##  + wraper for DTA::CAB::Format::Registry::newReader; accepts %opts qw(class file)
 sub newWriter {
   my ($that,%opts) = @_;
-  my $class = $opts{file} && !$opts{class} ? $that->fileWriterClass($opts{file}) : $opts{class};
-  delete($opts{file});
-  return $that->newFormat( ($class||$CLASS_DEFAULT), %opts );
+  my $class = $REG->writerClass(undef,%opts);
+  return ($class||$CLASS_DEFAULT)->new(%opts);
 }
 
 ##==============================================================================
-## Methods: Child Class registration
-##==============================================================================
+## Methods: Global Format Registry
 
 ## \%registered = $CLASS_OR_OBJ->registerFormat(%opts)
-##  + %opts:
-##      name          => $basename,      ##-- basename for the class (package name)
-##      short         => $shortname,     ##-- short name for the class (default = package name suffix, lower-cased)
-##      readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
-##      writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
-##      filenameRegex => $regex,
+##  + wrapper for DTA::CAB::Format::Registry::register()
 sub registerFormat {
   my ($that,%opts) = @_;
   $opts{name} = (ref($that)||$that) if (!defined($opts{name}));
-  $opts{readerClass} = $opts{name} if (!defined($opts{readerClass}));
-  $opts{writerClass} = $opts{name} if (!defined($opts{writerClass}));
-  if (!defined($opts{short})) {
-    $opts{short} = lc($opts{name});
-    $opts{short} =~ s/.*\:\://;
-  }
-  my $reg = {%opts};
-  #@classreg = grep { $_->{name} ne $opts{name} } @classreg; ##-- un-register any old class by this name
-  unshift(@classreg, $reg);
-  $short2reg{$opts{short}} = $reg;
-  $base2reg{$opts{name}} = $reg;
-  return $reg;
+  return $REG->register(%opts);
 }
 
 ## \%registered_or_undef = $CLASS_OR_OBJ->guessFilenameFormat($filename)
+##  + wrapper for DTA::CAB::Format::Registry::guessFilenameFormat()
 sub guessFilenameFormat {
-  my ($that,$filename) = @_;
-   foreach (@classreg) {
-    return $_ if (defined($_->{filenameRegex}) && $filename =~ $_->{filenameRegex});
-  }
-  return undef;
+  return $REG->guessFilenameFormat($_[1]);
 }
 
 ## $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename)
-##  + attempts to guess reader class name from $filename
+##  + wrapper for DTA::CAB::Format::Registry::fileReaderClass()
 sub fileReaderClass {
-  my ($that,$filename) = @_;
-  my $reg = $that->guessFilenameFormat($filename);
-  return defined($reg) ? $reg->{readerClass} : undef;
+  return $REG->fileReaderClass($_[1]);
 }
 
 ## $readerClass_or_undef = $CLASS_OR_OBJ->fileWriterClass($filename)
-##  + attempts to guess writer class name from $filename
+##  + wrapper for DTA::CAB::Format::Registry::fileWriterClass()
 sub fileWriterClass {
-  my ($that,$filename) = @_;
-  my $reg = $that->guessFilenameFormat($filename);
-  return defined($reg) ? $reg->{writerClass} : undef;
+  return $REG->fileWriterClass($_[1]);
 }
 
 ## $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname)
+##  + wrapper for DTA::CAB::Format::Registry::short2reg()
 sub short2reg {
-  return $short2reg{$_[1]};
+  return $REG->short2reg($_[1]);
 }
 
 ## $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename)
+##  + wrapper for DTA::CAB::Format::Registry::base2reg()
 sub base2reg {
-  return $base2reg{$_[1]};
+  return $REG->base2reg($_[1]);
 }
 
-
-## $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname)
-sub shortReaderClass {
-  my ($that,$short) = @_;
-  return $short2reg{$short} ? $short2reg{$short}{readerClass} : undef;
-}
-
-## $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname)
-sub shortWriterClass {
-  my ($that,$short) = @_;
-  return $short2reg{$short} ? $short2reg{$short}{writerClass} : undef;
-}
 
 ##==============================================================================
 ## Methods: Persistence
@@ -273,29 +229,48 @@ sub parseFh {
 ##  + a slightly more in-depth version of DTA::CAB::Datum::toDocument()
 sub forceDocument {
   my ($fmt,$any) = @_;
-  if (UNIVERSAL::isa($any,'DTA::CAB::Document')) {
+  if (!ref($any)) {
+    ##-- string: token-like
+    #return bless({body=>[ bless({tokens=>[bless({text=>$any},'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+    return bless({body=>[ {tokens=>[{text=>$any}] }] },'DTA::CAB::Document');
+  }
+  elsif (isa($any,'DTA::CAB::Document')) {
     ##-- document
     return $any;
   }
-  elsif (UNIVERSAL::isa($any,'DTA::CAB::Sentence')) {
+  elsif (isa($any,'DTA::CAB::Sentence')) {
     ##-- sentence
     return bless({body=>[$any]},'DTA::CAB::Document');
   }
-  elsif (UNIVERSAL::isa($any,'DTA::CAB::Token')) {
+  elsif (isa($any,'DTA::CAB::Token')) {
     ##-- token
-    return bless({body=>[ bless({tokens=>[$any]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+    #return bless({body=>[ bless({tokens=>[$any]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+    return bless({body=>[ {tokens=>[$any]} ]},'DTA::CAB::Document');
   }
-  elsif (ref($any) eq 'HASH' && exists($any->{body})) {
-    ##-- hash, document-like
-    return bless($any,'DTA::CAB::Document');
+  elsif (ref($any) eq 'HASH') {
+    ##-- hash
+    if (exists($any->{body})) {
+      ##-- hash, document-like
+      return bless($any,'DTA::CAB::Document');
+    }
+    elsif (exists($any->{tokens})) {
+      ##-- hash, sentence-like
+      #return bless({body=>[ bless($any,'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+      return bless({body=>[$any]},'DTA::CAB::Document');
+    }
+    elsif (exists($any->{text})) {
+      ##-- hash, token-like
+      #return bless({body=>[ bless({tokens=>[bless($any,'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+      return bless({body=>[ bless({tokens=>[bless($any,'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+    }
   }
-  elsif (ref($any) eq 'HASH' && exists($any->{tokens})) {
-    ##-- hash, sentence-like
-    return bless({body=>[ bless($any,'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
-  }
-  elsif (ref($any) eq 'HASH' && exists($any->{text})) {
-    ##-- hash, token-like
-    return bless({body=>[ bless({tokens=>[bless($any,'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+  elsif (ref($any) eq 'ARRAY') {
+    ##-- array
+    if (!ref($any->[0])) {
+      ##-- array; assumedly of token strings
+      $_ = bless({text=>$_},'DTA::CAB::Token') foreach (grep {!ref($_)} @$any);
+      return bless({body=>[ bless({tokens=>$any},'DTA::CAB::Sentence') ]}, 'DTA::CAB::Document');
+    }
   }
   else {
     ##-- ?
@@ -466,19 +441,19 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
  $fmt = $CLASS->newWriter(%opts);
  
  ##========================================================================
- ## Methods: Child Class registration
+ ## Methods: Global Format Registry
  
- \%registered = $CLASS_OR_OBJ->registerFormat(%opts);
- \%registered_or_undef = $CLASS_OR_OBJ->guessFilenameFormat($filename);
+ \%classReg_or_undef = $CLASS_OR_OBJ->registerFormat(%classRegOptions);
+ \%classReg_or_undef = $CLASS_OR_OBJ->guessFilenameFormat($filename);
  
  $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename);
  $readerClass_or_undef = $CLASS_OR_OBJ->fileWriterClass($filename);
  
- $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname);
- $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename);
- 
  $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname);
  $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname);
+ 
+ $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname);
+ $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename);
  
  ##========================================================================
  ## Methods: Persistence
@@ -534,8 +509,8 @@ Each I/O format (subclass) has a characteristic abstract `base class' as well as
 the current implementation, all reader/writer classes are identical with
 their respective base classes).  Individual formats may be invoked
 either directly by their respective classes (SUBCLASS-E<gt>new(), etc.),
-or via the DTA::CAB::Format
-subclass registry (L</registerFormat>, L</newFormat>, L</newReader>, L</newWriter>, etc.).
+or by means of the global L<DTA::CAB::Format::Registry|DTA::CAB::Format::Registry>
+object $REG (L</registerFormat>, L</newFormat>, L</newReader>, L</newWriter>, etc.).
 
 See L</SUBCLASSES> for a list of common built-in formats and their registry data.
 
@@ -561,9 +536,11 @@ L<DTA::CAB::Logger|DTA::CAB::Logger>.
 Default class returned by L</newFormat>()
 if no known class is specified.
 
-=item @classreg
+=item Variable: $REG
 
-List of registered subclasses: see L</registerFormat>().
+Default global format registry used,
+a L<DTA::CAB::Format::Registry|DTA::CAB::Format::Registry> object
+used by L</registerFormat>, L</newFormat>, etc.
 
 =back
 
@@ -607,7 +584,8 @@ be passed in as format names.
 
  $fmt = CLASS->newReader(%opts);
 
-Wrapper for L</new>() with additional %opts:
+Wrapper for L<DTA::CAB::Format::Registry::newReader|DTA::CAB::Format::Registry/newReader>
+which accepts %opts:
 
  class => $class,    ##-- classname or DTA::CAB::Format:: suffix
  file  => $filename, ##-- attempt to guess format from filename
@@ -616,7 +594,8 @@ Wrapper for L</new>() with additional %opts:
 
  $fmt = CLASS->newWriter(%opts);
 
-Wrapper for L</new>() with additional %opts:
+Wrapper for L<DTA::CAB::Format::Registry::newWriter|DTA::CAB::Format::Registry/newWriter>
+which accepts %opts:
 
  class => $class,    ##-- classname or DTA::CAB::Format:: suffix
  file  => $filename, ##-- attempt to guess format from filename
@@ -627,10 +606,14 @@ Wrapper for L</new>() with additional %opts:
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format: Methods: Child Class registration
+## DESCRIPTION: DTA::CAB::Format: Methods: Global Format Registry
 =pod
 
-=head2 Methods: Child Class registration
+=head2 Methods: Global Format Registry
+
+The global format registry lives in the package variable $REG.
+The following methods are backwards-compatible wrappers for
+method calls to this registry object.
 
 =over 4
 
@@ -638,16 +621,9 @@ Wrapper for L</new>() with additional %opts:
 
  \%registered = $CLASS_OR_OBJ->registerFormat(%opts);
 
-Registers a new format subclass.
-
-%opts:
-
- name          => $basename,      ##-- basename for the class
- short         => $shortname,     ##-- short basename for the class (all lower-case)
-                                  ##   + default: lower-cased DTA::CAB::Format:: basename suffix
- filenameRegex => $regex,         ##-- filename regex for guessFileNameFormat()
- readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
- writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
+Registers a new format subclass;
+wrapper for
+L<DTA::CAB::Format::Registry::register|DTA::CAB::Format::Registry/register>().
 
 =item guessFilenameFormat
 
@@ -655,44 +631,41 @@ Registers a new format subclass.
 
 Returns registration record for most recently registered format subclass
 whose C<filenameRegex> matches $filename.
+Wrapper for L<DTA::CAB::Format::Registry::guessFilenameFormat|DTA::CAB::Format::Registry/guessFilenameFormat>().
 
 =item fileReaderClass
 
  $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename);
 
 Attempts to guess reader class name from $filename.
+Wrapper for
+L<DTA::CAB::Format::Registry::fileReaderClass|DTA::CAB::Format::Registry/fileReaderClass>().
 
 =item fileWriterClass
 
  $readerClass_or_undef = $CLASS_OR_OBJ->fileWriterClass($filename);
 
-Attempts to guess writer class name from $filename
+Attempts to guess writer class name from $filename.
+Wrapper for
+L<DTA::CAB::Format::Registry::fileWriterClass|DTA::CAB::Format::Registry/fileWriterClass>().
+
 
 =item short2reg
 
  $registered_or_undef = $CLASS_OR_OBJ->short2reg($shortname);
 
 Gets the most recent subclass registry HASH ref for the short class name $shortname.
+Wrapper for
+L<DTA::CAB::Format::Registry::short2reg|DTA::CAB::Format::Registry/short2reg>().
+
 
 =item base2reg
 
  $registered_or_undef = $CLASS_OR_OBJ->base2reg($basename);
 
 Gets the most recent subclass registry HASH ref for the claass basename name $basename.
-
-=item shortReaderClass
-
- $class_or_undef = $CLASS_OR_OBJ->shortReaderClass($shortname);
-
-Guess appropriate reader class name from $shortname.
-
-=item shortWriterClass
-
- $class_or_undef = $CLASS_OR_OBJ->shortWriterClass($shortname);
-
-Guess appropriate writer class name from $shortname.
-
-=back
+Wrapper for
+L<DTA::CAB::Format::Registry::base2reg|DTA::CAB::Format::Registry/base2reg>().
 
 =cut
 

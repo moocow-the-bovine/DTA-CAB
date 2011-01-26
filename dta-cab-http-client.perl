@@ -165,7 +165,7 @@ DTA::CAB->debug("using input format class ", ref($ifmt));
 DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##-- analysis options
-$analyzeOpts{format} = $ifmt->shortName;
+$analyzeOpts{f}           = $ifmt->shortName;
 $analyzeOpts{contentType} = $ifmt->mimeType;
 
 ##-- input file

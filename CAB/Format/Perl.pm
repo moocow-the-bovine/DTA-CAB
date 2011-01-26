@@ -159,19 +159,19 @@ sub toString { return $_[0]{outbuf}; }
 
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['token'])->Values([$_[1]])->Dump."\$token\n";
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['token'])->Values([$_[1]])->Dump."\$token\n";
   return $_[0];
 }
 
 ## $fmt = $fmt->putSentence($sent)
 sub putSentence {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['sentence'])->Values([$_[1]])->Dump."\$sentence\n";
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['sentence'])->Values([$_[1]])->Dump."\$sentence\n";
   return $_[0];
 }
 
 ## $fmt = $fmt->putDocument($doc)
 sub putDocument {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level})->Names(['document'])->Values([$_[1]])->Dump."\$document\n";
+  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['document'])->Values([$_[1]])->Dump."\$document\n";
   return $_[0];
 }
 

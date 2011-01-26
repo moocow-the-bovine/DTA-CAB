@@ -20,15 +20,6 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Server::HTTP::Handler::CGI);
 
-## %allowFormats
-##  + default allowed formats
-our (%allowFormats);
-BEGIN {
-  foreach (qw(CSV JSON Null Perl Storable Text TT Xml XmlNative XmlPerl XmlRpc YAML)) {
-    $allowFormats{$_}=$allowFormats{lc($_)}=$allowFormats{uc($_)} = "DTA::CAB::Format::$_";
-  }
-}
-
 ##--------------------------------------------------------------
 ## Aliases
 BEGIN {
@@ -55,8 +46,9 @@ BEGIN {
 ##   ##-- NEW in Handler::Query
 ##   allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
 ##   defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
-##   allowFormats => \%formats,     ##-- allowed formats: ($fmtAlias => $formatClassName, ...)
+##   formats => $registry,          ##-- registry of allowed formats; default=$DTA::CAB::Format::REG
 ##   defaultFormat => $class,       ##-- default format (default=$DTA::CAB::Format::CLASS_DEFAULT)
+##   allowUserOptions => $bool,     ##-- allow user options to analyzeDocument()? (default=1)
 ##   forceClean => $bool,           ##-- always appends 'doAnalyzeClean'=>1 to options if true (default=false)
 ##   returnRaw => $bool,            ##-- return all data as text/plain? (default=0)
 ##   logVars => $level,             ##-- log-level for variable expansion (default=undef: none)
@@ -72,8 +64,9 @@ sub new {
 			     pushMode => 'keep',
 			     allowAnalyzers=>undef,
 			     defaultAnalyzer=>'default',
-			     allowFormats => {%allowFormats},
+			     formats => $DTA::CAB::Format::REG,
 			     defaultFormat => $DTA::CAB::Format::CLASS_DEFAULT,
+			     allowUserOptions => 1,
 			     forceClean => 0,
 			     returnRaw => 0,
 			     @_,
@@ -96,19 +89,21 @@ sub prepare {
 ##   if $localPath ends in '/list', a list of analyzers will be returned,
 ##   encoded accroding to the 'format' form variable.
 ##
-## + CGI form parameters:
+## + form parameters:
 ##   (
-##    ##-- query data, in order of preference
-##    data => $docData,              ##-- document data (for analyzeDocument())
-##    q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
+##    q    => $queryString,          ##-- raw, untokenized query string (preferred over 'qd')
+##    qd   => $queryData,            ##-- query data (formatted document)
+##    a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
+##    qf   => $queryFormat,          ##-- query format (default='raw' for 'q' parameter, otherwise $h->{defaultFormat})
+##    qe   => $queryEncoding,        ##-- query encoding (default='UTF-8')
+##    rf   => $responseFormat,       ##-- response format (default=$queryFormat)
+##    re   => $responseEncoding,     ##-- response encoding (default=$queryEncoding)
+##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+##    pretty => $level,              ##-- response format level
 ##    ##
-##    ##-- misc
-##    a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
-##    format => $format,             ##-- I/O format
-##    encoding => $enc,              ##-- I/O encoding
-##    pretty => $level,              ##-- pretty-printing level
-##    raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+##    $opt => $value,                ##-- other options are passed to analyzeDocument() (if $h->{allowUserOptions} is true)
 ##   )
+our %localParams = map {($_=>undef)} qw(q qd a qf qe rf re raw pretty);
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -120,19 +115,19 @@ sub run {
   return $h->runList($srv,$path,$c,$hreq) if ($upath[$#upath] eq 'list');
 
   ##-- parse query parameters
-  my $vars = $h->cgiParams($c,$hreq,defaultName=>'data') or return undef;
+  my $vars = $h->cgiParams($c,$hreq,defaultName=>'qd') or return undef;
   return $h->cerror($c, undef, "no query parameters specified!") if (!$vars || !%$vars);
   $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars'])) if ($h->{logVars});
 
-  my $enc  = $h->requestEncoding($hreq,$vars);
-  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+  ##-- get parameters: encodings
+  my $qe = $h->getEncoding($vars->{qe},$hreq,$h->{encoding});
+  my $re = $h->getEncoding($vars->{re},$qe);
+  return $h->cerror($c, undef, "unknown encoding qe='$qe'") if (!defined(Encode::find_encoding($qe)));
+  return $h->cerror($c, undef, "unknown encoding re='$re'") if (!defined(Encode::find_encoding($re)));
 
   ##-- pre-process query parameters
-  #$h->decodeVars($vars,[qw(d s w q a format)], $enc);
-  #$h->decodeVars($vars, vars=>[qw(data q a format)], encoding=>$enc, allowHtmlEscapes=>0);
-  $h->decodeVars($vars, vars=>[qw(a format)], encoding=>$enc, allowHtmlEscapes=>0);
-  $h->trimVars($vars,  vars=>[qw(q a format)]);
-
+  $h->decodeVars($vars, vars=>[qw(q a qf rf)], allowHtmlEscapes=>0);
+  $h->trimVars($vars,  vars=>[qw(q a qf rf)]);
 
   ##-- get analyzer $a
   my $akey = $vars->{'a'} || $h->{defaultAnalyzer};
@@ -142,61 +137,57 @@ sub run {
   elsif (!defined($a=$srv->{as}{$akey})) {
     return $h->cerror($c, RC_NOT_FOUND, "unknown analyzer '$akey'");
   }
-  my $ao = $srv->{aos}{$akey} || {};
 
-  ##-- local vars
-  my ($fclass,$fmt, $qdoc,$ostr);
-  eval {
-    ##-- get formatter
-    if (defined($vars->{format}) && !defined($fclass=$h->{allowFormats}{$vars->{format}})) {
-      return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "unknown format '$vars->{format}'");
+  ##-- get analyzer options
+  my %ao = $srv->{aos}{$akey} ? %{$srv->{aos}{$akey}} : qw();
+  if ($h->{allowUserOptions}) {
+    foreach (grep {!exists $localParams{$_}} keys %$vars) {
+      $ao{$_} = $vars->{$_};
     }
-    $fclass = $h->{defaultFormat} if (!defined($fclass));
-    $fmt = $fclass->new(level=>$vars->{pretty}, encoding=>$enc);
-    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not format parser for class '$fclass': $@") if (!$fmt);
+  }
+  $ao{doAnalyzeClean}=1 if ($h->{forceClean});
 
-    ##-- parse input query
-    if (defined($vars->{data})) {
-      $qdoc = $fmt->parseString($vars->{data}) or $fmt->logwarn("parseString() failed for data query paramater 'data'");
-    }
-#    elsif (defined($vars->{s})) {
-#      $qdoc = $fmt->parseString($vars->{s}) or $fmt->logconfess("parseString() failed for sentence query parameter 's'");
-#      $qdoc = $qdoc->{body}[0] || DTA::CAB::Sentence->new();
-#      $qsub = $a->can('analyzeSentence');
-#    }
-#    elsif (defined($vars->{w})) {
-#      $qdoc = $fmt->parseString($vars->{w}) or $fmt->logconfess("parseString() failed for token query parameter 'w'");
-#      $qdoc = $qdoc->{body}[0]{tokens}[0] || DTA::CAB::Token->new();
-#      $qsub = $a->can('analyzeToken');
-#    }
-    else { #if (defined($vars->{q}))
-      my $qsrc = defined($vars->{q}) ? $vars->{q} : '';
-      $qsrc    = join("\n", @$qsrc) if (ref($qsrc));
-      my $ifmt = DTA::CAB::Format::Raw->new;
-      $qdoc = $ifmt->parseString($qsrc) or $ifmt->logwarn("parseString() failed for raw query parameter 'q'");
-    }
-    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not parse input query: $@") if (!$qdoc);
+  ##-- get format classes
+  my $qfc = defined($vars->{q}) ? 'raw' : ($vars->{qf} || $h->{defaultFormat});
+  my $rfc = $vars->{rf} || $vars->{qf} || $h->{defaultFormat};
+  ##
+  my $qf  = $h->{formats}->newFormat($qfc, encoding=>$qe)
+    or return $h->cerror($c, undef, "unknown query format qf='$qfc'");
+  my $rf  = $h->{formats}->newFormat($rfc, encoding=>$re, level=>$vars->{pretty})
+    or return $h->cerror($c, undef, "unknown response format rf='$rfc'");
 
-    ##-- analyze
-    $qdoc = $a->analyzeDocument($qdoc, {%$ao, ($h->{forceClean} ? (doAnalyzeClean=>1) : qw())})
-      or return $h->cerror($c, RC_INTERNAL_SERVER_ERROR,"could not analyze query document");
+  ##-- parse input query
+  my ($qdoc);
+  if (defined($vars->{q})) {
+    my $qsrc = defined($vars->{q}) ? $vars->{q} : '';
+    $qsrc    = join("\n", @$qsrc) if (ref($qsrc));
+    $qdoc = $qf->parseString($vars->{q}) or $qf->logwarn("parseString() failed for query parameter 'q' via format '$qfc'");
+  }
+  elsif (defined($vars->{qd})) {
+    $qdoc = $qf->parseString($vars->{qd}) or $qf->logwarn("parseString() failed for query parameter 'qd' via format '$qfc'");
+  }
+  else {
+    return $h->cerror($c, undef, "no query specified -- use either the 'q' or 'qd' parameter!");
+  }
+  return $h->cerror($c, undef, "could not parse input query: $@") if (!$qdoc);
 
-    ##-- format
-    $ostr = $fmt->flush->putDocument($qdoc)->toString;
-    $fmt->flush;
-    $ostr = encode($enc,$ostr) if (utf8::is_utf8($ostr));
-    return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "could format output document: $@") if (!defined($ostr));
-  };
-  return $h->cerror($c, RC_INTERNAL_SERVER_ERROR, "could not process query: $@") if ($@ || !defined($ostr));
+  ##-- analyze
+  $qdoc = $a->analyzeDocument($qdoc, \%ao)
+    or return $h->cerror($c, undef, "analyzeDocument() failed");
+
+  ##-- format
+  my $rstr = $rf->flush->putDocument($qdoc)->toString;
+  $rstr   = encode($re,$rstr) if (utf8::is_utf8($rstr));
+  return $h->cerror($c, undef, "could format output document: $@") if (!defined($rstr));
 
   ##-- dump to client
   my $filename = defined($vars->{q}) ? $vars->{q} : 'data';
   $filename =~ s/\W.*$/_/;
-  $filename .= $fmt->defaultExtension;
-  return $h->dumpResponse(\$ostr,
+  $filename .= $rf->defaultExtension;
+  return $h->dumpResponse(\$rstr,
 			  raw=>$vars->{raw},
-			  type=>$fmt->mimeType,
-			  charset=>$enc,
+			  type=>$rf->mimeType,
+			  charset=>$re,
 			  filename=>$filename);
 }
 
