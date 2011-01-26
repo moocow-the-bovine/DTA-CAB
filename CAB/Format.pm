@@ -232,50 +232,58 @@ sub forceDocument {
   if (!ref($any)) {
     ##-- string: token-like
     #return bless({body=>[ bless({tokens=>[bless({text=>$any},'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
-    return bless({body=>[ {tokens=>[{text=>$any}] }] },'DTA::CAB::Document');
+    $any ={body=>[ {tokens=>[{text=>$any}] }] };
   }
   elsif (isa($any,'DTA::CAB::Document')) {
     ##-- document
-    return $any;
+    ; #$any;
   }
   elsif (isa($any,'DTA::CAB::Sentence')) {
     ##-- sentence
-    return bless({body=>[$any]},'DTA::CAB::Document');
+    $any = {body=>[$any]};
   }
   elsif (isa($any,'DTA::CAB::Token')) {
     ##-- token
     #return bless({body=>[ bless({tokens=>[$any]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
-    return bless({body=>[ {tokens=>[$any]} ]},'DTA::CAB::Document');
+    $any= {body=>[ {tokens=>[$any]} ]};
   }
   elsif (ref($any) eq 'HASH') {
     ##-- hash
     if (exists($any->{body})) {
       ##-- hash, document-like
-      return bless($any,'DTA::CAB::Document');
+      #return bless($any,'DTA::CAB::Document');
+      ;
     }
     elsif (exists($any->{tokens})) {
       ##-- hash, sentence-like
       #return bless({body=>[ bless($any,'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
-      return bless({body=>[$any]},'DTA::CAB::Document');
+      $any = {body=>[$any]};
     }
     elsif (exists($any->{text})) {
       ##-- hash, token-like
       #return bless({body=>[ bless({tokens=>[bless($any,'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
-      return bless({body=>[ bless({tokens=>[bless($any,'DTA::CAB::Token')]},'DTA::CAB::Sentence') ]},'DTA::CAB::Document');
+      #return bless({body=>[ {tokens=>[$any]} ]},'DTA::CAB::Document');
+      $any = {body=>[ {tokens=>[$any]} ]};
     }
   }
   elsif (ref($any) eq 'ARRAY') {
     ##-- array
     if (!ref($any->[0])) {
       ##-- array; assumedly of token strings
-      $_ = bless({text=>$_},'DTA::CAB::Token') foreach (grep {!ref($_)} @$any);
-      return bless({body=>[ bless({tokens=>$any},'DTA::CAB::Sentence') ]}, 'DTA::CAB::Document');
+      #$_ = bless({text=>$_},'DTA::CAB::Token') foreach (grep {!ref($_)} @$any);
+      #return bless({body=>[ bless({tokens=>$any},'DTA::CAB::Sentence') ]}, 'DTA::CAB::Document');
+      ##
+      $_ = {text=>$_} foreach (grep {!ref($_)} @$any);
+      #return bless({body=>[{tokens=>$any}]},'DTA::CAB::Document');
+      $any = {body=>[ {tokens=>$any} ]};
     }
   }
   else {
     ##-- ?
-    $fmt->warn("forceDocument(): cannot massage non-document '".(ref($any)||$any)."'")
+    $fmt->warn("forceDocument(): cannot massage non-document '".(ref($any)||$any)."'");
+    return $any;
   }
+  $any = bless($any,'DTA::CAB::Document') if (!isa($any,'DTA::CAB::Document'));
   return $any;
 }
 

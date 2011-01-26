@@ -46,7 +46,7 @@ our %clientOpts = (
 ##-- Analysis & Action Options
 our $analyzer = 'default';
 our $action = 'document';
-our %analyzeOpts = (pretty=>1);    ##-- currently unused
+our %analyzeOpts = qw(); #(pretty=>0);
 our $doProfile = undef;
 
 ##-- I/O Options
@@ -86,11 +86,12 @@ GetOptions(##-- General
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'data|D' => sub { $action='data'; }, ##-- server-side parsing
+	   'raw|R' => sub { $action='raw'; }, ##-- server-side tokenization & parsing
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O: common
 	   'format-class|fc=s'   => \$formatClass,
-	   'format-option|fo=s'  => \%formatOpts,
+	   'format-option|fo=s'  => \%formatOpts,	
 	   'format-level|fl|output-level|ol|pretty=s' => \$analyzeOpts{pretty},
 	   'format-encoding|encoding|e=s' => \$encoding,
 
@@ -148,8 +149,12 @@ $cli->connect() or die("$0: connect() failed: $!");
 ##======================================================
 ## Input & Output Formats
 
-our $isFileAction = ($action =~ m(data|doc|bench));
+our $isFileAction = ($action =~ m(data|doc|raw|bench));
 $formatOpts{encoding} = $encoding;
+
+##-- sanity check
+die("$prog: unknown format class '$formatClass'")
+  if (defined($formatClass) && !DTA::CAB::Format->newFormat($formatClass));
 
 $ifmt = DTA::CAB::Format->newReader(class=>$formatClass, ($isFileAction ? (file=>$ARGV[0]) : qw()),%formatOpts)
   or die("$0: could not create input parser of class $formatClass: $!");
@@ -165,7 +170,7 @@ DTA::CAB->debug("using input format class ", ref($ifmt));
 DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##-- analysis options
-$analyzeOpts{f}           = $ifmt->shortName;
+$analyzeOpts{fmt}         = $ifmt->shortName;
 $analyzeOpts{contentType} = $ifmt->mimeType;
 
 ##-- input file
@@ -230,11 +235,13 @@ elsif ($action eq 'sentence') {
   $ofmt->putSentenceRaw($s_out);
   $ofmt->toFh($outfh);
 }
-elsif ($action eq 'data' || $action eq 'document') {
+elsif ($action eq 'data' || $action eq 'document' || $action eq 'raw') {
   $cunit = 'bytes';
+  $analyzeOpts{qraw} = 1 if ($action eq 'raw');
 
   ##-- action: 'data': do server-side parsing
   our ($s_in,$s_out);
+  push(@ARGV,'-') if (!@ARGV);
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
     {
@@ -308,6 +315,7 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -trace FILE                     ##-- trace request(s) sent to the server to FILE
   -get                            ##-- query server using URL-only GET requests
   -post                           ##-- query server using use content-only POST requests
+  -multipart    , -nomultipart    ##-- for POST requests, do/don't use 'multipart/form-data' encoding (default=don't)
   -xpost                          ##-- query server using URL+content POST requests (default)
   -xmlrpc                         ##-- query server using XML-RPC requests
 
@@ -320,6 +328,7 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents (default)
   -data                           ##-- ARGUMENTS are filenames, analyzed as documents (same as '-document')
+  -raw                            ##-- ARGUMENTS are filenames, analyzed as raw text
 
  I/O Options:
   -format-class CLASS             ##-- select I/O format class (default: TT)

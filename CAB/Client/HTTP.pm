@@ -44,10 +44,8 @@ BEGIN {
 ##     rpcns => $prefix,              ##-- prefix for XML-RPC analyzer names (default='dta.cab.')
 ##     rpcpath => $path,              ##-- path part of URL for XML-RPC (default='/xmlrpc')
 ##
-##     qf => $queryFormat,            ##-- query format (default='json')
-##     qe => $queryEncoding,          ##-- query encoding (default='UTF-8')
-##     rf => $responseFormat,         ##-- response format (default=undef (:$queryFormat))
-##     re => $responseEncoding,       ##-- response encoding (default=undef (:$queryEncoding))
+##     format   => $formatName,       ##-- default query I/O format (default='json')
+##     encoding => $encoding,         ##-- query encoding (default='UTF-8')
 ##
 ##     ##-- debugging
 ##     tracefh => $fh,                ##-- dump requests to $fh if defined (default=undef)
@@ -74,10 +72,8 @@ sub new {
 			   rpcns => 'dta.cab.',
 			   rpcpath => '/xmlrpc',
 			   ##
-			   qf => 'json',
-			   qe => 'UTF-8',
-			   #rf => 'json',
-			   #re => 'UTF-8',
+			   format => 'json',
+			   encoding => 'UTF-8',
 			   ##
 			   ##-- low-level stuff
 			   ua => undef,
@@ -247,22 +243,12 @@ sub uxpost {
 ##==============================================================================
 
 ## $fmt = $cli->getFormat(\%opts)
-##  + returns a new DTA::CAB::Format object appropriate for parsing a $cli query
-##    with %opts.
-sub queryFormat {
+##  + returns a new DTA::CAB::Format object appropriate for
+##    parsing/formatting a $cli query with \%opts
+sub getFormat {
   my ($cli,$opts) = @_;
-  my $fc  = $opts->{qf} || $cli->{qf} || $DTA::CAB::Format::CLASS_DEFAULT;
-  my $enc = $opts->{qe} || $cli->{qe} || 'UTF-8';
-  return DTA::CAB::Format->newFormat($fc, encoding=>$enc);
-}
-
-## $fmt = $cli->getFormat(\%opts)
-##  + returns a new DTA::CAB::Format object appropriate for parsing a response to a $cli query
-##    with %opts.
-sub responseFormat {
-  my ($cli,$opts) = @_;
-  my $fc  = $opts->{rf} || $cli->{rf} || $cli->{qf} || $DTA::CAB::Format::CLASS_DEFAULT;
-  my $enc = $opts->{re} || $cli->{re} || $cli->{qe} || 'UTF-8';
+  my $fc  = $opts->{format} || $opts->{fmt} || $cli->{format} || $DTA::CAB::Format::CLASS_DEFAULT;
+  my $enc = $opts->{encoding} || $opts->{enc} || $cli->{encoding};
   return DTA::CAB::Format->newFormat($fc, encoding=>$enc);
 }
 
@@ -270,41 +256,58 @@ sub responseFormat {
 ##  + client-side %opts
 ##     contentType => $mimeType,      ##-- Content-Type to apply for mode='xpost'
 ##     encoding    => $charset,       ##-- character set for mode='xpost'; also used by server
-#  + server-side %opts: see DTA::CAB::Server::HTTP::Handler::Query
+##     qraw        => $bool,          ##-- if true, query is a raw untokenized string (default=false)
+##  + server-side %opts: see DTA::CAB::Server::HTTP::Handler::Query
 sub analyzeDataRef {
   my ($cli,$aname,$dataref,$opts) = @_;
   return $cli->rclient->analyzeData($cli->{rpcns}.$aname,$$dataref,$opts) if ($cli->{mode} eq 'xmlrpc');
-  ##
+
+  ##-- build form
   my %form = (
-	      qf=>$cli->{qf},
-	      qe=>$cli->{qe},
-	      rf=>$cli->{rf},
-	      re=>$cli->{re},
+	      fmt=>$cli->{format},
+	      enc=>$cli->{encoding},
 	      %$opts,
 	      a=>$aname,
 	     );
+
+  ##-- sanity checks (long parameter names clobber short names)
+  $form{enc} = $form{encoding} if ($form{encoding});
+  $form{fmt} = $form{format} if ($form{format});
+  delete(@form{qw(format encoding qraw)});
+  delete(@form{grep {!defined($form{$_})} keys %form});
+
+  ##-- content-type hacks
   my $ctype = $opts->{contentType};
   $ctype = 'application/octet-stream' if (!$ctype);
-  delete(@form{qw(q qd contentType format)});
-  delete(@form{grep {!defined($form{$_})} keys %form});
+  delete(@form{qw(q qd contentType)});
+
+  ##-- compatibility check / raw vs. formatted
+  my $qname = $opts->{qraw} ? 'q' : 'qd';
+  my $qmode = $cli->{mode};
+  if ($qname eq 'q' && $cli->{mode} eq 'xpost') {
+    $cli->logcarp("analyzeDataRef(): 'xpost' method not supported for raw queries; using 'post' instead");
+    $qmode = 'post';
+  }
+
+  ##-- get response
   my ($rsp);
-  if ($cli->{mode} eq 'get') {
-    $form{'qd'} = $$dataref;
+  if ($qmode eq 'get') {
+    $form{$qname} = $$dataref;
     return $cli->uget_form($cli->{serverURL}, \%form);
   }
-  elsif ($cli->{mode} eq 'post') {
-    $form{'qd'} = $$dataref;
+  elsif ($qmode eq 'post') {
+    $form{$qname} = $$dataref;
     return $cli->upost($cli->{serverURL}, \%form,
 		       ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
 		      );
   }
-  elsif ($cli->{mode} eq 'xpost') {
-    $ctype .= "; charset=\"$form{e}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
+  elsif ($qmode eq 'xpost') {
+    $ctype .= "; charset=\"$form{enc}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
     return $cli->uxpost($cli->{serverURL}, \%form, $$dataref, 'Content-Type'=>$ctype);
   }
 
   ##-- should never happen
-  return HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$cli->{mode}'");
+  return HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$qmode'");
 }
 
 ## $data_str = $cli->analyzeData($analyzer, \$data_str, \%opts)
@@ -325,20 +328,19 @@ sub analyzeDocument {
   my ($cli,$aname,$doc,$opts) = @_;
   return $cli->rclient->analyzeDocument($cli->{rpcns}.$aname,$doc,$opts) if ($cli->{mode} eq 'xmlrpc');
   ##
-  my $qf = $cli->queryFormat($opts);
-  $qf->putDocument($doc)
-    or $cli->logdie("analyzeDocument(): could not format document with class ".ref($qf).": $!");
-  my $str = $qf->toString;
-  $qf->flush;
+  my $fmt = $cli->getFormat($opts);
+  $fmt->putDocument($doc)
+    or $cli->logdie("analyzeDocument(): could not format document with class ".ref($fmt).": $!");
+  my $str = $fmt->toString;
+  $fmt->flush;
   ##
   my $rsp = $cli->analyzeDataRef($aname,\$str,{%$opts,
-					       qf => $qf->shortName,
-					       qe => $qf->{encoding},
-					       contentType=>$qf->mimeType,
+					       fmt => $fmt->shortName,
+					       enc => $fmt->{encoding},
+					       contentType=>$fmt->mimeType,
 					      });
   $cli->logdie("server returned error: " . $rsp->status_line) if ($rsp->is_error);
-  my $rf = $cli->responseFormat($opts);
-  return $rf->parseString($rsp->content);
+  return $fmt->parseString($rsp->content);
 }
 
 ## $sent = $cli->analyzeSentence($analyzer, $sent, \%opts)
