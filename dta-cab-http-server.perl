@@ -38,6 +38,9 @@ our $serverPort = undef;
 our $daemonMode = 0;       ##-- do a fork() ?
 our $pidFile  = undef;     ##-- save PID to a file?
 
+##-- default log level
+#$DTA::CAB::Logger::defaultLogOpts{level}='INFO';
+
 ##==============================================================================
 ## Command-line
 GetOptions(##-- General
