@@ -44,6 +44,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
 ##     ##
 ##     ##-- logging
+##     logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
 ##     logConnect => $level,        ##-- log successful connections (client IP and requested path) at $level (default='debug')
 ##     logRquestData => $level,     ##-- log full client request data at $level (default=undef: none)
@@ -84,11 +85,17 @@ sub new {
 			   _deny  => undef,
 
 			   ##-- logging
-			   logAttempt => undef,
+			   logRegisterPath => 'info',
+			   logAttempt => 'off',
 			   logConnect => 'debug',
 			   logRequestData => undef,
-			   logClose => undef,
+			   logClose => 'off',
 			   logClientError => 'trace',
+
+			   ##-- logging, XML-RPC sub-objects
+			   logRegisterProc => 'off',
+			   logCallData => 'off',
+			   logCall => 'off',
 
 			   ##-- user args
 			   @_
@@ -116,8 +123,9 @@ sub prepareLocal {
   ##-- register path handlers
   my ($path,$ph);
   while (($path,$ph)=each %{$srv->{paths}}) {
-    $srv->registerPathHandler($path,$ph)
+    $ph = $srv->registerPathHandler($path,$ph)
       or $srv->logconfess("registerPathHandler() failed for path '$path': $!");
+    $srv->vlog($srv->{logRegisterPath}, "registered path handler: '$path' => ".(ref($ph)||$ph));
   }
 
   ##-- compile allow/deny regexes
@@ -405,7 +413,7 @@ and supports the L<DTA::CAB::Server|DTA::CAB::Server> API.
   paths      => \%path2handler, ##-- maps local URL paths to handlers
   daemon     => $daemon,        ##-- underlying HTTP::Daemon object
   cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object (for XML-RPC handlers)
-  xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
+  xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1,logRegisterProc=>'off'})
   ##
   ##-- security
   #allowUserOptions => $bool,   ##-- allow client-specified analysis options? (default: true)
