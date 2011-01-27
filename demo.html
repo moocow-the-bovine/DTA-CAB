@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+	  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+  <head>
+    <title>DTA::CAB Demo</title>
+    <link rel="stylesheet" type="text/css" href="taxi.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  </head>
+  <body>
+    <div id="outer">
+      <div id="headers">
+        <h1>DTA::CAB Demo</h1>
+      </div>
+      <div id="content">
+        <div id="section">
+          <form method="get" action="/query" enctype="multipart/form-data" id="queryForm">
+            <table class="sep">
+              <tbody>
+                <tr>
+                  <td id="searchLabel">Query:</td>
+                  <td colspan="3">
+                    <input type="text" name="q" size="64" id="searchText" />
+                  </td>
+                </tr>
+                <tr>
+                  <td id="searchLabel">Analyzer:</td>
+                  <td>
+                    <select name="analyzer">
+                      <option selected="selected" value="norm">norm</option>
+                      <option value="expand">expand</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td id="searchLabelE">Format:</td>
+                  <td>
+                    <select name="format">
+                      <option value="csv">CSV</option>
+                      <option value="json">JSON</option>
+                      <option value="perl">Perl</option>
+                      <option selected="selected" value="text">Text</option>
+                      <option value="tt">TT</option>
+                      <option value="xml">XML (Native)</option>
+                      <option value="xmlperl">XML (Perl)</option>
+                      <option value="xmlrpc">XML-RPC</option>
+                      <option value="yaml">YAML</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td id="searchLabelE">Pretty:</td>
+                  <td>
+                    <label>
+                      <input type="checkbox" name="pretty" value="1" />
+                    </label>
+                  </td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td>
+                    <input type="submit" name="submit" value="submit" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+	   <input type="hidden" name="raw" value="1"/>
+          </form>
+        </div>
+      </div>
+      <div id="footers">
+        <tt>DTA::CAB::Client::CGIWrapper v1.12</tt>
+        <br />
+        <address>
+          <a href="mailto:jurish@bbaw.de">jurish@bbaw.de</a>
+        </address>
+      </div>
+    </div>
+  </body>
+</html>
