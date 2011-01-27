@@ -15,7 +15,7 @@ use HTTP::Status;
 use HTTP::Request::Common;
 use URI::Escape qw(uri_escape_utf8);
 use Encode qw(encode decode encode_utf8 decode_utf8);
-use Carp;
+use Carp qw(confess);
 use strict;
 
 ##==============================================================================
@@ -310,6 +310,17 @@ sub analyzeDataRef {
   return HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$qmode'");
 }
 
+## undef = $cli->serverError($rsp)
+##  + handle server error responses
+##  + default implementation just calls $cli->logconfess()
+sub serverError {
+  my ($cli,$rsp) = @_;
+  $cli->logconfess("server error: " . $rsp->status_line . "\n" . $rsp->content);
+  #$cli->logcroak("server error: " . $rsp->status_line . "\n" . $rsp->content . ' ');
+  #$cli->logdie("server error: " . $rsp->status_line . "\n" . $rsp->content);
+  #confess (ref($cli) . ": server error: " . $rsp->status_line . "\n" . $rsp->content);
+}
+
 ## $data_str = $cli->analyzeData($analyzer, \$data_str, \%opts)
 ##  + wrapper for analyzeDataRef()
 ##  + die()s on error
@@ -319,7 +330,7 @@ sub analyzeData {
   return $cli->rclient->analyzeData($cli->{rpcns}.$aname,$data,$opts) if ($cli->{mode} eq 'xmlrpc');
   ##
   my $rsp = $cli->analyzeDataRef($aname,\$data,$opts);
-  $cli->logdie("server returned error: " . $rsp->status_line) if ($rsp->is_error);
+  return $cli->serverError($rsp) if ($rsp->is_error);
   return $rsp->content;
 }
 
@@ -339,7 +350,7 @@ sub analyzeDocument {
 					       enc => $fmt->{encoding},
 					       contentType=>$fmt->mimeType,
 					      });
-  $cli->logdie("server returned error: " . $rsp->status_line) if ($rsp->is_error);
+  return $cli->serverError($rsp) if ($rsp->is_error);
   return $fmt->parseString($rsp->content);
 }
 

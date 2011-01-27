@@ -30,7 +30,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##    {
 ##     ##-- Underlying HTTP::Daemon server
 ##     daemonMode => $daemonMode,    ##-- one of 'serial', 'fork', 'xmlrpc' [default='serial']
-##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new()
+##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new(); default={LocalAddr=>'0.0.0.0',LocalPort=>8088}
 ##     paths      => \%path2handler, ##-- maps local URL paths to configs
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon object
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
@@ -65,6 +65,7 @@ sub new {
 			   ##-- underlying server
 			   daemon => undef,
 			   daemonArgs => {
+					  LocalAddr=>'0.0.0.0', ##-- all
 					  LocalPort=>8088,
 					  ReuseAddr=>1,
 					 },

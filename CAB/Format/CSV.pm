@@ -78,7 +78,7 @@ BEGIN {
 BEGIN { *parseTTString = \&parseCsvString; }
 sub parseCsvString {
   my ($fmt,$src) = @_;
-  $src =~ s|^([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)$|$1\t[moot/word] $2\t[moot/tag] $3\t[moot/lemma] $4|mg;
+  $src =~ s|^([^\t]+)(?:\t([^\t]*))?\t([^\t]*)\t([^\t]*)\t([^\t]*)$|$1\t[xlit] $2\t[moot/word] $3\t[moot/tag] $4\t[moot/lemma] $5|mg;
   return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
@@ -136,6 +136,7 @@ sub putToken {
   my ($fmt,$tok) = @_;
   $fmt->{outbuf} .= join("\t",
 			 $tok->{text},
+			 ($tok->{xlit} ? $tok->{xlit}{latin1Text} : ''),
 			 ($tok->{moot} ? (@{$tok->{moot}}{qw(word tag lemma)}) : ('','','')),
 			)."\n";
 }
@@ -203,7 +204,7 @@ As for L<DTA::CAB::Format::TT|DTA::CAB::Format::TT> (from which this class inher
 each token is represented by a single line and sentence boundaries
 are represented by blank lines.  Token lines have the format:
 
- OLD_TEXT   NEW_TEXT    POS_TAG    LEMMA
+ OLD_TEXT   XLIT_TEXT   NEW_TEXT    POS_TAG    LEMMA
 
 =cut
 

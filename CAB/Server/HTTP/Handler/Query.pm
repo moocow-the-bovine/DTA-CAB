@@ -41,9 +41,10 @@ BEGIN {
 ##   allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##   allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
-##   pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
+##   pushMode => $mode,             ##-- push mode for addVars (default='keep')
 ##   ##
 ##   ##-- NEW in Handler::Query
+##   prefix => $prefix,             ##-- analyzer name prefix (automatically trimmed; default='dta.cab.')
 ##   allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
 ##   defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
 ##   formats => $registry,          ##-- registry of allowed formats; default=$DTA::CAB::Format::REG
@@ -63,6 +64,7 @@ sub new {
 			     logVars => undef,
 			     pushMode => 'keep',
 			     allowAnalyzers=>undef,
+			     prefix => 'dta.cab.',
 			     defaultAnalyzer=>'default',
 			     formats => $DTA::CAB::Format::REG,
 			     defaultFormat => $DTA::CAB::Format::CLASS_DEFAULT,
@@ -127,6 +129,7 @@ sub run {
 
   ##-- get analyzer $a
   my $akey = $vars->{'a'} || $h->{defaultAnalyzer};
+  $akey =~ s/^\Q$h->{prefix}\E// if (defined($h->{prefix})); ##-- trim leading prefix
   if ($h->{allowAnalyzers} && !$h->{allowAnalyzers}{$akey}) {
     return $h->cerror($c, RC_FORBIDDEN, "access denied for analyzer '$akey'");
   }
@@ -213,7 +216,9 @@ sub runList {
   my $qre = defined($vars->{a}) ? qr/$vars->{a}/ : qr//;
   my @as  = (grep {$_ =~ $qre}
 	     grep {!defined($h->{allowAnalyzers}) || $h->{allowAnalyzers}{$_}}
-	     sort keys(%{$srv->{as}}));
+	     sort
+	     #map  {($_,defined($h->{prefix}) ? "$h->{prefix}$_" : qw())}
+	     keys %{$srv->{as}});
 
   ##-- get format
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
@@ -370,7 +375,7 @@ Default allowed formats.
    allowGet => $bool,             ##-- allow GET requests? (default=1)
    allowPost => $bool,            ##-- allow POST requests? (default=1)
    allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
-   pushMode => $mode,             ##-- push mode for addVars (dfefault='keep')
+   pushMode => $mode,             ##-- push mode for addVars (default='keep')
    ##
    ##-- NEW in Handler::Query
    allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)

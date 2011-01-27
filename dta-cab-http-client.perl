@@ -46,16 +46,17 @@ our %clientOpts = (
 ##-- Analysis & Action Options
 our $analyzer = 'default';
 our $action = 'document';
-our %analyzeOpts = qw(); #(pretty=>0);
+our %analyzeOpts = qw();
 our $doProfile = undef;
 
 ##-- I/O Options
 our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
 our $outfile     = '-';
-our %formatOpts  = qw();
-our $encoding = 'UTF-8';
-our ($ifmt,$ofmt);
+our %qfo = (
+	    encoding => 'UTF-8',
+	   );
+our (%ifo,%ofo, $qfmt,$ifmt,$ofmt);
 
 our $bench_iters = 1; ##-- number of benchmark iterations for -bench mode
 our $trace_request_file = undef; ##-- trace request to file?
@@ -89,11 +90,20 @@ GetOptions(##-- General
 	   'raw|R' => sub { $action='raw'; }, ##-- server-side tokenization & parsing
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
-	   ##-- I/O: common
-	   'format-class|fc=s'   => \$formatClass,
-	   'format-option|fo=s'  => \%formatOpts,	
-	   'format-level|fl|output-level|ol|pretty=s' => \$analyzeOpts{pretty},
-	   'format-encoding|encoding|e=s' => \$encoding,
+	   ##-- I/O
+	   'query-format-class|format-class|format|fmt|qfc|qf|fc=s' => \$qfo{class},
+	   'input-format-class|input-format|ifmt|ifc|if=s' => \$ifo{class},
+	   'output-format-class|output-format|ofmt|ofc|of=s' => \$ofo{class},
+	   ##
+	   'query-format-option|query-option|qfo|qo=s' => \%qfo,
+	   'input-format-option|input-option|ifo|io=s' => \%ifo,
+	   'output-format-option|ofo|oo=s' => \%ofo,
+	   ##
+	   'query-format-encoding|query-encoding|encoding|enc|qfe|qe' => \$qfo{encoding},
+	   'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
+	   'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
+	   ##
+	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => \$ofo{pretty},
 
 	   ##-- I/O: output
 	   'format-file|ff|output-file|output|o=s' => \$outfile,
@@ -141,7 +151,7 @@ if (defined($trace_request_file)) {
 ##-- create client object
 our $cli = DTA::CAB::Client::HTTP->new(%clientOpts,
 				       serverURL => $serverURL,
-				       encoding => $encoding,
+				       encoding => $qfo{encoding},
 				       tracefh=>$tracefh,
 				      );
 $cli->connect() or die("$0: connect() failed: $!");
@@ -150,28 +160,54 @@ $cli->connect() or die("$0: connect() failed: $!");
 ## Input & Output Formats
 
 our $isFileAction = ($action =~ m(data|doc|raw|bench));
-$formatOpts{encoding} = $encoding;
 
-##-- sanity check
-die("$prog: unknown format class '$formatClass'")
-  if (defined($formatClass) && !DTA::CAB::Format->newFormat($formatClass));
-
-$ifmt = DTA::CAB::Format->newReader(class=>$formatClass, ($isFileAction ? (file=>$ARGV[0]) : qw()),%formatOpts)
-  or die("$0: could not create input parser of class $formatClass: $!");
-
-if (defined($formatClass) || $outfile ne '-') {
-  $ofmt = DTA::CAB::Format->newWriter(class=>$formatClass, file=>$outfile, %formatOpts);
-} else {
-  $ofmt = $ifmt;
+##-- format defaults
+foreach my $fo (\%ifo, \%qfo, \%ofo) {
+  delete @$fo{grep {!defined($fo->{$_})} keys %$fo};
 }
-die("$0: could not create output formatter of class $formatClass: $!") if (!$ofmt);
+$qfo{level} = $ofo{level} if (defined($ofo{level}) && $action eq 'data');
+$ifo{$_} = $qfo{$_} foreach (grep {$_ ne 'class' && !exists($ifo{$_})} keys %qfo);
+$ofo{$_} = $ifo{$_} foreach (grep {$_ ne 'class' && !exists($ofo{$_})} keys %ifo);
+
+##-- formats: sanity checks
+die("$prog: unknown query format class '$qfo{class}'")
+  if (defined($qfo{class}) && !DTA::CAB::Format->newFormat($qfo{class}));
+die("$prog: unknown input format class '$ifo{class}'")
+  if (defined($ifo{class}) && !DTA::CAB::Format->newFormat($ifo{class}));
+die("$prog: unknown output format class '$ofo{class}'")
+  if (defined($ofo{class}) && !DTA::CAB::Format->newFormat($ofo{class}));
+
+##-- formats: create
+$ifmt = DTA::CAB::Format->newReader(($isFileAction ? (file=>$ARGV[0]) : (class=>$qfo{class})), %ifo)
+  or die("$0: could not create input format of class '".($ifo{class}||'undef')."': $!");
+
+$qfmt = DTA::CAB::Format->newReader(%qfo, class=>($qfo{class}||$ifmt->shortName))
+  or die("$0: could not create query format of class '".($qfo{class}||'undef')."': $!");
+
+$ofmt = DTA::CAB::Format->newWriter(%ofo, ($outfile ne '-' ? (file=>$outfile) : qw()))
+  or die("$0: could not create output format of class '".($ofo{class}||'undef')."': $!");
 
 DTA::CAB->debug("using input format class ", ref($ifmt));
+DTA::CAB->debug("using query format class ", ref($qfmt));
 DTA::CAB->debug("using output format class ", ref($ofmt));
 
-##-- analysis options
-$analyzeOpts{fmt}         = $ifmt->shortName;
-$analyzeOpts{contentType} = $ifmt->mimeType;
+##-- formats: post-creation sanity checks
+if ($action eq 'data') {
+  die("$prog: -input-format-class must match -query-format-class in -data mode!")
+    if ($ifmt->shortName ne $qfmt->shortName);
+
+  die("$prog: -output-format-class must match -query-format-class in -data mode!")
+    if ($ofmt->shortName ne $qfmt->shortName);
+}
+
+##-- format-dependent analysis options
+%analyzeOpts = (
+		%analyzeOpts,
+		fmt         => $qfmt->shortName,
+		contentType => $qfmt->mimeType,
+		encoding    => $qfmt->{encoding},
+		pretty      => $qfmt->{level},
+	       );
 
 ##-- input file
 push(@ARGV,'-') if (!@ARGV && $isFileAction);
@@ -235,8 +271,33 @@ elsif ($action eq 'sentence') {
   $ofmt->putSentenceRaw($s_out);
   $ofmt->toFh($outfh);
 }
-elsif ($action eq 'data' || $action eq 'document' || $action eq 'raw') {
-  $cunit = 'bytes';
+elsif ($action eq 'document') {
+  ##-- action: 'document'
+  my ($doc);
+  foreach $doc_filename (@ARGV) {
+    ##-- parse
+    $doc = $ifmt->parseFile($doc_filename)
+      or die("$prog: could not parse file '$doc_filename': $!");
+
+    ##-- analyze
+    $doc = $cli->analyzeDocument($analyzer, $doc, {%analyzeOpts})
+      or die("$prog: analyzeDocument() failed: $!");
+
+    ##-- format
+    $ofmt->putDocumentRaw($doc);
+
+    if ($doProfile) {
+      profile_stop();
+      ##-- count tokens, pausing profile timer
+      $nchrs += $doc->nChars;
+      $ntoks += $doc->nTokens;
+      profile_start();
+    }
+  }
+  $ofmt->toFh($outfh);
+}
+elsif ($action eq 'data' || $action eq 'raw') {
+  $cunit = 'chr';
   $analyzeOpts{qraw} = 1 if ($action eq 'raw');
 
   ##-- action: 'data': do server-side parsing
@@ -331,10 +392,12 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -raw                            ##-- ARGUMENTS are filenames, analyzed as raw text
 
  I/O Options:
-  -format-class CLASS             ##-- select I/O format class (default: TT)
-  -format-option OPT=VALUE        ##-- set I/O format option
-  -format-encoding ENCODING       ##-- override I/O encoding (default: 'UTF-8')
-  -format-level LEVEL             ##-- override output formatter level (default: 1)
+  -query-format-class CLASS       ##-- select query format class (default: 'TT')
+  -query-format-encoding ENC      ##-- select query format encoding (default: 'UTF-8')
+  -query-format-option OPT=VALUE  ##-- set query format option
+  -(input|output)-format-(class|encoding|option)
+                                  ##-- for non -data mode, set I/O format options
+  -output-format-level LEVEL      ##-- override output format level (default: 0)
   -output-file FILE               ##-- set output file (default: STDOUT)
 
 =cut
