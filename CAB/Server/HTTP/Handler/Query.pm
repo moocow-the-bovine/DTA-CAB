@@ -272,7 +272,7 @@ sub dumpResponse {
   my $rsp = $h->response(RC_OK);
   $rsp->content_type($contentType);
   $rsp->content_ref($dataref) if (defined($dataref));
-  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename});
+  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename} && !$returnRaw);
   return $rsp;
 }
 

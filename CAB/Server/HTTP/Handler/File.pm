@@ -30,7 +30,7 @@ BEGIN {
 ##     file => $filename,           ##-- filename to return
 sub new {
   my $that = shift;
-  return bless { file=>'', contentType=>'text/plain', @_ }, ref($that)||$that;
+  return bless { file=>'', contentType=>undef, @_ }, ref($that)||$that;
 }
 
 ## $bool = $obj->prepare($srv)
@@ -41,10 +41,20 @@ sub run {
   my ($h,$srv,$path,$csock,$hreq) = @_;
   return $h->error($csock,(-e $h->{file} ? RC_FORBIDDEN : RC_NOT_FOUND)) if (!-r $h->{file});
 
-  $csock->send_file_response($h->{file});
-  $csock->shutdown(2);
-  $csock->close;
-  return undef;
+  if (!$h->{contentType}) {
+    $csock->send_file_response($h->{file});
+    $csock->shutdown(2);
+    $csock->close;
+    return undef;
+  }
+  else {
+    my $ctype = $h->{contentType};
+    $ctype .= "; charset=\"$h->{encoding}\"" if ($h->{encoding});
+    $csock->send_basic_header(RC_OK);
+    $csock->print("Content-Type: $ctype\r\n");
+    $csock->send_crlf;
+    $csock->send_file($h->{file});
+  }
 }
 
 

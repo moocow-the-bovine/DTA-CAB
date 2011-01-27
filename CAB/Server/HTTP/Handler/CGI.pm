@@ -35,11 +35,14 @@ BEGIN {
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##     pushMode => $mode,             ##-- push mode for addVars (dfefault='push')
+##     prepare  => \&prepare,         ##-- CODE-ref for prepare()
+##     run      => \&run,             ##-- CODE-ref for run()
+##     finish   => \&finish,          ##-- CODE-ref for finish()
 ##
 ## + runtime %$h data:
-##     #cgi => $cgiobj,                ##-- CGI object (after cgiParse())
-##     #vars => \%vars,                ##-- CGI variables (after cgiParse())
-##     #cgisrc => $cgisrc,             ##-- CGI source (after cgiParse())
+##     #cgi => $cgiobj,               ##-- CGI object (after cgiParse())
+##     #vars => \%vars,               ##-- CGI variables (after cgiParse())
+##     #cgisrc => $cgisrc,            ##-- CGI source (after cgiParse())
 sub new {
   my $that = shift;
   my $h =  bless {
@@ -53,7 +56,11 @@ sub new {
 }
 
 ## $bool = $h->prepare($server)
-sub prepare { return 1; }
+##  + calls $h->{prepare}->($h,$server) if defined
+sub prepare {
+  return $_[0]{prepare}->(@_) if ($_[0]{prepare});
+  return 1;
+}
 
 ## \%vars = $h->decodeVars(\%vars,%opts)
 ##  + decodes cgi-style variables using $h->decodeString($str,%opts)
@@ -320,12 +327,21 @@ sub requestEncoding {
   return $h->getEncoding($vars->{encoding},$hreq,$h->{encoding});
 }
 
+## $rsp = $h->run($server, $localPath, $clientConn, $httpRequest)
+##  + return $h->{run}->(@_) if defined
+sub run {
+  my $h = shift;
+  return $h->{run}->($h,@_) if ($h->{run});
+  return $h->SUPER::run(@_);
+}
+
 
 ## undef = $h->finish($server, $clientSocket)
 ##  + clean up handler state after run()
 ##  + override deletes @$h{qw(cgi vars cgisrc)}
 sub finish {
   my $h = shift;
+  return $h->{finish}->($h,@_) if ($h->{finish});
   delete(@$h{qw(cgi vars cgisrc)});
   return;
 }
