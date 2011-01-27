@@ -5,7 +5,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
   <head>
     <title>DTA::CAB Demo</title>
-    <link rel="stylesheet" type="text/css" href="taxi.css" />
+    <link rel="stylesheet" type="text/css"  href="/taxi.css" />
+    <link rel="icon"       type="image/png" href="/favicon.png"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   </head>
   <body>
@@ -15,7 +16,8 @@
       </div>
       <div id="content">
         <div id="section">
-          <form method="get" action="/query" enctype="multipart/form-data" id="queryForm">
+          <!--<form method="post" action="/query" enctype="multipart/form-data" id="queryForm">-->
+taxi-	  <form method="get" action="/query" id="queryForm">
             <table class="sep">
               <tbody>
                 <tr>
@@ -27,7 +29,7 @@
                 <tr>
                   <td id="searchLabel">Analyzer:</td>
                   <td>
-                    <select name="analyzer">
+                    <select name="a">
                       <option selected="selected" value="norm">norm</option>
                       <option value="expand">expand</option>
                     </select>
@@ -36,7 +38,7 @@
                 <tr>
                   <td id="searchLabelE">Format:</td>
                   <td>
-                    <select name="format">
+                    <select name="fmt">
                       <option value="csv">CSV</option>
                       <option value="json">JSON</option>
                       <option value="perl">Perl</option>
@@ -70,7 +72,7 @@
         </div>
       </div>
       <div id="footers">
-        <tt>DTA::CAB::Client::CGIWrapper v1.12</tt>
+        <tt>DTA::CAB::Server::HTTP demo</tt>
         <br />
         <address>
           <a href="mailto:jurish@bbaw.de">jurish@bbaw.de</a>
