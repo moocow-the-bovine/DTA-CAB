@@ -34,6 +34,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     paths      => \%path2handler, ##-- maps local URL paths to configs
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon object
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
+##     xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
 ##     ##
 ##     ##-- security
 ##     allowUserOptions => $bool, ##-- allow user options? (default: true)
@@ -70,6 +71,7 @@ sub new {
 					  ReuseAddr=>1,
 					 },
 			   #cxsrv => undef,
+			   xopt => {no_http=>1},
 
 			   ##-- path config
 			   paths => {},
@@ -403,6 +405,7 @@ and supports the L<DTA::CAB::Server|DTA::CAB::Server> API.
   paths      => \%path2handler, ##-- maps local URL paths to handlers
   daemon     => $daemon,        ##-- underlying HTTP::Daemon object
   cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object (for XML-RPC handlers)
+  xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
   ##
   ##-- security
   #allowUserOptions => $bool,   ##-- allow client-specified analysis options? (default: true)

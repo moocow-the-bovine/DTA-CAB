@@ -54,6 +54,10 @@ sub prepare {
     $cxsrv = $srv->{cxsrv} = DTA::CAB::Server::XmlRpc->new(%$srv)
       or $h->logdie("prepare(): could not create DTA::CAB::Server::XmlRpc object: $!");
   }
+  elsif (!UNIVERSAL::isa($cxsrv,'DTA::CAB::Server::XmlRpc')) {
+    $cxsrv = $srv->{cxsrv} = DTA::CAB::Server::XmlRpc->loadPerlRef({ %$srv, %$cxsrv })
+      or $h->logdie("prepare(): loadPerlRef() failed for DTA::CAB::Server::XmlRpc object: $!");
+  }
   $h->{cxsrv} = $cxsrv;
 
   ##-- prepare underlying server
