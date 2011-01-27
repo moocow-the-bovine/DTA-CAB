@@ -12,6 +12,8 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use IO::File;
 use Pod::Usage;
 
+use strict;
+
 ##==============================================================================
 ## DEBUG
 ##==============================================================================
@@ -34,7 +36,7 @@ our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Lo
 
 ##-- Client Options
 our $defaultPort = 9099;
-our $defaultPath = '/cgi';
+our $defaultPath = '/query';
 our $serverURL   = "http://localhost:${defaultPort}${defaultPath}";
 our %clientOpts = (
 		   timeout=>65535, ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
@@ -257,7 +259,8 @@ if ($action eq 'list') {
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
   $doProfile = 0;
-  foreach $tokin (map {DTA::CAB::Utils::deep_decode($encoding,$_)} @ARGV) {
+  my ($tokin,$tokout);
+  foreach $tokin (map {DTA::CAB::Utils::deep_decode($ifmt->{encoding},$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     $ofmt->putTokenRaw($tokout);
   }
@@ -266,14 +269,14 @@ elsif ($action eq 'token') {
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   $doProfile = 0;
-  our $s_in  = DTA::CAB::Utils::deep_decode($encoding, toSentence([map {toToken($_)} @ARGV]));
-  our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
+  my $s_in  = DTA::CAB::Utils::deep_decode($ifmt->{encoding}, toSentence([map {toToken($_)} @ARGV]));
+  my $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   $ofmt->putSentenceRaw($s_out);
   $ofmt->toFh($outfh);
 }
 elsif ($action eq 'document') {
   ##-- action: 'document'
-  my ($doc);
+  my ($doc_filename,$doc);
   foreach $doc_filename (@ARGV) {
     ##-- parse
     $doc = $ifmt->parseFile($doc_filename)
@@ -301,7 +304,7 @@ elsif ($action eq 'data' || $action eq 'raw') {
   $analyzeOpts{qraw} = 1 if ($action eq 'raw');
 
   ##-- action: 'data': do server-side parsing
-  our ($s_in,$s_out);
+  my ($s_in,$s_out, $doc_filename);
   push(@ARGV,'-') if (!@ARGV);
   foreach $doc_filename (@ARGV) {
     open(DOC,"<$doc_filename") or die("$0: open failed for input file '$doc_filename': $!");
@@ -324,7 +327,7 @@ elsif ($action eq 'data' || $action eq 'raw') {
 elsif ($action eq 'bench') {
   $doProfile=1;
   our ($bench_i);
-  our ($d_in,$w_in,$w_out);
+  our ($doc_filename,$d_in,$w_in,$w_out);
   $bench_iters = 1 if (!$bench_iters);
   foreach $doc_filename (@ARGV) {
     $d_in = $ifmt->parseFile($doc_filename)
