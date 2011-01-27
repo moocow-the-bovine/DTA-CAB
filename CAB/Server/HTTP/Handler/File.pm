@@ -9,6 +9,8 @@
 package DTA::CAB::Server::HTTP::Handler::File;
 use DTA::CAB::Server::HTTP::Handler;
 use HTTP::Status;
+use HTTP::Date qw();
+use IO::File;
 use Carp;
 use strict;
 
@@ -26,7 +28,7 @@ BEGIN {
 ##--------------------------------------------------------------
 ## $h = $class_or_obj->new(%options)
 ##  + options:
-##     contentType => $mimeType,    ##-- default: text/plain
+##     contentType => $mimeType,    ##-- default: text/plain ; alt. e.g. 'text/plain; charset="UTF-8"'
 ##     file => $filename,           ##-- filename to return
 sub new {
   my $that = shift;
@@ -47,13 +49,27 @@ sub run {
     $csock->close;
     return undef;
   }
-  else {
-    my $ctype = $h->{contentType};
-    $ctype .= "; charset=\"$h->{encoding}\"" if ($h->{encoding});
-    $csock->send_basic_header(RC_OK);
-    $csock->print("Content-Type: $ctype\r\n");
-    $csock->send_crlf;
+  elsif (0) {
+    ##-- weirdness
+    my $CRLF = "\015\012"; ##-- "\r\n" is not portable
+    my $rsp   = HTTP::Response->new(RC_OK, status_message(RC_OK));
+    my ($size,$mtime) = (stat $h->{file})[7,9];
+    $rsp->header('Content-Type' => $h->{contentType}) if ($h->{contentType});
+    $rsp->header('Content-Length' => $size);
+    $rsp->header('Last-Modified'  => HTTP::Date::time2str($mtime));
+    $csock->send_basic_header;
+    $csock->print($rsp->headers->as_string($CRLF), $CRLF);
     $csock->send_file($h->{file});
+  }
+  else {
+    my $ioh = IO::File->new("<$h->{file}");
+    return $h->error($csock,RC_NOT_FOUND) if (!defined($ioh));
+    my $data = join('', $ioh->getlines);
+    return HTTP::Response->new(RC_OK, status_message(RC_OK),
+			       [
+				'Content-Type' => $h->{contentType},
+			       ],
+			       $data);
   }
 }
 

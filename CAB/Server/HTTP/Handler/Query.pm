@@ -204,7 +204,7 @@ sub runList {
 
   ##-- parse list query parameters
   my $vars = $h->cgiParams($c,$hreq) or return undef;
-  $h->vlog('debug', "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
+  $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
 
   my $enc = $h->getEncoding(@$vars{qw(enc encoding)},$hreq,$h->{encoding});
   return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
