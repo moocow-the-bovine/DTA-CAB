@@ -42,6 +42,7 @@ sub new {
 			   INTERPOLATE => 1,
 			   POST_CHOMP  => 0,
 			   EVAL_PERL   => 1,
+			   ABSOLUTE => 1,
 			  },
 		vars => {},
 		tmpl => undef,
