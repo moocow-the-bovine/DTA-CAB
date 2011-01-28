@@ -20,7 +20,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::JSON);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:json\.xs|json\.xs)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json-xs', filenameRegex=>qr/\.(?i:json[\.\-\_]xs|json[\.\-\_]xs)$/);
 }
 
 ##==============================================================================

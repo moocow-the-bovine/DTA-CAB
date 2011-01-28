@@ -40,7 +40,7 @@ BEGIN {
 ##   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##   allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##   allowPost => $bool,            ##-- allow POST requests? (default=1)
-##   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
+##   #allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
 ##   pushMode => $mode,             ##-- push mode for addVars (default='keep')
 ##   ##
 ##   ##-- NEW in Handler::Query
@@ -60,7 +60,6 @@ sub new {
 			     encoding=>'UTF-8', ##-- default CGI parameter encoding
 			     allowGet=>1,
 			     allowPost=>1,
-			     allowList=>1,
 			     logVars => undef,
 			     pushMode => 'keep',
 			     allowAnalyzers=>undef,
@@ -100,10 +99,11 @@ sub prepare {
 ##    enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
 ##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 ##    pretty => $level,              ##-- response format level
+##    clean  => $clean,              ##-- request doAnalyzeClean() if true
 ##    ##
 ##    $opt => $value,                ##-- other options are passed to analyzeDocument() (if $h->{allowUserOptions} is true)
 ##   )
-our %localParams = map {($_=>undef)} qw(q qd a fmt enc raw pretty);
+our %localParams = map {($_=>undef)} qw(q qd a fmt enc raw pretty clean);
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -144,7 +144,7 @@ sub run {
       $ao{$_} = $vars->{$_};
     }
   }
-  $ao{doAnalyzeClean}=1 if ($h->{forceClean});
+  $ao{doAnalyzeClean}=1 if ($vars->{clean} || $h->{forceClean});
 
   ##-- get format class
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
@@ -200,7 +200,7 @@ sub runList {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
   ##-- check for LIST
-  return $h->cerror($c,RC_NOT_FOUND,"/list path disabled") if (!$h->{allowList});
+  #return $h->cerror($c,RC_NOT_FOUND,"/list path disabled") if (!$h->{allowList});
 
   ##-- parse list query parameters
   my $vars = $h->cgiParams($c,$hreq) or return undef;
@@ -254,28 +254,6 @@ sub runList {
 			 );
 }
 
-## $rsp = $h->dumpResponse(\$contentRef, %opts)
-##  + Create and return a new data-dump response.
-##    Known %opts:
-##    (
-##     raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
-##     type => $mimetype, ##-- mime type if not raw mode
-##     charset => $enc,   ##-- character set, if not raw mode
-##     filename => $file, ##-- attachment name, if not raw mode
-##    )
-sub dumpResponse {
-  my ($h,$dataref,%vars) = @_;
-  my $returnRaw   = defined($vars{raw}) ? $vars{raw} : $h->{returnRaw};
-  my $contentType = ($returnRaw || !$vars{type} ? 'text/plain' : $vars{type});
-  $contentType   .= "; charset=$vars{charset}" if ($vars{charset} && $contentType !~ m|application/octet-stream|);
-  ##
-  my $rsp = $h->response(RC_OK);
-  $rsp->content_type($contentType);
-  $rsp->content_ref($dataref) if (defined($dataref));
-  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename} && !$returnRaw);
-  return $rsp;
-}
-
 ##--------------------------------------------------------------
 ## Methods: Local
 
@@ -313,8 +291,6 @@ DTA::CAB::Server::HTTP::Handler::Query - CAB HTTP Server: request handler: analy
  $h = $class_or_obj->new(%options);
  $bool = $h->prepare($server);
  $bool = $path->run($server, $localPath, $clientSocket, $httpRequest);
- $response = $h->runList($h,$srv,$path,$c,$hreq);
- $rsp = $h->dumpResponse(\$contentRef, %opts);
  
 
 =cut
@@ -374,7 +350,6 @@ Default allowed formats.
    encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
    allowGet => $bool,             ##-- allow GET requests? (default=1)
    allowPost => $bool,            ##-- allow POST requests? (default=1)
-   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
    pushMode => $mode,             ##-- push mode for addVars (default='keep')
    ##
    ##-- NEW in Handler::Query
@@ -398,43 +373,18 @@ Sets $h-E<gt>{allowAnalyzers} if not already defined.
  $bool = $path->run($server, $localPath, $clientSocket, $httpRequest);
 
 Process $httpRequest matching $localPath as CGI form-encoded query.
-
-If $localPath ends in '/list', a list of analyzers will be returned,
-encoded accroding to the 'format' form variable (see L</runList>).
-
-Otherwise, the following CGI form parameters are supported:
+The following CGI form parameters are supported:
 
  (
-  ##-- query data, in order of preference
-  data => $docData,              ##-- document data (for analyzeDocument())
-  q    => $rawQuery,             ##-- raw untokenized query string (for analyzeDocument())
+  q    => $queryString,          ##-- raw, untokenized query string (preferred over 'qd')
+  qd   => $queryData,            ##-- query data (formatted document)
+  a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
+  fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
+  enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
+  raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
+  pretty => $level,              ##-- response format level
   ##
-  ##-- misc
-  a => $analyer,                 ##-- analyzer key in %{$srv->{as}}
-  format => $format,             ##-- I/O format
-  encoding => $enc,              ##-- I/O encoding
-  pretty => $level,              ##-- pretty-printing level
-  raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
- )
-
-=item runList
-
- $response = $h->runList($h,$srv,$path,$c,$hreq);
-
-Guts for '/list' requests.
-
-=item dumpResponse
-
- $rsp = $h->dumpResponse(\$contentRef, %opts);
-
-Create and return a new data-dump response.
-Known %opts:
-
- (
-  raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
-  type => $mimetype, ##-- mime type if not raw mode
-  charset => $enc,   ##-- character set, if not raw mode
-  filename => $file, ##-- attachment name, if not raw mode
+  $opt => $value,                ##-- other options are passed to analyzeDocument() (if $h->{allowUserOptions} is true)
  )
 
 =back
@@ -455,7 +405,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Jurish
+Copyright (C) 2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,
@@ -463,6 +413,8 @@ at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
+L<DTA::CAB::Server::HTTP::Handler::QueryList(3pm)|DTA::CAB::Server::HTTP::Handler::QueryList>,
+L<DTA::CAB::Server::HTTP::Handler::QueryList(3pm)|DTA::CAB::Server::HTTP::Handler::QueryFormats>,
 L<DTA::CAB::Server::HTTP::Handler::CGI(3pm)|DTA::CAB::Server::HTTP::Handler::CGI>,
 L<DTA::CAB::Server::HTTP::Handler(3pm)|DTA::CAB::Server::HTTP::Handler>,
 L<DTA::CAB::Server::HTTP(3pm)|DTA::CAB::Server::HTTP>,

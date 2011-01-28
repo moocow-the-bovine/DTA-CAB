@@ -19,7 +19,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::JSON);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:json\.syck|jsn\.syck)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json-syck', filenameRegex=>qr/\.(?i:json[\.\-\_]syck|jsn[\.\-\_]syck)$/);
 }
 
 ##==============================================================================

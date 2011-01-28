@@ -20,7 +20,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::YAML);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:yaml\.xs|yml\.xs)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml-xs', filenameRegex=>qr/\.(?i:yaml[\.\-\_]xs|yml[\.\-\_]xs)$/);
 }
 
 ##==============================================================================

@@ -96,12 +96,16 @@ CAB/Sentence.pm
 CAB/Server.pm
 CAB/Server/HTTP.pm
 CAB/Server/HTTP/Handler.pm
+CAB/Server/HTTP/Handler/Alias.pm
 CAB/Server/HTTP/Handler/Builtin.pm
 CAB/Server/HTTP/Handler/CGI.pm
 CAB/Server/HTTP/Handler/Directory.pm
 CAB/Server/HTTP/Handler/File.pm
 CAB/Server/HTTP/Handler/Query.pm
+CAB/Server/HTTP/Handler/QueryFormats.pm
+CAB/Server/HTTP/Handler/QueryList.pm
 CAB/Server/HTTP/Handler/Response.pm
+CAB/Server/HTTP/Handler/Template.pm
 CAB/Server/HTTP/Handler/XmlRpc.pm
 CAB/Server/XmlRpc.pm
 CAB/Token.pm

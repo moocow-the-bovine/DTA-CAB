@@ -100,6 +100,28 @@ sub cerror {
   return undef;
 }
 
+## $rsp = $h->dumpResponse(\$contentRef, %opts)
+##  + Create and return a new data-dump response.
+##    Known %opts:
+##    (
+##     raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
+##     type => $mimetype, ##-- mime type if not raw mode
+##     charset => $enc,   ##-- character set, if not raw mode
+##     filename => $file, ##-- attachment name, if not raw mode
+##    )
+sub dumpResponse {
+  my ($h,$dataref,%vars) = @_;
+  my $returnRaw   = defined($vars{raw}) ? $vars{raw} : $h->{returnRaw};
+  my $contentType = ($returnRaw || !$vars{type} ? 'text/plain' : $vars{type});
+  $contentType   .= "; charset=$vars{charset}" if ($vars{charset} && $contentType !~ m|application/octet-stream|);
+  ##
+  my $rsp = $h->response(RC_OK);
+  $rsp->content_type($contentType);
+  $rsp->content_ref($dataref) if (defined($dataref));
+  $rsp->header('Content-Disposition' => "attachment; filename=\"$vars{filename}\"") if ($vars{filename} && !$returnRaw);
+  return $rsp;
+}
+
 
 ##======================================================================
 ## Handler class aliases (for derived classes)
@@ -187,6 +209,7 @@ DTA::CAB::Server::HTTP::Handler - abstract handler API class for DTA::CAB::Serve
  $rsp = $h->headResponse();
  $rsp = $CLASS_OR_OBJECT->response($code=RC_OK, $msg=status_message($code), $hdr, $content);
  undef = $h->cerror($csock, $status=RC_INTERNAL_SERVER_ERROR, @msg);
+ $rsp = $h->dumpResponse(\$contentRef, %opts);
  
  ##========================================================================
  ## Handler class aliases (for derived classes)
@@ -323,6 +346,20 @@ Really just a wrapper for HTTP::Response-E<gt>new().
 
 Creates an error response and sends it to the client socket $csock.
 Also logs the error at level ($h-E<gt>{logError}||'error') and shuts down the socket.
+
+=item dumpResponse
+
+ $rsp = $h->dumpResponse(\$contentRef, %opts);
+
+Create and return a new data-dump response.
+Known %opts:
+
+ (
+  raw => $bool,      ##-- return raw data (text/plain) ; defualt=$h->{returnRaw}
+  type => $mimetype, ##-- mime type if not raw mode
+  charset => $enc,   ##-- character set, if not raw mode
+  filename => $file, ##-- attachment name, if not raw mode
+ )
 
 =back
 

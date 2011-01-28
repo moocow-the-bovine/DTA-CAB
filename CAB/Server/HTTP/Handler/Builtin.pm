@@ -10,11 +10,15 @@ package DTA::CAB::Server::HTTP::Handler::Builtin;
 use strict;
 
 use DTA::CAB::Server::HTTP::Handler;
+use DTA::CAB::Server::HTTP::Handler::Alias;
 use DTA::CAB::Server::HTTP::Handler::File;
 use DTA::CAB::Server::HTTP::Handler::Directory;
 use DTA::CAB::Server::HTTP::Handler::Response;
 use DTA::CAB::Server::HTTP::Handler::CGI;
 use DTA::CAB::Server::HTTP::Handler::Query;
+use DTA::CAB::Server::HTTP::Handler::QueryFormats;
+use DTA::CAB::Server::HTTP::Handler::QueryList;
+use DTA::CAB::Server::HTTP::Handler::Template;
 use DTA::CAB::Server::HTTP::Handler::XmlRpc;
 
 1; ##-- be happy
