@@ -182,7 +182,7 @@ sub run {
       $rsp = $handler->run($srv,$localPath,$csock,$hreq);
     };
     if ($@) {
-      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died: $@");
+      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>$@</pre>");
       next;
     }
     elsif (!defined($rsp)) {

@@ -796,6 +796,54 @@ Wrapper for $fmt-E<gt>fromFh($filename_or_fh)-E<gt>parseDocument()
 Attempt to tweak $reference into a L<DTA::CAB::Document|DTA::CAB::Document>.
 This is
 a slightly more in-depth version of L<DTA::CAB::Datum::toDocument()|DTA::CAB::Datum/item_toDocument>.
+Current supported $reference forms are:
+
+=over 4
+
+=item L<DTA::CAB::Document|DTA::CAB::Document> object
+
+returned literally
+
+=item L<DTA::CAB::Sentence|DTA::CAB::Sentence> object
+
+returns a new document
+with a single sentence $reference.
+
+=item L<DTA::CAB::Token|DTA::CAB::Token> object
+
+returns a new document
+with a single token $reference.
+
+=item non-reference
+
+returns a new document with a single token
+whose 'text' key is $reference.
+
+=item HASH reference with 'body' key
+
+returns a bless()ed $reference as a L<DTA::CAB::Document|DTA::CAB::Document>.
+
+=item HASH reference with 'tokens' key
+
+returns a new document with the single
+sentence $reference
+
+=item HASH reference with 'text' key
+
+returns a new document with the single
+token $reference
+
+=item ARRAY reference with non-reference initial element
+
+returns a new document with a single sentence
+whose 'tokens' field is set to $reference.
+
+=item ... anything else
+
+will cause a warning to be emitted and $reference to be
+returned as-is.
+
+=back
 
 =back
 

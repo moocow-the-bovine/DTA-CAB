@@ -89,7 +89,8 @@ GetOptions(##-- General
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'data|D' => sub { $action='data'; }, ##-- server-side parsing
-	   'raw|R' => sub { $action='raw'; }, ##-- server-side tokenization & parsing
+	   'raw|r' => sub { $action='raw'; },   ##-- string args, server-side tokenization & parsing
+	   'rawfile|rf|R' => sub { $action='rawfile'; }, ##-- string args, server-side tokenization & parsing
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O
@@ -161,7 +162,7 @@ $cli->connect() or die("$0: connect() failed: $!");
 ##======================================================
 ## Input & Output Formats
 
-our $isFileAction = ($action =~ m(data|doc|raw|bench));
+our $isFileAction = ($action =~ m(data|doc|rawfile|bench));
 
 ##-- format defaults
 foreach my $fo (\%ifo, \%qfo, \%ofo) {
@@ -299,9 +300,9 @@ elsif ($action eq 'document') {
   }
   $ofmt->toFh($outfh);
 }
-elsif ($action eq 'data' || $action eq 'raw') {
+elsif ($action eq 'data' || $action eq 'rawfile') {
   $cunit = 'chr';
-  $analyzeOpts{qraw} = 1 if ($action eq 'raw');
+  $analyzeOpts{qraw} = 1 if ($action eq 'rawfile');
 
   ##-- action: 'data': do server-side parsing
   my ($s_in,$s_out, $doc_filename);
@@ -322,6 +323,23 @@ elsif ($action eq 'data' || $action eq 'raw') {
       $ntoks += $ofmt->parseString($s_out)->nTokens;
       profile_start();
     }
+  }
+}
+elsif ($action eq 'raw') {
+  $cunit = 'chr';
+
+  my $s_in  = join(' ', @ARGV);
+  $s_in     = decode($ifmt->{encoding}, $s_in) if (defined($ifmt->{encoding}));
+
+  my $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts,qraw=>1});
+  $outfh->print($s_out);
+
+  if ($doProfile) {
+    $nchrs += length($s_in);
+    ##-- count tokens, pausing profile timer
+    profile_stop();
+    $ntoks += $ofmt->parseString($s_out)->nTokens;
+    profile_start();
   }
 }
 elsif ($action eq 'bench') {
@@ -392,7 +410,8 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents (default)
   -data                           ##-- ARGUMENTS are filenames, analyzed as documents (same as '-document')
-  -raw                            ##-- ARGUMENTS are filenames, analyzed as raw text
+  -raw                            ##-- ARGUMENTS are strings, analyzed as raw untokenized text
+  -rawfile                        ##-- ARGUMENTS are filenames, analyed as raw untokenized text
 
  I/O Options:
   -query-format-class CLASS       ##-- select query format class (default: 'TT')
