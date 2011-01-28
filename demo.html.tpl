@@ -12,7 +12,7 @@
   <body>
     <div id="outer">
       <div id="headers">
-        <h1>DTA::CAB Demo</h1>
+	<h1>DTA::CAB Demo [%PERL%]print "v$DTA::CAB::VERSION";[%END%]</h1>
       </div>
       <div id="content">
         <div id="section">
@@ -22,16 +22,20 @@
               <tbody>
                 <tr>
                   <td id="searchLabel">Query:</td>
-                  <td colspan="3">
-                    <input type="text" name="q" size="64" id="searchText" />
-                  </td>
+                  <td colspan="3"><input type="text" name="q" size="64" id="searchText" /></td>
                 </tr>
                 <tr>
                   <td id="searchLabel">Analyzer:</td>
                   <td>
                     <select name="a">
-                      <option selected="selected" value="norm">norm</option>
-                      <option value="expand">expand</option>
+		      [% PERL %]
+		      my $h   = $stash->get('h');
+		      my $srv = $stash->get('srv');
+		      my $qh  = $h->{qh};
+		      foreach my $a (grep {!defined($qh->{allowAnalyzers}) || $qh->{allowAnalyzers}{$_}} sort keys %{$srv->{as}}) {
+		        print "<option ".($a eq $qh->{defaultAnalyzer} ? 'selected="1" ' : '')."value=\"$a\">$a</option>\n";
+		      }
+		      [% END %]
                     </select>
                   </td>
                 </tr>
@@ -39,6 +43,15 @@
                   <td id="searchLabelE">Format:</td>
                   <td>
                     <select name="fmt">
+      		      [% PERL %]
+		       return; ##-- don't use auto-generated format list (it's ugly)
+		       my $h   = $stash->get('h');
+		       my $reg = $h->{qh}{formats}{reg};
+		       my $f0  = $h->{qh}{defaultFormat};
+		       foreach my $f (sort {$a->{short} cmp $b->{short}} @$reg) {
+		         print "<option ".($f->{short} eq $f0 || $f->{base} eq $f0 ? 'selected="1" ' : '')."value=\"$f->{short}\">$f->{short}</option>\n";
+		       }
+		      [% END %]
                       <option value="csv">CSV</option>
                       <option value="json">JSON</option>
                       <option value="perl">Perl</option>
@@ -54,24 +67,18 @@
                 <tr>
                   <td id="searchLabelE">Pretty:</td>
                   <td>
-                    <label>
-                      <input type="checkbox" name="pretty" value="1" checked />
-                    </label>
+                    <label><input type="checkbox" name="pretty" value="1" checked /></label>
                   </td>
                 </tr>
                 <tr>
                   <td id="searchLabelE">Clean:</td>
                   <td>
-                    <label>
-                      <input type="checkbox" name="clean" value="1" checked />
-                    </label>
+                    <label><input type="checkbox" name="clean" value="1" checked /></label>
                   </td>
                 </tr>
                 <tr>
-                  <td></td>
-                  <td>
-                    <input type="submit" name="submit" value="submit" />
-                  </td>
+                  <td/>
+                  <td><input type="submit" name="submit" value="submit" /></td>
                 </tr>
               </tbody>
             </table>
@@ -85,8 +92,8 @@
       | <a class="linkButton" href="http://odo.dwds.de/~moocow/software/DTA-CAB">Documentation</a>
       <p/>
       <div id="footers">
-        <tt>DTA::CAB::Server::HTTP demo</tt>
-        <br />
+        <tt>DTA::CAB::Server::HTTP</tt><br/>
+	<tt>DTA::CAB</tt> v$VERSION (<tt>$SVNVERSION</tt>)<br/>
         <address>
           <a href="mailto:jurish@bbaw.de">jurish@bbaw.de</a>
         </address>
