@@ -162,7 +162,7 @@ sub run {
     ##-- serve client: parse HTTP request
     $hreq = $csock->get_request();
     if (!$hreq) {
-      $srv->clientError($csock, "could not parse HTTP request");
+      $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request");
       next;
     }
 
