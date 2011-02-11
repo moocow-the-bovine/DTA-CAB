@@ -303,7 +303,7 @@ sub analyzeDataRef {
   }
 
   if ($qmode eq 'post') {
-    $form{$qname} = $$dataref;
+    $form{$qname} = $form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref;
     return $cli->upost($cli->{serverURL}, \%form,
 		       ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
 		      );
