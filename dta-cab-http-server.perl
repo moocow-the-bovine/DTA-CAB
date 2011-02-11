@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Server::HTTP;
+use DTA::CAB::Utils qw(:version);
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
@@ -63,11 +64,7 @@ GetOptions(##-- General
 	  );
 
 if ($version) {
-  print STDERR
-    ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
-     '  $HeadURL: svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/dta-cab-http-server.perl $', "\n",
-     '  $Id: dta-cab-http-server.perl 4464 2010-11-29 13:36:53Z moocow $', "\n",
-    );
+  print cab_version;
   exit(0);
 }
 

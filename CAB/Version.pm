@@ -1,5 +1,5 @@
 ##-- automatically generated file: DO NOT EDIT!
 package DTA::CAB::Version;
 $DTA::CAB::VERSION = '1.13';
-$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 4803:4804M';
+$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 4831M';
 1;

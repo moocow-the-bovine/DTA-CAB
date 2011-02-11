@@ -119,11 +119,7 @@ GetOptions(##-- General
 	  );
 
 if ($version) {
-  print STDERR
-    ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
-     '  $HeadURL: svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/dta-cab-xmlrpc-client.perl $', "\n",
-     '  $Id: dta-cab-xmlrpc-client.perl 4476 2010-11-30 14:19:08Z moocow $', "\n",
-    );
+  print cab_version;
   exit(0);
 }
 

@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Server::XmlRpc;
+use DTA::CAB::Utils qw(:version);
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
@@ -67,11 +68,7 @@ GetOptions(##-- General
 	  );
 
 if ($version) {
-  print STDERR
-    ("${prog} (DTA::CAB version $DTA::CAB::VERSION) by Bryan Jurish <jurish\@bbaw.de>\n",
-     '  $HeadURL$', "\n",
-     '  $Id$', "\n",
-    );
+  print cab_version;
   exit(0);
 }
 

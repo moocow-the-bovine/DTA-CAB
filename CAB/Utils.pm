@@ -8,6 +8,7 @@ package DTA::CAB::Utils;
 use Exporter;
 use Carp;
 use Encode qw(encode decode);
+use File::Basename qw(basename);
 use strict;
 
 ##==============================================================================
@@ -24,9 +25,37 @@ our %EXPORT_TAGS =
      data => [qw(path_value)],
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
      profile => [qw(si_str profile_str)],
+     version => [qw(cab_version)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
+
+##==============================================================================
+## Functions: version dump
+##==============================================================================
+
+## $str = cab_version(%opts)
+##  + %opts:
+##     program          => $program_name,    ##-- default: basename($0) (undef for no report)
+##     program_version  => $program_version, ##-- default: undef (don't report)
+##     author           => $author,          ##-- default: $DTA::CAB::Utils::CAB_AUTHOR
+our $CAB_AUTHOR = "Bryan Jurish <jurish\@bbaw.de>";
+sub cab_version {
+  my %opts = @_;
+  $opts{program} = basename($0) if (!exists($opts{program}));
+  $opts{author}  = $CAB_AUTHOR  if (!exists($opts{author}));
+  return
+    (
+     ($opts{program}
+      ? ($opts{program}
+	 .($opts{program_version} ? " version $opts{program_version}" : '')
+	 .($opts{author} ? " by $opts{author}" : '')
+	 ."\n")
+      : '')
+     ." : DTA::CAB version $DTA::CAB::VERSION\n"
+     ." : $DTA::CAB::SVNVERSION\n"
+    );
+}
 
 ##==============================================================================
 ## Functions: XML strings
