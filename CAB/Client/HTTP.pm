@@ -290,20 +290,30 @@ sub analyzeDataRef {
   }
 
   ##-- get response
-  my ($rsp);
   if ($qmode eq 'get') {
     $form{$qname} = $$dataref;
     return $cli->uget_form($cli->{serverURL}, \%form);
   }
-  elsif ($qmode eq 'post') {
+
+  ##-- encode (for HTTP::Request v5.810 e.g. on services)
+  if ($form{enc}) {
+    foreach (values %form) {
+      $_ = encode($form{enc},$_) if (utf8::is_utf8($_));
+    }
+  }
+
+  if ($qmode eq 'post') {
     $form{$qname} = $$dataref;
     return $cli->upost($cli->{serverURL}, \%form,
 		       ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
 		      );
   }
-  elsif ($qmode eq 'xpost') {
+  if ($qmode eq 'xpost') {
     $ctype .= "; charset=\"$form{enc}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
-    return $cli->uxpost($cli->{serverURL}, \%form, $$dataref, 'Content-Type'=>$ctype);
+    return $cli->uxpost($cli->{serverURL},
+			\%form,
+			($form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref),
+			'Content-Type'=>$ctype);
   }
 
   ##-- should never happen
