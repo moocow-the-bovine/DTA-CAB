@@ -266,7 +266,7 @@ sub analyzeDataRef {
   my %form = (
 	      fmt=>$cli->{format},
 	      enc=>$cli->{encoding},
-	      %$opts,
+	      ($opts ? %$opts : qw()),
 	      a=>$aname,
 	     );
 
@@ -355,7 +355,7 @@ sub analyzeDocument {
   my $str = $fmt->toString;
   $fmt->flush;
   ##
-  my $rsp = $cli->analyzeDataRef($aname,\$str,{%$opts,
+  my $rsp = $cli->analyzeDataRef($aname,\$str,{($opts ? %$opts : qw()),
 					       fmt => $fmt->shortName,
 					       enc => $fmt->{encoding},
 					       contentType=>$fmt->mimeType,
