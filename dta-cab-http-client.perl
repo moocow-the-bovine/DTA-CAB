@@ -192,11 +192,13 @@ DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##-- formats: post-creation sanity checks
 if ($action eq 'data') {
-  die("$prog: -input-format-class must match -query-format-class in -data mode!")
-    if ($ifmt->shortName ne $qfmt->shortName);
+  if ($ifmt->shortName ne $qfmt->shortName) {
+    warn("$prog: -input-format-class must match -query-format-class in -data mode: setting -query-format-class=", $ifmt->shortName);
+  }
 
-  die("$prog: -output-format-class must match -query-format-class in -data mode!")
-    if ($ofmt->shortName ne $qfmt->shortName);
+  if ($ofmt->shortName ne $qfmt->shortName) {
+    warn("$prog: -output-format-class must match -query-format-class in -data mode: setting -output-format-class=", $qfmt->shortName);
+  }
 }
 
 ##-- format-dependent analysis options
