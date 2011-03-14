@@ -70,10 +70,12 @@ sub new {
 			      key2xml => {
 					  'id' => 'xml:id',
 					  'base' => 'xml:base',
+					  #'text' => 't', ##-- for TokWrap .t.xml
 					 },
 			      xml2key => {
 					  'xml:id' => 'id',
 					  'xml:base' => 'base',
+					  't' => 'text', ##-- for TokWrap .t.xml
 					 },
 
 			      arrayEltKeys => {
