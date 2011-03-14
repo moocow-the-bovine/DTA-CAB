@@ -65,6 +65,20 @@ sub new {
   return $fmt;
 }
 
+##=============================================================================
+## Methods: Output
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Output: MIME & HTTP stuff
+
+## $short = $fmt->shortName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'txml';
+}
+
 
 1; ##-- be happy
 

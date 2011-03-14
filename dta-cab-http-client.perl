@@ -405,7 +405,7 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents (default)
-  -data                           ##-- ARGUMENTS are filenames, analyzed as documents (same as '-document')
+  -data                           ##-- ARGUMENTS are filenames, analyzed as documents with server-side parsing
   -raw                            ##-- ARGUMENTS are strings, analyzed as raw untokenized text
   -rawfile                        ##-- ARGUMENTS are filenames, analyed as raw untokenized text
 
