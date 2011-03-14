@@ -106,7 +106,7 @@ GetOptions(##-- General
 	   'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
 	   'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
 	   ##
-	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => \$ofo{pretty},
+	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => sub { $ofo{level}=$qfo{level}=$_[1]; },
 
 	   ##-- I/O: output
 	   'format-file|ff|output-file|output|o=s' => \$outfile,
