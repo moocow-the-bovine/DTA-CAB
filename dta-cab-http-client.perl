@@ -191,11 +191,17 @@ if ($action eq 'data') {
   if ($ifmt->shortName ne $qfmt->shortName) {
     warn("$prog: -input-format-class must match -query-format-class in -data mode!");
     warn("$prog: setting -query-format-class=", $ifmt->shortName);
+    $qfo{class} = $ifmt->shortName;
+    $qfmt = DTA::CAB::Format->newWriter(%qfo)
+      or die("$0: could not create query format of class '$qfo{class}': $!");
   }
 
   if ($ofmt->shortName ne $qfmt->shortName) {
     warn("$prog: -output-format-class must match -query-format-class in -data mode!");
     warn("$prog: setting -output-format-class=", $qfmt->shortName);
+    $ofo{class} = $qfmt->shortName;
+    $ofmt = DTA::CAB::Format->newWriter(%ofo, ($outfile ne '-' ? (file=>$outfile) : qw()))
+      or die("$0: could not create output format of class '$ofo{class}': $!");
   }
 }
 
