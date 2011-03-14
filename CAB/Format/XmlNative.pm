@@ -118,9 +118,9 @@ sub parseNode {
   my ($nod,$cur,$name,$nxt);
   my ($topval);
 
-  my @queue = ([$top]);
-  while (@queue) {
-    ($nod,$cur) = @{shift @queue};
+  my @stack = ([$top]);
+  while (@stack) {
+    ($nod,$cur) = @{pop @stack};
     $name = $nod->nodeName;
     $name = $xml2key->{$name} if (defined($xml2key->{$name}));
 
@@ -157,7 +157,7 @@ sub parseNode {
 	$cur->{_xmldata} .= $nod->toString if (isa($cur,'HASH'));
       }
       ##-- Element: common: enqueue child nodes
-      push(@queue, map {[$_,$nxt]} $nod->attributes, $nod->childNodes);
+      push(@stack, map {[$_,$nxt]} reverse($nod->childNodes), $nod->attributes);
 
       ##-- Element: save top value
       $topval = $nxt if (!defined($topval));

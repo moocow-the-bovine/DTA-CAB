@@ -55,8 +55,13 @@ BEGIN {
 sub new {
   my $that = shift;
   my $fmt = $that->SUPER::new(@_);
-  $fmt->{key2xml}{text} = 't';
-  $fmt->{xml2key}{t}    = 'text';
+
+  $fmt->{key2xml}{text}      = 't';
+  $fmt->{xml2key}{t}         = 'text';
+
+  $fmt->{key2xml}{doc}       = 'sentences';
+  $fmt->{xml2key}{sentences} = 'doc';
+
   return $fmt;
 }
 
