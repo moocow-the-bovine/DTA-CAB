@@ -186,20 +186,22 @@ $qfmt = DTA::CAB::Format->newReader(%qfo, class=>($qfo{class}||$ifmt->shortName)
 $ofmt = DTA::CAB::Format->newWriter(%ofo, ($outfile ne '-' ? (file=>$outfile) : qw()))
   or die("$0: could not create output format of class '".($ofo{class}||'undef')."': $!");
 
-DTA::CAB->debug("using input format class ", ref($ifmt));
-DTA::CAB->debug("using query format class ", ref($qfmt));
-DTA::CAB->debug("using output format class ", ref($ofmt));
-
 ##-- formats: post-creation sanity checks
 if ($action eq 'data') {
   if ($ifmt->shortName ne $qfmt->shortName) {
-    warn("$prog: -input-format-class must match -query-format-class in -data mode: setting -query-format-class=", $ifmt->shortName);
+    warn("$prog: -input-format-class must match -query-format-class in -data mode!");
+    warn("$prog: setting -query-format-class=", $ifmt->shortName);
   }
 
   if ($ofmt->shortName ne $qfmt->shortName) {
-    warn("$prog: -output-format-class must match -query-format-class in -data mode: setting -output-format-class=", $qfmt->shortName);
+    warn("$prog: -output-format-class must match -query-format-class in -data mode!");
+    warn("$prog: setting -output-format-class=", $qfmt->shortName);
   }
 }
+
+DTA::CAB->debug("using input format class ", ref($ifmt));
+DTA::CAB->debug("using query format class ", ref($qfmt));
+DTA::CAB->debug("using output format class ", ref($ofmt));
 
 ##-- format-dependent analysis options
 %analyzeOpts = (
