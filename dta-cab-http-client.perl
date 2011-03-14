@@ -106,7 +106,7 @@ GetOptions(##-- General
 	   'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
 	   'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
 	   ##
-	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => sub { $ofo{level}=$qfo{level}=$_[1]; },
+	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => \$ofo{level},
 
 	   ##-- I/O: output
 	   'format-file|ff|output-file|output|o=s' => \$outfile,
@@ -206,8 +206,8 @@ if ($action eq 'data') {
 }
 
 DTA::CAB->debug("using input format class ", ref($ifmt));
-DTA::CAB->debug("using query format class ", ref($qfmt));
-DTA::CAB->debug("using output format class ", ref($ofmt));
+DTA::CAB->debug("using query format class ", ref($qfmt), "(level=", ($qfmt->{level}||0), ")");
+DTA::CAB->debug("using output format class ", ref($ofmt), "(level=", ($ofmt->{level}||0), ")");
 
 ##-- format-dependent analysis options
 %analyzeOpts = (
