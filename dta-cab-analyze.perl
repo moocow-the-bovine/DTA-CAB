@@ -55,7 +55,7 @@ GetOptions(##-- General
 
 	   ##-- Analysis
 	   'configuration|c=s'    => \$rcFile,
-	   'analyzer-class|analyze-class|analysis-class||ac|a=s' => \$analyzeClass,
+	   'analyzer-class|analyze-class|analysis-class|ac|a=s' => \$analyzeClass,
 	   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => \%analyzeOpts,
 	   'profile|p!' => \$doProfile,
 
