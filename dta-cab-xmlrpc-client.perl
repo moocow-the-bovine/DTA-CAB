@@ -32,7 +32,7 @@ our ($help,$man,$version,$verbose);
 our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Logger::ensureLog()
 
 ##-- Client Options
-our $serverURL  = 'http://localhost:8088';
+our $serverURL  = 'http://localhost:8088/xmlrpc';
 our $serverEncoding = 'UTF-8';
 our $localEncoding  = 'UTF-8';
 our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
@@ -310,7 +310,7 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -verbose LEVEL                  ##-- set default log level
 
  Client Options:
-  -server URL                     ##-- set server URL (default: http://localhost:8088)
+  -server URL                     ##-- set server URL (default: http://localhost:8088/xmlrpc)
   -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
   -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
