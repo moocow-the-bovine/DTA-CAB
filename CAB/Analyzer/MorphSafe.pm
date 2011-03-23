@@ -163,6 +163,7 @@ sub analyzeTypes {
 
 				    ##-- unsafe: composita
 				    #| \/NE          ##-- unsafe: composita with NE
+				    | \/ON           ##-- unsafe: composita with organisation names
 
 				    ##-- unsafe: verb roots
 				  | \b te    (?:\/V|\~)
@@ -188,8 +189,8 @@ sub analyzeTypes {
 				  | \b Szene (?:\/N|\[_NN\])
 
 				    ##-- unsafe: name roots
-				  | \b Thür  (?:\/NE|\[_NE\])
-				  | \b Loo(?:s?)  (?:\/NE|\[_NE\])
+				  | \b Thür  (?:\/NE|\/GN|\[_NE\])
+				  | \b Loo(?:s?)  (?:\/NE|\/GN|\[_NE\])
 				  )
 			       )x)
 	     } @$analyses
