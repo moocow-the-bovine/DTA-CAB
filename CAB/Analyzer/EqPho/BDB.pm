@@ -1,37 +1,44 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqRW::DB.pm
+## File: DTA::CAB::Analyzer::EqPho::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: DB dictionary-based equivalence-class expander, rewrite variant
+## Description: dictionary-based equivalence-class expander, phonetic variant
 
-package DTA::CAB::Analyzer::EqRW::DB;
-use DTA::CAB::Analyzer::Dict ':all';
-use DTA::CAB::Analyzer::Dict::DB;
+package DTA::CAB::Analyzer::EqPho::BDB;
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict;
+use DTA::CAB::Analyzer::Dict::BDB;
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Dict::DB
+##  + object structure: see DTA::CAB::Analyzer::Dict::BDB
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   label       => 'eqrw',
-			   analyzeGet  => '($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}), ($_[0]{rw} ? (map {$_->{hi}} @{$_[0]{rw}}) : qw())',
-			   analyzeSet  => $DICT_SET_FST_EQ,
+			   label       => 'eqpho',
 			   eqIdWeight  => 0,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			   ##
+			   #analyzeGet  => '$_[0]{lts}[0]{hi}',
+			   #analyzeSet  => $DICT_SET_FST_EQ,
+			   ##
+			   analyzeCode => ('$_->{$lab}=['.
+					   _am_tt_fst_sort('grep {defined($_)}'
+							   .' '._am_tt_fst_eqlist('$dhash->{'._am_lts.'}', '$_', '$dic->{eqIdWeight}')
+							  )
+					   .']'),
 
-			   #inputKey    => 'rw',
 
 			   ##-- user args
 			   @_
@@ -51,7 +58,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqRW::DB - DB dictionary-based rewrite-equivalence expander
+DTA::CAB::Analyzer::EqPho::BDB - DB dictionary-based phonetic equivalence expander
 
 =cut
 
@@ -61,12 +68,12 @@ DTA::CAB::Analyzer::EqRW::DB - DB dictionary-based rewrite-equivalence expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqRW::DB;
+ use DTA::CAB::Analyzer::EqPho::BDB;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqrw = DTA::CAB::Analyzer::EqRW::DB->new(%args);
+ $eqp = DTA::CAB::Analyzer::EqPho::BDB->new(%args);
  
 
 =cut
@@ -77,12 +84,13 @@ DTA::CAB::Analyzer::EqRW::DB - DB dictionary-based rewrite-equivalence expander
 
 =head1 DESCRIPTION
 
-DB Dictionary-based rewrite equivalence-class expander.
+Dictionary-DB-based phonetic equivalence-class expander.
+Composite analyzers should also include an 'lts' phonetic analyzer.
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Globals
 =pod
 
 =head2 Globals
@@ -91,15 +99,15 @@ DB Dictionary-based rewrite equivalence-class expander.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqRW::DB inherits from
-L<DTA::CAB::Analyzer::Dict>.
+DTA::CAB::Analyzer::EqPho::BDB inherits from
+L<DTA::CAB::Analyzer::Dict::BDB>.
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqRW::DB: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -112,8 +120,8 @@ L<DTA::CAB::Analyzer::Dict>.
 
 Constructor.  Sets the following default options:
 
- label       => 'eqrw',
- analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
+ label       => 'eqpho',
+ analyzeGet  => '$_[0]{lts}[0]{hi}',
  analyzeSet  => $DICT_SET_FST_EQ,
  eqIdWeight  => 0,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',

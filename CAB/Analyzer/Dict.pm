@@ -5,11 +5,10 @@
 ## Description: generic analysis dictionary API using Lingua::TT::Dict
 
 package DTA::CAB::Analyzer::Dict;
-use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Format;
 use Lingua::TT::Dict;
 use IO::File;
-use Exporter;
 use Carp;
 
 use strict;
@@ -18,95 +17,27 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(Exporter DTA::CAB::Analyzer);
+our @ISA = qw(DTA::CAB::Analyzer);
 
 ##--------------------------------------------------------------
-## Globals: Accessors: Get
+## Globals: Accessors
 
-## $DICT_GET_TEXT 
-##  + $text = "$DICT_GET_TEXT"->($tok)
-##  + access closure
-our $DICT_GET_TEXT = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
-
-## $DICT_GET_LTS
-##  + $pho = "$DICT_GET_LTS"->($tok)
-##  + access closure
-our $DICT_GET_LTS = '$_[0]{lts} && @{$_[0]{lts}} ? $_[0]{lts}[0]{hi} : $_[0]{text}';
-
-##--------------------------------------------------------------
-## Globals: Accessors: Set
-
-## $DICT_SET_RAW
-##  + undef = "$DICT_SET_RAW"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = \%key2val
-our $DICT_SET_RAW = '$_[0]{$anl->{label}}=$_[1];';
-
-## $DICT_SET_LIST
-##  + undef = "$DICT_SET_LIST"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = [map {split(/\t/,$_)} values(%key2val)]
-our $DICT_SET_LIST = '$_[0]{$anl->{label}} = [map {split(/\t/,$_)} grep {defined($_)} values(%{$_[1]})];';
-
-## $DICT_SET_FST
-##  + undef = "$DICT_SET_FST"->($tok,\%key2val)
-##  + just sets $tok->{$anl->{label}} = [map {split(/\t/,$_)} values(%key2val)]
-our $DICT_SET_FST = q(
-  $_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")}
-			  map {).__PACKAGE__.q(::parseFstString($_)}
-			  map {split(/\t/,$_)}
-			  grep {defined($_)}
-			  values(%{$_[1]})];
-  delete($_[0]{$anl->{label}}) if (!@{$_[0]{$anl->{label}}});
-);
-
-## $DICT_SET_FST_EQ
-##  + undef = "$DICT_SET_FST_EQ"->($tok,\%key2val)
-##  + like $DICT_SET_FST, but adds pseudo-analysis {hi=>$key,w=>($anl->{eqIdWeight}||0)} for $tok->{text}, $tok->{xlit}{latin1Text}
-our $DICT_SET_FST_EQ = '
-  $_[0]{$anl->{label}} = [sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")}
-			  values %{
-			    {((map {($_=>{hi=>$_,w=>($anl->{eqIdWeight}||0)})} ($_[0]{text}, ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : qw()))),
-			      (map {($_->{hi}=>$_)}
-			       map {'.__PACKAGE__.'::parseFstString($_)}
-			       map {split(/\t/,$_)}
-			       grep {defined($_)}
-			       values(%{$_[1]})))}
-			  }];
-';
-
-
-##--------------------------------------------------------------
-## Globals: Accessors: Defaults
-
-## $DEFAULT_ANALYZE_GET
-##  + default coderef or eval-able string for {analyzeGet}
-##  + eval()d in list context, may return multiples
-##  + parameters:
-##      $_[0] => token object being analyzed
-##  + closure vars:
-##      $anl  => analyzer (automaton)
-our $DEFAULT_ANALYZE_GET = $DICT_GET_TEXT;
-
-## $DEFAULT_ANALYZE_SET
-##  + default coderef or eval-able string for {analyzeSet}
-##  + parameters:
-##      $_[0] => token object being analyzed
-##      $_[1] => hash {$analysisKey => $dictVal} of dict lookup results; may be safely copied by reference
-##  + closure vars:
-##      $anl  => analyzer (dictionary)
-our $DEFAULT_ANALYZE_SET = $DICT_SET_LIST;
-
+##  + dict application is computed as:
+##      $dic->accessClosure($dic->{analyzeCode})->();
+##  + analysis closure compiled from $dic->{analyzeCode} can use vars:
+##      $dic   ##-- analyzer object
+##      $anl   ##-- analyzer object (alias provided by Analyzer::accessClosure)
+##      $lab   ##-- $dic->{label}
+##      $dhash ##-- $dic->dictHash()
+##      #$doc   ##-- document being analyzed
+##      #$types ##-- types being analyzed with analyzeTypes()
+##      #$opts  ##-- user options to analyzeTypes()
+##  + the following lexical temporaries are provided:
+##      $key   ##-- dict key (temporary)
+##      $val   ##-- dict value (temporary)
 ##==============================================================================
-## Exports
 
-our @EXPORT = qw();
-our %EXPORT_TAGS =
-  ('get'   => [qw($DICT_GET_TEXT $DICT_GET_LTS)],
-   'set'   => [qw($DICT_SET_RAW $DICT_SET_LIST $DICT_SET_FST $DICT_SET_FST_EQ parseFstString)],
-   'defaults'  => [qw($DEFAULT_ANALYZE_GET $DEFAULT_ANALYZE_SET)],
-  );
-$EXPORT_TAGS{all}   = [map {@$_} values %EXPORT_TAGS];
-$EXPORT_TAGS{child} = @{$EXPORT_TAGS{all}};
-our @EXPORT_OK = @{$EXPORT_TAGS{all}};
+our $CODE_DEFAULT = '$_->{$lab}=$dhash->{'._am_xlit().'};'; # '._am_clean('$_->{$lab}'); ##-- useless, since expandTypes() puts undef back!
 
 ##==============================================================================
 ## Constructors etc.
@@ -120,8 +51,7 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ##
 ##     ##-- Analysis Output
 ##     label          => $lab,   ##-- analyzer label
-##     analyzeGet     => $code,  ##-- pseudo-accessor ($code->($tok)): returns list of source keys for token  (default='$_[0]{text}')
-##     analyzeSet     => $code,  ##-- pseudo-accessor ($code->($tok,$key,$val)) sets analyses for $tok
+##     analyzeCode    => $code,  ##-- pseudo-accessor ($code->()): apply dict to current token ($_)
 ##
 ##     ##-- Analysis Options
 ##     encoding       => $enc,   ##-- encoding of dict file (default='UTF-8')
@@ -145,8 +75,7 @@ sub new {
 
 			      ##-- analysis output
 			      label => 'dict',
-			      analyzeGet => $DEFAULT_ANALYZE_GET,
-			      analyzeSet => $DEFAULT_ANALYZE_SET,
+			      analyzeCode => $CODE_DEFAULT,
 			      allowRegex => undef,
 
 			      ##-- user args
@@ -161,6 +90,7 @@ sub clear {
   $dic->{ttd}->clear;
   return $dic;
 }
+
 
 ##==============================================================================
 ## Methods: Embedded API
@@ -254,42 +184,41 @@ sub analyzeTypes {
   my ($dic,$doc,$types,$opts) = @_;
 
   ##-- setup common variables
-  my $lab      = $dic->{label};
-  my $dhash    = $dic->dictHash;
   my $allow_re = defined($dic->{allowRegex}) ? qr($dic->{allowRegex}) : undef;
+  my $acode    = $dic->analyzeCode;
 
-  ##-- accessors
-  my $aget  = $dic->accessClosure(defined($dic->{analyzeGet}) ? $dic->{analyzeGet} : $DEFAULT_ANALYZE_GET);
-  my $aset  = $dic->accessClosure(defined($dic->{analyzeSet}) ? $dic->{analyzeSet} : $DEFAULT_ANALYZE_SET);
-
-  ##-- ananalysis options
-  #my @analyzeOptionKeys = qw(tolower tolowerNI toupperI); #)
-  #$opts = $opts ? {%$opts} : {}; ##-- set default options: copy / create
-  #$opts->{$_} = $dic->{$_} foreach (grep {!defined($opts->{$_})} @analyzeOptionKeys);
-
-  my ($tok, $k2v);
-  foreach $tok (values %$types) {
-    next if (defined($allow_re) && $tok->{text} !~ $allow_re);
-    $k2v = { map {($_=>$dhash->{$_})} $aget->($tok) };
-    $aset->($tok,$k2v);
+  foreach (values %$types) {
+    next if (defined($allow_re) && $_->{text} !~ $allow_re);
+    $acode->();
   }
 
   return $doc;
 }
 
-##==============================================================================
-## Methods: Utilities
+##------------------------------------------------------------------------
+## Methods: Analysis: Utils
 
-## \%fstAnalysis = PACKAGE::parseFstString($string)
-##  + parses a string as an TT-style FST analaysis, i.e. a HASH ref with
-##    mandatory fields 'hi', 'w' and optional fields 'lo', 'lemma'.
-sub parseFstString {
-  return ($_[0] =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/
-	  ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}
-	  : {hi=>$_[0]})
+## $prefix = $dict->analyzePre()
+sub analyzePre {
+  my $dic = shift;
+  return join('',
+	      map {"my $_;\n"}
+	      '$dic=$anl',
+	      '$lab=$dic->{label}',
+	      '$dhash=$dic->dictHash',
+	      '($key,$val)',
+	      ($dic->{analyzePre} ? $dic->{analyzePre} : qw()),
+	     );
 }
 
-
+## $coderef = $dict->analyzeCode()
+## $coderef = $dict->analyzeCode($code)
+sub analyzeCode {
+  my ($dic,$code) = @_;
+  $code      = defined($dic->{analyzeCode}) ? $dic->{analyzeCode} : $CODE_DEFAULT if (!defined($code));
+  my $acode  = $dic->accessClosure($code, pre=>$dic->analyzePre);
+  return $acode;
+}
 
 1; ##-- be happy
 
@@ -350,11 +279,6 @@ DTA::CAB::Analyzer::Dict - generic analysis dictionary API using Lingua::TT::Dic
  $bool = $anl->canAnalyze();
  $doc = $anl->analyzeTypes($doc,\%types,\%opts);
  
- ##========================================================================
- ## Methods: Utilities
- 
- \%fstAnalysis = PACKAGE::parseFstString($string);
- 
 
 =cut
 
@@ -377,147 +301,41 @@ DTA::CAB::Analyzer::Dict - generic analysis dictionary API using Lingua::TT::Dic
 =item Variable: @ISA
 
 DTA::CAB::Analyzer::Dict inherits from
-Exporter and L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
+L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Globals: Accessors
+## DESCRIPTION: DTA::CAB::Analyzer::Dict: Accessors
 =pod
 
-=head2 Globals: Accessors: Get
+=head2 Accessors
 
-=over 4
+Dict application is computed as:
 
-=item Variable: $DICT_GET_TEXT
+ $dic->accessClosure($dic->{analyzeCode})->();
 
- $text = "$DICT_GET_TEXT"->($tok)
+Analysis closure compiled from $dic-E<gt>{analyzeCode} can use vars:
 
-Access closure, returns token text.
+ $dic   ##-- analyzer object
+ $anl   ##-- analyzer object (alias provided by Analyzer::accessClosure)
+ $lab   ##-- $dic->{label}
+ $dhash ##-- $dic->dictHash()
+ #$doc   ##-- document being analyzed
+ #$types ##-- types being analyzed with analyzeTypes()
+ #$opts  ##-- user options to analyzeTypes()
 
-=item Variable: $DICT_GET_LTS
+The following lexical temporaries are provided for convenience:
 
- $pho = "$DICT_GET_LTS"->($tok)
+ $key   ##-- dict key (temporary)
+ $val   ##-- dict value (temporary, used by SET macros)
 
-Access closure, returns 1st phonetic analysis string for token.
-
-=item Variable: $DICT_SET_RAW
-
- "$DICT_SET_RAW"->($tok,\%key2val)
-
-Just sets $tok-E<gt>{$anl-E<gt>{label}} = \%key2val.
-
-=item Variable: $DICT_SET_LIST
-
- undef = "$DICT_SET_LIST"->($tok,\%key2val)
-
-Just sets $tok-E<gt>{$anl-E<gt>{label}} = [map {split(/\t/,$_)} values(%key2val)].
-
-=item Variable: $DICT_SET_FST
-
- undef = "$DICT_SET_FST"->($tok,\%key2val)
-
-Just sets $tok-E<gt>{$anl-E<gt>{label}} = [map {split(/\t/,$_)} values(%key2val)]
-
-=item Variable: $DICT_SET_FST_EQ
-
- undef = "$DICT_SET_FST_EQ"->($tok,\%key2val)
-
-Like $DICT_SET_FST, but adds pseudo-analysis
-{hi=E<gt>$key,w=E<gt>($anl-E<gt>{eqIdWeight}||0)} for $tok-E<gt>{text}, $tok-E<gt>{xlit}{latin1Text}
-
-=back
+See L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> for more details on access closures.
 
 =cut
 
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Globals: Accessors: Defaults
-=pod
-
-=head2 Globals: Accessors: Defaults
-
-=over 4
-
-=item Variable: $DEFAULT_ANALYZE_GET
-
- $DEFAULT_ANALYZE_GET
-
-Default coderef or eval-able string for {analyzeGet};
-eval()d in list context, may return multiples
-
-Parameters:
-
- $_[0] => token object being analyzed
-
-Closure vars:
-
- $anl  => analyzer
-
-=item Variable: $DEFAULT_ANALYZE_SET
-
-$DEFAULT_ANALYZE_SET
-
-Default coderef or eval-able string for {analyzeSet}.
-
-Parameters:
-
- $_[0] => token object being analyzed
- $_[1] => hash {$analysisKey => $dictVal} of dict lookup results; may be safely copied by reference
-
-Closure vars:
-
- $anl  => analyzer
-
-=back
-
-=cut
-
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Exports
-=pod
-
-=head2 Exports
-
-=over 4
-
-=item Variable: @EXPORT
-
-Default exports (none).
-
-=item Variable: %EXPORT_TAGS
-
-Export tags include:
-
-=over 4
-
-=item :get
-
-Exports $DICT_GET_* constants.
-
-=item :set
-
-Exports $DICT_SET_* constants.
-
-=item :defaults
-
-Exports $DEFAULT_* constants.
-
-=item :all
-
-All of the above.
-
-=back
-
-
-=item Variable: @EXPORT_OK
-
-Allowable exports; should be identical to $EXPORT_TAGS{all}.
-
-=back
-
-=cut
 
 ##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Analyzer::Dict: Constructors etc.
@@ -659,25 +477,6 @@ Perform type-wise analysis of all (text) types in $doc-E<gt>{types}.
 
 =cut
 
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict: Methods: Utilities
-=pod
-
-=head2 Methods: Utilities
-
-=over 4
-
-=item parseFstString
-
- \%fstAnalysis = PACKAGE::parseFstString($string);
-
-Parses a string as an TT-style FST analaysis, i.e. a HASH ref with
-mandatory fields 'hi', 'w' and optional fields 'lo', 'lemma'.
-Used e.g. by $DICT_SET_FST.
-
-=back
-
-=cut
 
 ##========================================================================
 ## END POD DOCUMENTATION, auto-generated by podextract.perl
@@ -702,7 +501,7 @@ at your option, any later version of Perl 5 you may have available.
 =head1 SEE ALSO
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
-L<DTA::CAB::Analyzer::Dict::DB(3pm)|DTA::CAB::Analyzer::Dict::DB>,
+L<DTA::CAB::Analyzer::Dict::BDB(3pm)|DTA::CAB::Analyzer::Dict::BDB>,
 L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
 L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
 L<DTA::CAB(3pm)|DTA::CAB>,

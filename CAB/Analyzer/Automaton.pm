@@ -49,12 +49,12 @@ our $DEFAULT_ANALYZE_SET = 'delete($_[0]{$anl->{label}}); $_[0]{$anl->{label}}=$
 ##     ##-- Filename Options
 ##     fstFile => $filename,     ##-- source FST file (default: none)
 ##     labFile => $filename,     ##-- source labels file (default: none)
-##     dictFile => $filename,    ##-- source dict file (default: none): clobbers $dict->{dictFile} if defined
 ##
-##     ##-- Exception lexicon options
-##     dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
-##                               ##   + default=undef
-##     dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
+##     ##-- Exception lexicon options (OBSOLETE for CAB >=v1.15)
+##     #dictFile => $filename,    ##-- source dict file (default: none): clobbers $dict->{dictFile} if defined
+##     #dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
+##     #                          ##   + default=undef
+##     #dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
 ##
 ##     ##-- Analysis Output
 ##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
@@ -95,7 +95,6 @@ sub new {
 			      ##-- filenames
 			      fstFile => undef,
 			      labFile => undef,
-			      dictFile => undef,
 
 			      ##-- analysis objects
 			      fst=>undef,
@@ -104,14 +103,11 @@ sub new {
 			      labh=>{},
 			      laba=>[],
 			      labc=>[],
-			      dict=>undef,
-			      dictClass=>'DTA::CAB::Analyzer::Dict',
 
 			      ##-- options
 			      eow            =>'',
 			      check_symbols  => 1,
 			      labenc         => 'latin1',
-			      #dictenc        => 'utf8',
 			      auto_connect   => 0,
 			      tolower        => 0,
 			      tolowerNI      => 0,
@@ -171,10 +167,6 @@ sub fstOk { return defined($_[0]{fst}) && $_[0]{fst}->n_states>0; }
 ##  + should return false iff label-set is undefined or "empty"
 sub labOk { return defined($_[0]{lab}) && $_[0]{lab}->size>0; }
 
-## $bool = $aut->dictOk()
-##  + should return false iff dict is undefined or "empty"
-sub dictOk { return $_[0]{dict} && $_[0]{dict}->dictOk; }
-
 ##==============================================================================
 ## Methods: I/O
 ##==============================================================================
@@ -195,21 +187,16 @@ sub ensureLoaded {
   if ( defined($aut->{labFile}) && !$aut->labOk ) {
     $rc &&= $aut->loadLabels($aut->{labFile});
   }
-  ##-- ensure: dict
-  if ( (defined($aut->{dictFile}) || ($aut->{dict} && $aut->{dict}{dictFile})) && !$aut->dictOk ) {
-    $rc &&= $aut->loadDict();
-  }
   return $rc;
 }
 
-## $aut = $aut->load(fst=>$fstFile, lab=>$labFile, dict=>$dictFile)
+## $aut = $aut->load(fst=>$fstFile, lab=>$labFile)
 sub load {
   my ($aut,%args) = @_;
   return 0 if (!grep {defined($_)} @args{qw(fst lab dict)});
   my $rc = $aut;
   $rc &&= $aut->loadFst($args{fst}) if (defined($args{fst}));
   $rc &&= $aut->loadLabels($args{lab}) if (defined($args{lab}));
-  $rc &&= $aut->loadDict($args{dict}) if (defined($args{dict}));
   return $rc;
 }
 
@@ -263,29 +250,6 @@ sub parseLabels {
   return $aut;
 }
 
-##--------------------------------------------------------------
-## Methods: I/O: Input: Dictionary
-
-## $aut = $aut->loadDict()
-## $aut = $aut->loadDict($dictfile)
-sub loadDict {
-  my ($aut,$dictfile) = @_;
-  $dictfile = $aut->{dictFile} if (!defined($dictfile));
-  $dictfile = $aut->{dict}{dictFile} if (!defined($dictfile));
-  return $aut if (!defined($dictfile)); ##-- no dict file to load
-  $aut->info("loading exception lexicon from '$dictfile'");
-
-  ##-- sanitize dict object
-  my $dclass = (ref($aut->{dict})||$aut->{dictClass}||'DTA::CAB::Analyzer::Dict');
-  my $dict = $aut->{dict} = bless(_unifyClobber($dclass->new,$aut->{dict},undef), $dclass);
-  $dict->{label}    = $aut->{label}."_dict"; ##-- force sub-analyzer label
-  $dict->{dictFile} = $dictfile;             ##-- clobber sub-analyzer file
-
-  ##-- load dict object
-  $dict->ensureLoaded();
-  return undef if (!$dict->dictOk);
-  return $aut;
-}
 
 ##==============================================================================
 ## Methods: Persistence
@@ -323,7 +287,7 @@ sub loadPerlRef {
 ## $bool = $anl->canAnalyze()
 ##  + returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
 sub canAnalyze {
-  return $_[0]->dictOk || ($_[0]->labOk && $_[0]->fstOk);
+  return ($_[0]->labOk && $_[0]->fstOk);
 }
 
 
@@ -341,7 +305,6 @@ sub analyzeTypes {
   ##-- setup common variables
   my $aget   = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
   my $aset   = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
-  my $dict   = $aut->dictOk ? $aut->{dict}->dictHash : undef;
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
   my $result = $aut->{result};
@@ -399,17 +362,8 @@ sub analyzeTypes {
       if    ($toupperI)  { $uword = ucfirst($uword); }
       if    (defined($bashWS)) { $uword =~ s/\s+/$bashWS/g; }
 
-      ##-- dict lookup (normalized)
-      if ($dict && defined($ua=$dict->{$uword})) {
-	push(@wa,
-	     sort {($a->{w}||0) <=> ($b->{w}||0)}
-	     map  {DTA::CAB::Analyzer::Dict::parseFstString($_)}
-	     grep {$_ ne ''}
-	     split(/\t/,$ua)
-	    );
-      }
-      elsif ($fst_ok) {
-	##-- fst lookup (if fst available and no dict analysis was found)
+      if ($fst_ok) {
+	##-- fst lookup (if fst available and no previous analysis was found)
 
 	##-- fst: get labels
 	if ($attInput) {
@@ -524,7 +478,6 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  $class = $aut->labClass();
  $bool = $aut->fstOk();
  $bool = $aut->labOk();
- $bool = $aut->dictOk();
  
  ##========================================================================
  ## Methods: I/O
@@ -534,7 +487,6 @@ DTA::CAB::Analyzer::Automaton - generic analysis automaton API
  $aut = $aut->loadFst($fstfile);
  $aut = $aut->loadLabels($labfile);
  $aut = $aut->parseLabels();
- $aut = $aut->loadDict($dictfile);
  
  ##========================================================================
  ## Methods: Persistence: Perl
@@ -596,12 +548,6 @@ Constuctor.
  ##-- Filename Options
  fstFile => $filename,     ##-- source FST file (default: none)
  labFile => $filename,     ##-- source labels file (default: none)
- dictFile => $filename,    ##-- source dict file (default: none): clobbers $dict->{dictFile} if defined
- ##
- ##-- Exception lexicon options
- dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
-                           ##   + default=undef
- dictClass => $class,      ##-- fallback class for new dict (default='DTA::CAB::Analyzer::Dict')
  ##
  ##-- Analysis Output
  analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
@@ -613,7 +559,6 @@ Constuctor.
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
  labenc         => $enc,  ##-- encoding of labels file (default='latin1')
- #dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8') (set $aut->{dict}{encoding} instead)
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
@@ -679,12 +624,6 @@ Should return false iff fst is undefined or "empty".
 
 Should return false iff alphabet (label-set) is undefined or "empty".
 
-=item dictOk
-
- $bool = $aut->dictOk();
-
-Should return false iff dict is undefined or "empty".
-
 =back
 
 =cut
@@ -705,7 +644,7 @@ Ensures automaton data is loaded from default files.
 
 =item load
 
- $aut = $aut->load(fst=>$fstFile, lab=>$labFile, dict=>$dictFile);
+ $aut = $aut->load(fst=>$fstFile, lab=>$labFile);
 
 Loads specified files.
 
@@ -739,12 +678,6 @@ fixes encoding difficulties in $aut-E<gt>{labh}, $aut-E<gt>{laba}
 
 =back
 
-
-=item loadDict
-
- $aut = $aut->loadDict($dictfile);
-
-Loads dictionary from $dictfile.
 
 =back
 
@@ -794,7 +727,7 @@ Implicitly calls $obj-E<gt>clear()
 Returns true if analyzer can perform its function (e.g. data is loaded & non-empty)
 This implementation just returns:
 
- $anl->dictOk || ($anl->labOk && $anl->fstOk)
+ ($anl->labOk && $anl->fstOk)
 
 =item analyzeTypes
 

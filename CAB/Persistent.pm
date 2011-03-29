@@ -179,7 +179,7 @@ sub savePerlString {
 ##     %more_obj_args,      ##-- literally inserted into $obj
 ##  + load from perl code string
 sub loadPerlString {
-  my ($that,$str,%args) = @_;
+ my ($that,$str,%args) = @_;
   my $var = $args{var} ? $args{var} : '$obj';
   my $src = (defined($args{src})
 	     ? $args{src}

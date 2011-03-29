@@ -104,6 +104,8 @@ sub loadDict {
 our %badTypes =
   map {($_=>undef)}
   (
+   qw(Abtheilung Abtheilungen), ##-- != Abt/N#heil/V~ung[_NN][event_result][fem][sg]\* <15>
+   qw(Andre andre), ##-- != Andre[_NE][firstname][none][none][sg][nom_acc_dat] <0>
    qw(Nahme Nahmen),
    qw(Thaler),
    qw(Thür Thüre Thüren Thürer),

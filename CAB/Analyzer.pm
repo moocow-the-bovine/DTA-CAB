@@ -9,6 +9,7 @@ use DTA::CAB::Utils;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
+use Exporter;
 use Carp;
 use strict;
 
@@ -16,7 +17,23 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Persistent);
+our @ISA = qw(Exporter DTA::CAB::Persistent);
+
+our @EXPORT = qw();
+our %EXPORT_TAGS =
+  (
+   'access' => [qw(_am_xlit _am_lts _am_rw),
+		qw(_am_tt_list _am_tt_fst),
+		qw(_am_id_fst _am_tt_fst_list _am_tt_fst_eqlist),
+		qw(_am_fst_sort),
+		qw(_am_clean),
+		qw(parseFstString),
+	       ],
+  );
+our @EXPORT_OK = map {@$_} values %EXPORT_TAGS;
+$EXPORT_TAGS{all}   = [@EXPORT_OK];
+$EXPORT_TAGS{child} = [@EXPORT_OK];
+
 
 ##==============================================================================
 ## Constructors etc.
@@ -390,25 +407,138 @@ sub getAnalyzeClosure {
 ##------------------------------------------------------------------------
 ## Methods: Analysis: (Token-)Accessor Closures
 
-## $closure = $anl->accessClosure( $methodName);
-## $closure = $anl->accessClosure(\&codeRef);
-## $closure = $anl->accessClosure( $codeString);
+## $closure = $anl->accessClosure( $methodName, %opts);
+## $closure = $anl->accessClosure(\&codeRef, %opts);
+## $closure = $anl->accessClosure( $codeString, %opts);
 ##  + returns accessor-closure $closure for $anl
 ##  + passed argument can be one of the following:
 ##    - a CODE ref resolves to itself
 ##    - a method name resolves to $anl->can($methodName)
 ##    - any other string resolves to 'sub { $codeString }';
 ##      which may reference the closure variable $anl
+##  + %opts
+##     pre => $code_str,   ##-- for $codeString accessors, prefix for eval (e.g. 'my ($lexVar);')
+##     vars => \@vars,     ##-- adds lexical vars 'my ('.join(',',@varNames).');'
 sub accessClosure {
-  my ($anl,$code) = @_;
+  my ($anl,$code,%opts) = @_;
   $code = ';' if (!defined($code));
   return $code if (UNIVERSAL::isa($code,'CODE'));
   return $anl->can($code) if ($anl->can($code));
-  my $sub = eval "sub { $code }";
+  $code = (''
+	   .($opts{pre}  ? "$opts{pre}; " : '')
+	   .($opts{vars} ? ('my ('.join(',',@{$opts{vars}}).'); ') : '')
+	   ."sub { $code }");
+  my $sub = eval $code;
   $anl->logcluck("accessClosure(): could not compile closure {$code}: $@") if (!$sub);
   return $sub;
 }
 
+## PACKAGE::_am_xlit($tokvar='$_')
+##  + access-closure macro: get xlit or text for token $$tokvar
+##  + evaluates to a string:
+##    ($$tokvar->{xlit} ? $$tokvar->{xlit}{latin1Text} : $$tokvar->{text})
+sub _am_xlit {
+  my $tokvar = shift || '$_';
+  return "($tokvar\->{xlit} ? $tokvar\->{xlit}{latin1Text} : $tokvar\->{text})";
+}
+
+## PACKAGE::_am_lts($tokvar='$_')
+##  + access-closure macro for first LTS analysis of token $$tokvar
+##  + evaluates to string:
+##    ($$tokvar->{lts} && @{$$tokvar->{lts}} ? $$tokvar->{lts}[0]{hi} : $$tokvar->{text})
+sub _am_lts {
+  my $tokvar = shift || '$_';
+  return "($tokvar\->{lts} && \@{$tokvar\->{lts}} ? $tokvar\->{lts}[0]{hi} : $tokvar\->{text})";
+}
+
+## PACKAGE::_am_rw($tokvar='$_')
+##  + access-closure macro for rw output(s) for token $$tokvar
+##  + evaluates to string:
+##    ($$tokvar->{rw} ? (map {$_->{hi}} @{$$tokvar->{rw}}) : qw())
+sub _am_rw {
+  my $tokvar = shift || '$_';
+  return "($tokvar\->{rw} ? (map {\$_->{hi}} \@{$tokvar\->{rw}}) : qw())";
+}
+
+## PACKAGE::_am_tt_list($ttvar='$_')
+##  + access-closure macro for a TT-style list of strings $$ttvar
+##  + evaluatees to a list: "split(/\\t/,$$ttvar)"
+sub _am_tt_list {
+  my $ttvar = shift || '$_';
+  return "split(/\\t/,$ttvar)";
+}
+
+## PACKAGE::_am_tt_fst($ttvar='$_')
+##  + access-closure macro for a single TT-style FST analysis $$ttvar
+##  + formerly mutliply defined in sub-packages as SUBPACKAGE::parseFstString()
+##  + evaluates to a FST-analysis hash {hi=>$hi,w=>$w,lo=>$lo,lemma=>$lemma}:
+##    (
+##     $$ttvar =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/
+##     ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}
+##     : {hi=>$$ttvar}
+##    )
+sub _am_tt_fst {
+  my $ttvar = shift || '$_';
+  return ("($ttvar".' =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/'
+	  .' ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}'
+	  ." : {hi=>$ttvar})");
+}
+
+## PACKAGE::_parseFstString($ttstr)
+##  + actual subroutine for parsing an fst string
+sub parseFstString {
+  return ($_[0] =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/
+	  ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}
+	  : {hi=>$_[0]});
+}
+
+## PACKAGE::_am_id_fst($tokvar='$_', $wvar='0')
+##  + access-closure macro for a identity FST analysis
+##  + evaluates to a single fst analysis hash:
+##    {hi=>_am_xlit($tokvar), w=>$$wvar}
+sub _am_id_fst {
+  my $tokvar = shift || '$_';
+  my $wvar   = shift || '0';
+  return '{hi=>'._am_xlit($tokvar).', w=>'.$wvar.'}';
+}
+
+
+## PACKAGE::_am_tt_fst_list($ttvar='$_')
+##  + access-closure macro for a list of TT-style FST analyses $$ttvar
+##  + evaluates to a list of fst analysis hashes:
+##    (map {_am_tt_fst('$_')} split(/\t/,$$ttvar))
+sub _am_tt_fst_list {
+  my $ttvar = shift || '$_';
+  return '(map {'._am_tt_fst('$_').'} split(/\t/,'.$ttvar.'))';
+}
+
+## PACKAGE::_am_tt_fst_eqlist($ttvar='$tt', $tokvar='$_', $wvar='0')
+##  + access-closure macro for a list of TT-style FST analyses $$ttvar
+##  + evaluates to a list of fst analysis hashes:
+##    (_am_id_fst($tokvar,$wvar), _am_tt_fst_list($ttvar))
+sub _am_tt_fst_eqlist {
+  my $ttvar  = shift || '$tt';
+  my $tokvar = shift || '$_';
+  my $wvar   = shift || '0';
+  return '('._am_id_fst($tokvar,$wvar).', '._am_tt_fst_list($ttvar).')';
+}
+
+## PACKAGE::_am_fst_sort($listvar='@_')
+##  + access-closure macro to sort a list of FST analyses $$listvar by weight
+##  + evaluates to a sorted list of fst analysis hashes:
+##    (sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} $$listvar)
+sub _am_fst_sort {
+  my $listvar = shift || '@_';
+  return '(sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} '.$listvar.')';
+}
+
+## PACKAGE::_am_clean($hashvar='$_->{$lab}')
+##  + access-closure macro to delete a hash entry if undefined; evaluates to
+##    delete($$hashvar) if (!defined($$hashvar));
+sub _am_clean {
+  my $hashvar = shift || '$_->{$lab}';
+  return "delete($hashvar) if (!defined($hashvar));";
+}
 
 
 ##==============================================================================
@@ -598,12 +728,21 @@ DTA::CAB::Analyzer - generic analyzer API
  $rpc_xml_base64 = $anl->analyzeData($data_str,\%opts);
  
  ##========================================================================
- ## Methods: Analysis: Closure Utilities (optional)
+ ## Methods: Analysis: Closure Utilities
  
  \&closure = $anl->analyzeClosure($which);
  \&closure = $anl->getAnalyzeClosure($which);
  
  $closure = $anl->accessClosure( $methodName);
+
+ PACKAGE::_am_xlit($tokvar);
+ PACKAGE::_am_lts($tokvar);
+ PACKAGE::_am_tt_list($ttvar);
+ PACKAGE::_am_tt_fst($ttvar);
+ PACKAGE::_am_id_fst($tokvar, $wvar);
+ PACKAGE::_am_tt_fst_list($ttvar);
+ PACKAGE::_am_fst_sort($listvar);
+ PACKAGE::_am_fst_clean($hashvar);
  
  ##========================================================================
  ## Methods: XML-RPC
@@ -691,8 +830,6 @@ The method name is still used with (basically) its original semantics
 by the (unmaintained) subclass L<DTA::CAB::Analyzer::Dyn|DTA::CAB::Analyzer::Dyn>.
 
 Currently does nothing.
-
-=back
 
 =item defaultLabel
 
@@ -1041,33 +1178,134 @@ available, otherwise croak()s.
 
 =item accessClosure
 
- $closure = $anl->accessClosure( $methodName);
- $closure = $anl->accessClosure(\&codeRef);
- $closure = $anl->accessClosure( $codeString);
+ $closure = $anl->accessClosure(\&codeRef,    %opts);
+ $closure = $anl->accessClosure( $methodName, %opts);
+ $closure = $anl->accessClosure( $codeString, %opts);
 
 Returns accessor-closure $closure for $anl.
 Passed argument can be one of the following:
 
 =over 4
 
-=item *
+=item $codeRef
 
 a CODE ref resolves to itself
 
-=item *
+=item $methodName
 
 a method name resolves to $anl-E<gt>can($methodName)
 
-=item *
+=item $codeString
 
 any other string resolves to 'sub { $codeString }';
 which may reference the closure variable $anl
 
 =back
 
+Additional options for $codeString pseudo-accessors can be passed in %opts:
+
+ pre => $prefix,     ##-- compiles as "${prefix}; sub {$code}"
+ vars => \@vars,     ##-- compiles as 'my ('.join(',',@vars).'); '."sub {$code}"
+
 =back
 
 =cut
+
+##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Analyzer: Methods: Analysis: Closure Utilities: Macros
+=pod
+
+=head3 Methods: Analysis: Closure Utilities: Macros
+
+In order to facilitate development of analyzer-local accessor code in string form,
+the following "macros" are defined as exportable functions.  Their arguments and
+return values are B<strings> suitable for inclusion in acccessor macros.  These
+macros are exported by the tags ':access', ':child', and ':all'.
+
+=over 4
+
+=item _am_xlit
+
+ PACKAGE::_am_xlit($tokvar='$_');
+
+access-closure macro: get xlit or text for token $$tokvar;
+evaluates to a string:
+($$tokvar-E<gt>{xlit} ? $$tokvar-E<gt>{xlit}{latin1Text} : $$tokvar-E<gt>{text})
+
+=item _am_lts
+
+ PACKAGE::_am_lts($tokvar='$_');
+
+access-closure macro for first LTS analysis of token $$tokvar;
+evaluates to string:
+($$tokvar-E<gt>{lts} && @{$$tokvar-E<gt>{lts}} ? $$tokvar-E<gt>{lts}[0]{hi} : $$tokvar-E<gt>{text})
+
+=item _am_tt_list
+
+ PACKAGE::_am_tt_list($ttvar='$_');
+
+access-closure macro for a TT-style list of strings $$ttvar;
+evaluates to a list: split(/\\t/,$$ttvar)
+
+=item _am_tt_fst
+
+ PACKAGE::_am_tt_fst($ttvar='$_');
+
+(formerly mutliply defined in sub-packages as SUBPACKAGE::parseFstString())
+
+access-closure macro for a single TT-style FST analysis $$ttvar;
+evaluates to a FST-analysis hash {hi=E<gt>$hi,w=E<gt>$w,lo=E<gt>$lo,lemma=E<gt>$lemma}:
+
+    (
+     $$ttvar =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/
+     ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}
+     : {hi=>$$ttvar}
+    )
+
+=item _am_id_fst
+
+ PACKAGE::_am_id_fst($tokvar='$_', $wvar='0');
+
+access-closure macro for a identity FST analysis;
+evaluates to a single fst analysis hash:
+{hi=E<gt>_am_xlit($tokvar), w=E<gt>$$wvar}
+
+=item _am_tt_fst_list
+
+ PACKAGE::_am_tt_fst_list($ttvar='$_');
+
+access-closure macro for a list of TT-style FST analyses $$ttvar;
+evaluates to a list of fst analysis hashes:
+(map {_am_tt_fst('$_')} split(/\t/,$$ttvar))
+
+=item _am_tt_fst_eqlist
+
+ PACKAGE::_am_tt_fst_eqlist($ttvar='$tt', $tokvar='$_', $wvar='0');
+
+access-closure macro for a list of TT-style FST analyses $$ttvar;
+evaluates to a list of fst analysis hashes:
+(_am_id_fst($tokvar,$wvar), _am_tt_fst_list($ttvar))
+
+=item _am_fst_sort
+
+ PACKAGE::_am_fst_sort($listvar='@_');
+
+access-closure macro to sort a list of FST analyses $$listvar by weight;
+evaluates to a sorted list of fst analysis hashes:
+(sort {($a-E<gt>{w}||0) E<lt>=E<gt> ($b-E<gt>{w}||0) || ($a-E<gt>{hi}||"") cmp ($b-E<gt>{hi}||"")} $$listvar)
+
+=item _am_fst_clean
+
+ PACKAGE::_am_fst_clean($hashvar='$_->{$lab}');
+
+access-closure macro to delete undefined hash entries;
+evaluates to:
+delete($$hashvar) if (!defined($$hashvar));
+
+=back
+
+=cut
+
 
 ##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Analyzer: Methods: XML-RPC

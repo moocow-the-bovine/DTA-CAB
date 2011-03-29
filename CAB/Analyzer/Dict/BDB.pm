@@ -1,13 +1,14 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Dict::DB.pm
+## File: DTA::CAB::Analyzer::Dict::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: generic analysis dictionary API using Lingua::TT::DB::File
+## Description: generic analysis dictionary API using Lingua::TT::DBFile
 
-package DTA::CAB::Analyzer::Dict::DB;
-use DTA::CAB::Analyzer::Dict ':all';
+package DTA::CAB::Analyzer::Dict::BDB;
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict;
 use DTA::CAB::Format;
-use Lingua::TT::DB::File;
+use Lingua::TT::DBFile;
 use IO::File;
 use Carp;
 use DB_File;
@@ -20,13 +21,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(Exporter DTA::CAB::Analyzer::Dict);
-
-## $DEFAULT_ANALYZE_GET
-##  + inherited from Dict
-
-## $DEFAULT_ANALYZE_SET
-##  + inherited from Dict
+our @ISA = qw(DTA::CAB::Analyzer::Dict);
 
 ##==============================================================================
 ## Constructors etc.
@@ -40,15 +35,14 @@ our @ISA = qw(Exporter DTA::CAB::Analyzer::Dict);
 ##
 ##     ##-- Analysis Output
 ##     label          => $lab,   ##-- analyzer label
-##     analyzeGet     => $code,  ##-- pseudo-accessor ($code->($tok)): returns list of source keys for token  (default='$_[0]{text}')
-##     analyzeSet     => $code,  ##-- pseudo-accessor ($code->($tok,$key,$val)) sets analyses for $tok
+##     analyzeCode    => $code,  ##-- pseudo-accessor to perform actual analysis for token ($_); see DTA::CAB::Analyzer::Dict for details
 ##
 ##     ##-- Analysis Options
-##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding}
+##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding} ; uses DB filters
 ##
 ##     ##-- Analysis objects
-##     dbf => $dbf,              ##-- underlying Lingua::TT::DB::File object (default=undef)
-##     dba => \%dba,             ##-- args for Lingua::TT::DB::File->new()
+##     dbf => $dbf,              ##-- underlying Lingua::TT::DBFile object (default=undef)
+##     dba => \%dba,             ##-- args for Lingua::TT::DBFile->new()
 ##     #={
 ##     #  mode  => $mode,        ##-- default: 0644
 ##     #  dbflags => $flags,     ##-- default: O_RDONLY
@@ -76,8 +70,7 @@ sub new {
 
 			      ##-- analysis output
 			      label => 'dict',
-			      analyzeGet => $DEFAULT_ANALYZE_GET,
-			      analyzeSet => $DEFAULT_ANALYZE_SET,
+			      analyzeCode => $DTA::CAB::Analyzer::Dict::CODE_DEFAULT,
 
 			      ##-- user args
 			      @_
@@ -138,7 +131,7 @@ sub ensureLoaded {
   my $rc  = 1;
   if ( defined($dic->{dictFile}) && !$dic->dictOk ) {
     $dic->info("opening DB file '$dic->{dictFile}'");
-    $dic->{dbf} = Lingua::TT::DB::File->new(%{$dic->{dba}||{}});
+    $dic->{dbf} = Lingua::TT::DBFile->new(%{$dic->{dba}||{}});
     $rc &&= $dic->{dbf}->open($dic->{dictFile}, encoding=>$dic->{encoding});
   }
   $dic->logwarn("error opening file '$dic->{dictFile}': $!") if (!$rc);
@@ -202,7 +195,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Dict::DB - generic analysis dictionary API using Lingua::TT::DB::File
+DTA::CAB::Analyzer::Dict::BDB - generic analysis dictionary API using Lingua::TT::DBFile
 
 =cut
 
@@ -215,7 +208,7 @@ DTA::CAB::Analyzer::Dict::DB - generic analysis dictionary API using Lingua::TT:
  ##========================================================================
  ## PRELIMINARIES
  
- use DTA::CAB::Analyzer::Dict::DB;
+ use DTA::CAB::Analyzer::Dict::BDB;
  
  ##========================================================================
  ## Constructors etc.
@@ -253,7 +246,7 @@ DTA::CAB::Analyzer::Dict::DB - generic analysis dictionary API using Lingua::TT:
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Globals
 =pod
 
 =head2 Globals
@@ -262,10 +255,10 @@ DTA::CAB::Analyzer::Dict::DB - generic analysis dictionary API using Lingua::TT:
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::Dict::DB
+DTA::CAB::Analyzer::Dict::BDB
 inherits from L<DTA::CAB::Analyzer::Dict|DTA::CAB::Analyzer::Dict>
 and supports the L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> API.
-This module uses Lingua::TT::DB::File to implement a static
+This module uses Lingua::TT::DBFile to implement a static
 finite dictionary stored in a Berkeley DB file.
 
 =back
@@ -273,7 +266,7 @@ finite dictionary stored in a Berkeley DB file.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -291,15 +284,14 @@ finite dictionary stored in a Berkeley DB file.
  ##
  ##-- Analysis Output
  label          => $lab,   ##-- analyzer label
- analyzeGet     => $code,  ##-- pseudo-accessor ($code->($tok)): returns list of source keys for token  (default='$_[0]{text}')
- analyzeSet     => $code,  ##-- pseudo-accessor ($code->($tok,$key,$val)) sets analyses for $tok
+ analyzeCode    => $code,  ##-- pseudo-accessor code for analyzeing token $_
  ##
  ##-- Analysis Options
  encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding}
  ##
  ##-- Analysis objects
- dbf => $dbf,              ##-- underlying Lingua::TT::DB::File object (default=undef)
- dba => \%dba,             ##-- args for Lingua::TT::DB::File->new()
+ dbf => $dbf,              ##-- underlying Lingua::TT::DBFile object (default=undef)
+ dba => \%dba,             ##-- args for Lingua::TT::DBFile->new()
  #={
  #  mode  => $mode,        ##-- default: 0644
  #  dbflags => $flags,     ##-- default: O_RDONLY
@@ -320,7 +312,7 @@ Overriude just closes db.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Methods: Embedded API
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Methods: Embedded API
 =pod
 
 =head2 Methods: Embedded API
@@ -354,7 +346,7 @@ Default returns $dict-E<gt>{ttd}{dict}{$key} or undef.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Methods: I/O: Input: all
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Methods: I/O: Input: all
 =pod
 
 =head2 Methods: I/O
@@ -366,14 +358,14 @@ Default returns $dict-E<gt>{ttd}{dict}{$key} or undef.
  $bool = $dic->ensureLoaded();
 
 Ensures analyzer data is loaded from default files.
-Override instantiates $dic-E<gt>{dbf} as a new Lingua::TT::DB::File object.
+Override instantiates $dic-E<gt>{dbf} as a new Lingua::TT::DBFile object.
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Methods: Persistence: Perl
+## DESCRIPTION: DTA::CAB::Analyzer::Dict::BDB: Methods: Persistence: Perl
 =pod
 
 =head2 Methods: Persistence: Perl

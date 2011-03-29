@@ -1,23 +1,23 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqLemma::DB.pm
+## File: DTA::CAB::Analyzer::EqLemma::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: DB dictionary-based equivalence-class expander, rewrite variant
 
-package DTA::CAB::Analyzer::EqLemma::DB;
-use DTA::CAB::Analyzer::Dict ':all';
-use DTA::CAB::Analyzer::Dict::DB;
+package DTA::CAB::Analyzer::EqLemma::BDB;
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict::BDB;
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB);
 
-our $ANALYZE_GET_MOOT = '($_[0]{moot} ? $_[0]{moot}{lemma} : qw())';
-our $ANALYZE_GET_MORPH = '($_[0]{morph} ? (map {$_->{hi}} @{$_[0]{morph}}) : qw())';
-our $ANALYZE_GET_RW_MORPH = '($_[0]{rw} ? (map {$_->{morph} ? (map {$_->{lemma}} @{$_->{morph}}) : qw()} @{$_[0]{rw}}) : qw())';
+our $ANALYZE_GET_MOOT = '($_->{moot} ? $_->{moot}{lemma} : qw())';
+our $ANALYZE_GET_MORPH = '($_->{morph} ? (map {$_->{hi}} @{$_->{morph}}) : qw())';
+our $ANALYZE_GET_RW_MORPH = '($_->{rw} ? (map {$_->{morph} ? (map {$_->{lemma}} @{$_->{morph}}) : qw()} @{$_->{rw}}) : qw())';
 
 our $ANALYZE_GET_ALL = '('.join(",\n",$ANALYZE_GET_MOOT, $ANALYZE_GET_MORPH, $ANALYZE_GET_RW_MORPH).')';
 
@@ -28,15 +28,16 @@ our $ANALYZE_GET_DEFAULT = $ANALYZE_GET_MOOT;
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Dict::DB
+##  + object structure: see DTA::CAB::Analyzer::Dict::BDB
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
 			   label       => 'eqlemma',
+			   ##
 			   analyzeGet  => $ANALYZE_GET_DEFAULT,
-			   #analyzeSet  => $DICT_SET_FST, ##-- NOT USED
-			   #allowRegex  => '(?:^[[:alpha:]\-\¬]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\¬]+(?:\.?)$)',
+			   ##analyzeSet  => $DICT_SET_FST, ##-- NOT USED
+			   ##allowRegex  => '(?:^[[:alpha:]\-\¬]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\¬]+(?:\.?)$)',
 
 			   ##-- user args
 			   @_
@@ -74,7 +75,7 @@ sub analyzeSentences {
   my $allow_re = defined($anl->{allowRegex}) ? qr($anl->{allowRegex}) : undef;
 
   ##-- accessors
-  my $aget  = $anl->accessClosure(defined($anl->{analyzeGet}) ? $anl->{analyzeGet} : $ANALYZE_GET_DEFAULT);
+  my $aget  = $anl->analyzeCode($anl->{analyzeGet});
 
   ##-- get lemma types
   my $ltypes = {};
@@ -85,10 +86,10 @@ sub analyzeSentences {
     foreach $l ($aget->($tok)) {
       if (!defined($ltyp=$ltypes->{$l})) {
 	$ltyp = $ltypes->{$l} = {lemma=>$l};
-	$lw  = $dhash->{$l};
+	$lw   = $dhash->{$l};
 	$ltyp->{$lab} = [({lo=>$l,hi=>$l,w=>0}),
 			 (map {$_->{lo}=$l; $_}
-			  map {DTA::CAB::Analyzer::Dict::parseFstString($_)}
+			  map {DTA::CAB::Analyzer::parseFstString($_)}
 			  grep {defined($_)}
 			  split(/\t/,$lw))
 			]
@@ -110,7 +111,6 @@ sub analyzeSentences {
 }
 
 
-
 1; ##-- be happy
 
 __END__
@@ -123,7 +123,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqLemma::DB - DB dictionary-based lemma-equivalence expander
+DTA::CAB::Analyzer::EqLemma::BDB - DB dictionary-based lemma-equivalence expander
 
 =cut
 
@@ -133,12 +133,12 @@ DTA::CAB::Analyzer::EqLemma::DB - DB dictionary-based lemma-equivalence expander
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqLemma::DB;
+ use DTA::CAB::Analyzer::EqLemma::BDB;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqlemma = DTA::CAB::Analyzer::EqLemma::DB->new(%args);
+ $eqlemma = DTA::CAB::Analyzer::EqLemma::BDB->new(%args);
  
  ##========================================================================
  ## analysis overrides
@@ -170,8 +170,8 @@ DB dictionary-based lemma equivalence-class expander.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqLemma::DB inherits from
-L<DTA::CAB::Analyzer::Dict::DB>.
+DTA::CAB::Analyzer::EqLemma::BDB inherits from
+L<DTA::CAB::Analyzer::Dict::BDB>.
 
 =item Variable: $ANALYZE_GET_MOOT
 
@@ -198,7 +198,7 @@ L<DTA::CAB::Analyzer::Dict::DB>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqLemma::DB: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::EqLemma::BDB: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -217,7 +217,7 @@ Constructor.  Sets some default options.
 
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::EqLemma::DB: Analysis
+## DESCRIPTION: DTA::CAB::Analyzer::EqLemma::BDB: Analysis
 =pod
 
 =head2 Methods: Analysis

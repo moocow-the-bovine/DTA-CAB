@@ -1,35 +1,47 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqPho::DB.pm
+## File: DTA::CAB::Analyzer::EqRW::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: dictionary-based equivalence-class expander, phonetic variant
+## Description: DB dictionary-based equivalence-class expander, rewrite variant
 
-package DTA::CAB::Analyzer::EqPho::DB;
-use DTA::CAB::Analyzer::Dict ':all';
-use DTA::CAB::Analyzer::Dict::DB;
+package DTA::CAB::Analyzer::EqRW::BDB;
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict;
+use DTA::CAB::Analyzer::Dict::BDB;
 use strict;
+#no strict ('subs');
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB);
 
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Dict::DB
+##  + object structure: see DTA::CAB::Analyzer::Dict::BDB
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   label       => 'eqpho',
-			   analyzeGet  => '$_[0]{lts}[0]{hi}',
-			   analyzeSet  => $DICT_SET_FST_EQ,
+			   label       => 'eqrw',
 			   eqIdWeight  => 0,
 			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			   ##
+			   #analyzeGet  => '($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}), ($_[0]{rw} ? (map {$_->{hi}} @{$_[0]{rw}}) : qw())',
+			   #analyzeSet  => $DICT_SET_FST_EQ,
+			   ##
+			   analyzeCode => ('$_->{$lab}=['.
+							_am_tt_fst_sort(_am_id_fst('$_', '$dic->{eqIdWeight}')
+									.', '
+									.'map {'._am_tt_fst_list.'}'
+									.' grep {defined($_)}'
+									.' @$dhash{'._am_xlit.','._am_rw.'}'
+								       )
+					   .']'),
 
 			   ##-- user args
 			   @_
@@ -49,7 +61,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqPho::DB - DB dictionary-based phonetic equivalence expander
+DTA::CAB::Analyzer::EqRW::BDB - DB dictionary-based rewrite-equivalence expander
 
 =cut
 
@@ -59,12 +71,12 @@ DTA::CAB::Analyzer::EqPho::DB - DB dictionary-based phonetic equivalence expande
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqPho::DB;
+ use DTA::CAB::Analyzer::EqRW::BDB;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqp = DTA::CAB::Analyzer::EqPho::DB->new(%args);
+ $eqrw = DTA::CAB::Analyzer::EqRW::BDB->new(%args);
  
 
 =cut
@@ -75,13 +87,12 @@ DTA::CAB::Analyzer::EqPho::DB - DB dictionary-based phonetic equivalence expande
 
 =head1 DESCRIPTION
 
-Dictionary-DB-based phonetic equivalence-class expander.
-Composite analyzers should also include an 'lts' phonetic analyzer.
+DB Dictionary-based rewrite equivalence-class expander.
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Dict: Globals
 =pod
 
 =head2 Globals
@@ -90,15 +101,15 @@ Composite analyzers should also include an 'lts' phonetic analyzer.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqPho::DB inherits from
-L<DTA::CAB::Analyzer::Dict::DB>.
+DTA::CAB::Analyzer::EqRW::BDB inherits from
+L<DTA::CAB::Analyzer::Dict>.
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Dict::DB: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::EqRW::BDB: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -111,8 +122,8 @@ L<DTA::CAB::Analyzer::Dict::DB>.
 
 Constructor.  Sets the following default options:
 
- label       => 'eqpho',
- analyzeGet  => '$_[0]{lts}[0]{hi}',
+ label       => 'eqrw',
+ analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
  analyzeSet  => $DICT_SET_FST_EQ,
  eqIdWeight  => 0,
  allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',

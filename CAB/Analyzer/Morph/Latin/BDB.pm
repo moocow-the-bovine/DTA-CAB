@@ -1,18 +1,19 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Morph::Latin::DB.pm
+## File: DTA::CAB::Analyzer::Morph::Latin::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: auxilliary latin-language analysis, dictionary-based
 
 ##==============================================================================
-## Package: Analyzer::Morph::Latin::DB
+## Package: Analyzer::Morph::Latin::BDB
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph::Latin::DB;
-use DTA::CAB::Analyzer::Dict ':all';
-use DTA::CAB::Analyzer::Dict::DB;
+package DTA::CAB::Analyzer::Morph::Latin::BDB;
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict;
+use DTA::CAB::Analyzer::Dict::BDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Dict::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
@@ -21,8 +22,10 @@ sub new {
   my $aut = $that->SUPER::new(
 			      ##-- analysis selection
 			      label      => 'mlatin',
-			      analyzeGet => "lc($DICT_GET_TEXT)",
-			      analyzeSet => $DICT_SET_FST,
+			      #analyzeGet => "lc($DICT_GET_TEXT)",
+			      #analyzeSet => $DICT_SET_FST,
+			      ##
+			      analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').']',
 
 			      ##-- user args
 			      @_
@@ -50,7 +53,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via external full-form DB
+DTA::CAB::Analyzer::Morph::Latin::BDB - auxilliary latin word recognizer via external full-form DB
 
 =cut
 
@@ -60,9 +63,9 @@ DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via exte
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Morph::Latin::DB;
+ use DTA::CAB::Analyzer::Morph::Latin::BDB;
  
- $latin = DTA::CAB::Analyzer::Morph::Latin::DB->new(%args);
+ $latin = DTA::CAB::Analyzer::Morph::Latin::BDB->new(%args);
  
 
 =cut
@@ -73,9 +76,9 @@ DTA::CAB::Analyzer::Morph::Latin::DB - auxilliary latin word recognizer via exte
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Morph::Latin::DB
+DTA::CAB::Analyzer::Morph::Latin::BDB
 is a just a simplified wrapper for
-L<DTA::CAB::Analyzer::Dict::DB|DTA::CAB::Analyzer::Dict::DB>
+L<DTA::CAB::Analyzer::Dict::BDB|DTA::CAB::Analyzer::Dict::BDB>
 which sets the following default options:
 
  label      => 'mlatin',

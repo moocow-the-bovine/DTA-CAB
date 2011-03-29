@@ -13,7 +13,7 @@ use DTA::CAB::Analyzer::Unicruft;
 use DTA::CAB::Analyzer::LTS;
 
 use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
-#use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict::DB (default)
+#use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict::BDB (default)
 #use DTA::CAB::Analyzer::EqPho::Dict;     ##-- via Dict (unused)
 #use DTA::CAB::Analyzer::EqPho::Cascade;  ##-- via Gfsm::XL (unused)
 #use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
@@ -30,13 +30,13 @@ use DTA::CAB::Analyzer::Moot::DynLex;
 use DTA::CAB::Analyzer::Lemmatizer;      ##-- tagh lemma extractor
 
 use DTA::CAB::Analyzer::EqRW;            ##-- default eqrw-expander
-#use DTA::CAB::Analyzer::EqRW::DB;        ##-- via Dict::DB (default)
+#use DTA::CAB::Analyzer::EqRW::BDB;        ##-- via Dict::BDB (default)
 #use DTA::CAB::Analyzer::EqRW::Dict;      ##-- via Dict (unused)
 #use DTA::CAB::Analyzer::EqRW::Cascade;   ##-- via Gfsm::XL (unimplemented, unused)
 #use DTA::CAB::Analyzer::EqRW::FST;       ##-- via Gfsm::Automaton (default)
 
 use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer (base class)
-use DTA::CAB::Analyzer::Dict::DB;        ##-- generic DB-dictionary-based analyzer (base class)
+use DTA::CAB::Analyzer::Dict::BDB;        ##-- generic DB-dictionary-based analyzer (base class)
 #use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander (obsolete, removed)
 
 use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-based analysis)
@@ -110,7 +110,7 @@ Finite-state analyzer base class using Gfsm::XL for low-level automaton operatio
 
 Full-form dictionary-based analyzer (aka "cache") using a flat hash.
 
-=item L<DTA::CAB::Analyzer::Dict::DB|DTA::CAB::Analyzer::Dict::DB>
+=item L<DTA::CAB::Analyzer::Dict::BDB|DTA::CAB::Analyzer::Dict::BDB>
 
 Full-form dictionary-based analyzer (aka "cache") using Berkeley DB.
 

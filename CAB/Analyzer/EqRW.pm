@@ -13,8 +13,8 @@ use strict;
 #use DTA::CAB::Analyzer::EqRW::FST;
 #our @ISA = qw(DTA::CAB::Analyzer::EqRW::FST);
 ##--
-use DTA::CAB::Analyzer::EqRW::DB;
-our @ISA = qw(DTA::CAB::Analyzer::EqRW::DB);
+use DTA::CAB::Analyzer::EqRW::BDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqRW::BDB);
 
 1; ##-- be happy
 
@@ -52,7 +52,7 @@ DTA::CAB::Analyzer::EqRW - rewrite-equivalence class expander: default
 =head1 DESCRIPTION
 
 Default rewrite-equivalence class expander.
-Just a wrapper for L<DTA::CAB::Analyzer::EqRW::DB|DTA::CAB::Analyzer::EqRW::DB>.
+Just a wrapper for L<DTA::CAB::Analyzer::EqRW::BDB|DTA::CAB::Analyzer::EqRW::BDB>.
 
 =cut
 
@@ -80,7 +80,7 @@ at your option, any later version of Perl 5 you may have available.
 =head1 SEE ALSO
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
-L<DTA::CAB::Analyzer::EqRW::DB(3pm)|DTA::CAB::Analyzer::EqRW::DB>,
+L<DTA::CAB::Analyzer::EqRW::BDB(3pm)|DTA::CAB::Analyzer::EqRW::BDB>,
 L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
 L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
 L<DTA::CAB(3pm)|DTA::CAB>,

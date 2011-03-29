@@ -10,10 +10,10 @@
 package DTA::CAB::Analyzer::Morph::Latin;
 #use DTA::CAB::Analyzer::Morph::Latin::FST;
 #use DTA::CAB::Analyzer::Morph::Latin::Dict;
-use DTA::CAB::Analyzer::Morph::Latin::DB;
+use DTA::CAB::Analyzer::Morph::Latin::BDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Morph::Latin::DB);
+our @ISA = qw(DTA::CAB::Analyzer::Morph::Latin::BDB);
 
 ##==============================================================================
 ## Analysis Formatting
@@ -59,7 +59,7 @@ DTA::CAB::Analyzer::Morph::Latin - latin pesudo-morphology analysis (wrapper)
 
 DTA::CAB::Analyzer::Morph::Latin
 is a just a wrapper for
-L<DTA::CAB::Analyzer::Morph::Latin::DB|DTA::CAB::Analyzer::Morph::Latin::DB>.
+L<DTA::CAB::Analyzer::Morph::Latin::BDB|DTA::CAB::Analyzer::Morph::Latin::BDB>.
 
 =cut
 

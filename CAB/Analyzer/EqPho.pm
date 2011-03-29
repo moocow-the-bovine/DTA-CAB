@@ -12,8 +12,8 @@ use strict;
 #use DTA::CAB::Analyzer::EqPho::FST;
 #our @ISA = qw(DTA::CAB::Analyzer::EqPho::FST);
 ##
-use DTA::CAB::Analyzer::EqPho::DB;
-our @ISA = qw(DTA::CAB::Analyzer::EqPho::DB);
+use DTA::CAB::Analyzer::EqPho::BDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqPho::BDB);
 
 
 1; ##-- be happy
@@ -53,7 +53,7 @@ DTA::CAB::Analyzer::EqPho - phonetic equivalence class expander
 =head1 DESCRIPTION
 
 Default phonetic equivalence class expander.
-Just a wrapper for L<DTA::CAB::Analyzer::EqPho::DB|DTA::CAB::Analyzer::EqPho::DB>.
+Just a wrapper for L<DTA::CAB::Analyzer::EqPho::BDB|DTA::CAB::Analyzer::EqPho::BDB>.
 
 =cut
 
@@ -79,7 +79,7 @@ it under the same terms as Perl itself, either Perl version 5.8.4 or,
 at your option, any later version of Perl 5 you may have available.
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
-L<DTA::CAB::Analyzer::EqPho::DB(3pm)|DTA::CAB::Analyzer::EqPho::DB>,
+L<DTA::CAB::Analyzer::EqPho::BDB(3pm)|DTA::CAB::Analyzer::EqPho::BDB>,
 L<DTA::CAB::Analyzer(3pm)|DTA::CAB::Analyzer>,
 L<DTA::CAB::Chain(3pm)|DTA::CAB::Chain>,
 L<DTA::CAB(3pm)|DTA::CAB>,

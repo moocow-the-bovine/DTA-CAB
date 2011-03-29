@@ -70,7 +70,7 @@ sub analyzeTypes {
   $types = $doc->types if (!$types);
   my $akey = $xlit->{label};
 
-  my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
+  my ($tok, $w,$uc, $ld,$l0,$l, $isLatin1,$isLatinExt);
   foreach $tok (values(%$types)) {
     $w   = $tok->{text};
     $uc  = Unicode::Normalize::NFKC($w); ##-- compatibility(?) decomposition + canonical composition

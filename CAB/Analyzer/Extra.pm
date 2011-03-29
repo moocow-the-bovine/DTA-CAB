@@ -7,6 +7,9 @@ package DTA::CAB::Analyzer::Extra;
 
 use DTA::CAB::Analyzer::Common;
 
+use DTA::CAB::Analyzer::Dict::JSON;
+use DTA::CAB::Analyzer::Dict::BDB::JSON;
+
 use DTA::CAB::Analyzer::TextPhonetic;
 use DTA::CAB::Analyzer::Koeln;
 use DTA::CAB::Analyzer::Metaphone;

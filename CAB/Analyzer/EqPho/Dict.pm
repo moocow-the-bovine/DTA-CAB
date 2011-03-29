@@ -5,7 +5,8 @@
 ## Description: dictionary-based equivalence-class expander, phonetic variant
 
 package DTA::CAB::Analyzer::EqPho::Dict;
-use DTA::CAB::Analyzer::Dict ':all';
+use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict;
 use strict;
 
 ##==============================================================================
