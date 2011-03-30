@@ -66,8 +66,8 @@ sub new {
 			      label => 'dict_json',
 			      analyzeCode => $CODE_DEFAULT,
 
-			      ##-- JSON parser (segfaults if we create it here sometimes... urgh)
-			      #jxs => JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1),
+			      ##-- JSON parser (segfaults: see jsonxs() method, below)
+			      #jxs => __PACKAGE__->jsonxs,
 
 			      ##-- user args
 			      @_
@@ -115,6 +115,13 @@ sub noSaveKeys {
   return ($that->SUPER::noSaveKeys, qw(jxs));
 }
 
+## @keys = $class_or_obj->noSaveBinKeys()
+##  + returns list of keys not to be saved in binary mode
+sub noSaveBinKeys {
+  my $that = shift;
+  return ($that->SUPER::noSaveBinKeys, qw(jxs));
+}
+
 
 ##==============================================================================
 ## Methods: Analysis
@@ -130,11 +137,35 @@ sub noSaveKeys {
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Utils
 
+## $jxs = $dict->jsonxs()
+## $jxs = $CLASS->jsonxs()
+##  + returns underlying JSON::XS object or creates appropriate new object
+##  + DISABLED (b/c of segfaults): caches if not already defined for object call
+##--
+## Program received signal SIGSEGV, Segmentation fault.
+## 0xb7a03584 in XS_JSON__XS_DESTROY () from /usr/lib/perl5/auto/JSON/XS/XS.so
+## (gdb) bt
+## #0  0xb7a03584 in XS_JSON__XS_DESTROY () from /usr/lib/perl5/auto/JSON/XS/XS.so
+## #1  0x080d5d7b in Perl_pp_entersub ()
+## #2  0x08078bb8 in Perl_call_sv ()
+## #3  0x080e8090 in Perl_sv_clear ()
+## #4  0x080e87da in Perl_sv_free2 ()
+## #5  0x080dd8d9 in ?? ()
+## #6  0x080dd939 in Perl_sv_clean_objs ()
+## #7  0x0807dcaf in perl_destruct ()
+## #8  0x080642a5 in main ()
+##--
+sub jsonxs {
+  return $_[0]{jxs} if (ref($_[0]) && defined($_[0]{jxs}));
+  my $jxs = JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
+  #return $_[0]{jxs} = $jxs if (ref($_[0]));
+  return $jxs;
+}
+
 ## $prefix = $dict->analyzePre()
 sub analyzePre {
   my $dic = shift;
-  $dic->{jxs} = JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1) if (!defined($dic->{jxs}));
-  return 'my $jxs=$anl->{jxs}; '.$dic->SUPER::analyzePre();
+  return 'my $jxs=$anl->jsonxs; '.$dic->SUPER::analyzePre();
 }
 
 ## $coderef = $dict->analyzeCode()

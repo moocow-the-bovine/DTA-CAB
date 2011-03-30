@@ -152,6 +152,13 @@ sub noSaveKeys {
   return ($that->SUPER::noSaveKeys, qw(dbf));
 }
 
+## @keys = $class_or_obj->noSaveBinKeys()
+##  + returns list of keys not to be saved
+sub noSaveBinKeys {
+  my $that = shift;
+  return ($that->SUPER::noSaveBinKeys, qw(dbf));
+}
+
 ## $saveRef = $obj->savePerlRef()
 ##  + inherited from DTA::CAB::Persistent
 

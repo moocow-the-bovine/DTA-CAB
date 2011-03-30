@@ -60,8 +60,8 @@ sub new {
 						      label => 'dict_json',
 						      analyzeCode => $DTA::CAB::Analyzer::Dict::JSON::CODE_DEFAULT,
 
-						      ##-- JSON parser (segfaults if we create it here sometimes... urgh)
-						      #jxs => JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1),
+						      ##-- JSON parser (segfaults; see Analyzer::Dict::JSON::jsonxs() method)
+						      #jxs => __PACKAGE__->jsonxs,
 
 						      ##-- user args
 						      @_
@@ -107,6 +107,14 @@ sub noSaveKeys {
   my $that = shift;
   return ($that->DTA::CAB::Analyzer::Dict::BDB::noSaveKeys,
 	  $that->DTA::CAB::Analyzer::Dict::JSON::noSaveKeys,
+	 );
+}
+
+## @keys = $class_or_obj->noSaveBinKeys()
+sub noSaveBinKeys {
+  my $that = shift;
+  return ($that->DTA::CAB::Analyzer::Dict::BDB::noSaveBinKeys,
+	  $that->DTA::CAB::Analyzer::Dict::JSON::noSaveBinKeys,
 	 );
 }
 
