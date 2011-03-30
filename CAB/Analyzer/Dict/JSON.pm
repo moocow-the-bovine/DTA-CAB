@@ -157,7 +157,7 @@ sub noSaveBinKeys {
 ##--
 sub jsonxs {
   return $_[0]{jxs} if (ref($_[0]) && defined($_[0]{jxs}));
-  my $jxs = JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
+  my $jxs = JSON::XS->new->utf8(1)->relaxed(1)->shrink(1)->allow_blessed(1)->convert_blessed(1);
   #return $_[0]{jxs} = $jxs if (ref($_[0]));
   return $jxs;
 }
