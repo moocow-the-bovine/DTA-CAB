@@ -92,11 +92,23 @@ sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
 
   ##-- prune output
-  my %keep_keys = map {($_=>undef)} qw(text id xlit mlatin eqpho eqrw eqlemma moot);
-  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
-    ##-- delete all unsafe keys
-    delete @$_{grep {!exists($keep_keys{$_})} keys %$_};
-    delete $_->{moot}{analyses} if ($_->{moot});
+  if (1) {
+    ##-- black-list
+    my @prune_keys = qw(tokpp lts morph rw eqphox dmoot);
+    foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+      ##-- delete all unsafe keys
+      delete @$_{@prune_keys};
+      delete $_->{moot}{analyses} if ($_->{moot});
+    }
+  }
+  elsif (0) {
+    ##-- white-list
+    my %keep_keys = map {($_=>undef)} qw(text id xlit mlatin eqpho eqrw eqlemma moot);
+    foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+      ##-- delete all unsafe keys
+      delete @$_{grep {!exists($keep_keys{$_})} keys %$_};
+      delete $_->{moot}{analyses} if ($_->{moot});
+    }
   }
 
   return $doc;

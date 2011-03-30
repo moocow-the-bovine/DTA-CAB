@@ -5,7 +5,7 @@
 ## Description: generic analysis automaton API
 
 package DTA::CAB::Analyzer::Automaton;
-use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Unify ':all';
 use Gfsm;
 use Encode qw(encode decode);
@@ -23,21 +23,16 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $DEFAULT_ANALYZE_GET
 ##  + default coderef or eval-able string for {analyzeGet}
-##  + eval()d in list context, may return multiples
-##  + parameters:
-##      $_[0] => token object being analyzed
-##  + closure vars:
-##      $anl  => analyzer (automaton)
-our $DEFAULT_ANALYZE_GET = '$_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}';
+our $DEFAULT_ANALYZE_GET = '$_->{$lab} ? qw() : '._am_xlit;
 
 ## $DEFAULT_ANALYZE_SET
 ##  + default coderef or eval-able string for {analyzeSet}
-##  + parameters:
-##      $_[0] => token object being analyzed
-##      $_[1] => blessed analyses (array-ref, maybe blessed)
-##  + closure vars:
-##      $anl  => analyzer (automaton)
-our $DEFAULT_ANALYZE_SET = 'delete($_[0]{$anl->{label}}); $_[0]{$anl->{label}}=$_[1] if (defined($_[1]));';
+##  + vars:
+##     $anl  => analyzer (automaton)
+##     $lab  => analyzer label
+##     $_    => token
+##     $wa   => analyses (array-ref)
+our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 
 ##==============================================================================
 ## Constructors etc.
@@ -303,8 +298,6 @@ sub analyzeTypes {
   $types = $doc->types if (!$types);
 
   ##-- setup common variables
-  my $aget   = $aut->accessClosure(defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET);
-  my $aset   = $aut->accessClosure(defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET);
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
   my $result = $aut->{result};
@@ -314,6 +307,18 @@ sub analyzeTypes {
   my $labenc = $aut->{labenc};
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
   my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
+
+  ##-- closures
+  my (@wa);
+  my $aget_code = defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
+  my $aset_code = defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET;
+  my $ax_pre    = join('',
+		       map {"my $_;\n"}
+		       '$lab=$anl->{label}',
+		       '$wa=$opts{wa}',
+		      );
+  my $aget   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
+  my $aset   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
 
   ##-- object analysis options
   my $check_symbols = $aut->{check_symbols};
@@ -344,11 +349,11 @@ sub analyzeTypes {
   my $wopts    = { %{$opts||{}} };
   $wopts->{$_} = $aut->{$_} foreach (@objectOptions, grep {!defined($opts->{$_})} @userOptions);
 
-  my ($tok,@w,$w,$uword,$ulword,@wlabs,@wa,$ua,$lemma);
-  foreach $tok (values(%$types)) {
-    next if (defined($allowTextRegex) && $tok->{text} !~ $allowTextRegex); ##-- text-sensitive regex
-    @w  = grep {defined($_)} $aget->($tok);
-    @wa = qw();
+  my (@w,$w,$uword,$ulword,@wlabs,$ua,$lemma);
+  foreach (values(%$types)) {
+    next if (defined($allowTextRegex) && $_->{text} !~ $allowTextRegex); ##-- text-sensitive regex
+    @w   = $aget->();
+    @$wa = qw();
     foreach $w (@w) {
       ##-------- BEGIN analyzeWord
       $wopts->{src} = $w;            ##-- set $wopts->{src} (hack for setLookupOptions())
@@ -391,7 +396,7 @@ sub analyzeTypes {
 	#$result->_rmepsilon() if ($wopts->{auto_rmeps});
 
 	##-- parse analyses
-	push(@wa,
+	push(@$wa,
 	     map {
 	       {(
 		 ($wantAnalysisLo ? (lo=>$uword) : qw()),
@@ -408,7 +413,7 @@ sub analyzeTypes {
 
     ##-- un-escape output
     if (!$attOutput) {
-      foreach (@wa) {
+      foreach (@$wa) {
 	$_->{hi} =~ s/\\(.)/$1/g;
 	$_->{hi} =~ s/\[([^\]]+)\]/$1/g;
       }
@@ -416,7 +421,7 @@ sub analyzeTypes {
 
     ##-- parse lemmata
     if ($wantAnalysisLemma) {
-      foreach (@wa) {
+      foreach (@$wa) {
 	$lemma = $_->{hi};
 	if (defined($lemma) && $lemma ne '') {
 	  $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
@@ -434,7 +439,7 @@ sub analyzeTypes {
     ##-------- END analyzeWord
 
     ##-- set analyses
-    $aset->($tok, (@wa ? [@wa] : undef));
+    $aset->();
   }
 
   return $doc;

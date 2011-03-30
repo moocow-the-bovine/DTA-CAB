@@ -314,11 +314,11 @@ sub getTypes {
 
 ## $doc = $anl->expandTypes($doc,\%types,\%opts)
 ##  + expands \%types into $doc->{body} tokens
-##  + default just calls $doc->expandTypeKeys(\@typeKeys,\%types)
+##  + default just calls $doc->expandTypeKeys(\@typeKeys,\%types,\%opts)
 sub expandTypes {
   my ($anl,$doc,$types,$opts) = @_;
   my %typeKeys = map {($_=>undef)} $anl->typeKeys($opts);
-  return $doc->expandTypeKeys([keys %typeKeys],$types);
+  return $doc->expandTypeKeys([keys %typeKeys],$types,$opts);
 }
 
 ## $doc = $anl->clearTypes($doc)

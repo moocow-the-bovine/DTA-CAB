@@ -113,6 +113,7 @@ sub extendTypes {
 ## $doc = $doc->expandTypes()
 ## $doc = $doc->expandTypes(\%types)
 ## $doc = $doc->expandTypes(\@keys,\%types)
+## $doc = $doc->expandTypes(\@keys,\%types,\%opts)
 ##  + expands \%types (default=$doc->{types}) map into tokens
 ##  + clobbers all keys
 sub expandTypes {
@@ -130,6 +131,7 @@ sub expandTypes {
 
 ## $doc = $doc->expandTypeKeys(\@typeKeys)
 ## $doc = $doc->expandTypeKeys(\@typeKeys,\%types)
+## $doc = $doc->expandTypeKeys(\@typeKeys,\%types,\%opts)
 ##  + expands \%types (default=$doc->{types}) map into tokens
 ##  + only keys in \@typeKeys are expanded
 sub expandTypeKeys {
