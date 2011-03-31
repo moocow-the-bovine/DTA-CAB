@@ -121,7 +121,7 @@ our %badTypes =
 ## %badTags : known bad tagh tags;  TODO: move this out of here?
 our %badTags = map {($_=>undef)} qw(FM XY ITJ);
 
-## %badStems : known bad tagh stems; TODO: move this out of here?
+## %badStems : known bad tagh morphs; TODO: move this out of here?
 our %badStems = (map {($_=>undef)}
 		 ##
 		 ##-- unsafe: verb stems
@@ -132,6 +132,9 @@ our %badStems = (map {($_=>undef)}
 		 ##
 		 ##-- unsafe: ne stems
 		 qw(Thür Loo Loos),
+		 ##
+		 ##-- unsafe: stem classes
+		 qw(/ON),
 		);
 
 ## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
@@ -147,7 +150,7 @@ sub analyzeTypes {
   my $dict      = $ms->dictOk ? $ms->{dict}->dictHash : undef;
   my $want_toka = $ms->{allowTokenizerAnalyses};
 
-  my ($tok,$safe,@m,$ma,%ml);
+  my ($tok,$safe,@m,$ma);
   foreach $tok (values %$types) {
     next if (defined($tok->{$label})); ##-- avoid re-analysis
 
@@ -170,10 +173,10 @@ sub analyzeTypes {
       MSAFE_MORPH_A:
 	foreach (grep {$_ && $_->{hi}} @{$tok->{morph}}) {
 	  @m = $_->{hi} =~ m{\G
-			     (?:[^\~\#\/\[]+)  ##-- stem
-			     |(?:[\~\#])       ##-- morph join code
-			     |(?:\/[A-Z]{1,2}) ##-- stem class
-			     |(?:\[.*$)        ##-- tag+features...
+			     (?:[^\~\#\/\[\=]+)        ##-- stem
+			     |(?:\/[A-Z]{1,2}[\~\#])   ##-- stem class + separator
+			     |(?:[\~\#\/\=])           ##-- separator
+			     |(?:\[.*$)                ##-- tag+features...
 			    }gx;
 
 	  ##-- check for unsafe tags
@@ -189,18 +192,8 @@ sub analyzeTypes {
 			      ))x
 		  );
 
-	  ##-- check for unsafe stem classes
-	  %ml = (@m, (@m%2 ? '' : qw()));
-	  next if (grep
-		   {
-		     #$_ eq '/NE'          ##-- unsafe: composita with NE
-		     $_ eq '/ON'          ##-- unsafe: composita with organisation names
-		   }
-		   values %ml
-		  );
-
 	  ##-- check for unsafe stems
-	  foreach (keys %ml) {
+	  foreach (@ml) {
 	    next MSAFE_MORPH_A if (exists($badStems{$_}));
 	  }
 
