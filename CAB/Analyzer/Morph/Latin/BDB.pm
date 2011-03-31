@@ -25,7 +25,7 @@ sub new {
 			      #analyzeGet => "lc($DICT_GET_TEXT)",
 			      #analyzeSet => $DICT_SET_FST,
 			      ##
-			      analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').']',
+			      analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').'] if (!defined($_->{$lab}));',
 
 			      ##-- user args
 			      @_

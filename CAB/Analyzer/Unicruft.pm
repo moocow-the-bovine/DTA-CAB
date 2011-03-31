@@ -81,6 +81,7 @@ sub analyzeTypes {
 
   my ($tok, $w,$uc, $ld, $isLatin1,$isLatinExt);
   foreach $tok (values(%$types)) {
+    next if (defined($tok->{$akey})); ##-- avoid re-analysis
     $w   = $tok->{text};
 
     ##-- 2010-01-23: Mantis Bug #140: 'µ'="\x{b5}" gets mapped to 'm' rather than

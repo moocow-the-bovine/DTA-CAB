@@ -10,8 +10,8 @@ use DTA::CAB::Common;
 
 use DTA::CAB::Analyzer;
 use DTA::CAB::Analyzer::Common;
-#use DTA::CAB::Analyzer::Extra;
-eval "use DTA::CAB::Analyzer::Common";
+use DTA::CAB::Analyzer::Extra;
+#eval "use DTA::CAB::Analyzer::Common";
 
 #eval "use DTA::CAB::Server::HTTP";
 #eval "use DTA::CAB::Client::HTTP";

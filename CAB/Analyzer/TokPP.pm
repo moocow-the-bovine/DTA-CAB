@@ -69,6 +69,7 @@ sub analyzeTypes {
 
   my ($tok,$w,@wa);
   foreach $tok (values(%$types)) {
+    next if (defined($tok->{$akey})); ##-- avoid re-analysis
     $w = $tok->{text};
     @wa = qw();
 
