@@ -149,6 +149,8 @@ sub analyzeTypes {
 
   my ($tok,$safe,@m,$ma,%ml);
   foreach $tok (values %$types) {
+    next if (defined($tok->{$label})); ##-- avoid re-analysis
+
     #if (!defined($dict) || !defined($safe=$dict->{$tok->{text}})) ##-- OLD
     ##
     $safe =
