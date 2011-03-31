@@ -34,9 +34,9 @@ sub new {
 			   #analyzeSet  => $DICT_SET_FST_EQ,
 			   ##
 			   analyzeCode => ('$_->{$lab}=['.
-					   _am_tt_fst_sort('grep {defined($_)}'
-							   .' '._am_tt_fst_eqlist('$dhash->{'._am_lts.'}', '$_', '$dic->{eqIdWeight}')
-							  )
+					   _am_fst_sort('grep {defined($_)}'
+							.' '._am_tt_fst_eqlist('$dhash->{'._am_lts.'}', '$_', '$dic->{eqIdWeight}')
+						       )
 					   .']'),
 
 

@@ -8,8 +8,8 @@ package DTA::CAB;
 use DTA::CAB::Version;
 use DTA::CAB::Common;
 
-#use DTA::CAB::Analyzer;
-#use DTA::CAB::Analyzer::Common;
+use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Common;
 #use DTA::CAB::Analyzer::Extra;
 eval "use DTA::CAB::Analyzer::Common";
 

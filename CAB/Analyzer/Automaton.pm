@@ -318,7 +318,7 @@ sub analyzeTypes {
 		       '$wa=$opts{wa}',
 		      );
   my $aget   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
-  my $aset   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
+  my $aset   = $aut->accessClosure($aset_code, pre=>$ax_pre, wa=>\@wa);
 
   ##-- object analysis options
   my $check_symbols = $aut->{check_symbols};
@@ -352,8 +352,9 @@ sub analyzeTypes {
   my (@w,$w,$uword,$ulword,@wlabs,$ua,$lemma);
   foreach (values(%$types)) {
     next if (defined($allowTextRegex) && $_->{text} !~ $allowTextRegex); ##-- text-sensitive regex
-    @w   = $aget->();
-    @$wa = qw();
+    @w=$aget->();
+    next if (!@w); ##-- no lookup-inputs for token (e.g. if $_->{$label} was already populated, e.g. from exlex)
+    @wa = qw();
     foreach $w (@w) {
       ##-------- BEGIN analyzeWord
       $wopts->{src} = $w;            ##-- set $wopts->{src} (hack for setLookupOptions())
@@ -396,7 +397,7 @@ sub analyzeTypes {
 	#$result->_rmepsilon() if ($wopts->{auto_rmeps});
 
 	##-- parse analyses
-	push(@$wa,
+	push(@wa,
 	     map {
 	       {(
 		 ($wantAnalysisLo ? (lo=>$uword) : qw()),
@@ -413,7 +414,7 @@ sub analyzeTypes {
 
     ##-- un-escape output
     if (!$attOutput) {
-      foreach (@$wa) {
+      foreach (@wa) {
 	$_->{hi} =~ s/\\(.)/$1/g;
 	$_->{hi} =~ s/\[([^\]]+)\]/$1/g;
       }
@@ -421,7 +422,7 @@ sub analyzeTypes {
 
     ##-- parse lemmata
     if ($wantAnalysisLemma) {
-      foreach (@$wa) {
+      foreach (@wa) {
 	$lemma = $_->{hi};
 	if (defined($lemma) && $lemma ne '') {
 	  $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol

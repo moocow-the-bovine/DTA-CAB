@@ -35,12 +35,12 @@ sub new {
 			   #analyzeSet  => $DICT_SET_FST_EQ,
 			   ##
 			   analyzeCode => ('$_->{$lab}=['.
-							_am_tt_fst_sort(_am_id_fst('$_', '$dic->{eqIdWeight}')
-									.', '
-									.'map {'._am_tt_fst_list.'}'
-									.' grep {defined($_)}'
-									.' @$dhash{'._am_xlit.','._am_rw.'}'
-								       )
+							_am_fst_sort(_am_id_fst('$_', '$dic->{eqIdWeight}')
+								     .', '
+								     .'map {'._am_tt_fst_list.'}'
+								     .' grep {defined($_)}'
+								     .' @$dhash{'._am_xlit.','._am_rw.'}'
+								    )
 					   .']'),
 
 			   ##-- user args
