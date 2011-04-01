@@ -21,9 +21,9 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'eqphox',
-			      analyzeGet => '$_[0]{lts} ? (map {$_->{hi}} @{$_[0]{lts}}) : qw()',
+			      analyzeGet => '$_->{lts} ? (map {$_->{hi}} @{$_->{lts}}) : qw()',
 			      attInput   => 1,
-			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			      allowTextRegex => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 			      tolower=>0,
 			      tolowerNI=>0,
 			      toupperI=>0,
@@ -81,7 +81,7 @@ L<DTA::CAB::Analyzer::EqPho::Cascade|DTA::CAB::Analyzer::EqPho::Cascade>
 which sets the following analyzer defaults:
 
  label => 'eqphox',
- analyzeGet => '$_[0]{lts} ? (map {$_->{hi}} @{$_[0]{lts}}) : qw()',
+ analyzeGet => '$_->{lts} ? (map {$_->{hi}} @{$_->{lts}}) : qw()',
  attInput   => 1,
  allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
  tolower=>0,

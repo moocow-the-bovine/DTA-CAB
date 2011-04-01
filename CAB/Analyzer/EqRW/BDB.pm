@@ -29,19 +29,18 @@ sub new {
 			   ##-- options
 			   label       => 'eqrw',
 			   eqIdWeight  => 0,
-			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			   allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 			   ##
-			   #analyzeGet  => '($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text}), ($_[0]{rw} ? (map {$_->{hi}} @{$_[0]{rw}}) : qw())',
-			   #analyzeSet  => $DICT_SET_FST_EQ,
-			   ##
-			   analyzeCode => ('$_->{$lab}=['.
-							_am_fst_sort(_am_id_fst('$_', '$dic->{eqIdWeight}')
-								     .', '
-								     .'map {'._am_tt_fst_list.'}'
-								     .' grep {defined($_)}'
-								     .' @$dhash{'._am_xlit.','._am_rw.'}'
-								    )
-					   .']'),
+			   analyzeCode => join("\n",
+					       'return if (defined($_->{$lab})); ##-- avoid re-analysis',
+					       '$val=undef; ##-- re-initialize temporary used by _am_fst_uniq',
+					       '$_->{$lab}=['._am_fst_usort(
+									    _am_id_fst('$_', '$dic->{eqIdWeight}')
+									    .', map {defined($_) ? '._am_tt_fst_list('$_').' : qw()}'
+									    .' @$dhash{'._am_xlit.','._am_rw.'}'
+									   ).'];',
+					      ),
+
 
 			   ##-- user args
 			   @_
@@ -126,7 +125,7 @@ Constructor.  Sets the following default options:
  analyzeGet  => 'map {$_->{hi}} ($_[0]{rw} ? @{$_[0]{rw}} : qw())',
  analyzeSet  => $DICT_SET_FST_EQ,
  eqIdWeight  => 0,
- allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+ allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 
 =back
 

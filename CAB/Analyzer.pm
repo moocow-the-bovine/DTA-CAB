@@ -25,8 +25,9 @@ our %EXPORT_TAGS =
    'access' => [qw(_am_xlit _am_lts _am_rw),
 		qw(_am_tt_list _am_tt_fst),
 		qw(_am_id_fst _am_tt_fst_list _am_tt_fst_eqlist),
-		qw(_am_fst_sort),
+		qw(_am_fst_sort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
+		qw(_am_tag _am_word),
 		qw(parseFstString),
 	       ],
   );
@@ -439,7 +440,7 @@ sub accessClosure {
 ##    ($$tokvar->{xlit} ? $$tokvar->{xlit}{latin1Text} : $$tokvar->{text})
 sub _am_xlit {
   my $tokvar = shift || '$_';
-  return "($tokvar\->{xlit} ? $tokvar\->{xlit}{latin1Text} : $tokvar\->{text})";
+  return "($tokvar\->{xlit} ? $tokvar\->{xlit}{latin1Text} : $tokvar\->{text}) ##== _am_xlit\n";
 }
 
 ## PACKAGE::_am_lts($tokvar='$_')
@@ -448,7 +449,7 @@ sub _am_xlit {
 ##    ($$tokvar->{lts} && @{$$tokvar->{lts}} ? $$tokvar->{lts}[0]{hi} : $$tokvar->{text})
 sub _am_lts {
   my $tokvar = shift || '$_';
-  return "($tokvar\->{lts} && \@{$tokvar\->{lts}} ? $tokvar\->{lts}[0]{hi} : $tokvar\->{text})";
+  return "($tokvar\->{lts} && \@{$tokvar\->{lts}} ? $tokvar\->{lts}[0]{hi} : $tokvar\->{text}) ##== _am_lts\n";
 }
 
 ## PACKAGE::_am_rw($tokvar='$_')
@@ -457,7 +458,7 @@ sub _am_lts {
 ##    ($$tokvar->{rw} ? (map {$_->{hi}} @{$$tokvar->{rw}}) : qw())
 sub _am_rw {
   my $tokvar = shift || '$_';
-  return "($tokvar\->{rw} ? (map {\$_->{hi}} \@{$tokvar\->{rw}}) : qw())";
+  return "($tokvar\->{rw} ? (map {\$_->{hi}} \@{$tokvar\->{rw}}) : qw()) ##== _am_rw\n";
 }
 
 ## PACKAGE::_am_tt_list($ttvar='$_')
@@ -465,7 +466,7 @@ sub _am_rw {
 ##  + evaluatees to a list: "split(/\\t/,$$ttvar)"
 sub _am_tt_list {
   my $ttvar = shift || '$_';
-  return "split(/\\t/,$ttvar)";
+  return "split(/\\t/,$ttvar) ##== _am_tt_list\n";
 }
 
 ## PACKAGE::_am_tt_fst($ttvar='$_')
@@ -481,7 +482,8 @@ sub _am_tt_fst {
   my $ttvar = shift || '$_';
   return ("($ttvar".' =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/'
 	  .' ? {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)}'
-	  ." : {hi=>$ttvar})");
+	  ." : {hi=>$ttvar})"
+	  ." ##== _am_tt_fst\n");
 }
 
 ## PACKAGE::_parseFstString($ttstr)
@@ -499,7 +501,7 @@ sub parseFstString {
 sub _am_id_fst {
   my $tokvar = shift || '$_';
   my $wvar   = shift || '0';
-  return '{hi=>'._am_xlit($tokvar).', w=>'.$wvar.'}';
+  return '{hi=>'._am_xlit($tokvar).', w=>'.$wvar.'}'." ##== _am_id_fst\n";
 }
 
 
@@ -509,7 +511,7 @@ sub _am_id_fst {
 ##    (map {_am_tt_fst('$_')} split(/\t/,$$ttvar))
 sub _am_tt_fst_list {
   my $ttvar = shift || '$_';
-  return '(map {'._am_tt_fst('$_').'} split(/\t/,'.$ttvar.'))';
+  return '(map {'._am_tt_fst('$_').'} split(/\t/,'.$ttvar.'))'." ##== _am_tt_fst_list\n";
 }
 
 ## PACKAGE::_am_tt_fst_eqlist($ttvar='$tt', $tokvar='$_', $wvar='0')
@@ -520,7 +522,7 @@ sub _am_tt_fst_eqlist {
   my $ttvar  = shift || '$tt';
   my $tokvar = shift || '$_';
   my $wvar   = shift || '0';
-  return '('._am_id_fst($tokvar,$wvar).', '._am_tt_fst_list($ttvar).')';
+  return "("._am_id_fst($tokvar,$wvar).', '._am_tt_fst_list($ttvar).')'." ##== _am_tt_fst_eqlist\n";
 }
 
 ## PACKAGE::_am_fst_sort($listvar='@_')
@@ -529,7 +531,29 @@ sub _am_tt_fst_eqlist {
 ##    (sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} $$listvar)
 sub _am_fst_sort {
   my $listvar = shift || '@_';
-  return '(sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} '.$listvar.')';
+  return '(sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} '.$listvar.')'." ##== _am_fst_sort\n";
+}
+
+## PACKAGE::_am_fst_uniq($listvar='@_', $tmpvar='$val')
+##  + access-closure macro for a unique list of TT-style FST analyses $$listvar
+##  + only the weight-minimal analysis is kept
+##  + evaluates to a list of upper-unique fst analysis hashes:
+##    (map {$$val && $$val->{hi} eq $_->{hi} ? qw() : ($$val=$_)} sort {$a->{hi} cmp $b->{hi} || ($a->{w}||0) <=> ($b->{w}||0)} $$listvar)
+##  + assumes $$tmpvar is initialized to undef at start of evaluation
+sub _am_fst_uniq {
+  my $listvar = shift || '@_';
+  my $tmpvar  = shift || '$val';
+  return ("(map {$tmpvar && $tmpvar\->{hi} eq \$_->{hi} ? qw() : ($tmpvar=\$_)}"
+	  .' sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)}'
+	  ." $listvar)"
+	  ." ##== _am_fst_uniq\n"
+	 );
+}
+
+## PACKAGE::_am_fst_usort($listvar='@_', $tmpvar='$val')
+##  + wrapper for _am_fst_sort(_am_fst_uniq($listvar,$tmpvar))
+sub _am_fst_usort {
+  return _am_fst_sort(_am_fst_uniq(@_));
 }
 
 ## PACKAGE::_am_clean($hashvar='$_->{$lab}')
@@ -537,8 +561,27 @@ sub _am_fst_sort {
 ##    delete($$hashvar) if (!defined($$hashvar));
 sub _am_clean {
   my $hashvar = shift || '$_->{$lab}';
-  return "delete($hashvar) if (!defined($hashvar));";
+  return "delete($hashvar) if (!defined($hashvar)); ##== _am_clean\n"
 }
+
+## PACKAGE::_am_tag($mootvar='$_->{moot}', $defaultvar='undef')
+##  + access-closure macro for a moot or dmoot tag; evaluates to
+##    ($$mootvar ? $$mootvar->{tag} : $defaultvar)
+sub _am_tag {
+  my $mootvar = shift||'$_->{moot}';
+  my $default = shift||'undef';
+  return "($mootvar ? $mootvar\->{tag} : $default) ##== _am_tag\n";
+}
+
+## PACKAGE::_am_word($mootvar='$_->{moot}', $defaultvar='undef')
+##  + access-closure macro for a moot or dmoot tag; evaluates to
+##    ($$mootvar ? $$mootvar->{word} : $defaultvar)
+sub _am_word {
+  my $mootvar = shift||'$_->{moot}';
+  my $default = shift||'undef';
+  return "($mootvar ? $mootvar\->{word} : $default) ##== _am_tag\n";
+}
+
 
 
 ##==============================================================================

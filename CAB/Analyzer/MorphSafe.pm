@@ -7,6 +7,7 @@
 package DTA::CAB::Analyzer::MorphSafe;
 
 use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer::Dict;
 use DTA::CAB::Unify ':all';
 
 use Encode qw(encode decode);
@@ -20,6 +21,27 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(DTA::CAB::Analyzer);
+
+## %badTypes = ($text=>$isBad, ...)
+##  + default hash of bad text types
+our %badTypes = (
+		 #Andre=>1,    ##-- bad: type: Andre[_NE][firstname][none][none][sg][nom_acc_dat]
+		);
+
+## %badMorphs = ($taghMorph=>$isBad, ...)
+##  + default hash of bad TAGH morphs
+our %badMorphs = (
+		  #'Thür'=>1,  ##-- bad: stem
+		  #'/ON'=>1,   ##-- bad: stem class: organization name
+		 );
+
+## %badTags = ($taghTag=>$isBad, ...)
+##  + default hash of bad TAGH tags
+our %badTags = (
+		'FM'=>1,       ##-- bad: FM  (e.g. That:That[_FM][en])
+		'XY'=>1,       ##-- bad: XY
+		'ITJ'=>1,      ##-- bad: ITJ
+	       );
 
 ##==============================================================================
 ## Constructors etc.
@@ -44,8 +66,14 @@ sub new {
 			   allowTokenizerAnalyses => 1,
 
 			   ##-- dictionary stuff
-			   #dict=>undef
-			   #dictClass=>'DTA::CAB::Analyzer::Dict',
+			   #badTypesFile  => undef,            ##-- filename of ($text "\t" $isBadBool) mapping for raw utf8 text types
+			   #badTypes      => {%badTypes},      ##-- hash of bad utf8 text types ($text=>$isBadBool)
+			   ##
+			   #badMorphsFile  => undef,           ##-- filename of ($taghMorph "\t" $isBadBool) mapping for TAGH morph components
+			   #badMorphs      => {%badMorphs},    ##-- hash of bad TAGH morphs ($taghMorph=>$isBadBool)
+			   ##
+			   #badTagsFile    => undef,           ##-- filename of ($taghTag "\t" $isBadBool) mapping for TAGH tags (without '[_', ']')
+			   #badTags        => {%badTags},      ##-- hash of bad TAGH tags ($taghTag=>$isBadBool)
 
 			   ##-- user args
 			   @_
@@ -62,80 +90,49 @@ sub ensureLoaded {
   my $msafe = shift;
   my $rc = 1;
 
-  ##-- ensure: dict
-  #if ( (defined($msafe->{dictFile}) || ($msafe->{dict} && $msafe->{dict}{dictFile})) && !$msafe->dictOk ) {
-  #  $rc &&= $msafe->loadDict();
-  #}
+  ##-- ensure: dict: badTypes
+  $rc &&= $msafe->ensureDict('badTypes',\%badTypes) if (!$msafe->{badTypes});
+
+  ##-- ensure: dict: badMorphs
+  $rc &&= $msafe->ensureDict('badMorphs',\%badMorphs) if (!$msafe->{badMorphs});
+
+  ##-- ensure: dict: badTags
+  $rc &&= $msafe->ensureDict('badTags',\%badTags) if (!$msafe->{badTags});
+
   return $rc;
 }
 
 ##--------------------------------------------------------------
-## Methods: I/O: Input: Dictionary
+## Methods: I/O: Input: Dictionaries: generic
 
-## $bool = $msafe->dictOk()
-##  + should return false iff dict is undefined or "empty"
-sub dictOk { return $_[0]{dict} && $_[0]{dict}->dictOk; }
+## $bool = $msafe->ensureDict($dictName,\%dictDefault)
+sub ensureDict {
+  my ($ms,$name,$default) = @_;
+  return 1 if ($ms->{$name}); ##-- already defined
+  return $ms->loadDict($name,$ms->{"${name}File"}) if ($ms->{"${name}File"});
+  $ms->{$name} = $default ? {%$default} : {};
+  return 1;
+}
 
-## $msafe = $msafe->loadDict()
-## $msafe = $msafe->loadDict($dictfile)
+## \%dictHash_or_undef = $msafe->loadDict($dictName,$dictFile)
 sub loadDict {
-  my ($msafe,$dictfile) = @_;
-  $dictfile = $msafe->{dictFile} if (!defined($dictfile));
-  $dictfile = $msafe->{dict}{dictFile} if (!defined($dictfile));
-  return $msafe if (!defined($dictfile)); ##-- no dict file to load
-  $msafe->info("loading exception lexicon from '$dictfile'");
+  my ($ms,$name,$dfile) = @_;
+  delete($ms->{$name});
+  $ms->info("loading exception lexicon from '$dfile'");
 
-  ##-- sanitize dict object
-  my $dclass = (ref($msafe->{dict})||$msafe->{dictClass}||'DTA::CAB::Analyzer::Dict');
-  my $dict = $msafe->{dict} = bless(_unifyClobber($dclass->new,$msafe->{dict},undef), $dclass);
-  $dict->{label}    = $msafe->{label}."_dict"; ##-- force sub-analyzer label
-  $dict->{dictFile} = $dictfile;               ##-- clobber sub-analyzer file
-
-  ##-- load dict object
+  ##-- hack: generate a temporary dict object
+  my $dict = DTA::CAB::Analyzer::Dict->new(label=>($ms->{label}.".dict.$name"), dictFile=>$dfile);
   $dict->ensureLoaded();
   return undef if (!$dict->dictOk);
-  return $msafe;
+
+  ##-- clobber dict
+  $ms->{$name} = $dict->dictHash;
 }
+
 
 ##==============================================================================
 ## Methods: Analysis: v1.x
 ##==============================================================================
-
-##-- %badTypes : known bad input types (raw text): TODO: move this to external dict file!
-##    + this is basically what the current 'dict' does
-our %badTypes =
-  map {($_=>undef)}
-  (
-   qw(Abtheilung Abtheilungen), ##-- != Abt/N#heil/V~ung[_NN][event_result][fem][sg]\* <15>
-   qw(Andre andre), ##-- != Andre[_NE][firstname][none][none][sg][nom_acc_dat] <0>
-   qw(Nahme Nahmen),
-   qw(Thaler),
-   qw(Thür Thüre Thüren Thürer),
-   qw(Thor Thore Thoren),
-   qw(Loos),
-   qw(Vortheil Vortheile Vortheilen),
-   qw(Geheimniß),
-   qw(Proceß Proceße Process Processe),
-  );
-
-## %badTags : known bad tagh tags;  TODO: move this out of here?
-our %badTags = map {($_=>undef)} qw(FM XY ITJ);
-
-## %badStems : known bad tagh morphs; TODO: move this out of here?
-our %badStems = (map {($_=>undef)}
-		 ##
-		 ##-- unsafe: verb stems
-		 qw(te gel gell öl penn dau äs),
-		 ##
-		 ##-- unsafe: noun stems
-		 qw(Bus Ei Eis Gel Gen Öl Reh Tee Teig Zen Heu Szene Proceß),
-		 ##
-		 ##-- unsafe: ne stems
-		 qw(Thür Loo Loos),
-		 ##
-		 ##-- unsafe: stem classes
-		 qw(/ON),
-		);
 
 ## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
@@ -147,56 +144,68 @@ sub analyzeTypes {
   #$types = $doc->extendTypes($types,'morph') if (!grep {$_->{morph}} values(%$types)); ##-- DEBUG
 
   my $label     = $ms->{label};
-  my $dict      = $ms->dictOk ? $ms->{dict}->dictHash : undef;
   my $want_toka = $ms->{allowTokenizerAnalyses};
+  my $badTypes  = $ms->{badTypes}||{};
+  my $badTags   = $ms->{badTags}||{};
+  my $badMorphs = $ms->{badMorphs}||{};
 
   my ($tok,$safe,@m,$ma);
   foreach $tok (values %$types) {
-    next if (defined($tok->{$label})); ##-- avoid re-analysis
+    next if (defined($tok->{$label})); ##-- avoid re-analysis (e.g. of global exlex-provided analyses)
 
-    #if (!defined($dict) || !defined($safe=$dict->{$tok->{text}})) ##-- OLD
-    ##
+    ##-- no dict entry: use morph heuristics
     $safe =
-      (($want_toka && $tok->{toka} && @{$tok->{toka}})     ##-- tokenizer-analyzed words are 'safe'
-       || ($tok->{text}    =~ m/^[[:digit:][:punct:]]*$/   ##-- punctuation, digits are (almost) always "safe"
-	   && $tok->{text} !~ m/\#/                        ##-- unless they contain '#' (placeholder for unrecognized char)
+      (($want_toka && $tok->{toka} && @{$tok->{toka}})     ##-- tokenizer-analyzed words are considered "safe"
+       || (
+	   $tok->{text}  =~ m/^[[:digit:][:punct:]]*$/     ##-- punctuation, digits are (usually) "safe"
+	   &&
+	   $tok->{text} !~ m/\#/                           ##-- ... unless they contain '#' (placeholder for unrecognized char)
 	  )
+       || $tok->{mlatin}                                   ##-- latin words are "safe" [NEW Fri, 01 Apr 2011 11:38:45 +0200]
       );
 
     ##-- are we still unsafe?  then check for some "safe" morph analysis: if found, set $safe=1 & bug out
     if (!$safe
-        && !exists($badTypes{$tok->{text}}) ##-- not a known bad type
-	&& $tok->{morph}	            ##-- analyses defined & true
-	&& @{$tok->{morph}}                 ##-- non-empty analysis set
+        && !$badTypes->{$tok->{text}}                      ##-- ... only if it's not a known bad type
+	&& $tok->{morph}	                           ##-- ... and it has morph analyses (empty $tok->{morph} will still be "unsafe")
        )
       {
-      MSAFE_MORPH_A:
-	foreach (grep {$_ && $_->{hi}} @{$tok->{morph}}) {
+      MORPHA:
+	foreach (@{$tok->{morph}}) {
 	  @m = $_->{hi} =~ m{\G
-			     (?:[^\~\#\/\[\=]+)        ##-- stem
-			     |(?:\/[A-Z]{1,2}[\~\#])   ##-- stem class + separator
-			     |(?:[\~\#\/\=])           ##-- separator
-			     |(?:\[.*$)                ##-- tag+features...
+			     (?:[^\~\#\/\[\=\-\+\\]+)  ##-- morph: stem
+			     |(?:\/[A-Z]{1,2})         ##-- morph: stem class
+			     |(?:[\~\#\=\-\\\+]+)      ##-- morph: separator
+			     |(?:\[.*$)                ##-- morph: syntax (tag+features)
 			    }gx;
-
-	  ##-- check for unsafe tags
 	  $ma = pop @m;
-	  next if (exists($badTags{$ma =~ /^\[_([A-Z]+)\]/ ? $1 : $ma})
-		   || $ma =~ m(^(?:
-				   #| \[_NE\]               ##-- unsafe: tag: NE: proper name: all
-				   #| \[_NE\]\[geoname\]    ##-- unsafe: tag: NE.geo
-				   #| \[_NE\]\[firstname\]  ##-- unsafe: tag: NE.first
-				 \[_NE\]\[lastname\]     ##-- unsafe: tag: NE.last
-				 | \[_NE\]\[orgname\]      ##-- unsafe: tag: NE.org
-				 | \[_NE\]\[productname\]  ##-- unsafe: tag: NE.product
-			      ))x
+
+	  ##-- check for bad tags (unsafe)
+	  next if (
+		   $badTags->{$ma =~ /^\[_([A-Z]+)\]/ ? $1 : $ma}
+		   ||
+		   $ma =~ m{
+			     ^\[_NE\]\[
+			     (?:
+			       #geoname|
+			       #firstname|
+			       lastname|
+			       orgname|
+			       productname
+			     )
+			     \]
+			 }x
 		  );
 
-	  ##-- check for unsafe stems
-	  foreach (@ml) {
-	    next MSAFE_MORPH_A if (exists($badStems{$_}));
+	  ##-- check for unsafe roots
+	  foreach (@m) {
+	    next MORPHA if ($badMorphs->{$_});
 	  }
 
+	  ##-- check for suspicious composites, e.g. "Mittheilung:Mitte/N#heil/V~ung", "Abtheilung:Abt/N#heil/V~ung"
+	  next if ($_->{hi} =~ m{te?\/[A-Z]{1,2}\#[Hh]});
+
+	  ##-- this analysis is safe: update flag & break out of morph-analysis loop
 	  $safe=1;
 	  last;
 	}

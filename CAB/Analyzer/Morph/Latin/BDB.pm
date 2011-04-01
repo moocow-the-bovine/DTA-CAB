@@ -25,8 +25,11 @@ sub new {
 			      #analyzeGet => "lc($DICT_GET_TEXT)",
 			      #analyzeSet => $DICT_SET_FST,
 			      ##
-			      analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').'] if (!defined($_->{$lab}));',
-
+			      analyzeCode => join("\n",
+						  'return if (defined($_->{$lab})); ##-- avoid re-analysis',
+						  '@vals='._am_tt_fst_list('($dhash->{$_->{text}}||"")').';',
+						  '$_->{$lab}=[@vals] if (@vals);',
+						 ),
 			      ##-- user args
 			      @_
 			     );
@@ -82,9 +85,7 @@ L<DTA::CAB::Analyzer::Dict::BDB|DTA::CAB::Analyzer::Dict::BDB>
 which sets the following default options:
 
  label      => 'mlatin',
- analyzeGet => "lc($DICT_GET_TEXT)",
- analyzeSet => $DICT_SET_FST,
-
+ analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').'] if (!defined($_->{$lab}));',
 
 =cut
 
@@ -103,7 +104,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Jurish
+Copyright (C) 2010,2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

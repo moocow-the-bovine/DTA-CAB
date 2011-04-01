@@ -8,6 +8,7 @@
 ## Package: Analyzer::Rewrite
 ##==============================================================================
 package DTA::CAB::Analyzer::Rewrite;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Automaton::Gfsm::XL;
 use Carp;
 use strict;
@@ -23,7 +24,7 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'rw',
-			      analyzeGet => '$_[0]{msafe} ? undef : ($_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text})',
+			      analyzeGet => '$_->{$lab} || $_->{msafe} ? qw() : '._am_xlit,
 			      wantAnalysisLo => 0,
 			      tolowerNI => 1,
 			      attInput => 0,

@@ -1,11 +1,11 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Moot.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: generic Moot analysis API
 
 package DTA::CAB::Analyzer::Moot;
-use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Datum ':all';
 
 use moot;
@@ -20,6 +20,26 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(DTA::CAB::Analyzer);
+
+##==============================================================================
+## Closure stuff
+
+## $DEFAULT_ANALYZE_GET
+##  + default coderef or eval-able string for {analyzeGet}
+##  + available variables:
+##     $_       # current token
+##     $moot    # moot object
+##     $lab     # moot object label
+##     $hmm     # moot hmm
+
+our $DEFAULT_ANALYZE_GET = ('{'
+			    .join(",\n",
+				  'word=>'._am_tag('$_->{dmoot}', _am_xlit),
+				  'analyses=>['.join(",\n",
+						    ).']',
+				 )
+			    .'}');
+
 
 ## $DEFAULT_ANALYZE_TEXT_GET
 ##  + default coderef or eval-able string for {analyzeTextGet}
@@ -73,6 +93,13 @@ our %TAGX =
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber moot::HMM->new() defaults (default: verbose=>$moot::HMMvlWarnings)
 ##     hmmEnc         => $enc,   ##-- encoding of model file(s) (default='UTF-8')
+##
+##     analyzeGet => $code,      ##-- pseudo-closure: get moot input {word=>$text,analyses=>\@analayses} for token $_
+##     analyzeGetPre => $code,   ##-- additional 'pre' code for Analyzer::accessClosure()
+##
+##     analyzeSet => $code,      ##-- pseudo-closure: set token ($_) properties from moot output ($out)
+##     analyzeSetPre => $code,   ##-- additional 'pre' code for Analyzer::accessClosure()
+##
 ##     analyzeTextGet => $code,  ##-- pseudo-closure: token 'text' (default=$DEFAULT_ANALYZE_TEXT_GET)
 ##     analyzeTagsGet => $code,  ##-- pseudo-closure: token 'analyses' (defualt=$DEFAULT_ANALYZE_TAGS_GET)
 ##     #analyzeTagSrcs => \@srcs, ##-- OBSOLETE: source token 'analyses' key(s) (default=[qw(text xlit eqpho rewrite)], undef for none)
@@ -93,6 +120,9 @@ our %TAGX =
 ##     uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
 ##     wantTaggedWord => $bool,  ##-- if true, output field will contain top-level 'word' element (default=true)
 ##
+##     tagxFile  => $tagxFile,   ##-- tag-translation file (hack)
+##     tagx      => \%tagx,      ##-- tag-translation table (loaded via DTA::CAB::Analyzer::Dict from $tagxFile)
+##
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
 ##    )
@@ -107,6 +137,7 @@ sub new {
   my $moot = $that->SUPER::new(
 			       ##-- filenames
 			       hmmFile => undef,
+			       tagxFile => undef,
 
 			       ##-- options
 			       hmmArgs   => {
@@ -144,6 +175,7 @@ sub clear {
 
   ##-- analysis objects
   delete($moot->{hmm});
+  delete($moot->{tagx});
 
   return $moot;
 }
@@ -182,11 +214,15 @@ sub hmmClass { return 'moot::HMM'; }
 ##  + ensures model data is loaded from default files (if available)
 sub ensureLoaded {
   my $moot = shift;
+  my $rc = 1; ##-- allow empty models
+
   ##-- ensure: hmm
-  if ( defined($moot->{hmmFile}) && !$moot->hmmOk ) {
-    return $moot->loadHMM($moot->{hmmFile});
-  }
-  return 1; ##-- allow empty models
+  $rc &&= $moot->loadHMM($moot->{hmmFile}) if (defined($moot->{hmmFile}) && !$moot->hmmOk);
+
+  ##-- ensure: dict: tagx
+  $rc &&= $moot->ensureDict('tagx',{}) if (!$moot->{tagx});
+
+  return $rc;
 }
 
 ##--------------------------------------------------------------
@@ -208,6 +244,36 @@ sub loadHMM {
   $moot->dropClosures();
   return $moot;
 }
+
+##--------------------------------------------------------------
+## Methods: I/O: Input: Dictionaries: generic
+
+## $bool = $a->ensureDict($dictName,\%dictDefault)
+sub ensureDict {
+  my ($a,$name,$default) = @_;
+  return 1 if ($a->{$name}); ##-- already defined
+  return $a->loadDict($name,$a->{"${name}File"}) if ($a->{"${name}File"});
+  $a->{$name} = $default ? {%$default} : {};
+  return 1;
+}
+
+## \%dictHash_or_undef = $a->loadDict($dictName,$dictFile)
+sub loadDict {
+  my ($a,$name,$dfile) = @_;
+  delete($a->{$name});
+  my $dclass = 'DTA::CAB::Analyzer::Dict';
+  $a->info("loading map from '$dfile' as $dclass");
+
+  ##-- hack: generate a temporary dict object
+  my $dict = $dclass->new(label=>($a->{label}.".dict.$name"), dictFile=>$dfile);
+  $dict->ensureLoaded();
+  return undef if (!$dict->dictOk);
+
+  ##-- clobber dict
+  $a->{$name} = $dict->dictHash;
+}
+
+
 
 ##==============================================================================
 ## Methods: Persistence
@@ -334,7 +400,6 @@ sub analyzeSentences {
   $doc = toDocument($doc);
 
   ##-- setup common variables
-
   my $adst   = $moot->{label};
   my $prune  = $moot->{prune};
   my $uniqa  = $moot->{uniqueAnalyses};
@@ -361,7 +426,7 @@ sub analyzeSentences {
   my ($asrc,$acf);
   while (($asrc,$acf)=each(%$acfunc_strs)) {
     $acfunc_code{$asrc} = eval "sub { $acf }" if (defined($acf));
-    $moot->logconfess("cannot evaluate cost-munging function '$acf' for analysis key '$asrc': $@") if ($@);
+    $moot->logconfess("cannot evaluate cost-munging function {$acf} for analysis key '$asrc': $@") if ($@);
   }
 
   ##-- ensure $opts hash exists
@@ -781,7 +846,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009,2010,2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

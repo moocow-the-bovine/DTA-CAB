@@ -33,8 +33,11 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##      #$types ##-- types being analyzed with analyzeTypes()
 ##      #$opts  ##-- user options to analyzeTypes()
 ##  + the following lexical temporaries are provided:
-##      $key   ##-- dict key (temporary)
-##      $val   ##-- dict value (temporary)
+##      $key   ##-- temporary; unused here
+##      $val   ##-- temporary; unused here
+##      @keys  ##-- temporary; unused here
+##      @vals  ##-- temporary; unused here
+##      %vals  ##-- temporary; unused here
 ##==============================================================================
 
 our $CODE_DEFAULT = '$_->{$lab}=$dhash->{'._am_xlit().'};'; # '._am_clean('$_->{$lab}'); ##-- useless, since expandTypes() puts undef back!
@@ -206,7 +209,7 @@ sub analyzePre {
 	      '$dic=$anl',
 	      '$lab=$dic->{label}',
 	      '$dhash=$dic->dictHash',
-	      '($key,$val)',
+	      '($key,$val,@keys,@vals,%vals)',
 	      ($dic->{analyzePre} ? $dic->{analyzePre} : qw()),
 	     );
 }

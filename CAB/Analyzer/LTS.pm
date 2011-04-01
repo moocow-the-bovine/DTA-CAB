@@ -8,6 +8,7 @@
 ## Package: Analyzer::Morph
 ##==============================================================================
 package DTA::CAB::Analyzer::LTS;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use Carp;
 use strict;

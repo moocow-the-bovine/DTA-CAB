@@ -9,6 +9,7 @@
 ##==============================================================================
 package DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Chain;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::LTS;
 use Carp;

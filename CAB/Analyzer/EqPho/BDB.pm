@@ -28,17 +28,17 @@ sub new {
 			   ##-- options
 			   label       => 'eqpho',
 			   eqIdWeight  => 0,
-			   allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			   allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 			   ##
-			   #analyzeGet  => '$_[0]{lts}[0]{hi}',
-			   #analyzeSet  => $DICT_SET_FST_EQ,
-			   ##
-			   analyzeCode => ('$_->{$lab}=['.
-					   _am_fst_sort('grep {defined($_)}'
-							.' '._am_tt_fst_eqlist('$dhash->{'._am_lts.'}', '$_', '$dic->{eqIdWeight}')
-						       )
-					   .']'),
-
+			   analyzeCode => join("\n",
+					       'return if (defined($_->{$lab})); ##-- avoid re-analysis',
+					       '$val=undef; ##-- re-initialize temporary used by _am_fst_uniq',
+					       '$_->{$lab}=['._am_fst_usort(
+									    _am_id_fst('$_','$dic->{eqIdWeight}')
+									    .', '
+									    ._am_tt_fst_list('($dhash->{'._am_lts.'}||"")')
+									   ).'];'
+					      ),
 
 			   ##-- user args
 			   @_
@@ -124,7 +124,7 @@ Constructor.  Sets the following default options:
  analyzeGet  => '$_[0]{lts}[0]{hi}',
  analyzeSet  => $DICT_SET_FST_EQ,
  eqIdWeight  => 0,
- allowRegex  => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+ allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 
 =back
 
