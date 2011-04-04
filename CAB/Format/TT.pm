@@ -105,122 +105,112 @@ sub fromString {
 ## $fmt = $fmt->parseTTString($str)
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseTTString {
-  my ($fmt,$src) = @_;
-  $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
-
-  my ($tok,$rw,$line);
-  my ($text,@fields,$fieldi,$field, $fkey,$fval,$fobj);
-  my $sents  = [];
-  my $s      = [];
-  my %sa     = qw(); ##-- sentence attributes
-  my %doca   = qw(); ##-- document attributes
+  my $fmt = shift;
+  my $srcr = \$_[0];
+  if ($fmt->{encoding} && !utf8::is_utf8($$srcr)) {
+    my $src=decode($fmt->{encoding},$$srcr);
+    $srcr = \$src;
+  }
 
   my %f2key =
     ('morph/lat'=>'mlatin',
      'morph/la'=>'mlatin',
     );
 
-  while ($src =~ m/^(.*)$/mg) {
-    $line = $1;
-    if ($line =~ /^\%\% (?:xml\:)?base=(.*)$/) {
-      ##-- special comment: document attribute: xml:base
-      $doca{'base'} = $1;
-    }
-    elsif ($line =~ /^\%\% Sentence (.*)$/) {
-      ##-- special comment: sentence attribute: xml:id
-      $sa{'id'} = $1;
-    }
-    elsif ($line =~ /^\%\%(.*)$/) {
-      ##-- generic line: add to _cmts
-      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
-      next;
-    }
-    elsif ($line eq '') {
-      ##-- blank line: eos
-      push(@$sents, { %sa, tokens=>$s }) if (@$s || %sa);
-      $s   = [];
-      %sa  = qw();
-    }
-    else {
-      ##-- token
-      ($text,@fields) = split(/\t/,$line);
-      push(@$s, $tok=bless({text=>$text},'DTA::CAB::Token'));
-      foreach $fieldi (0..$#fields) {
-	$field = $fields[$fieldi];
-	if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] (?:off=)?(\d+) (?:len=)?(\d+)$/)) {
-	  ##-- token: field: loc
-	  $tok->{loc} = { off=>$1,len=>$2 };
-	}
-	elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
-	  ##-- token: field: DTA::TokWrap special field
-	  $tok->{$1} = $2;
-	}
-	elsif ($field =~ m/^\[xlit\] /) {
-	  ##-- token: field: xlit
-	  if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
-	    $tok->{xlit} = { isLatin1=>($1||0), isLatinExt=>($2||0), latin1Text=>$3 };
+  ##-- split by sentence
+  my ($toks,$tok,$rw,$text,@fields,$fieldi,$field, $fkey,$fval,$fobj);
+  my (%sa,%doca);
+  my $sents =
+    [
+     map {
+       %sa=qw();
+       $toks=
+	 [
+	  map {
+	    if ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
+	      ##-- special comment: document attribute: xml:base
+	      $doca{'base'} = $1;
+	      qw()
+	    } elsif ($_ =~ /^\%\% Sentence (.*)$/) {
+	      ##-- special comment: sentence attribute: xml:id
+	      $sa{'id'} = $1;
+	      qw()
+	    } elsif ($_ =~ /^\%\%(.*)$/) {
+	      ##-- generic line: add to _cmts
+	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
+	      qw()
+	    } else {
+	      ##-- token
+	      ($text,@fields) = split(/\t/,$_);
+	      $tok={text=>$text};
+	      foreach $fieldi (0..$#fields) {
+		$field = $fields[$fieldi];
+		if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] (?:off=)?(\d+) (?:len=)?(\d+)$/)) {
+		  ##-- token: field: loc
+		  $tok->{loc} = { off=>$1,len=>$2 };
+		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
+		  ##-- token: field: DTA::TokWrap special field
+		  $tok->{$1} = $2;
+		} elsif ($field =~ m/^\[xlit\] /) {
+		  ##-- token: field: xlit
+		  if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
+		    $tok->{xlit} = { isLatin1=>($1||0), isLatinExt=>($2||0), latin1Text=>$3 };
+		  } else {
+		    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
+		  }
+		} elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
+		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph)
+		  ($fkey,$fval) = ($1,$2);
+		  if ($fkey =~ s/^rw\///) {
+		    $tok->{rw} = [ {} ] if (!$tok->{rw});
+		    $fobj      = $tok->{rw}[$#{$tok->{rw}}];
+		  } elsif ($fkey =~ s/^dmoot\///) {
+		    $tok->{dmoot} = {} if (!$tok->{dmoot});
+		    $fobj         = $tok->{dmoot};
+		  } elsif ($fkey =~ s/^moot\///) {
+		    $tok->{moot}  = {} if (!$tok->{moot});
+		    $fobj         = $tok->{moot};
+		  } else {
+		    $fobj = $tok;
+		  }
+		  $fkey = $f2key{$fkey} if (defined($f2key{$fkey}));
+		  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/) {
+		    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)});
+		  } else {
+		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
+		  }
+		} elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
+		  ##-- token: field: morph-safety check (morph/safe)
+		  $tok->{msafe} = $1;
+		} elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
+		  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
+		  $tok->{$1}{$2} = $3;
+		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
+		  ##-- token: field: moot/analysis|dmoot/analysis
+		  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
+		} elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
+		  ##-- token: field: other known list field: (toka|tokpüp)
+		  push(@{$tok->{$1}}, $2);
+		} elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
+		  ##-- token: field: unknown named field "[$name] $val", parse into $tok->{other}{$name} = \@vals
+		  push(@{$tok->{other}{$1}}, $2);
+		} else {
+		  ##-- token: field: unnamed field
+		  #$fmt->warn("parseTTString(): could not parse token field '$field' for token '$text'");
+		  push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $field);
+		}
+	      }
+	      $tok
+	    }
 	  }
-	  else {
-	    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
-	  }
-	}
-	elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
-	  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph)
-	  ($fkey,$fval) = ($1,$2);
-	  if ($fkey =~ s/^rw\///) {
-	    $tok->{rw} = [ {} ] if (!$tok->{rw});
-	    $fobj      = $tok->{rw}[$#{$tok->{rw}}];
-	  }
-	  elsif ($fkey =~ s/^dmoot\///) {
-	    $tok->{dmoot} = {} if (!$tok->{dmoot});
-	    $fobj         = $tok->{dmoot};
-	  }
-	  elsif ($fkey =~ s/^moot\///) {
-	    $tok->{moot}  = {} if (!$tok->{moot});
-	    $fobj         = $tok->{moot};
-	  }
-	  else {
-	    $fobj = $tok;
-	  }
-	  $fkey = $f2key{$fkey} if (defined($f2key{$fkey}));
-	  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/) {
-	    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)});
-	  } else {
-	    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
-	  }
-	}
-	elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
-	  ##-- token: field: morph-safety check (morph/safe)
-	  $tok->{msafe} = $1;
-	}
-	elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
-	  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
-	  $tok->{$1}{$2} = $3;
-	}
-	elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
-	  ##-- token: field: moot/analysis|dmoot/analysis
-	  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
-	}
-	elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
-	  ##-- token: field: other known list field: (toka|tokpüp)
-	  push(@{$tok->{$1}}, $2);
-	}
-	elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
-	  ##-- token: field: unknown named field "[$name] $val", parse into $tok->{other}{$name} = \@vals
-	  push(@{$tok->{other}{$1}}, $2);
-	}
-	else {
-	  ##-- token: field: unnamed field
-	  #$fmt->warn("parseTTString(): could not parse token field '$field' for token '$text'");
-	  push(@{$tok->{other}{$fmt->{defaultFieldName}||''}}, $field);
-	}
-      }
-    }
-  }
-  push(@$sents,{%sa,tokens=>$s}) if (@$s || %sa); ##-- final sentence
+	  split(/\n/, $_)
+	 ];
+       (%sa || @$toks ? {%sa,tokens=>$toks} : qw())
+     } split(/\n\n+/, $$srcr)
+    ];
 
   ##-- construct & buffer document
-  $_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
+  #$_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
   $fmt->{doc} = bless({%doca,body=>$sents}, 'DTA::CAB::Document');
   return $fmt;
 }
@@ -383,7 +373,7 @@ sub putToken {
       if ($tok->{dmoot}{morph});
 
     ##-- dmoot/analyses
-    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
+    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{prob}||$_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
       if ($tok->{dmoot}{analyses});
   }
 
@@ -409,7 +399,7 @@ sub putToken {
     ##-- moot/analyses
     $out .= join('', map {("\t[moot/analysis] $_->{tag}"
 			   .(defined($_->{lemma}) ? " \@ $_->{lemma}" : '')
-			   ." ~ $_->{details} <".($_->{cost}||0).">"
+			   ." ~ $_->{details} <".($_->{prob}||$_->{cost}||0).">"
 			  )} @{$tok->{moot}{analyses}})
       if ($tok->{moot}{analyses});
   }

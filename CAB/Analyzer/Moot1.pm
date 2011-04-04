@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Moot.pm
+## File: DTA::CAB::Analyzer::Moot1.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: generic Moot analysis API
 
-package DTA::CAB::Analyzer::Moot;
+package DTA::CAB::Analyzer::Moot1;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Datum ':all';
 

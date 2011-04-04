@@ -44,18 +44,11 @@ sub {
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{analyses} = [
        map {$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}})); $_}
-       ($w->{tokpp} ? (map {parseAnalysis($_,src=>"tokpp")} @{$w->{tokpp}}) : qw()),
-       ($w->{toka} ? (map {parseAnalysis($_,src=>"toka")} @{$w->{toka}}) : qw()),
-       ($w->{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$w->{mlatin}}) : qw()),
-       ($_->{dmoot}
-        ? (
-  	   ($_->{dmoot}{morph} ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_->{dmoot}{morph}}) : qw()),
-	  )
-        : (
-	   ($_->{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_->{morph}}) : qw()),
-	   ($_->{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
-  		         map {@{$_->{morph}}} grep {$_->{morph}} @{$_->{rw}}) : qw()),
-	  )),
+      '._am_tagh_list2moota('map {$_ ? @$_ : qw()}
+			    @$w{qw(tokpp toka mlatin)},
+			    ($w->{dmoot} ? $w->{dmoot}{morph}
+                             : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
+			   ).'
      ] if (!defined($mw->{analyses}));
    $mw
  } @{$_->{tokens}}];
@@ -68,6 +61,7 @@ sub {
  }
 }
 ';
+
 
 ##==============================================================================
 ## Constructors etc.
@@ -299,70 +293,6 @@ sub canAnalyze {
   return $_[0]->hmmOk();
 }
 
-##------------------------------------------------------------------------
-## Methods: Analysis: Utilities
-
-## \%infoHash = CLASS::parseAnalysis(\%infoHash, %opts)
-## \%infoHash = CLASS::parseAnalysis(\%fstAnalysisHash, %opts)
-## \%infoHash = CLASS::parseAnalysis(\%xlitAnalysisHash, %opts)
-## \%infoHash = CLASS::parseAnalysis( $tagString, %opts)
-##  + returns an info hash {%opts,tag=>$tag,details=>$details,cost=>$cost} for various analysis types
-sub parseAnalysis {
-  my $ta = shift;
-  my ($tag,$details,$cost);
-  if (UNIVERSAL::isa($ta,'HASH')) {
-    ##-- case: hash-ref: use literal 'tag','details','cost' keys if present
-    ($tag,$details,$cost)=(@$ta{qw(tag details cost)});
-    if (exists($ta->{hi})) {
-      ##-- case: hash-ref: tok/FstPaths (e.g. $tok->{rw} for dmoot, $tok->{morph} for moot)
-      $details = $ta->{hi};
-      if ($details =~ /\[\_?([^\s\]]*)/) {
-	$tag = $1;
-      } else {
-	$tag = $details;
-	$tag =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape brackets (for DynLex)
-	$tag =~ s/\\(.)/$1/g;
-      }
-    }
-    elsif (defined($tag=$ta->{latin1Text})) {
-      ##-- case: hash-ref: xlit (e.g. $tok->{xlit} for dmoot)
-      $details='';
-    }
-    $details = $ta->{lemma}.' @ '.$details if (defined($ta->{lemma})); ##-- include lemma in 'details' string
-    $cost = $ta->{w} if (!defined($cost) && defined($ta->{w}));
-  }
-  else {
-    ##-- case: non-hash: assume it's all tag
-    ($tag,$details) = ($ta,'');
-  }
-  $cost = 0 if (!defined($cost));
-  return {@_,tag=>$tag,details=>$details,cost=>$cost};
-}
-
-## @analyses = CLASS::parseMorphAnalyses($tok)
-##  + utility for PoS tagging using {dmoot}{morph}, {morph}, and {rw}{morph} analyses
-sub parseMorphAnalyses {
-  return
-    (
-     map {$_->{tag}=$TAGX{$_->{tag}} if (defined($TAGX{$_->{tag}})); $_}
-     (
-      ##-- common
-      ($_[0]{toka} ? (map {parseAnalysis($_,src=>"toka")} @{$_[0]{toka}}) : qw()),
-      ($_[0]{tokpp} ? (map {parseAnalysis($_,src=>"tokpp")} @{$_[0]{tokpp}}) : qw()),
-      ($_[0]{mlatin} ? (map {parseAnalysis($_,src=>"mlatin")} @{$_[0]{mlatin}}) : qw()),
-     ),
-     ($_[0]{dmoot}
-      ? (
-	 ($_[0]{dmoot}{morph} ? (map {parseAnalysis($_,src=>"dmoot/morph")} @{$_[0]{dmoot}{morph}}) : qw()),
-	)
-      : (
-	 ($_[0]{morph} ? (map {parseAnalysis($_,src=>"morph")} @{$_[0]{morph}}) : qw()),
-	 ($_[0]{rw} ? (map {parseAnalysis($_,src=>"rw/morph")}
-		       map {@{$_->{morph}}} grep {$_->{morph}} @{$_[0]{rw}}) : qw()),
-	)),
-    );
-}
-
 
 ##------------------------------------------------------------------------
 ## Methods: Analysis: v1.x: API
@@ -454,12 +384,7 @@ DTA::CAB::Analyzer::Moot - generic Moot HMM tagger/disambiguator analysis API
  $bool = $anl->doAnalyze(\%opts, $name);
  $doc = $anl->analyzeSentences($doc,\%opts);
  
- ##========================================================================
- ## Methods: Analysis: Utilities
- 
- \%infoHash = CLASS::parseAnalysis(\%infoHash, %opts);
- @analyses = CLASS::parseMorphAnalyses($tok);
- 
+
 
 =cut
 
@@ -657,37 +582,6 @@ Override: only allow analyzeSentences().
  $doc = $anl->analyzeSentences($doc,\%opts);
 
 Perform sentence-wise analysis of all sentences $doc-E<gt>{body}[$si].
-
-=back
-
-=cut
-
-##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Moot: Methods: Analysis: Utilities
-=pod
-
-=head2 Methods: Analysis: Utilities
-
-=over 4
-
-=item parseAnalysis
-
- \%infoHash = CLASS::parseAnalysis(\%infoHash,         %opts);
- \%infoHash = CLASS::parseAnalysis(\%fstAnalysisHash,  %opts)
- \%infoHash = CLASS::parseAnalysis(\%xlitAnalysisHash, %opts)
- \%infoHash = CLASS::parseAnalysis( $tagString,        %opts)
-
-Returns an info hash of the form
-
- {%opts,tag=>$tag,details=>$details,cost=>$cost}
-
-for various analysis types.
-
-=item parseMorphAnalyses
-
- @analyses = CLASS::parseMorphAnalyses($tok);
-
-Utility for PoS tagging using {dmoot}{morph}, {morph}, and {rw}{morph} analyses.
 
 =back
 

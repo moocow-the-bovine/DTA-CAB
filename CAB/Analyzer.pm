@@ -28,6 +28,7 @@ our %EXPORT_TAGS =
 		qw(_am_fst_sort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
 		qw(_am_tag _am_word),
+		qw(_am_tagh_fst2moota _am_tagh_list2moota),
 		qw(parseFstString),
 	       ],
   );
@@ -415,8 +416,11 @@ sub getAnalyzeClosure {
 ##  + passed argument can be one of the following:
 ##    - a CODE ref resolves to itself
 ##    - a method name resolves to $anl->can($methodName)
-##    - any other string resolves to 'sub { $codeString }';
-##      which may reference the closure variable $anl
+##    - anything else resolves to a string passed to eval()
+##      + if the string contains no /\bsub\b/, it will be wrapped
+##        as "sub {$codeString}"
+##      + $codeString may reference the closure variable $anl
+##        (and maybe others; see 'pre' and 'vars' options)
 ##  + %opts
 ##     pre => $code_str,   ##-- for $codeString accessors, prefix for eval (e.g. 'my ($lexVar);')
 ##     vars => \@vars,     ##-- adds lexical vars 'my ('.join(',',@varNames).');'
@@ -428,14 +432,18 @@ sub accessClosure {
   $code = (''
 	   .($opts{pre}  ? "$opts{pre}; " : '')
 	   .($opts{vars} ? ('my ('.join(',',@{$opts{vars}}).'); ') : '')
-	   ."sub { $code }");
+	   .($code =~ /\bsub\b/ ? $code : "sub { $code }")
+	  );
+
+  print STDERR "accessClosure():\n$code\n" if (0); ##-- DEBUG
+
   my $sub = eval $code;
   $anl->logcluck("accessClosure(): could not compile closure {$code}: $@") if (!$sub);
   return $sub;
 }
 
 ## PACKAGE::_am_xlit($tokvar='$_')
-##  + access-closure macro: get xlit or text for token $$tokvar
+##  + access-closure macro (EXPR): get xlit or text for token $$tokvar
 ##  + evaluates to a string:
 ##    ($$tokvar->{xlit} ? $$tokvar->{xlit}{latin1Text} : $$tokvar->{text})
 sub _am_xlit {
@@ -444,7 +452,7 @@ sub _am_xlit {
 }
 
 ## PACKAGE::_am_lts($tokvar='$_')
-##  + access-closure macro for first LTS analysis of token $$tokvar
+##  + access-closure macro (EXPR) for first LTS analysis of token $$tokvar
 ##  + evaluates to string:
 ##    ($$tokvar->{lts} && @{$$tokvar->{lts}} ? $$tokvar->{lts}[0]{hi} : $$tokvar->{text})
 sub _am_lts {
@@ -453,7 +461,7 @@ sub _am_lts {
 }
 
 ## PACKAGE::_am_rw($tokvar='$_')
-##  + access-closure macro for rw output(s) for token $$tokvar
+##  + access-closure macro (EXPR) for rw output(s) for token $$tokvar
 ##  + evaluates to string:
 ##    ($$tokvar->{rw} ? (map {$_->{hi}} @{$$tokvar->{rw}}) : qw())
 sub _am_rw {
@@ -462,7 +470,7 @@ sub _am_rw {
 }
 
 ## PACKAGE::_am_tt_list($ttvar='$_')
-##  + access-closure macro for a TT-style list of strings $$ttvar
+##  + access-closure macro (EXPR) for a TT-style list of strings $$ttvar
 ##  + evaluatees to a list: "split(/\\t/,$$ttvar)"
 sub _am_tt_list {
   my $ttvar = shift || '$_';
@@ -470,7 +478,7 @@ sub _am_tt_list {
 }
 
 ## PACKAGE::_am_tt_fst($ttvar='$_')
-##  + access-closure macro for a single TT-style FST analysis $$ttvar
+##  + access-closure macro (EXPR) for a single TT-style FST analysis $$ttvar
 ##  + formerly mutliply defined in sub-packages as SUBPACKAGE::parseFstString()
 ##  + evaluates to a FST-analysis hash {hi=>$hi,w=>$w,lo=>$lo,lemma=>$lemma}:
 ##    (
@@ -495,7 +503,7 @@ sub parseFstString {
 }
 
 ## PACKAGE::_am_id_fst($tokvar='$_', $wvar='0')
-##  + access-closure macro for a identity FST analysis
+##  + access-closure macro (EXPR) for a identity FST analysis
 ##  + evaluates to a single fst analysis hash:
 ##    {hi=>_am_xlit($tokvar), w=>$$wvar}
 sub _am_id_fst {
@@ -506,7 +514,7 @@ sub _am_id_fst {
 
 
 ## PACKAGE::_am_tt_fst_list($ttvar='$_')
-##  + access-closure macro for a list of TT-style FST analyses $$ttvar
+##  + access-closure macro (EXPR) for a list of TT-style FST analyses $$ttvar
 ##  + evaluates to a list of fst analysis hashes:
 ##    (map {_am_tt_fst('$_')} split(/\t/,$$ttvar))
 sub _am_tt_fst_list {
@@ -515,7 +523,7 @@ sub _am_tt_fst_list {
 }
 
 ## PACKAGE::_am_tt_fst_eqlist($ttvar='$tt', $tokvar='$_', $wvar='0')
-##  + access-closure macro for a list of TT-style FST analyses $$ttvar
+##  + access-closure macro (EXPR) for a list of TT-style FST analyses $$ttvar
 ##  + evaluates to a list of fst analysis hashes:
 ##    (_am_id_fst($tokvar,$wvar), _am_tt_fst_list($ttvar))
 sub _am_tt_fst_eqlist {
@@ -526,7 +534,7 @@ sub _am_tt_fst_eqlist {
 }
 
 ## PACKAGE::_am_fst_sort($listvar='@_')
-##  + access-closure macro to sort a list of FST analyses $$listvar by weight
+##  + access-closure macro (EXPR) to sort a list of FST analyses $$listvar by weight
 ##  + evaluates to a sorted list of fst analysis hashes:
 ##    (sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} $$listvar)
 sub _am_fst_sort {
@@ -535,7 +543,7 @@ sub _am_fst_sort {
 }
 
 ## PACKAGE::_am_fst_uniq($listvar='@_', $tmpvar='$val')
-##  + access-closure macro for a unique list of TT-style FST analyses $$listvar
+##  + access-closure macro (EXPR) for a unique list of TT-style FST analyses $$listvar
 ##  + only the weight-minimal analysis is kept
 ##  + evaluates to a list of upper-unique fst analysis hashes:
 ##    (map {$$val && $$val->{hi} eq $_->{hi} ? qw() : ($$val=$_)} sort {$a->{hi} cmp $b->{hi} || ($a->{w}||0) <=> ($b->{w}||0)} $$listvar)
@@ -557,7 +565,7 @@ sub _am_fst_usort {
 }
 
 ## PACKAGE::_am_clean($hashvar='$_->{$lab}')
-##  + access-closure macro to delete a hash entry if undefined; evaluates to
+##  + access-closure macro (STMT) to delete a hash entry if undefined; evaluates to
 ##    delete($$hashvar) if (!defined($$hashvar));
 sub _am_clean {
   my $hashvar = shift || '$_->{$lab}';
@@ -565,7 +573,7 @@ sub _am_clean {
 }
 
 ## PACKAGE::_am_tag($mootvar='$_->{moot}', $defaultvar='undef')
-##  + access-closure macro for a moot or dmoot tag; evaluates to
+##  + access-closure macro (EXPR) for a moot or dmoot tag; evaluates to
 ##    ($$mootvar ? $$mootvar->{tag} : $defaultvar)
 sub _am_tag {
   my $mootvar = shift||'$_->{moot}';
@@ -574,12 +582,33 @@ sub _am_tag {
 }
 
 ## PACKAGE::_am_word($mootvar='$_->{moot}', $defaultvar='undef')
-##  + access-closure macro for a moot or dmoot tag; evaluates to
+##  + access-closure macro (EXPR) for a moot or dmoot tag; evaluates to
 ##    ($$mootvar ? $$mootvar->{word} : $defaultvar)
 sub _am_word {
   my $mootvar = shift||'$_->{moot}';
   my $default = shift||'undef';
   return "($mootvar ? $mootvar\->{word} : $default) ##== _am_tag\n";
+}
+
+## PACKAGE::_am_tagh_fst2moota($taghvar='$_')
+##  + access-closure macro (EXPR): single moot token analysis from TAGH-style fst analysis
+##  + requires: $$taghvar->{hi}; evaluates to:
+##    {details=>$taghvar->{hi}, prob=>($$taghvar->{w}||0), tag=>($$taghvar->{hi} =~ /\[\_?([A-Z0-9]+)\]/ ? \$1 : $$taghvar->{hi})}
+sub _am_tagh_fst2moota {
+  my $taghvar = shift||'$_';
+  return ("{details=>$taghvar\->{hi},"
+	  ." prob=>($taghvar\->{w}||0),"
+	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?([A-Z0-9]+)\\]/ ? \$1 : $taghvar\->{hi})"
+	  ."} ##-- _am_tagh2moota\n");
+}
+
+## PACKAGE::_am_tagh_list2moota($listvar='@{$_->{morph}}')
+##  + access-closure macro (EXPR): moot token analysis-list from TAGH-style fst analysis-list
+##  + evaluates to:
+##    (map { $${_am_tagh_fst2moota('$_')} } $$listvar)
+sub _am_tagh_list2moota {
+  my $listvar = shift||'@{$_->{morph}}';
+  return "(map {"._am_tagh_fst2moota('$_')."} $listvar) ##-- _am_tagh2moota_list\n";
 }
 
 

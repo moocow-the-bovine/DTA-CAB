@@ -182,7 +182,7 @@ sub analyzeTypes {
 
 	  ##-- check for bad tags (unsafe)
 	  next if (
-		   $badTags->{$ma =~ /^\[_([A-Z]+)\]/ ? $1 : $ma}
+		   $badTags->{$ma =~ /^\[_([A-Z0-9]+)\]/ ? $1 : $ma}
 		   ||
 		   $ma =~ m{
 			     ^\[_NE\]\[
