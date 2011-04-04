@@ -24,11 +24,14 @@ our %EXPORT_TAGS =
   (
    'access' => [qw(_am_xlit _am_lts _am_rw),
 		qw(_am_tt_list _am_tt_fst),
-		qw(_am_id_fst _am_tt_fst_list _am_tt_fst_eqlist),
+		qw(_am_id_fst _am_xlit_fst),
+		qw(_am_fst_wcp _am_fst_wcp_list _am_fst_wcp_listref),
+		qw(_am_tt_fst_list _am_tt_fst_eqlist),
 		qw(_am_fst_sort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
 		qw(_am_tag _am_word),
 		qw(_am_tagh_fst2moota _am_tagh_list2moota),
+		qw(_am_dmoot_fst2moota _am_dmoot_list2moota),
 		qw(parseFstString),
 	       ],
   );
@@ -504,14 +507,51 @@ sub parseFstString {
 
 ## PACKAGE::_am_id_fst($tokvar='$_', $wvar='0')
 ##  + access-closure macro (EXPR) for a identity FST analysis
+##  + really just a wrapper for _am_xlit_fst()
+sub _am_id_fst {
+  return _am_xlit_fst(@_);
+}
+
+## PACKAGE::_am_xlit_fst($tokvar='$_', $wvar='0')
+##  + access-closure macro (EXPR) for a xlit-FST analysis
 ##  + evaluates to a single fst analysis hash:
 ##    {hi=>_am_xlit($tokvar), w=>$$wvar}
-sub _am_id_fst {
+sub _am_xlit_fst {
   my $tokvar = shift || '$_';
   my $wvar   = shift || '0';
   return '{hi=>'._am_xlit($tokvar).', w=>'.$wvar.'}'." ##== _am_id_fst\n";
 }
 
+## PACKAGE::_am_fst_wcp($fstvar='$_', $wexpr=$fstvar.'->{w}')
+##  + access-closure macro (EXPR) for a re-weighted copy of FST analysis $$fstvar
+##  + evaluates to a copy of $$fstvar with $$wexpr replacing $$fstvar->{w}:
+##    {%$$fstvar,w=>$$wexpr}
+sub _am_fst_wcp {
+  my $fstvar  = shift || '$_';
+  my $wexpr   = shift || $fstvar.'->{w}';
+  return "{ %{$fstvar}, w=>$wexpr } ##-- _am_fst_wcp\n";
+}
+
+## PACKAGE::_am_fst_wcp_list($listvar='@_', $wexpr='$_->{w}')
+##  + access-closure macro (EXPR) for a list of weighted copies of FST analysis-list $$listvar
+##  + evaluates to a list of copies of $$listvar analyses with $$wexpr replacing $_->{w}:
+##    (map { $${_am_fst_wcp('$_',$wexpr)} } $$listvar)
+sub _am_fst_wcp_list {
+  my $listvar  = shift || '@_';
+  my $wexpr   = shift || '$_->{w}';
+  return "(map {"._am_fst_wcp('$_',$wexpr)."} $listvar) ##-- _am_fst_wcp_list\n";
+}
+
+## PACKAGE::_am_fst_wcp_listref($listrefvar='$_->{rw}', $wexpr='$_->{w}')
+##  + access-closure macro (EXPR) for a list of weighted copies of FST analysis-listref $$listrefvar
+##  + accepts undef $$listrefvar
+##  + evaluates to a list of copies of $$listvar analyses with $$wexpr replacing $_->{w}:
+##    ($$listvar ? (map { $${_am_fst_wcp('$_',$wexpr)} } @{$$listvar}) : qw())
+sub _am_fst_wcp_listref {
+  my $listrefvar  = shift || '$_->{rw}';
+  my $wexpr   = shift;
+  return "($listrefvar ? "._am_fst_wcp_list("\@{$listrefvar}",$wexpr)." : qw()) ##-- _am_fst_wcp_listref\n";
+}
 
 ## PACKAGE::_am_tt_fst_list($ttvar='$_')
 ##  + access-closure macro (EXPR) for a list of TT-style FST analyses $$ttvar
@@ -599,7 +639,7 @@ sub _am_tagh_fst2moota {
   return ("{details=>$taghvar\->{hi},"
 	  ." prob=>($taghvar\->{w}||0),"
 	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?([A-Z0-9]+)\\]/ ? \$1 : $taghvar\->{hi})"
-	  ."} ##-- _am_tagh2moota\n");
+	  ."} ##-- _am_tagh_fst2moota\n");
 }
 
 ## PACKAGE::_am_tagh_list2moota($listvar='@{$_->{morph}}')
@@ -608,7 +648,25 @@ sub _am_tagh_fst2moota {
 ##    (map { $${_am_tagh_fst2moota('$_')} } $$listvar)
 sub _am_tagh_list2moota {
   my $listvar = shift||'@{$_->{morph}}';
-  return "(map {"._am_tagh_fst2moota('$_')."} $listvar) ##-- _am_tagh2moota_list\n";
+  return "(map {"._am_tagh_fst2moota('$_')."} $listvar) ##-- _am_tagh_list2moota\n";
+}
+
+## PACKAGE::_am_dmoot_fst2moota($fstvar='$_')
+##  + access-closure macro (EXPR): single dmoot token analysis from fst analysis
+##  + requires: $$fstvar->{hi}; evaluates to:
+##    {tag=>$$fstvar->{hi}, prob=>($$fstvar->{w}||0)}
+sub _am_tagh_fst2moota {
+  my $taghvar = shift||'$_';
+  return "{tag=>$fstvar\->{hi}, prob=>($fstvar\->{w}||0)} ##-- _am_dmoot_fst2moota\n";
+}
+
+## PACKAGE::_am_dmoot_list2moota($listvar='@_')
+##  + access-closure macro (EXPR): dmoot token analysis-list from fst analysis-list
+##  + evaluates to:
+##    (map { $${_am_dmoot_fst2moota('$_')} } $$listvar)
+sub _am_dmoot_list2moota {
+  my $listvar = shift||'@_';
+  return "(map {"._am_dmoot_fst2moota('$_')."} $listvar) ##-- _am_dmoot_list2moota\n";
 }
 
 

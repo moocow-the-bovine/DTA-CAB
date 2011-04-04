@@ -25,7 +25,7 @@ use DTA::CAB::Analyzer::Null;
 use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::Moot;
-use DTA::CAB::Analyzer::Moot::DynLex;
+#use DTA::CAB::Analyzer::Moot::DynLex;
 
 use DTA::CAB::Analyzer::Lemmatizer;      ##-- tagh lemma extractor
 

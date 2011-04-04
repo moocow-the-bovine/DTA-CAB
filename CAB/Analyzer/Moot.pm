@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Moot2.pm
+## File: DTA::CAB::Analyzer::Moot.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: generic Moot analysis API
 
-package DTA::CAB::Analyzer::Moot2;
+package DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Datum ':all';
 
@@ -36,11 +36,12 @@ my $lab =$moot->{label};
 my $hmm =$moot->{hmm};
 my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
+my $prune=$moot->{prune};
 my ($msent,$w,$mw,$t);
 sub {
  $msent = [map {
    $w  = $_;
-   $mw = $w->{moot} ? $w->{$lab} : ($w->{$lab}={});
+   $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{analyses} = [
        map {$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}})); $_}
@@ -58,6 +59,10 @@ sub {
  foreach (@$msent) {
    $_->{word}=$_->{text};
    delete($_->{text});
+   if ($prune) {
+     $t = $_->{tag};
+     @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
+   }
  }
 }
 ';
@@ -72,43 +77,20 @@ sub {
 ##    (
 ##     ##-- Filename Options
 ##     hmmFile => $filename,     ##-- default: none (REQUIRED)
+##     tagxFile  => $tagxFile,   ##-- tag-translation file (hack)
 ##
 ##     ##-- Analysis Options
 ##     hmmArgs        => \%args, ##-- clobber Moot::HMM->new() defaults (default: none)
 ##     hmmUtf8        => $bool,  ##-- use hmm utf8 mode? (default=true)
 ##
-##     analyzeCode => $code,      ##-- pseudo-closure: get moot input {word=>$text,analyses=>\@analayses} for token $_
-##
-##     #analyzeCostFuncs =>\%fnc, ##-- maps source 'analyses' key(s) to cost-munging functions: TODO (for dynlex)
-##                               ##     %fnc = ($akey=>$perlcode_str, ...)
-##                               ##   + evaluates $perlcode_str as subroutine body to derive analysis
-##                               ##     'weights' from source-key weights
-##                               ##   + $perlcode_str may use variables:
-##                               ##       $moot    ##-- current Analyzer::Moot object
-##                               ##       $tag     ##-- source analysis tag
-##                               ##       $details ##-- source analysis 'details' "$hi <$w>"
-##                               ##       $cost    ##-- source analysis weight
-##                               ##       $text    ##-- source token text
-##                               ##   + Default just returns $cost (identity function)
-##     label             =>$lab, ##-- destination key (default='moot')
-##     #requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=1)
-##     #prune          => $bool,  ##-- if true (default), prune analyses after tagging
-##     #uniqueAnalyses => $bool,  ##-- if true, only cost-minimal analyses for each tag will be added (default=false)
-##     #wantTaggedWord => $bool,  ##-- if true, output field will contain top-level 'word' element (default=true)
-
-##
-##     tagxFile  => $tagxFile,   ##-- tag-translation file (hack)
-##     tagx      => \%tagx,      ##-- tag-translation table (loaded via DTA::CAB::Analyzer::Dict from $tagxFile)
+##     analyzeCode => $code,     ##-- pseudo-closure: analyze current sentence $_
+##     label       => $lab,      ##-- destination key (default='moot')
+##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
+##     tagx      => \%tagx,      ##-- tag-translation table (loaded via DTA::CAB::Analyzer::Dict from $tagxFile)
 ##    )
-##
-##     ##-- OBSOLETE (use analyzeTextGet, analyzeTagsGet pseudo-closure accessors)
-##     #analyzeTextSrc => $src,   ##-- source token 'text' key (default='text')
-##     #analyzeTagSrcs => \@srcs, ##-- source token 'analyses' key(s) (default=['morph'], undef for none)
-##     #analyzeLiteralFlag=>$key, ##-- if ($tok->{$key}), only literal analyses are allowed (default='dmootLiteral')
-##     #analyzeLiteralSrc =>$key, ##-- source key for literal analyses (default='xlit')
 sub new {
   my $that = shift;
   my $moot = $that->SUPER::new(
@@ -315,7 +297,7 @@ sub analyzeSentences {
   $doc = toDocument($doc);
 
   ##-- setup access closures
-  my $acode_str  = $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE;
+  my $acode_str  = $moot->analysisCode();
   my $acode_sub  = $moot->accessClosure($acode_str);
 
   ##-- ye olde loope
@@ -325,6 +307,18 @@ sub analyzeSentences {
 
   return $doc;
 }
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Closure Utilities
+
+## $asub_code = $moot->analysisCode()
+##  + analysis closure for passing to Analyzer::accessClosure()
+##  + default just returns $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE
+sub analysisCode {
+  my $moot = shift;
+  return $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE;
+}
+
 
 1; ##-- be happy
 
