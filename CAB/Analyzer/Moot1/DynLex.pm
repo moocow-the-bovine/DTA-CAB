@@ -4,8 +4,8 @@
 ## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
 ## Description: Moot analysis API for word n-gram disambiguation using dynamic lexicon
 
-package DTA::CAB::Analyzer::Moot::DynLex;
-use DTA::CAB::Analyzer::Moot;
+package DTA::CAB::Analyzer::Moot1::DynLex;
+use DTA::CAB::Analyzer::Moot1;
 
 use moot;
 use Encode qw(encode decode);
@@ -18,7 +18,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::Moot);
+our @ISA = qw(DTA::CAB::Analyzer::Moot1);
 
 ## $DEFAULT_DYN_ANALYZE_TEXT_GET
 ##  + default coderef or eval-able string for {analyzeTextGet}
@@ -154,9 +154,9 @@ sub hmmClass { return 'moot::DynLexHMM_Boltzmann'; }
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Utilities
 
-BEGIN { *parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
+BEGIN { *parseAnalysis = \&DTA::CAB::Analyzer::Moot1::parseAnalysis; }
 
-BEGIN { *_parseAnalysis = \&DTA::CAB::Analyzer::Moot::parseAnalysis; }
+BEGIN { *_parseAnalysis = \&DTA::CAB::Analyzer::Moot1::parseAnalysis; }
 
 ## @analyses = CLASS::parseDynAnalysesSafe($tok)
 ##  + pseudo-accessor utility for disambiguation using @$tok{qw(text xlit msafe eqphox rw)} fields (NOT 'eqpho'!)
