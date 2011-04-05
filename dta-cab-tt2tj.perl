@@ -10,9 +10,10 @@ our $tj = DTA::CAB::Format::TJ->new;
 our $sbuf='';
 
 sub tt2tj {
-  $tt->parseTJString($sbuf);
+  $sbuf = Encode::decode_utf8($sbuf) if (!utf8::is_utf8($sbuf));
+  $tt->parseTTString($sbuf);
   $tj->putDocument($tt->{doc});
-  print Encode::encode_utf8($tj->{outbuf}) if (defined($tj->{outbuf}));
+  print $tj->{outbuf} if (defined($tj->{outbuf}));
   delete $tj->{outbuf};
   $sbuf = '';
 }
