@@ -173,10 +173,10 @@ sub analyzeTypes {
       MORPHA:
 	foreach (@{$tok->{morph}}) {
 	  @m = $_->{hi} =~ m{\G
-			     (?:[^\~\#\/\[\=\-\+\\]+)  ##-- morph: stem
-			     |(?:\/[A-Z]{1,2})         ##-- morph: stem class
-			     |(?:[\~\#\=\-\\\+]+)      ##-- morph: separator
-			     |(?:\[.*$)                ##-- morph: syntax (tag+features)
+			     (?:[^\~\#\/\[\=\|\-\+\\]+)  ##-- morph: stem
+			     |(?:\/[A-Z]{1,2})           ##-- morph: stem class
+			     |(?:[\~\#\=\|\-\+\\]+)      ##-- morph: separator
+			     |(?:\[.*$)                  ##-- morph: syntax (tag+features)
 			    }gx;
 	  $ma = pop @m;
 

@@ -1,16 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Moot::DynLex.pm
+## File: DTA::CAB::Analyzer::Moot::Boltzmann.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Moot analysis API for word n-gram disambiguation using dynamic lexicon
 
-package DTA::CAB::Analyzer::Moot::DynLex;
+package DTA::CAB::Analyzer::Moot::Boltzmann;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Moot;
-
 use Moot;
-use Encode qw(encode decode);
-use IO::File;
-use Carp;
 
 use strict;
 
@@ -27,7 +24,7 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure:
 ##    (
-##     ##-- new in Analyzer::Moot::DynLex
+##     ##-- new in Analyzer::Moot::Boltzmann
 ##     #?
 ##
 ##     ##==== Inherited from Analyzer::Moot
@@ -57,48 +54,48 @@ our @ISA = qw(DTA::CAB::Analyzer::Moot);
 ##                               ##       rw     => $_->{w}/length($text)
 ##
 ##     #uniqueAnalyses  => $bool, ##-- if true, only cost-minimal analyses for each tag will be added (default=1)
-##     #requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for DynLex; default=0)
+##     #requireAnalyses => $bool, ##-- if true all tokens MUST have non-empty analyses (useful for Boltzmann; default=0)
 ##     #prune           => $bool, ##-- if true, prune analyses after tagging (default (override)=false)
 ##
 ##     ##-- Analysis Objects
 ##     hmm            => $hmm,   ##-- a moot::HMM object
 sub new {
   my $that = shift;
-  my $moot = $that->SUPER::new(
+  my $dmoot = $that->SUPER::new(
 			       ##-- options (override)
-			       hmmArgs => {
-					   newtag_str=>'@NEW',
-					   newtag_f=>0.5,
-					   Ftw_eps =>0.0,  ##-- moot default=0.5
-					   invert_lexp=>1,
-					   hash_ngrams=>1,
-					   relax=>0,
-					   dynlex_base=>2,
-					   dynlex_beta=>1,
-					  },
+				hmmArgs => {
+					    newtag_str=>'@NEW',
+					    newtag_f=>0.5,
+					    Ftw_eps =>0.0, ##-- moot default=0.5
+					    invert_lexp=>1,
+					    hash_ngrams=>1,
+					    relax=>0,
+					    dynlex_base=>2,
+					    dynlex_beta=>1,
+					   },
 
-			       ##-- these flow into analysisCode()
-			       #uniqueAnalyses  =>1,
-			       #requireAnalyses =>1,
-			       #prune           =>0,
-			       analyzeCostFuncs => {
-						    xlit=>'2.0/length($text)',
-						    eqpho=>'1.0/length($text)',
-						    eqphox=>'(1+0.1*$cost)/length($text)',
-						    rw=>'$cost/length($text)',
-						   },
+				##-- these flow into analysisCode()
+				#uniqueAnalyses  =>1,
+				#requireAnalyses =>1,
+				#prune           =>0,
+				analyzeCostFuncs => {
+						     xlit=>'2.0/length($text)',
+						     eqpho=>'1.0/length($text)',
+						     eqphox=>'(1+0.1*$cost)/length($text)',
+						     rw=>'$cost/length($text)',
+						    },
 
-			       ##-- analysis I/O
-			       label => 'dmoot',
-			       analyzeCode => undef, ##-- see analysisCode() method, below
+				##-- analysis I/O
+				label => 'dmoot',
+				analyzeCode => undef, ##-- see analysisCode() method, below
 
-			       ##-- analysis objects
-			       #hmm => undef,
+				##-- analysis objects
+				#hmm => undef,
 
-			       ##-- user args
-			       @_
-			      );
-  return $moot;
+				##-- user args
+				@_
+			       );
+  return $dmoot;
 }
 
 ## $moot = $moot->clear()
@@ -118,7 +115,7 @@ sub hmmOk {
 ## $class = $moot->hmmClass()
 ##  + returns class for $moot->{hmm} object
 ##  + default just returns 'moot::HMM::Boltzmann'
-sub hmmClass { return 'moot::HMM::Boltzmann'; }
+sub hmmClass { return 'Moot::HMM::Boltzmann'; }
 
 ##==============================================================================
 ## Methods: Analysis
@@ -127,10 +124,12 @@ sub hmmClass { return 'moot::HMM::Boltzmann'; }
 ##------------------------------------------------------------------------
 ## Methods: Analysis: Closure Utilities
 
-## $asub_code = $moot->analysisCode()
+## $asub_code = $dmoot->analysisCode()
 ##  + analysis closure for passing to Analyzer::accessClosure()
 sub analysisCode {
   my $dmoot = shift;
+  return $dmoot->analyzeDebug() if (0 || $dmoot->{analyzeDebug}); ##-- DEBUG
+
   my %acfunc = %{$dmoot->{analyzeCostFuncs}};
   foreach (keys %acfunc) {
     $acfunc{$_} =~ s/\$cost/\$_->{w}/g;
@@ -143,33 +142,98 @@ my $dmoot=$anl;
 my $lab  =$dmoot->{label};
 my $hmm  =$dmoot->{hmm};
 my $utf8 =$dmoot->{hmmUtf8};
-my ($msent,$w,$mw,$text,$cost);
+my ($msent,$w,$mw,$text,$tmp, $analysesOk);
 sub {
  $msent = [map {
    $w  = $_;
+   $analysesOk=1;
    $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
-     if ($mw->{exlex}) {
+     if ($w->{exlex}) {
        $mw->{analyses} = [{tag=>$w->{exlex}, prob=>0}];
-     } elsif ($mw->{msafe}) {
+     } elsif ($w->{msafe}) {
        $mw->{analyses} = [{tag=>'._am_xlit('$w').', prob=>0}];
      } else {
        $mw->{analyses} = [
-        '._am_dmoot_list2moota(
-			       _am_fst_uniq(
-					    '('.join(",\n\t",
-						     _am_fst_xlit('$w',"($acfunc{xlit})"),
-						     _am_fst_wcp_listref('$w->{eqphox}',"($acfunc{eqphox})"),
-						     _am_fst_wcp_listref('$w->{rw}',"($acfunc{rw})"),
-						    )
-					    .')'
+        '._am_dmoot_list2moota(_am_fst_sort(
+					    _am_fst_uniq( ##-- only include cost-minimal unique analyses
+							 '('.join(",\n\t",
+								  _am_xlit_fst('$w',"($acfunc{xlit})"),
+								  _am_fst_wcp_listref('$w->{eqphox}',"($acfunc{eqphox})"),
+								  _am_fst_wcp_listref('$w->{rw}',"($acfunc{rw})"),
+								 )
+							 .')',
+							 '$tmp'
+							)
 					   )
 			      ).'
         ];
         foreach (@{$mw->{analyses}}) {
           $_->{tag} =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape: brackets
-          $_->{tag} =~ s/\\(.)/$1/g;          ##-- un-escape: backslashes
+          $_->{tag} =~ s/\\\\(.)/$1/g;        ##-- un-escape: backslashes
+        }
+        $analysesOk=0 if (!@{$mw->{analyses}});
+     }
+     $_->{details} = $_->{tag} foreach (@{$mw->{analyses}});
+   }
+   $mw
+ } @{$_->{tokens}}];
+
+ if (!$analysesOk) {
+   $dmoot->logwarn("no candidate analyses found for token text \\"$text\\": skipping sentence!");
+   return;
+ }
+ $hmm->tag_sentence($msent, $utf8);
+
+ foreach (@$msent) {
+   delete($_->{text});
+ }
+}
+';
+}
+
+##-- DEBUG
+sub analyzeDebug {
+  my $anl = shift;
+return sub {
+
+my $dmoot=$anl;
+my $lab  =$dmoot->{label};
+my $hmm  =$dmoot->{hmm};
+my $utf8 =$dmoot->{hmmUtf8};
+my ($msent,$w,$mw,$text,$tmp);
+
+ $msent = [map {
+   $w  = $_;
+   $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
+   $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
+   if (!$mw->{analyses}) {
+     if ($w->{exlex}) {
+       $mw->{analyses} = [{tag=>$w->{exlex}, prob=>0}];
+     } elsif ($w->{msafe}) {
+       $mw->{analyses} = [{tag=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
+, prob=>0}];
+     } else {
+       $mw->{analyses} = [
+        (map {{tag=>$_->{hi}, prob=>($_->{w}||0)} ##-- _am_dmoot_fst2moota
+} (map {$tmp && $tmp->{hi} eq $_->{hi} ? qw() : ($tmp=$_)} sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)} ({hi=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
+, w=>(2/length($text))} ##== _am_id_fst
+,
+	($w->{eqphox} ? (map {{ %{$_}, w=>((1+0.1*$_->{w})/length($text)) } ##-- _am_fst_wcp
+} @{$w->{eqphox}}) ##-- _am_fst_wcp_list
+ : qw()) ##-- _am_fst_wcp_listref
+,
+	($w->{rw} ? (map {{ %{$_}, w=>($_->{w}/length($text)) } ##-- _am_fst_wcp
+} @{$w->{rw}}) ##-- _am_fst_wcp_list
+ : qw()) ##-- _am_fst_wcp_listref
+)) ##== _am_fst_uniq
+) ##-- _am_dmoot_list2moota
+
+        ];
+        foreach (@{$mw->{analyses}}) {
+          $_->{tag} =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape: brackets
+          $_->{tag} =~ s/\\(.)/$1/g;        ##-- un-escape: backslashes
         }
      }
      $_->{details} = $_->{tag} foreach (@{$mw->{analyses}});
@@ -182,9 +246,7 @@ sub {
  foreach (@$msent) {
    delete($_->{text});
  }
-}
-';
-}
+}}
 
 
 ##==============================================================================
@@ -240,7 +302,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Moot::DynLex - Moot analysis API for word n-gram disambiguation using dynamic lexicon
+DTA::CAB::Analyzer::Moot::Boltzmann - Moot analysis API for word n-gram disambiguation using dynamic lexicon
 
 =cut
 
@@ -253,7 +315,7 @@ DTA::CAB::Analyzer::Moot::DynLex - Moot analysis API for word n-gram disambiguat
  ##========================================================================
  ## PRELIMINARIES
  
- use DTA::CAB::Analyzer::Moot::DynLex;
+ use DTA::CAB::Analyzer::Moot::Boltzmann;
  
  ##========================================================================
  ## Constructors etc.
@@ -277,7 +339,7 @@ DTA::CAB::Analyzer::Moot::DynLex - Moot analysis API for word n-gram disambiguat
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Moot::DynLex: Globals
+## DESCRIPTION: DTA::CAB::Analyzer::Moot::Boltzmann: Globals
 =pod
 
 =head2 Globals
@@ -286,7 +348,7 @@ DTA::CAB::Analyzer::Moot::DynLex - Moot analysis API for word n-gram disambiguat
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::Moot::DynLex
+DTA::CAB::Analyzer::Moot::Boltzmann
 inherits from
 L<DTA::CAB::Analyzer::Moot|DTA::CAB::Analyzer::Moot>.
 
@@ -295,7 +357,7 @@ L<DTA::CAB::Analyzer::Moot|DTA::CAB::Analyzer::Moot>.
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Moot::DynLex: Constructors etc.
+## DESCRIPTION: DTA::CAB::Analyzer::Moot::Boltzmann: Constructors etc.
 =pod
 
 =head2 Constructors etc.
@@ -309,7 +371,7 @@ L<DTA::CAB::Analyzer::Moot|DTA::CAB::Analyzer::Moot>.
 Object structure, %args
 
     (
-     ##-- new in Analyzer::Moot::DynLex
+     ##-- new in Analyzer::Moot::Boltzmann
      analyzeCostFuncs => [
      #
      ##==== Inherited from Analyzer::Moot
@@ -324,7 +386,7 @@ Object structure, %args
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::Moot::DynLex: Methods: Generic
+## DESCRIPTION: DTA::CAB::Analyzer::Moot::Boltzmann: Methods: Generic
 =pod
 
 =head2 Methods: Generic

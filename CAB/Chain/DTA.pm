@@ -8,6 +8,8 @@ use DTA::CAB::Datum ':all';
 use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
+use DTA::CAB::Analyzer::Moot;
+use DTA::CAB::Analyzer::Moot::Boltzmann;
 use DTA::CAB::Analyzer::Dict::JsonDB;
 use DTA::CAB::Analyzer::EqPhoX;
 use DTA::CAB::Analyzer::RewriteSub;
@@ -53,12 +55,12 @@ sub new {
 			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),
 			   ##
 			   ##
-			   dmoot => DTA::CAB::Analyzer::Moot::DynLex->new(), ##-- moot n-gram disambiguator
-			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),  ##-- moot n-gram disambiguator: sub-morph
-			   moot => DTA::CAB::Analyzer::Moot->new(),          ##-- moot tagger (on dmoot output)
-			   mootsub => DTA::CAB::Analyzer::MootSub->new(),    ##-- moot tagger, post-processing hacks
+			   dmoot => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator
+			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),     ##-- moot n-gram disambiguator: sub-morph
+			   moot => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output)
+			   mootsub => DTA::CAB::Analyzer::MootSub->new(),       ##-- moot tagger, post-processing hacks
 			   ##
-			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),   ##-- eqlemma (best only)
+			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),      ##-- eqlemma (best only)
 			   ##
 			   clean => DTA::CAB::Analyzer::DTAClean->new(),
 

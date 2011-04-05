@@ -22,6 +22,9 @@ use DTA::CAB::Analyzer::Unidecode;
 use DTA::CAB::Analyzer::LangId;          ##-- language identification via Lingua::LangId::Map
 use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocClassify
 
+use DTA::CAB::Analyzer::DmootSub;        ##-- DTA
+use DTA::CAB::Analyzer::MootSub;         ##-- DTA
+
 use strict;
 
 1; ##-- be happy

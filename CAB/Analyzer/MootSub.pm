@@ -6,7 +6,7 @@
 ##  + tweaks $tok->{moot}{word}, instantiates $tok->{moot}{lemma}
 
 package DTA::CAB::Analyzer::MootSub;
-use DTA::CAB::Analyzer;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Lemmatizer;
 use Carp;
 use strict;
@@ -22,17 +22,18 @@ our @ISA = qw(DTA::CAB::Analyzer);
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
-			     ##-- analysis selection
-			     label => 'mootsub',
-			     mootLabel => 'moot',
-			     lz => DTA::CAB::Analyzer::Lemmatizer->new(analyzeGet    =>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_ANALYSES,
-								       analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
-								       analyzeWhich  =>'Sentences',
-								      ),
+			       ##-- analysis selection
+			       label => 'mootsub',
+			       mootLabel => 'moot',
+			       lz => DTA::CAB::Analyzer::Lemmatizer->new(analyzeGet    =>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_ANALYSES,
+									 analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
+									 analyzeWhich  =>'Sentences',
+									),
+			       xyTags => {map {($_=>undef)} qw(XY FM)}, #CARDNE ##-- if these tags are assigned, use literal text and not dmoot normalization
 
-			     ##-- user args
-			     @_
-			    );
+			       ##-- user args
+			       @_
+			      );
   $asub->{lz}{label} = $asub->{label}."_lz";
   return $asub;
 }
@@ -47,7 +48,6 @@ sub doAnalyze {
 
 ## $doc = $anl->Sentences($doc,\%opts)
 ##  + post-processing for 'moot' object
-our %LITERAL_WORD_TAGS = (map {($_=>undef)} qw(FM XY CARD)); #NE
 sub analyzeSentences {
   my ($asub,$doc,$opts) = @_;
   return $doc if (!$asub->enabled($opts));
@@ -55,6 +55,7 @@ sub analyzeSentences {
   ##-- common variables
   my $mlabel = $asub->{mootLabel};
   my $lz     = $asub->{lz};
+  my $xytags = $asub->{xyTags};
   my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
   ##-- Step 1: populate $tok->{moot}{word}
@@ -64,10 +65,10 @@ sub analyzeSentences {
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
     $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
 
-    ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
-    $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
-		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
-		     : $tok->{text})) if (!defined($m->{word}));
+#    ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
+#    $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
+#		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
+#		     : $tok->{text})) if (!defined($m->{word}));
   }
 
   ##-- Step 2: run lemmatizer (populates $tok->{moot}{analyses}[$i]{lemma}
@@ -81,11 +82,11 @@ sub analyzeSentences {
     @a = $m->{analyses} ? grep {$_->{tag} eq $t} @{$m->{analyses}} : qw();
     @a = ($m->{analyses}[0]) if (!@a && $m->{analyses} && @{$m->{analyses}}); ##-- hack: any analysis is better than none!
     if (!@a
-	|| exists($LITERAL_WORD_TAGS{$t})
+	|| exists($xytags->{$t})
         #|| ($t eq 'NE' && !$tok->{msafe})
         ) {
 
-      ##-- hack: bash FM,XY,CARD-tagged elements to raw (possibly transliterated) text
+      ##-- hack: bash XY-tagged elements to raw (possibly transliterated) text
       $l = $m->{word} = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
       $l =~ s/\s+/_/g;
       $l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
@@ -93,7 +94,7 @@ sub analyzeSentences {
     }
     else {
       ##-- extract lemma from best analysis
-      $m->{lemma} = (sort {$a->{cost}<=>$b->{cost} || $a->{lemma} cmp $b->{lemma}} @a)[0]{lemma};
+      $m->{lemma} = (sort {$a->{prob}<=>$b->{prob} || $a->{lemma} cmp $b->{lemma}} @a)[0]{lemma};
     }
   }
 

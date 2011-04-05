@@ -16,6 +16,7 @@ use DTA::CAB::Format::Raw;      ##-- raw untokenized (input only)
 use DTA::CAB::Format::Text;
 #use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;
+use DTA::CAB::Format::TJ;     ##-- tt-like with json-encoded token data
 use DTA::CAB::Format::YAML;
 use DTA::CAB::Format::JSON;
 use DTA::CAB::Format::XmlCommon;

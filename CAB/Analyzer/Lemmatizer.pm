@@ -114,7 +114,7 @@ sub _analyzeGuts {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
       $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
-      $lemma =~ s/(?:\/\w+)|(?:[\\\¬\~\|\=\+\#])//g;
+      $lemma =~ s/(?:\/[A-Z]{1,2})|(?:[\\\¬\~\|\=\+\#])//g;
     } else {
       $lemma = $_->{$lab_txt};
     }

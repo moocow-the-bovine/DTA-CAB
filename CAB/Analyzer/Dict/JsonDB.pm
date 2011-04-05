@@ -85,7 +85,7 @@ sub ensureLoaded {
   my $rc  = $dic->DTA::CAB::Analyzer::Dict::BDB::ensureLoaded(@_);
 
   ##-- shutoff the value filters
-  if ($rc) {
+  if ($rc && $dic->dictOk) {
     my $tied = $dic->{dbf}{tied};
     $tied->filter_fetch_value(undef);
     $tied->filter_store_value(undef);

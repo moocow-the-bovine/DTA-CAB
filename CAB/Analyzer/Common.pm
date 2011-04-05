@@ -24,8 +24,12 @@ use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Null;
 use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::RewriteSub;
-use DTA::CAB::Analyzer::Moot;
-#use DTA::CAB::Analyzer::Moot::DynLex;
+
+#use DTA::CAB::Analyzer::Moot1;           ##-- moot/swig bindings: base class: moot:HMM
+#use DTA::CAB::Analyzer::Moot1::DynLex;   ##-- moot/swig bindings: dynamic-lexical hmm (moot::DynLexHMM_Boltzmann)
+##
+use DTA::CAB::Analyzer::Moot;             ##-- moot/xs bindings: base class: Moot::HMM
+use DTA::CAB::Analyzer::Moot::Boltzmann;  ##-- moot/xs bindings: dynamic-lexical hmm (Moot::HMM::Boltzmann)
 
 use DTA::CAB::Analyzer::Lemmatizer;      ##-- tagh lemma extractor
 

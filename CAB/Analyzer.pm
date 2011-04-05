@@ -27,7 +27,7 @@ our %EXPORT_TAGS =
 		qw(_am_id_fst _am_xlit_fst),
 		qw(_am_fst_wcp _am_fst_wcp_list _am_fst_wcp_listref),
 		qw(_am_tt_fst_list _am_tt_fst_eqlist),
-		qw(_am_fst_sort _am_fst_uniq _am_fst_usort),
+		qw(_am_fst_sort _am_fst_rsort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
 		qw(_am_tag _am_word),
 		qw(_am_tagh_fst2moota _am_tagh_list2moota),
@@ -438,7 +438,8 @@ sub accessClosure {
 	   .($code =~ /\bsub\b/ ? $code : "sub { $code }")
 	  );
 
-  print STDERR "accessClosure():\n$code\n" if (0); ##-- DEBUG
+  print STDERR
+    ((ref($anl)||$anl), "->accessClosure():\n$code\n") if (0 || (ref($anl) && $anl->{debugAccessClosure}));
 
   my $sub = eval $code;
   $anl->logcluck("accessClosure(): could not compile closure {$code}: $@") if (!$sub);
@@ -582,6 +583,15 @@ sub _am_fst_sort {
   return '(sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} '.$listvar.')'." ##== _am_fst_sort\n";
 }
 
+## PACKAGE::_am_fst_rsort($listvar='@_')
+##  + access-closure macro (EXPR) to reverse-sort a list of FST analyses $$listvar by weight
+##  + evaluates to a sorted list of fst analysis hashes:
+##    (sort {($b->{w}||0) <=> ($a->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} $$listvar)
+sub _am_fst_rsort {
+  my $listvar = shift || '@_';
+  return '(sort {($b->{w}||0) <=> ($a->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} '.$listvar.')'." ##== _am_fst_rsort\n";
+}
+
 ## PACKAGE::_am_fst_uniq($listvar='@_', $tmpvar='$val')
 ##  + access-closure macro (EXPR) for a unique list of TT-style FST analyses $$listvar
 ##  + only the weight-minimal analysis is kept
@@ -655,8 +665,8 @@ sub _am_tagh_list2moota {
 ##  + access-closure macro (EXPR): single dmoot token analysis from fst analysis
 ##  + requires: $$fstvar->{hi}; evaluates to:
 ##    {tag=>$$fstvar->{hi}, prob=>($$fstvar->{w}||0)}
-sub _am_tagh_fst2moota {
-  my $taghvar = shift||'$_';
+sub _am_dmoot_fst2moota {
+  my $fstvar = shift||'$_';
   return "{tag=>$fstvar\->{hi}, prob=>($fstvar\->{w}||0)} ##-- _am_dmoot_fst2moota\n";
 }
 

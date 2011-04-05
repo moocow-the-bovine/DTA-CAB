@@ -8,6 +8,7 @@
 ## Package: Analyzer::DmootSub
 ##==============================================================================
 package DTA::CAB::Analyzer::DmootSub;
+use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Chain;
 use DTA::CAB::Analyzer::Morph;
 use Carp;
@@ -94,8 +95,8 @@ sub analyzeSentences {
   ##-- get dmoot target types
   my $dmkey = $asub->{dmootLabel};
   my $standalone = $asub->{standalone};
-  my $dmtypes = {};
-  my $udmtypes = {};
+  my $dmtypes = {};   ##-- $dmtypes:  {$dmootTag => {text=>$dmootTag, morph=>\@dmootMorph}, ... } ##-- analyzed types
+  my $udmtypes = {};  ##-- $udmtypes: {$dmootTag => {text=>$dmootTag, morph=>undef, ...}}         ##-- un-analyzed types
   my ($tok,$txt,$dm,$dmtag,$dmtyp);
  TOK:
   foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
@@ -104,7 +105,7 @@ sub analyzeSentences {
 
     ##-- check for existing analyses
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
-    if    (($tok->{toka} && @{$tok->{toka}}) || ($tok->{tokpp} && @{$tok->{tokpp}})) {
+    if (($tok->{toka} && @{$tok->{toka}}) || ($tok->{tokpp} && @{$tok->{tokpp}})) {
       ##-- existing analyses: toka|tokpp
       $dm->{morph} = [map { {hi=>$_,w=>0} }
 		      ($tok->{toka} ? @{$tok->{toka}} : qw()),
@@ -115,14 +116,17 @@ sub analyzeSentences {
     elsif (!$standalone) {
       $dmtyp = $dmtypes->{$dmtag};
       $dmtyp = $dmtypes->{$dmtag} = { text=>$dmtag } if (!defined($dmtyp));
-      next if ($dmtyp->{morph} && @{$dmtyp->{morph}});
+      if ($dmtyp->{morph} && @{$dmtyp->{morph}}) {
+	$dm->{morph} = $dmtyp->{morph} if (!$dm->{morph} || !@{$dm->{morph}});
+	next;
+      }
 
       if ($dmtag eq $txt) {
 	##-- existing analyses: morph: from text
 	$dm->{morph} = $dmtyp->{morph} = $tok->{morph};
 
 	##-- latin analyses exist: add them
-	$dm->{morph} = [@{$dm->{morph}||[]}, @{$tok->{mlatin}}] if ($tok->{mlatin});
+	$dm->{morph} = $dmtyp->{morph} = [@{$dm->{morph}||[]}, @{$tok->{mlatin}}] if ($tok->{mlatin});
       }
       else {
 	foreach (grep {$_->{hi} eq $dmtag && $_->{morph}} @{$tok->{rw}}) {
@@ -148,7 +152,7 @@ sub analyzeSentences {
       $_->{label} = $sublabel;
     }
 
-    ##-- delete rewrite target type 'text'
+    ##-- delete dmoot target type 'text'
     delete($_->{text}) foreach (values %$dmtypes);
 
     ##-- re-expand dmoot target fields (morph,mlatin): UNKNOWN ONLY
