@@ -104,8 +104,8 @@ DTA::CAB::Logger->logInit();
 ##-- create / load server object
 our $srv = DTA::CAB::Server::HTTP->new(pidfile=>$pidFile);
 $srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
-$srv->{daemonArgs}{host} = $serverHost if (defined($serverHost));
-$srv->{daemonArgs}{port} = $serverPort if (defined($serverPort));
+$srv->{daemonArgs}{LocalHost} = $serverHost if (defined($serverHost));
+$srv->{daemonArgs}{LocalPort} = $serverPort if (defined($serverPort));
 
 ##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
 sub serverMain {
