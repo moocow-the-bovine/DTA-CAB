@@ -49,7 +49,7 @@ WriteMakefile
 		    'Unicruft' => 0.03,
 		    #'moot' => 0.02, ##-- moot/swig
 		    'Moot' => 0.01,  ##-- moot/xs
-		    'Lingua::TT' => 0.06,
+		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File
 		    ##--
 		    'Unicode::Normalize' => undef, # 1.02
 		    'Encode'=>undef,
