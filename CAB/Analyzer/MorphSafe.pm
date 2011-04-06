@@ -51,6 +51,7 @@ our %badTags = (
 ##  + object structure, new:
 ##    ##-- analysis selection
 ##    allowTokenizerAnalyses => $bool, ##-- if true (default), tokenizer-analyzed tokens (as determined by $tok->{toka}) are "safe"
+##    allowExlexAnalyses => $bool,     ##-- if true (default), exlex-analyzed tokens (as determined by $tok->{exlex}) are "safe"
 ##
 ##    ##-- Exception lexicon options
 ##    #dict      => $dict,       ##-- exception lexicon as a DTA::CAB::Analyzer::Dict object or option hash
@@ -62,8 +63,8 @@ sub new {
   return $that->SUPER::new(
 			   ##-- options
 			   label => 'msafe',
-			   aclass => undef, ##-- don't bless analysis at all (it's not a ref)
 			   allowTokenizerAnalyses => 1,
+			   allowExlexAnalyses => 1,
 
 			   ##-- dictionary stuff
 			   #badTypesFile  => undef,            ##-- filename of ($text "\t" $isBadBool) mapping for raw utf8 text types
@@ -134,7 +135,7 @@ sub loadDict {
 ## Methods: Analysis: v1.x
 ##==============================================================================
 
-## $doc = $xlit->analyzeTypes($doc,\%types,\%opts)
+## $doc = $msafe->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
 ##  + checks for "safe" analyses in $tok->{morph} for each $tok in $doc->{types}
 ##  + sets $tok->{ $anl->{label} } = $bool
@@ -145,6 +146,7 @@ sub analyzeTypes {
 
   my $label     = $ms->{label};
   my $want_toka = $ms->{allowTokenizerAnalyses};
+  my $want_exlex= $ms->{allowExlexAnalyses};
   my $badTypes  = $ms->{badTypes}||{};
   my $badTags   = $ms->{badTags}||{};
   my $badMorphs = $ms->{badMorphs}||{};
@@ -155,7 +157,8 @@ sub analyzeTypes {
 
     ##-- no dict entry: use morph heuristics
     $safe =
-      (($want_toka && $tok->{toka} && @{$tok->{toka}})     ##-- tokenizer-analyzed words are considered "safe"
+      (($want_exlex && defined($tok->{exlex}))             ##-- exception-lexicon analyses are considered "safe"
+       || ($want_toka && $tok->{toka} && @{$tok->{toka}})  ##-- tokenizer-analyzed words are considered "safe"
        || (
 	   $tok->{text}  =~ m/^[[:digit:][:punct:]]*$/     ##-- punctuation, digits are (usually) "safe"
 	   &&
@@ -288,19 +291,29 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
 
 %args, %$msafe:
 
- ##-- analysis selection
- analysisSrcKey => $srcKey,    ##-- input token key   (default: 'morph')
- analysisKey    => $key,       ##-- output key        (default: 'msafe')
+ ##-- selection options
+ allowTokenizerAnalyses => 1,
+ allowExlexAnalyses => 1,
+
+ ##-- dictionary options
+ badTypesFile  => $filename,         ##-- filename of ($text "\t" $isBadBool) mapping for raw utf8 text types
+ badMorphsFile  => $filename,        ##-- filename of ($taghMorph "\t" $isBadBool) mapping for TAGH morph components
+ badTagsFile    => $filename,        ##-- filename of ($taghTag "\t" $isBadBool) mapping for TAGH tags (tags appear without '[_', ']')
+
+ ##-- low-level data (after prepare())
+ badTypes       => \%badTypes,       ##-- hash of bad utf8 text types ($text=>$isBadBool)
+ badMorphs      => \%badMorphs,      ##-- hash of bad TAGH morphs ($taghMorph=>$isBadBool)
+ badTags        => \%badTags,        ##-- hash of bad TAGH tags ($taghTag=>$isBadBool)
 
 =back
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Analyzer::MorphSafe: Methods: I/O
+## DESCRIPTION: DTA::CAB::Analyzer::MorphSafe: Methods
 =pod
 
-=head2 Methods: I/O
+=head2 Methods
 
 =over 4
 
@@ -309,6 +322,14 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
  $bool = $msafe->ensureLoaded();
 
 Override: ensures analysis data is loaded
+
+=over 4
+
+=item analyzeTypes
+
+ $doc = $msafe->analyzeTypes($doc,\%types,\%opts)
+
+Override: implements L<DTA::CAB::Analyzer::analyzeTypes|DTA::CAB::Analyzer/analyzeTypes>.
 
 =back
 
@@ -330,10 +351,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009,2010,2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

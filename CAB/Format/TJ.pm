@@ -154,6 +154,7 @@ sub parseTJString {
 	      ##-- vanilla token
 	      ($text,$json) = split(/\t/,$_,2);
 	      $tok = $jxs->decode($json);
+	      $tok->{text}=decode_utf8($text) if (!defined($tok->{text}));
 	      $tok
 	    }
 	  }

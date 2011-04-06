@@ -353,6 +353,8 @@ sub analyzeTypes {
   foreach (values(%$types)) {
     next if (defined($allowTextRegex) && $_->{text} !~ $allowTextRegex); ##-- text-sensitive regex
     @w=$aget->();
+    #$aut->trace("analyzeTypes(): w=(", join(' ', @w), ")") if ($aut->{label} eq 'eqphox'); ##-- DEBUG
+
     next if (!@w); ##-- no lookup-inputs for token (e.g. if $_->{$label} was already populated, e.g. from exlex)
     @wa = qw();
     foreach $w (@w) {

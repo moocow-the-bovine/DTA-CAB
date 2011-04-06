@@ -24,6 +24,7 @@ use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocCla
 
 use DTA::CAB::Analyzer::DmootSub;        ##-- DTA
 use DTA::CAB::Analyzer::MootSub;         ##-- DTA
+use DTA::CAB::Analyzer::ExLex;           ##-- DTA
 
 use strict;
 

@@ -88,8 +88,8 @@ sub {
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##
 ##     ##-- Analysis Objects
-##     hmm            => $hmm,   ##-- a moot::HMM object
-##     tagx      => \%tagx,      ##-- tag-translation table (loaded via DTA::CAB::Analyzer::Dict from $tagxFile)
+##     hmm         => $hmm,   ##-- a moot::HMM object
+##     tagx        => \%tagx,      ##-- tag-translation table (loaded via DTA::CAB::Analyzer::Dict from $tagxFile)
 ##    )
 sub new {
   my $that = shift;
@@ -100,7 +100,7 @@ sub new {
 
 			       ##-- options
 			       hmmArgs   => {
-					     #verbose=>$moot::HMMvlWarnings,
+					     #verbose=>Moot::vlWarnings,
 					     #relax => 1,
 					    },
 			       hmmUtf8  => 1,

@@ -1,41 +1,31 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::LTS.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
-## Description: letter-to-sound analysis via Gfsm automata
+## File: DTA::CAB::Analyzer::ExLex.pm
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Description: DTA exception lexicon
 
 ##==============================================================================
 ## Package: Analyzer::Morph
 ##==============================================================================
-package DTA::CAB::Analyzer::LTS;
+package DTA::CAB::Analyzer::ExLex;
 use DTA::CAB::Analyzer ':child';
-use DTA::CAB::Analyzer::Automaton::Gfsm;
+use DTA::CAB::Analyzer::Dict::JsonDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Automaton::Gfsm);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
 sub new {
   my $that = shift;
-  my $aut = $that->SUPER::new(
-			      ##-- overrides
-			      tolower => 1,
-			      #allowTextRegex => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
-
-			      ##-- analysis selection
-			      label => 'lts',
-			      wantAnalysisLo => 0,
-
-			      ##-- user args
-			      @_
-			     );
-  return $aut;
+  return $that->SUPER::new(
+			   ##-- overrides
+			   label => 'exlex',
+			   typeKeys => [qw(exlex pnd)],
+			   ##-- user args
+			   @_
+			  );
 }
-
-##==============================================================================
-## Analysis Formatting
-##==============================================================================
 
 
 1; ##-- be happy
@@ -54,7 +44,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::LTS - letter-to-sound analysis via Gfsm automata
+DTA::CAB::Analyzer::ExLex - DTA exception lexicon using DTA::CAB::Analyzer::Dict::JsonDB
 
 =cut
 
@@ -64,10 +54,9 @@ DTA::CAB::Analyzer::LTS - letter-to-sound analysis via Gfsm automata
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::LTS;
+ use DTA::CAB::Analyzer::ExLex;
  
- $lts = DTA::CAB::Analyzer::LTS->new(%args);
- $lts->analyze($tok);
+ $exlex = DTA::CAB::Analyzer::ExLex->new(%args);
 
 =cut
 
@@ -77,13 +66,13 @@ DTA::CAB::Analyzer::LTS - letter-to-sound analysis via Gfsm automata
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::LTS
-is a just a simplified wrapper for
-L<DTA::CAB::Analyzer::Automaton::Gfsm|DTA::CAB::Analyzer::Automaton::Gfsm>
+DTA::CAB::Analyzer::ExLex
+is a just a wrapper for
+L<DTA::CAB::Analyzer::Dict::JsonDB|DTA::CAB::Analyzer::Dict::JsonDB>
 which sets the following default options:
 
- analyzeDst     => 'lts',  ##-- analysis output property
- wantAnalysisLo => 0,      ##-- don't output lower label paths'
+ label => 'exlex',             ##-- analysis label
+ typeKeys => [qw(exlex pnd)]   ##-- type-wise analysis keys
 
 =cut
 
@@ -102,10 +91,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

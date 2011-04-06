@@ -139,6 +139,9 @@ sub parseTTString {
 	      ##-- generic line: add to _cmts
 	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
 	      qw()
+	    } elsif ($_ =~ /^$/) {
+	      ##-- blank line: ignore
+	      qw()
 	    } else {
 	      ##-- token
 	      ($text,@fields) = split(/\t/,$_);
@@ -293,6 +296,12 @@ sub putToken {
 
   ##-- character list
   #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
+
+  ##-- exception lexicon
+  $out .= "\t[exlex] $tok->{exlex}" if (defined($tok->{exlex}));
+
+  ##-- pnd data
+  $out .= "\t[pnd] $tok->{pnd}" if (defined($tok->{pnd}));
 
   ##-- cab token-preprocessor analyses
   $out .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});

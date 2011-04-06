@@ -33,6 +33,11 @@ CVS
 \.graveyard$
 ^argh
 
+^in\.
+^out\.
+^playground
+^tests
+
 \.plm$
 CAB/.*\.txt$
 ^cgi/
@@ -53,7 +58,10 @@ pathtest\.perl
 \.dict$
 \bpostme\b
 
+^ec-block1\.
+
 ##-- these are outdated
 dta-cab-cachegen.perl
 dta-cab-compile.perl
 dta-cab-dict-convert.perl
+CAB/Analyzer/Moot1

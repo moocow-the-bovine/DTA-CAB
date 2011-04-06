@@ -8,6 +8,7 @@ use DTA::CAB::Datum ':all';
 use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
+use DTA::CAB::Analyzer::ExLex;
 use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::Boltzmann;
 use DTA::CAB::Analyzer::Dict::JsonDB;
@@ -38,7 +39,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- analyzers
-			   exlex => DTA::CAB::Analyzer::Dict::JsonDB->new(label=>'exlex'),
+			   exlex => DTA::CAB::Analyzer::ExLex->new(),
 			   tokpp => DTA::CAB::Analyzer::TokPP->new(),
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
 			   ##
