@@ -149,7 +149,10 @@ sub parseTTString {
 		  ##-- token: field: loc
 		  $tok->{loc} = { off=>$1,len=>$2 };
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
-		  ##-- token: field: DTA::TokWrap special field
+		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
+		  $tok->{$1} = $2;
+		} elsif ($field =~ m/^\[(exlex|pnd)\] (.*)$/) {
+		  ##-- token: field: other literal field (exlex, pnd)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
@@ -179,8 +182,8 @@ sub parseTTString {
 		  } else {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 		  }
-		} elsif ($field =~ m/^\[morph\/safe\] (\d)$/) {
-		  ##-- token: field: morph-safety check (morph/safe)
+		} elsif ($field =~ m/^\[m(?:morph\/)?safe\] (\d)$/) {
+		  ##-- token: field: morph-safety check (msafe|morph/safe)
 		  $tok->{msafe} = $1;
 		} elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
 		  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
@@ -189,7 +192,7 @@ sub parseTTString {
 		  ##-- token: field: moot/analysis|dmoot/analysis
 		  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 		} elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
-		  ##-- token: field: other known list field: (toka|tokpüp)
+		  ##-- token: field: other known list field: (toka|tokpp)
 		  push(@{$tok->{$1}}, $2);
 		} elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
 		  ##-- token: field: unknown named field "[$name] $val", parse into $tok->{other}{$name} = \@vals

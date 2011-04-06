@@ -33,8 +33,8 @@ BEGIN {
 ##     doc => $doc,                    ##-- buffered input document
 ##
 ##     ##-- Output
-##     outbuf    => $stringBuffer,     ##-- buffered output
-##     #level    => $formatLevel,      ##-- n/a
+##     outbuf  => $stringBuffer,     ##-- buffered output
+##     level   => $formatLevel,      ##-- <0:no 'text' attribute; >=0: all attributes
 ##
 ##     ##-- Common
 ##     raw => $bool,                   ##-- attempt to load/save raw data
@@ -50,6 +50,7 @@ sub new {
 
 		   ##-- output
 		   #outbuf => '',
+		   level => 0,
 
 		   ##-- common
 		   encoding => 'UTF-8',
@@ -232,7 +233,10 @@ sub putToken {
 		 .$_[1]{text}
 		 ."\t"
 		)
-     .$_[0]->jsonxs->encode($_[1])
+     .$_[0]->jsonxs->encode(($_[0]{level}||0) >= 0
+			    ? $_[1]
+			    : {(map {$_ eq 'text' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})}
+			   )
      ."\n"
     );
 

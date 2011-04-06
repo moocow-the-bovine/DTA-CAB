@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 
+use lib '.';
 use JSON::XS;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Format::TJ;
