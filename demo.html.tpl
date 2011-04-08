@@ -56,7 +56,8 @@
                       <option value="json">JSON</option>
                       <option value="perl">Perl</option>
                       <option selected="selected" value="text">Text</option>
-                      <option value="tt">TT</option>
+                      <option value="tt">TT ('vertical')</option>
+                      <option value="tj">TJ ('vertical' + json)</option>
                       <option value="xml">XML (Native)</option>
                       <option value="xmlperl">XML (Perl)</option>
                       <option value="xmlrpc">XML-RPC</option>
