@@ -185,7 +185,7 @@ sub parseTTString {
 		  } else {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 		  }
-		} elsif ($field =~ m/^\[m(?:morph\/)?safe\] (\d)$/) {
+		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] (\d)$/) {
 		  ##-- token: field: morph-safety check (msafe|morph/safe)
 		  $tok->{msafe} = $1;
 		} elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
