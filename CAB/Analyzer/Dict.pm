@@ -218,6 +218,7 @@ sub analyzePre {
 ## $coderef = $dict->analyzeCode($code)
 sub analyzeCode {
   my ($dic,$code) = @_;
+  #return $dic->analyzeCode_dummy($code) if ($dic->{label} eq 'exlex'); ##-- DEBUG
   $code      = defined($dic->{analyzeCode}) ? $dic->{analyzeCode} : $CODE_DEFAULT if (!defined($code));
   my $acode  = $dic->accessClosure($code, pre=>$dic->analyzePre);
   return $acode;

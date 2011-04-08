@@ -26,6 +26,9 @@ sub new {
 			      #wantAnalysisLemma => 1, ##-- default=0
 			      wantAnalysisLemma => 0, ##-- default=0
 
+			      ##-- analysis selection
+			      #analyzeGet => '$_->{$lab} ? qw() : '._am_xlit; ##-- default
+
 			      ##-- user args
 			      @_
 			     );

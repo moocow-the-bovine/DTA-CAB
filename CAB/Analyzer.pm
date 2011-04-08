@@ -22,7 +22,7 @@ our @ISA = qw(Exporter DTA::CAB::Persistent);
 our @EXPORT = qw();
 our %EXPORT_TAGS =
   (
-   'access' => [qw(_am_xlit _am_lts _am_rw),
+   'access' => [qw(_am_xtext _am_xlit _am_lts _am_rw),
 		qw(_am_tt_list _am_tt_fst),
 		qw(_am_id_fst _am_xlit_fst),
 		qw(_am_fst_wcp _am_fst_wcp_list _am_fst_wcp_listref),
@@ -306,6 +306,20 @@ sub analyzeLocal { return $_[1]; }
 ##  + no default implementation
 sub analyzeClean { return $_[1]; }
 
+## $doc = $anl->analyzeClean_rm_undef($doc,\%opts)
+##  + cleanup any temporary data associated with $doc
+##  + removes keys with undef values from all tokens
+sub analyzeClean_rm_undef {
+  my ($anl,$doc,$opts) = @_;
+  my ($tok);
+  foreach (@{$doc->{body}}) {
+    foreach $tok (@{$_->{tokens}}) {
+      delete @$tok{grep {!defined($tok->{$_})} keys %$tok};
+    }
+  }
+  return $doc;
+}
+
 ##------------------------------------------------------------------------
 ## Methods: Analysis: API: Type-wise
 
@@ -447,12 +461,25 @@ sub accessClosure {
 }
 
 ## PACKAGE::_am_xlit($tokvar='$_')
-##  + access-closure macro (EXPR): get xlit or text for token $$tokvar
+##  + access-closure macro (EXPR): get text (xlit.latin1Text << text) for token $$tokvar
 ##  + evaluates to a string:
 ##    ($$tokvar->{xlit} ? $$tokvar->{xlit}{latin1Text} : $$tokvar->{text})
 sub _am_xlit {
   my $tokvar = shift || '$_';
   return "($tokvar\->{xlit} ? $tokvar\->{xlit}{latin1Text} : $tokvar\->{text}) ##== _am_xlit\n";
+}
+
+## PACKAGE::_am_xtext($tokvar='$_')
+##  + access-closure macro (EXPR): get (exlex << xlit.latin1Text << text) for token $$tokvar
+##  + evaluates to a string:
+##    (defined($$tokvar->{exlex}) ? $$tokvar->{exlex} : $${am_xlit($tokvar)})
+sub _am_xtext {
+  my $tokvar = shift || '$_';
+  return ("(defined($tokvar\->{exlex})"
+	  ." ? $tokvar\->{exlex}"
+	  ." : ($tokvar\->{xlit} ? $tokvar\->{xlit}{latin1Text} : $tokvar\->{text})"
+	  .") ##== _am_xtext\n"
+	 );
 }
 
 ## PACKAGE::_am_lts($tokvar='$_')
@@ -658,7 +685,7 @@ sub _am_tagh_fst2moota {
 ##    (map { $${_am_tagh_fst2moota('$_')} } $$listvar)
 sub _am_tagh_list2moota {
   my $listvar = shift||'@{$_->{morph}}';
-  return "(map {"._am_tagh_fst2moota('$_')."} $listvar) ##-- _am_tagh_list2moota\n";
+  return "(map {ref(\$_) ? "._am_tagh_fst2moota('$_')." : {details=>\$_,tag=>\$_,prob=>0}} $listvar) ##-- _am_tagh_list2moota\n";
 }
 
 ## PACKAGE::_am_dmoot_fst2moota($fstvar='$_')

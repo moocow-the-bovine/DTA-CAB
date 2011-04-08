@@ -86,19 +86,21 @@ sub doAnalyze {
 
 ## $doc = $ach->analyzeClean($doc,\%opts)
 ##  + cleanup any temporary data associated with $doc
-##  + Chain default calls $a->analyzeClean for each analyzer $a in the chain,
-##    then superclass Analyzer->analyzeClean
+##  + override deletes black-listed keys
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
 
   ##-- prune output
   if (1) {
     ##-- black-list
-    my @prune_keys = qw(tokpp lts morph rw eqphox dmoot);
+    my @prune_keys = qw(tokpp toka lts morph rw eqphox dmoot);
     foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
       ##-- delete all unsafe keys
       delete @$_{@prune_keys};
-      delete $_->{moot}{analyses} if ($_->{moot});
+      delete $_->{moot}{analyses} if ($_->{moot}); ##-- moot/analyses: also unsafe
+
+      ##-- delete any remaining keys with undef values
+      #delete @$tok{grep {!defined($_->{$_})} keys %$tok};
     }
   }
   elsif (0) {

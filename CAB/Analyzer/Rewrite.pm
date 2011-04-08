@@ -24,7 +24,7 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'rw',
-			      analyzeGet => '$_->{$lab} || $_->{msafe} ? qw() : '._am_xlit,
+			      analyzeGet => '$_->{msafe} || $_->{exlex} || $_->{$lab} ? qw() : '._am_xlit,
 			      wantAnalysisLo => 0,
 			      tolowerNI => 1,
 			      attInput => 0,

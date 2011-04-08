@@ -8,9 +8,9 @@ package DTA::CAB;
 use DTA::CAB::Version;
 use DTA::CAB::Common;
 
-#use DTA::CAB::Analyzer;
-#use DTA::CAB::Analyzer::Common;
-#use DTA::CAB::Analyzer::Extra;
+#use DTA::CAB::Analyzer;           ##-- DEBUG
+#use DTA::CAB::Analyzer::Common;   ##-- DEBUG
+#use DTA::CAB::Analyzer::Extra;    ##-- DEBUG
 eval "use DTA::CAB::Analyzer::Common";
 
 #eval "use DTA::CAB::Server::HTTP";

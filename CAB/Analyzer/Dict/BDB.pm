@@ -39,6 +39,8 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict);
 ##
 ##     ##-- Analysis Options
 ##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding} ; uses DB filters
+##     keyEncoding    => $enc,   ##-- encoding of db file (default=undef): alternative to 'encoding'
+##     valEncoding    => $enc,   ##-- encoding of db file (default=undef): alternative to 'encoding'
 ##
 ##     ##-- Analysis objects
 ##     dbf => $dbf,              ##-- underlying Lingua::TT::DBFile object (default=undef)
@@ -67,6 +69,8 @@ sub new {
 
 			      ##-- options
 			      encoding       => 'UTF-8',
+			      #keyEncoding   => undef,
+			      #valEncoding   => undef,
 
 			      ##-- analysis output
 			      label => 'dict',
@@ -133,6 +137,20 @@ sub ensureLoaded {
     $dic->info("opening DB file '$dic->{dictFile}'");
     $dic->{dbf} = Lingua::TT::DBFile->new(%{$dic->{dba}||{}});
     $rc &&= $dic->{dbf}->open($dic->{dictFile}, encoding=>$dic->{encoding});
+
+    ##-- setup filters
+    if ($rc && (!$dic->{encoding} || $dic->{encoding} eq 'raw')) {
+      my $dbf  = $dic->{dbf};
+      my $tied = $dic->{dbf}{tied};
+      if ($dic->{keyEncoding} && $dic->{keyEncoding} ne 'raw') {
+	$tied->filter_fetch_key($dbf->encFilterFetch($dic->{keyEncoding}));
+	$tied->filter_store_key($dbf->encFilterStore($dic->{keyEncoding}));
+      }
+      if ($dic->{valEncoding} && $dic->{valEncoding} ne 'raw') {
+	$tied->filter_fetch_value($dbf->encFilterFetch($dic->{valEncoding}));
+	$tied->filter_store_value($dbf->encFilterStore($dic->{valEncoding}));
+      }
+    }
   }
   $dic->logwarn("error opening file '$dic->{dictFile}': $!") if (!$rc);
   return $rc;

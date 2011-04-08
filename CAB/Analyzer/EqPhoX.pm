@@ -21,7 +21,7 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'eqphox',
-			      analyzeGet => '$_->{lts} ? (map {$_->{hi}} @{$_->{lts}}) : qw()',
+			      analyzeGet => '$_->{msafe} || $_->{exlex} || !$_->{lts} ? qw() : (map {$_->{hi}} @{$_->{lts}})',
 			      attInput   => 1,
 			      allowTextRegex => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
 			      tolower=>0,

@@ -153,7 +153,7 @@ sub parseTJString {
 	    } else {
 	      ##-- vanilla token
 	      ($text,$json) = split(/\t/,$_,2);
-	      $tok = $jxs->decode($json);
+	      $tok = (defined($json) && $json ne '' ? $jxs->decode($json) : {});
 	      $tok->{text}=decode_utf8($text) if (!defined($tok->{text}));
 	      $tok
 	    }
@@ -229,11 +229,12 @@ sub putToken {
   #my ($fmt,$tok) = @_;
 
   $_[0]{outbuf} .=
-    (encode_utf8(
+    (
+     encode_utf8(
 		 ($_[1]{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$_[1]{_cmts}}) : '')
 		 .$_[1]{text}
-		 ."\t"
 		)
+     ."\t"
      .$_[0]->jsonxs->encode(($_[0]{level}||0) >= 0
 			    ? $_[1]
 			    : {(map {$_ eq 'text' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})}
@@ -246,11 +247,30 @@ sub putToken {
 
 ## $fmt = $fmt->putSentence($sent)
 ##  + concatenates formatted tokens, adding sentence-id comment if available
-##  + INHERITED from Format::TT
+sub putSentence {
+  my ($fmt,$sent) = @_;
+  $fmt->{outbuf} .=
+    encode_utf8(
+		($sent->{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}}) : '')
+		.($sent->{id} ? "%% Sentence $sent->{id}\n" : '')
+	       );
+  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
+  $fmt->{outbuf} .= "\n";
+  return $fmt;
+}
 
 ## $fmt = $fmt->putDocument($doc)
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
-##  + INHERITED from Format::TT
+sub putDocument {
+  my ($fmt,$doc) = @_;
+  $fmt->{outbuf} .=
+    encode_utf8(($doc->{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}}) : '')
+		.($doc->{base} ? "%% base=$doc->{base}\n\n" : '')
+	       );
+  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
+  return $fmt;
+}
+
 
 ## $fmt = $fmt->putData($data)
 ##  + puts raw data (json)

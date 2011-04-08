@@ -97,7 +97,8 @@ sub setupChains {
   my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {
-     (map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
+     #(map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
+     (map {("$_"=>[$ach->{$_}])} @akeys),     ##-- xlit, lts, ...
      ##
      'sub.expand'     =>[@$ach{qw(eqpho eqrw eqlemma)}],
      'sub.sent'       =>[@$ach{qw(dmoot dmootsub moot)}],
@@ -252,7 +253,8 @@ sub doAnalyze {
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
   $ach->SUPER::analyzeClean($doc,$opts);                                    ##-- inherited from DTA::CAB::Chain (chain-local cleanup)
-  return $doc if (!$ach->{autoClean} && !exists($opts->{doAnalyzeClean}));  ##-- don't clean by default
+  $ach->analyzeClean_rm_undef($doc,$opts);                                  ##-- remove keys with undef values from tokens
+  return $doc if (!$ach->{autoClean} && !exists($opts->{doAnalyzeClean}));  ##-- don't "clean" by default
   return $ach->{clean}->analyzeClean($doc,$opts);
 }
 

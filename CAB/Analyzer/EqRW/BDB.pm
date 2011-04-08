@@ -37,7 +37,7 @@ sub new {
 					       '$_->{$lab}=['._am_fst_usort(
 									    _am_id_fst('$_', '$dic->{eqIdWeight}')
 									    .', map {defined($_) ? '._am_tt_fst_list('$_').' : qw()}'
-									    .' @$dhash{'._am_xlit.','._am_rw.'}'
+									    .' @$dhash{'._am_xtext.','._am_xlit.','._am_rw.'}'
 									   ).'];',
 					      ),
 

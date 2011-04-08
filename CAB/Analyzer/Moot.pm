@@ -46,7 +46,7 @@ sub {
    $mw->{analyses} = [
        map {$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}})); $_}
       '._am_tagh_list2moota('map {$_ ? @$_ : qw()}
-			    @$w{qw(tokpp toka mlatin)},
+			    @$w{qw(mlatin tokpp toka)},
 			    ($w->{dmoot} ? $w->{dmoot}{morph}
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
 			   ).'

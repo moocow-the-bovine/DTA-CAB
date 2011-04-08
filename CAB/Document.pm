@@ -144,6 +144,9 @@ sub expandTypeKeys {
     @$tok{@$keys} = @$typ{@$keys};
     #$tok{$_}=$typ->{$_} foreach (grep {defined($typ->{$_})} @$keys); ##-- don't put undef keys into tok in the first place
     #delete(@$tok{grep {!defined($tok->{$_})} @$keys}); ##-- ... or remove undef keys from tok after the fact
+    ## + both of these undef-pruners are kind of useless here, since undef values sometimes come back via 'map'
+    ##   e.g. in (...map {$_ ? @$_ : qw()} @$w{qw(tokpp toka mlatin)}...) as used in Analyzer::Moot code
+    ## + this should really be something for e.g. analyzeClean(), but that now means something else
   }
   return $doc;
 }

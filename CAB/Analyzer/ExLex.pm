@@ -22,6 +22,18 @@ sub new {
 			   ##-- overrides
 			   label => 'exlex',
 			   typeKeys => [qw(exlex pnd)],
+
+			   analyzeCode =>join("\n",
+					      (
+					       'return if (!defined($val=$dhash->{'
+					       #._am_xlit('$_')
+					       .'$_->{text}'
+					       .'}));'
+					      ),
+					      '$val=$jxs->decode($val);',
+					      '@$_{keys %$val}=values %$val;',
+					     ),
+
 			   ##-- user args
 			   @_
 			  );

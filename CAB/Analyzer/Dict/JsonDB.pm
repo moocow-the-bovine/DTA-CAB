@@ -34,7 +34,8 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB DTA::CAB::Analyzer::Dict::Json);
 ##     analyzeCode    => $code,  ##-- pseudo-accessor to perform actual analysis for token ($_); see DTA::CAB::Analyzer::Dict for details
 ##
 ##     ##-- Analysis Options
-##     encoding       => $enc,   ##-- encoding of db file (default='UTF-8'): clobbers $dba{encoding} ; uses DB filters
+##     encoding       => $enc,   ##-- encoding of db file: OVERRIDE DEFAULT: 'raw'
+##     keyEncoding    => $enc,   ##-- NEW: encoding of db file keys (default='UTF-8')
 ##
 ##     ##-- Analysis objects
 ##     dbf => $dbf,              ##-- underlying Lingua::TT::DBFile object (default=undef)
@@ -54,7 +55,8 @@ sub new {
 						      dictFile => undef,
 
 						      ##-- options
-						      encoding => 'UTF-8',
+						      encoding => 'raw', ##-- override
+						      keyEncoding => 'UTF-8',
 
 						      ##-- analysis output
 						      label => 'dict_json',
@@ -85,11 +87,15 @@ sub ensureLoaded {
   my $rc  = $dic->DTA::CAB::Analyzer::Dict::BDB::ensureLoaded(@_);
 
   ##-- shutoff the value filters
-  if ($rc && $dic->dictOk) {
-    my $tied = $dic->{dbf}{tied};
-    $tied->filter_fetch_value(undef);
-    $tied->filter_store_value(undef);
-  }
+  ## + BUG (2011-04-08, kaskade, perl 5.10.0): 'Undefined subroutine &main:: called'
+  ##   - appears whenever we disable existing filters with filter_OP_KEYVAL(undef)
+  ##   - workaround: pass 'raw' encoding into DB_File and install only the filters we really want here
+  ##   - implemented as workaround 'keyEncoding','valEncoding' in Analyzer::Dict::BDB
+#  if ($rc && $dic->dictOk) {
+#    my $tied = $dic->{dbf}{tied};
+#    $tied->filter_fetch_value(undef); ##-- BUG
+#    $tied->filter_store_value(undef); ##-- BUG
+#  }
 
   return $rc;
 }
