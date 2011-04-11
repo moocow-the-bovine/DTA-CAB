@@ -154,8 +154,8 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd)\] (.*)$/) {
-		  ##-- token: field: other literal field (exlex, pnd)
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass)\] (.*)$/) {
+		  ##-- token: field: other literal field (exlex, pnd, mapclass)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
@@ -302,6 +302,9 @@ sub putToken {
 
   ##-- pnd data
   $out .= "\t[pnd] $tok->{pnd}" if (defined($tok->{pnd}));
+
+  ##-- mapping class
+  $out .= "\t[mapclass] $tok->{mapclass}" if (defined($tok->{mapclass}));
 
   ##-- cab token-preprocessor analyses
   $out .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
