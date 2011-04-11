@@ -55,7 +55,7 @@ sub analyzeSentences {
     $new    = $_->{moot} ? $_->{moot}{word} : ($_->{dmoot} ? $_->{dmoot}{tag} : $xlit);
     $xlit   = $_->{xlit} ? $_->{xlit}{latin1Text} : $old;
     if ($_->{moot}) {
-      $moota  = $_->{moot}{analyses};
+      $moota  = $_->{moot}{analyses} && @{$_->{moot}{analyses}};
       $mootxy = exists($xytags->{$_->{moot}{tag}});
     } else {
       ($moota,$mootxy) = (undef,1);
