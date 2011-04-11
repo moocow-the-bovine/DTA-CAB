@@ -66,7 +66,7 @@ sub new {
 			   ##-- options
 			   label => 'msafe',
 			   allowTokenizerAnalyses => 1,
-			   allowExlexAnalyses => 1,
+			   allowExlexAnalyses => 0,
 			   tokMorphKey => 'morph',
 			   morphHiKey => 'hi',
 

@@ -17,6 +17,7 @@ use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
+use DTA::CAB::Analyzer::DTAMapClass;
 use DTA::CAB::Analyzer::DTAClean;
 
 use IO::File;
@@ -60,6 +61,7 @@ sub new {
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),     ##-- moot n-gram disambiguator: sub-morph
 			   moot => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output)
 			   mootsub => DTA::CAB::Analyzer::MootSub->new(),       ##-- moot tagger, post-processing hacks
+			   mapclass => DTA::CAB::Analyzer::DTAMapClass->new(),  ##-- mapping class (post-moot)
 			   ##
 			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),      ##-- eqlemma (best only)
 			   ##
@@ -97,8 +99,8 @@ sub setupChains {
   my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {
-     #(map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
-     (map {("$_"=>[$ach->{$_}])} @akeys),     ##-- xlit, lts, ...
+     (map {("sub.$_"=>[$ach->{$_}])} @akeys), ##-- sub.xlit, sub.lts, ...
+     #(map {("$_"=>[$ach->{$_}])} @akeys),     ##-- xlit, lts, ...
      ##
      'sub.expand'     =>[@$ach{qw(eqpho eqrw eqlemma)}],
      'sub.sent'       =>[@$ach{qw(dmoot dmootsub moot)}],
@@ -121,6 +123,7 @@ sub setupChains {
      'expand.ext'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
      'expand.all'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
      'default'       =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],
+     'caberr'        =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub mapclass)}],
      'all'           =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}], ##-- dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
     };
