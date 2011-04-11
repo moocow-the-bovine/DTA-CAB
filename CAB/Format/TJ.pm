@@ -138,16 +138,25 @@ sub parseTJString {
        $toks=
 	 [
 	  map {
-	    if ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
-	      ##-- special comment: document attribute: xml:base
+	    if ($_ =~ /^\%\%\$TJ\:DOC=(.+)$/) {
+	      ##-- tj comment: document
+	      $json = defined($1) && $1 ? $jxs->decode($1) : {};
+	      @doca{keys %$json} = values %$json;
+	      qw()
+	    } elsif ($_ =~ /^\%\%\$TJ\:SENT=(.+)$/) {
+	      $json = defined($1) && $1 ? $jxs->decode($1) : {};
+	      @sa{keys %$json} = values %$json;
+	      qw()
+	    } elsif ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
+	      ##-- (tt-compat) special comment: document attribute: xml:base
 	      $doca{'base'} = decode_utf8($1);
 	      qw()
 	    } elsif ($_ =~ /^\%\% Sentence (.*)$/) {
-	      ##-- special comment: sentence attribute: xml:id
+	      ##-- (tt-compat) special comment: sentence attribute: xml:id
 	      $sa{'id'} = decode_utf8($1);
 	      qw()
 	    } elsif ($_ =~ /^\%\%(.*)$/) {
-	      ##-- generic line: add to _cmts
+	      ##-- (tt-compat) generic line: add to _cmts
 	      push(@{$sa{_cmts}},decode_utf8($1)); ##-- generic doc- or sentence-level comment
 	      qw()
 	    } else {
@@ -248,27 +257,29 @@ sub putToken {
 ## $fmt = $fmt->putSentence($sent)
 ##  + concatenates formatted tokens, adding sentence-id comment if available
 sub putSentence {
-  my ($fmt,$sent) = @_;
-  $fmt->{outbuf} .=
-    encode_utf8(
-		($sent->{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}}) : '')
-		.($sent->{id} ? "%% Sentence $sent->{id}\n" : '')
+  #my ($fmt,$sent) = @_;
+  $_[0]{outbuf} .=
+    encode_utf8('%%$TJ:SENT='
+		.$_[0]->jsonxs->encode( {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})} )
+		."\n"
 	       );
-  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
-  $fmt->{outbuf} .= "\n";
-  return $fmt;
+  $_[0]->putToken($_) foreach (@{toSentence($_[1])->{tokens}});
+  $_[0]->{outbuf} .= "\n";
+  return $_[0];
 }
 
 ## $fmt = $fmt->putDocument($doc)
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
 sub putDocument {
-  my ($fmt,$doc) = @_;
-  $fmt->{outbuf} .=
-    encode_utf8(($doc->{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}}) : '')
-		.($doc->{base} ? "%% base=$doc->{base}\n\n" : '')
+  #my ($fmt,$doc) = @_;
+  $_[0]{outbuf} .=
+    encode_utf8('%%$TJ:DOC='
+		.$_[0]->jsonxs->encode( {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})} )
+		."\n"
 	       );
-  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
-  return $fmt;
+  $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
+  $_[0]->{outbuf} .= "\n";
+  return $_[0];
 }
 
 

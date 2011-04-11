@@ -52,6 +52,7 @@ $EXPORT_TAGS{child} = [@EXPORT_OK];
 ##     typeKeys => \@keys, ##-- analyzer type keys for $anl->typeKeys()
 ##     enabled => $bool,   ##-- set to false, non-undef value to disable this analyzer
 ##     initQuiet => $bool, ##-- if true, initInfo() will not print any output
+##     traceLevel => $level, ##-- log-level for trace messages (default=undef: none)
 ##    )
 sub new {
   my $that = shift;
