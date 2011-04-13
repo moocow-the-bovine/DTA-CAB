@@ -21,7 +21,7 @@ sub new {
   return $that->SUPER::new(
 			   ##-- overrides
 			   label => 'exlex',
-			   typeKeys => [qw(exlex pnd)],
+			   typeKeys => [qw(exlex pnd errid)],
 
 			   analyzeCode =>join("\n",
 					      (
