@@ -258,11 +258,8 @@ sub putToken {
 ##  + concatenates formatted tokens, adding sentence-id comment if available
 sub putSentence {
   #my ($fmt,$sent) = @_;
-  $_[0]{outbuf} .=
-    encode_utf8('%%$TJ:SENT='
-		.$_[0]->jsonxs->encode( {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})} )
-		."\n"
-	       );
+  my $sh = {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
+  $_[0]{outbuf} .=  encode_utf8('%%$TJ:SENT='.$_[0]->jsonxs->encode($sh)) if (%$sh);
   $_[0]->putToken($_) foreach (@{toSentence($_[1])->{tokens}});
   $_[0]->{outbuf} .= "\n";
   return $_[0];
@@ -272,11 +269,8 @@ sub putSentence {
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
 sub putDocument {
   #my ($fmt,$doc) = @_;
-  $_[0]{outbuf} .=
-    encode_utf8('%%$TJ:DOC='
-		.$_[0]->jsonxs->encode( {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})} )
-		."\n"
-	       );
+  my $dh = {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
+  $_[0]{outbuf} .= encode_utf8('%%$TJ:DOC='.$_[0]->jsonxs->encode($dh)."\n") if (%$dh);
   $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
   $_[0]->{outbuf} .= "\n";
   return $_[0];
