@@ -7,6 +7,7 @@
 package DTA::CAB::Server::HTTP;
 use DTA::CAB::Server;
 use DTA::CAB::Server::HTTP::Handler::Builtin;
+use DTA::CAB::Cache::LRU;
 use HTTP::Daemon;
 use HTTP::Status;
 use POSIX ':sys_wait_h';
@@ -36,8 +37,13 @@ our @ISA = qw(DTA::CAB::Server);
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
 ##     xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
 ##     ##
+##     ##-- caching
+##     cacheSize  => $nelts,         ##-- maximum number of responses to cache (default=1024; undef for no cache)
+##     cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=8192; undef for no limit)
+##     cache      => $lruCache,      ##-- response cache: (key = $url, value = $response), a DTA::CAB::Cache::LRU object
+##     ##
 ##     ##-- security
-##     allowUserOptions => $bool, ##-- allow user options? (default: true)
+##     allowUserOptions => $bool,   ##-- allow user options? (default: true)
 ##     allow => \@allow_ip_regexes, ##-- allow queries from these clients (default=none)
 ##     deny  => \@deny_ip_regexes,  ##-- deny queries from these clients (default=none)
 ##     _allow => $allow_ip_regex,   ##-- single allow regex (compiled by 'prepare()')
@@ -47,6 +53,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
 ##     logConnect => $level,        ##-- log successful connections (client IP and requested path) at $level (default='debug')
+##     logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
 ##     logRquestData => $level,     ##-- log full client request data at $level (default=undef: none)
 ##     logClientError => $level,    ##-- log errors to client at $level (default='debug')
 ##     logClose => $level,          ##-- log close client connections (default=undef: none)
@@ -77,6 +84,11 @@ sub new {
 			   ##-- path config
 			   paths => {},
 
+			   ##-- caching
+			   cacheSize  => 1024,
+			   cacheLimit => 8192,
+			   cache      => undef,
+
 			   ##-- security
 			   allowUserOptions => 1,
 			   allow => [],
@@ -89,6 +101,7 @@ sub new {
 			   logAttempt => 'off',
 			   logConnect => 'debug',
 			   logRequestData => undef,
+			   logCache => 'debug',
 			   logClose => 'off',
 			   logClientError => 'trace',
 
@@ -134,6 +147,9 @@ sub prepareLocal {
     $srv->{"_".$policy} = qr/$re/;
   }
 
+  ##-- setup cache
+  $srv->{cache} = DTA::CAB::Cache::LRU->new(max_size=>$srv->{cacheSize}) if (!$srv->{cache} && $srv->{cacheSize}>0);
+
   return 1;
 }
 
@@ -147,7 +163,7 @@ sub run {
   my $daemon = $srv->{daemon};
   $srv->info("server starting on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
 
-  my ($csock,$chost,$hreq,$handler,$localPath,$rsp);
+  my ($csock,$chost,$hreq,$urikey,$cacheable,$handler,$localPath,$rsp);
   while (defined($csock=$daemon->accept)) {
     ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();
@@ -167,13 +183,22 @@ sub run {
     }
 
     ##-- log basic request, and possibly request data
-    $srv->vlog($srv->{logConnect}, "client $chost: ", $hreq->method, " ", $hreq->uri);
+    $urikey = $hreq->uri->as_string;
+    $srv->vlog($srv->{logConnect}, "client $chost: ", $hreq->method, ' ', $urikey);
     $srv->vlog($srv->{logRequestData}, "client $chost: HTTP::Request={\n", $hreq->as_string, "}");
 
     ##-- map request to handler
     ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
     if (!defined($handler)) {
       $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", $hreq->uri);
+      next;
+    }
+
+    ##-- check cache
+    $cacheable = $srv->{cache} && $hreq->method eq 'GET' ? 1 : 0;
+    if ($cacheable && defined($rsp = $srv->{cache}->get($urikey))) {
+      $srv->vlog($srv->{logCache}, "using cached response for $urikey");
+      $csock->send_response($rsp);
       next;
     }
 
@@ -188,6 +213,19 @@ sub run {
     elsif (!defined($rsp)) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
       next;
+    }
+
+    ##-- maybe cache response
+    if ($cacheable) {
+      if (!defined($srv->{cacheLimit}) || length(${$rsp->content_ref}) <= $srv->{cacheLimit}) {
+	$srv->vlog($srv->{logCache}, "caching response for $urikey");
+	$srv->{cache}->set($urikey,$rsp);
+      } else {
+	$srv->vlog($srv->{logCache},
+		   "response length=",
+		   length(${$rsp->content_ref}),
+		   " for $urikey exceeds server limit=$srv->{cacheLimit}: NOT caching");
+      }
     }
 
     ##-- ... and dump response to client

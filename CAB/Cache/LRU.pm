@@ -27,7 +27,7 @@ our @ISA = qw();
 ##     autohit   => $bool,     ##-- whether or not to implicitly call hit() on get() and set(); default=1
 ##     ##
 ##     ##-- low-level data
-##     size     => $nelts,      ##-- current cache size (may differ from scalar(@pos2key), scalar(@pos2val) b/c some array items may be undef)
+##     #size     => $nelts,      ##-- current cache size (may differ from scalar(@pos2key), scalar(@pos2val) b/c some array items may be undef)
 ##     offset   => $pos,        ##-- index of least recently used item == next available index for new item
 ##     key2pos  => \%key2pos,   ##-- $pos=$key2pos{$key}: maps key to item-position
 ##     pos2val  => \@values,    ##-- $val=$pos2val[$pos]: maps item-position to value (or undef)
@@ -40,7 +40,7 @@ sub new {
 		     get_cb => undef,
 		     autohit   => 1,
 
-		     size    => 0,
+		     #size    => 0,
 		     offset  => 0,
 		     key2pos => {},
 		     pos2val => [],
@@ -54,7 +54,7 @@ sub new {
 ##  + clears cache
 sub clear {
   my $cache = shift;
-  $cache->{size} = 0;
+  #$cache->{size} = 0;
   $cache->{offset} = 0;
   %{$cache->{key2pos}} = qw();
   @{$cache->{pos2val}} = qw();
@@ -79,9 +79,10 @@ sub resize {
 
 ## $n = $cache->size()
 ##  + number of stored items
-sub size {
-  return $_[0]{size};
-}
+##  + TODO
+#sub size {
+#  return $_[0]{size};
+#}
 
 ## $bool = $cache->exists($key)
 ##  + returns true if cache has a stored value for $key
