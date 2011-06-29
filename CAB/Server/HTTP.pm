@@ -53,8 +53,8 @@ our @ISA = qw(DTA::CAB::Server);
 ##     logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
 ##     logConnect => $level,        ##-- log successful connections (client IP and requested path) at $level (default='debug')
-##     logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
 ##     logRquestData => $level,     ##-- log full client request data at $level (default=undef: none)
+##     logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
 ##     logClientError => $level,    ##-- log errors to client at $level (default='debug')
 ##     logClose => $level,          ##-- log close client connections (default=undef: none)
 ##     ##
@@ -176,9 +176,10 @@ sub run {
     }
 
     ##-- serve client: parse HTTP request
+    ${*$csock}{'httpd_client_proto'} = HTTP::Daemon::ClientConn::_http_version("HTTP/1.0"); ##-- HACK: force status line on send_error() from $csock->get_request()
     $hreq = $csock->get_request();
     if (!$hreq) {
-      $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request");
+      $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", ($csock->reason || 'get_request() failed'));
       next;
     }
 
@@ -195,12 +196,18 @@ sub run {
     }
 
     ##-- check cache
-    $cacheable = $srv->{cache} && $hreq->method eq 'GET' ? 1 : 0;
-    if ($cacheable && defined($rsp = $srv->{cache}->get($urikey))) {
-      $srv->vlog($srv->{logCache}, "using cached response for $urikey");
-      $csock->send_response($rsp);
-      next;
-    }
+    $cacheable = ($srv->{cache}
+		  && $hreq->method eq 'GET'
+		  && ($hreq->header('Pragma')||'') !~ /\bno-cache\b/);
+    if ($cacheable
+	&& ($hreq->header('Cache-Control')||'') !~ /\bno-cache\b/
+	&& defined($rsp = $srv->{cache}->get($urikey)))
+      {
+	$srv->vlog($srv->{logCache}, "using cached response");
+	$rsp->header('X-Cached' => 1);
+	$csock->send_response($rsp);
+	next;
+      }
 
     ##-- pass request to handler
     eval {
@@ -216,17 +223,19 @@ sub run {
     }
 
     ##-- maybe cache response
-    if ($cacheable) {
-      if (!defined($srv->{cacheLimit}) || length(${$rsp->content_ref}) <= $srv->{cacheLimit}) {
-	$srv->vlog($srv->{logCache}, "caching response for $urikey");
-	$srv->{cache}->set($urikey,$rsp);
-      } else {
-	$srv->vlog($srv->{logCache},
-		   "response length=",
-		   length(${$rsp->content_ref}),
-		   " for $urikey exceeds server limit=$srv->{cacheLimit}: NOT caching");
+    if ($cacheable
+	&& ($hreq->header('Cache-Control')||'') !~ /\bno-store\b/)
+      {
+	if (!defined($srv->{cacheLimit}) || length(${$rsp->content_ref}) <= $srv->{cacheLimit}) {
+	  $srv->vlog($srv->{logCache}, "caching response");
+	  $srv->{cache}->set($urikey,$rsp);
+	} else {
+	  $srv->vlog($srv->{logCache},
+		     "response length=",
+		     length(${$rsp->content_ref}),
+		     " exceeds server limit=$srv->{cacheLimit}: NOT caching response");
+	}
       }
-    }
 
     ##-- ... and dump response to client
     $csock->send_response($rsp) if ($csock->opened);

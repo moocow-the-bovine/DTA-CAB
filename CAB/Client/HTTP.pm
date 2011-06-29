@@ -46,6 +46,8 @@ BEGIN {
 ##
 ##     format   => $formatName,       ##-- default query I/O format (default='json')
 ##     encoding => $encoding,         ##-- query encoding (default='UTF-8')
+##     cacheGet => $bool,             ##-- allow cached response from server? (default=1)
+##     cacheSet => $bool,             ##-- allow caching of server response? (default=1)
 ##
 ##     ##-- debugging
 ##     tracefh => $fh,                ##-- dump requests to $fh if defined (default=undef)
@@ -71,6 +73,9 @@ sub new {
 			   post => 'urlencoded',
 			   rpcns => 'dta.cab.',
 			   rpcpath => '/xmlrpc',
+			   ##
+			   cacheGet=>1,
+			   cacheSet=>1,
 			   ##
 			   format => 'json',
 			   encoding => 'UTF-8',
@@ -183,16 +188,16 @@ sub urlEncode {
 ##   + also traces request to $cli->{tracefh} if defined
 sub urequest {
   my ($cli,$hreq) = @_;
-  $cli->{tracefh}->print("\n__BEGIN__\n", $hreq->as_string, "__END__\n") if (defined($cli->{tracefh}));
+  $cli->{tracefh}->print("\n__BEGIN_REQEST__\n", $hreq->as_string, "__END_REQUEST__\n") if (defined($cli->{tracefh}));
   return $cli->ua->request($hreq);
 }
 
-## $response = $cli->uhead($url, Header=>Value, ...)
+## $response = $cli->uhead($url, Header=>Value,...)
 sub uhead {
   return $_[0]->urequest(HEAD @_[1..$#_]);
 }
 
-## $response = $cli->uget($url, $headers)
+## $response = $cli->uget($url, Header=>Value,...)
 sub uget {
   #return $_[0]->ua->get(@_[1..$#_]);
   return $_[0]->urequest(GET @_[1..$#_]);
@@ -257,10 +262,33 @@ sub getFormat {
 ##     contentType => $mimeType,      ##-- Content-Type to apply for mode='xpost'
 ##     encoding    => $charset,       ##-- character set for mode='xpost'; also used by server
 ##     qraw        => $bool,          ##-- if true, query is a raw untokenized string (default=false)
+##     headers     => $headers,       ##-- HASH or ARRAY or HTTP::Headers object
+##     cacheGet    => $bool,          ##-- locally override $cli->{cacheGet}
+##     cacheSet    => $bool,          ##-- locally override $cli->{cacheSet}
 ##  + server-side %opts: see DTA::CAB::Server::HTTP::Handler::Query
 sub analyzeDataRef {
   my ($cli,$aname,$dataref,$opts) = @_;
   return $cli->rclient->analyzeData($cli->{rpcns}.$aname,$$dataref,$opts) if ($cli->{mode} eq 'xmlrpc');
+
+  ##-- get headers as ARRAY
+  my $headers = $opts->{headers};
+  if (UNIVERSAL::isa($headers,'HTTP::Headers')) {
+    $headers = [];
+    $opts->{headers}->scan(sub {push(@$headers,@_)});
+  } elsif (UNIVERSAL::isa($headers,'HASH')) {
+    $headers = [ %$headers ];
+  } elsif (UNIVERSAL::isa($headers,'ARRAY')) {
+    $headers = [ @$headers ];
+  } else {
+    ##-- unknown headers
+    $headers = [];
+  }
+  ##-- headers: cache control
+  my $cacheControl = join(', ',
+			  ((exists($opts->{cacheGet}) ? $opts->{cacheGet} : $cli->{cacheGet}) ? qw() : 'no-cache'),
+			  ((exists($opts->{cacheSet}) ? $opts->{cacheSet} : $cli->{cacheSet}) ? qw() : 'no-store'),
+			 );
+  push(@$headers, 'Cache-Control'=>$cacheControl) if ($cacheControl);
 
   ##-- build form
   my %form = (
@@ -273,7 +301,7 @@ sub analyzeDataRef {
   ##-- sanity checks (long parameter names clobber short names)
   $form{enc} = $form{encoding} if ($form{encoding});
   $form{fmt} = $form{format} if ($form{format});
-  delete(@form{qw(format encoding qraw)});
+  delete(@form{qw(format encoding qraw headers cacheGet cacheSet)});
   delete(@form{grep {!defined($form{$_})} keys %form});
 
   ##-- content-type hacks
@@ -290,34 +318,44 @@ sub analyzeDataRef {
   }
 
   ##-- get response
+  my ($rsp);
   if ($qmode eq 'get') {
     $form{$qname} = $$dataref;
-    return $cli->uget_form($cli->{serverURL}, \%form);
+    $rsp = $cli->uget_form($cli->{serverURL}, \%form, @$headers);
   }
+  else {
+    ##-- encode (for HTTP::Request v5.810 e.g. on services)
+    if ($form{enc}) {
+      foreach (values %form) {
+	$_ = encode($form{enc},$_) if (utf8::is_utf8($_));
+      }
+    }
 
-  ##-- encode (for HTTP::Request v5.810 e.g. on services)
-  if ($form{enc}) {
-    foreach (values %form) {
-      $_ = encode($form{enc},$_) if (utf8::is_utf8($_));
+    if ($qmode eq 'post') {
+      $form{$qname} = $form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref;
+      $rsp = $cli->upost($cli->{serverURL}, \%form,
+			 @$headers,
+			 ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
+			);
+    }
+    elsif ($qmode eq 'xpost') {
+      $ctype .= "; charset=\"$form{enc}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
+      $rsp = $cli->uxpost($cli->{serverURL},
+			  \%form,
+			  ($form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref),
+			  @$headers,
+			  'Content-Type'=>$ctype);
     }
   }
 
-  if ($qmode eq 'post') {
-    $form{$qname} = $form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref;
-    return $cli->upost($cli->{serverURL}, \%form,
-		       ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
-		      );
-  }
-  if ($qmode eq 'xpost') {
-    $ctype .= "; charset=\"$form{enc}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
-    return $cli->uxpost($cli->{serverURL},
-			\%form,
-			($form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref),
-			'Content-Type'=>$ctype);
+  if (!$rsp) {
+    ##-- should never happen
+    $rsp = HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$qmode'");
   }
 
-  ##-- should never happen
-  return HTTP::Response->new(RC_NOT_IMPLEMENTED, "not implemented: unknown client mode '$qmode'");
+  ##-- trace server response
+  $cli->{tracefh}->print("\n__BEGIN_RESPONSE__\n", ($rsp ? $rsp->as_string : '(undef)'), "__END_RESPONSE__\n") if (defined($cli->{tracefh}));
+  return $rsp;
 }
 
 ## undef = $cli->serverError($rsp)
@@ -507,6 +545,8 @@ for communication with an XML-RPC server.
      rpcns => $prefix,              ##-- prefix for XML-RPC analyzer names (default='dta.cab.')
      rpcpath => $path,              ##-- path part of URL for XML-RPC (default='/xmlrpc')
      format => $fmtName,            ##-- DTA::CAB::Format short name for transfer (default='json')
+     cacheGet => $bool,             ##-- allow cached response from server? (default=1)
+     cacheSet => $bool,             ##-- allow caching of server response? (default=1)
      ##
      ##-- debugging
      tracefh => $fh,                ##-- dump requests to $fh if defined (default=undef)
@@ -623,6 +663,9 @@ Returns a HTTP::Response object representing the server response.
 
  contentType => $mimeType,      ##-- Content-Type header to apply for mode='xpost'
  encoding    => $charset,       ##-- Character set for mode='xpost'; also used by server
+ headers     => $headers,       ##-- additional HTTP headers (ARRAY or HASH or HTTP::Headers object)
+ cacheGet    => $bool,          ##-- locally override $cli->{cacheGet} (sets header 'Cache-Control: no-cache')
+ cacheSet    => $bool,          ##-- locally override $cli->{cacheSet} (sets header 'Cache-Control: no-store')
 
 =item Server-Side Options
 
@@ -766,7 +809,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Jurish
+Copyright (C) 2010-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

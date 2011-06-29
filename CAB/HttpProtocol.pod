@@ -213,6 +213,21 @@ as output by $fmt-E<gt>toString().
 
 =cut
 
+##========================================================================
+=pod
+
+=head2 Caching
+
+As of DTA::CAB version 1.16, DTA::CAB::Server::HTTP supports basic in-memory
+caching of responses for GET requests.  Client requests may set the
+C<Cache-Control: no-cache> header option to prevent the server from returning
+a cached response even if one is available.  Similarly, if a client request
+includes a C<Cache-Control: no-store> header option, the server will not cache
+its generated response (although this option has no effect on a previously
+cached response for the same URI, if one exists).  If the response returned
+by the server was drawn from the server-internal cache, it will contain the
+header C<X-Cached: 1>.
+
 ##======================================================================
 ## Footer
 ##======================================================================

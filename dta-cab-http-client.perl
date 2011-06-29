@@ -43,12 +43,16 @@ our %clientOpts = (
 		   testConnect=>1,
 		   mode => 'xpost',
 		   post => 'urlencoded',
+		   cacheGet=>1,
+		   cacheSet=>1,
 		  );
 
 ##-- Analysis & Action Options
 our $analyzer = 'default';
 our $action = 'document';
-our %analyzeOpts = qw();
+our %analyzeOpts = (
+		    headers=>[], ##-- additional HTTP request header+value pairs (e.g. Cache-Control)
+		   );
 our $doProfile = undef;
 
 ##-- I/O Options
@@ -74,6 +78,10 @@ GetOptions(##-- General
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
 	   'timeout|T=i' => \$clientOpts{timeout},
 	   'test-connect|tc!' => \$clientOpts{testConnect},
+	   'header|H=s%' => sub { push(@{$analyzeOpts{headers}},@_[1,2]); },
+	   'cache-get|cg!' => \$clientOpts{cacheGet},
+	   'cache-set|cs!' => \$clientOpts{cacheSet},
+	   'cache|cc!' => sub { $clientOpts{cacheGet}=$clientOpts{cacheSet}=$_[1] },
 	   'get' => sub { $clientOpts{mode}='get'; },
 	   'post' => sub { $clientOpts{mode}='post'; },
 	   'multipart|multi!' => sub { $clientOpts{post}=$_[1] ? 'multipart' : 'urlencoded'; },
@@ -401,9 +409,13 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
   -test-connect , -notest-connect ##-- do/don't send a test request to the server (default: do)
   -trace FILE                     ##-- trace request(s) sent to the server to FILE
+  -header HEADER=VALUE            ##-- set additional HTTP header
+  -cache-get , -nocache-get       ##-- enable/disable cached response from server (Cache-Control: no-cache)
+  -cache-set , -nocache-set       ##-- enable/disable caching of server response  (Cache-Control: no-store)
+  -cache     , -nocache           ##-- alias for -[no]cache-get -[no]cache-set
   -get                            ##-- query server using URL-only GET requests
   -post                           ##-- query server using use content-only POST requests
-  -multipart    , -nomultipart    ##-- for POST requests, do/don't use 'multipart/form-data' encoding (default=don't)
+  -multipart , -nomultipart       ##-- for POST requests, do/don't use 'multipart/form-data' encoding (default=don't)
   -xpost                          ##-- query server using URL+content POST requests (default)
   -xmlrpc                         ##-- query server using XML-RPC requests
 
@@ -411,7 +423,7 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -list                           ##-- just list registered analyzers
   -analyzer NAME                  ##-- set analyzer name (default: 'default')
   -analyze-option OPT=VALUE       ##-- set analysis option (default: none)
-  -profile , -noprofile           ##-- do/don't report profiling information (default: do)
+  -profile , -noprofile           ##-- do/don't report profiling information (default: don't)
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents (default)
