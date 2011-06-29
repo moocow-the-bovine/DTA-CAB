@@ -39,7 +39,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     ##
 ##     ##-- caching
 ##     cacheSize  => $nelts,         ##-- maximum number of responses to cache (default=1024; undef for no cache)
-##     cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=8192; undef for no limit)
+##     cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=undef: no limit)
 ##     cache      => $lruCache,      ##-- response cache: (key = $url, value = $response), a DTA::CAB::Cache::LRU object
 ##     ##
 ##     ##-- security
@@ -86,7 +86,7 @@ sub new {
 
 			   ##-- caching
 			   cacheSize  => 1024,
-			   cacheLimit => 8192,
+			   cacheLimit => undef,
 			   cache      => undef,
 
 			   ##-- security
