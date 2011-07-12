@@ -7,6 +7,12 @@
 package DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Unify ':all';
+use DTA::CAB::Utils ':threads';
+
+use threads;
+use Thread::Semaphore;
+use Data::Structure::Utils 'unbless';
+
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -78,7 +84,8 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     labh => \%sym2lab,  ##-- (?) label hash:  $sym2lab{$labSym} = $labId;
 ##     laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
-##     result=>$resultfst, ##-- (child classes only) e.g. result fst
+##     #result=>$resultfst, ##-- (child classes only) e.g. result fst
+##     tsem => $tsem,      ##-- Thread::Semaphore object to use for pseudo-locking
 ##
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
@@ -94,7 +101,7 @@ sub new {
 			      ##-- analysis objects
 			      fst=>undef,
 			      lab=>undef,
-			      result=>undef,
+			      #result=>undef,
 			      labh=>{},
 			      laba=>[],
 			      labc=>[],
@@ -133,12 +140,41 @@ sub clear {
   ##-- analysis objects
   delete($aut->{fst});
   delete($aut->{lab});
-  delete($aut->{result});
+  delete($aut->{result}); ##-- should be undef anyways
   %{$aut->{labh}} = qw();
   @{$aut->{laba}} = qw();
   @{$aut->{labc}} = qw();
 
   return $aut;
+}
+
+##==============================================================================
+## Methods: Threads
+##==============================================================================
+
+## $key_or_undef = $anl->semaphoreKey()
+##  + returns semaphore key for default threadPrepare(), or undef (default)
+##  + default returns 'tsem'
+sub semaphoreKey {
+  return 'tsem';
+}
+
+## undef = $anl->threadInit()
+## undef = $anl->threadInit(\%opts)
+##  + initializes analyzer to run in a new thread; called from sub-thread
+##  + default implementation just propagates call to subAnalyzers(\%opts)
+##INHERITED
+
+## undef = $anl->threadFree()
+## undef = $anl->threadFree(\%opts)
+##  + shuts down analyzer running in a sub-thread
+##  + default implementation just propagates call to subAnalyzers(\%opts)
+##  + override un-blesses opaque C pointers to avoid double-free
+sub threadFree {
+  my $anl = shift;
+  unbless($anl->{fst}) if (defined($anl->{fst}));
+  unbless($anl->{lab}) if (defined($anl->{lab}));
+  unbless($anl->{result}) if (defined($anl->{result}));
 }
 
 
@@ -205,9 +241,15 @@ sub loadFst {
   $aut->{fst} = $aut->fstClass->new() if (!defined($aut->{fst}));
   $aut->{fst}->load($fstfile)
     or $aut->logconfess("loadFst(): load failed for '$fstfile': $!");
-  $aut->{result} = $aut->{fst}->shadow; #if (defined($aut->{result}) && $aut->{fst}->can('shadow'));
+  #$aut->{result} = $aut->{fst}->shadow; #if (defined($aut->{result}) && $aut->{fst}->can('shadow'));
   delete($aut->{_analyze});
   return $aut;
+}
+
+## $result = $aut->resultFst()
+##  + returns empty result FST
+sub resultFst {
+  return $_[0]{fst}->shadow;
 }
 
 ##--------------------------------------------------------------
@@ -300,7 +342,7 @@ sub analyzeTypes {
   ##-- setup common variables
   my $fst    = $aut->{fst};
   my $fst_ok = $aut->fstOk();
-  my $result = $aut->{result};
+  my $result = $aut->resultFst();
   my $lab    = $aut->{lab};
   my $labc   = $aut->{labc};
   my $laba   = $aut->{laba};
@@ -582,7 +624,6 @@ Constuctor.
  labh => \%sym2lab,  ##-- (?) label hash:  $sym2lab{$labSym} = $labId;
  laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
  labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
- result=>$resultfst, ##-- (child classes only) e.g. result fst
  ##
  ##-- INHERITED from DTA::CAB::Analyzer
  label => $label,    ##-- analyzer label (default: from analyzer class name)

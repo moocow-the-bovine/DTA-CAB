@@ -26,9 +26,33 @@ our %EXPORT_TAGS =
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
      profile => [qw(si_str profile_str)],
      version => [qw(cab_version)],
+     threads => [qw(downup)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
+
+##==============================================================================
+## Functions: threads & semaphores
+##==============================================================================
+
+## @rc = downup($semaphore,\&sub,$count=1)          ##-- list context
+## $rc = downup($semaphore,\&sub,$count=1)          ##-- scalar context
+##  + wraps sub() call in { $semaphore->down() ... $semaphore->up() }, catching die()
+sub downup {
+  my ($sem,$sub,$count) = @_;
+  $count = 1 if (!defined($count));
+  $sem->down($count);
+  my (@rc);
+  if (wantarray) {
+    eval { @rc = $sub->(); };
+  } else {
+    eval { $rc[0] = $sub->(); };
+  }
+  $sem->up($count);
+  die ($@) if ($@);
+  return wantarray ? @rc : $rc[0];
+}
+
 
 ##==============================================================================
 ## Functions: version dump

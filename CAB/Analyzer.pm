@@ -98,6 +98,49 @@ sub typeKeys {
   return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : (defined($_[0]{label}) ? ($_[0]{label}) : qw());
 }
 
+##==============================================================================
+## Methods: Threaded Operation
+##==============================================================================
+
+## $anl = $anl->threadPrepare()
+## $anl = $anl->threadPrepare(\%opts)
+##  + prepares $anl to run in threaded mode
+##  + should be called from main thread
+##  + default implementation does:
+##    - creates a semaphore $anl->{$anl->semaphoreKey()} if not already present
+##    - propagates call to subAnalyzers(\%opts)
+sub threadPrepare {
+  use Thread::Semaphore;
+  my $anl = shift;
+  my $skey = $anl->semaphoreKey;
+  $anl->{$skey} = Thread::Semaphore->new() if (defined($skey));
+  $_->threadPrepare(@_) foreach (@{$anl->subAnalyzers(@_)});
+  return $anl;
+}
+
+## $key_or_undef = $anl->semaphoreKey()
+##  + returns semaphore key for default threadPrepare(), or undef (default)
+sub semaphoreKey {
+  return undef;
+}
+
+## undef = $anl->threadInit()
+## undef = $anl->threadInit(\%opts)
+##  + initializes analyzer to run in a new thread; called from sub-thread
+##  + default implementation just propagates call to subAnalyzers(\%opts)
+sub threadInit {
+  my $anl = shift;
+  $_->threadInit(@_) foreach (@{$anl->subAnalyzers(@_)});
+}
+
+## undef = $anl->threadFree()
+## undef = $anl->threadFree(\%opts)
+##  + shuts down analyzer running in a sub-thread
+##  + default implementation just propagates call to subAnalyzers(\%opts)
+sub threadFree {
+  my $anl = shift;
+  $_->threadFree(@_) foreach (@{$anl->subAnalyzers(@_)});
+}
 
 ##==============================================================================
 ## Methods: I/O

@@ -162,10 +162,17 @@ sub loadCascade {
   }
   $aut->{fst} = Gfsm::XL::Cascade::Lookup->new($csc);
   $aut->setLookupOptions($aut);
-  $aut->{result} = Gfsm::Automaton->new($csc->semiring_type);  ##-- reset result automaton
+  #$aut->{result} = Gfsm::Automaton->new($csc->semiring_type);  ##-- reset result automaton
   delete($aut->{_analyze});
   return $aut;
 }
+
+## $result = $aut->resultFst()
+##  + returns empty result FST
+sub resultFst {
+  return Gfsm::Automaton->new($_[0]{fst}->cascade->semiring_type);
+}
+
 
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: Labels

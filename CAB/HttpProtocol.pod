@@ -216,7 +216,7 @@ as output by $fmt-E<gt>toString().
 ##========================================================================
 =pod
 
-=head2 Caching
+=head2 Response Caching
 
 As of DTA::CAB version 1.16, DTA::CAB::Server::HTTP supports basic in-memory
 caching of responses for GET requests.  Client requests may set the
@@ -227,6 +227,8 @@ its generated response (although this option has no effect on a previously
 cached response for the same URI, if one exists).  If the response returned
 by the server was drawn from the server-internal cache, it will contain the
 header C<X-Cached: 1>.
+
+=cut
 
 ##======================================================================
 ## Footer

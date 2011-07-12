@@ -31,7 +31,7 @@ sub new {
 			      ##-- analysis objects
 			      fst=>undef, #Gfsm::Automaton->new,
 			      lab=>undef, #Gfsm::Alphabet->new,
-			      result=>undef, #Gfsm::Automaton->new,
+			      #result=>undef, #Gfsm::Automaton->new,
 
 			      ##-- user args
 			      @_
