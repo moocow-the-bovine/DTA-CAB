@@ -105,12 +105,11 @@ sub typeKeys {
 ## $anl = $anl->threadPrepare()
 ## $anl = $anl->threadPrepare(\%opts)
 ##  + prepares $anl to run in threaded mode
-##  + should be called from main thread
+##  + should be called from main thread BEFORE sub-threads are created
 ##  + default implementation does:
 ##    - creates a semaphore $anl->{$anl->semaphoreKey()} if not already present
 ##    - propagates call to subAnalyzers(\%opts)
 sub threadPrepare {
-  use Thread::Semaphore;
   my $anl = shift;
   my $skey = $anl->semaphoreKey;
   $anl->{$skey} = Thread::Semaphore->new() if (defined($skey));

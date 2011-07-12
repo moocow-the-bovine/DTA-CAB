@@ -11,7 +11,7 @@ use DTA::CAB::Utils ':threads';
 
 use threads;
 use Thread::Semaphore;
-use Data::Structure::Utils 'unbless';
+use Data::Structure::Util 'unbless';
 
 use Gfsm;
 use Encode qw(encode decode);
