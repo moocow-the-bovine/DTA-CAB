@@ -84,12 +84,12 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     labh => \%sym2lab,  ##-- (?) label hash:  $sym2lab{$labSym} = $labId;
 ##     laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
-##     #result=>$resultfst, ##-- (child classes only) e.g. result fst
-##     tsem => $tsem,      ##-- Thread::Semaphore object to use for pseudo-locking
 ##
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
 ##     typeKeys => \@keys, ##-- type-wise keys to expand
+##     semaphore => $semaphore, ##-- object-local Thread::Semaphore for pseudo-locking (created by threadPrepare())
+##     doSemaphore => $bool,    ##-- OVERRIDE: use object-local semaphore protection
 ##    )
 sub new {
   my $that = shift;
@@ -98,10 +98,13 @@ sub new {
 			      fstFile => undef,
 			      labFile => undef,
 
+			      ##-- threading
+			      doSemaphore => 1,
+
 			      ##-- analysis objects
 			      fst=>undef,
 			      lab=>undef,
-			      #result=>undef,
+			      result=>undef,
 			      labh=>{},
 			      laba=>[],
 			      labc=>[],
@@ -152,13 +155,6 @@ sub clear {
 ## Methods: Threads
 ##==============================================================================
 
-## $key_or_undef = $anl->semaphoreKey()
-##  + returns semaphore key for default threadPrepare(), or undef (default)
-##  + default returns 'tsem'
-sub semaphoreKey {
-  return 'tsem';
-}
-
 ## undef = $anl->threadInit()
 ## undef = $anl->threadInit(\%opts)
 ##  + initializes analyzer to run in a new thread; called from sub-thread
@@ -175,6 +171,7 @@ sub threadFree {
   unbless($anl->{fst}) if (defined($anl->{fst}));
   unbless($anl->{lab}) if (defined($anl->{lab}));
   unbless($anl->{result}) if (defined($anl->{result}));
+  return $anl->SUPER::threadFree(@_);
 }
 
 
@@ -241,6 +238,7 @@ sub loadFst {
   $aut->{fst} = $aut->fstClass->new() if (!defined($aut->{fst}));
   $aut->{fst}->load($fstfile)
     or $aut->logconfess("loadFst(): load failed for '$fstfile': $!");
+  delete($aut->{result});
   #$aut->{result} = $aut->{fst}->shadow; #if (defined($aut->{result}) && $aut->{fst}->can('shadow'));
   delete($aut->{_analyze});
   return $aut;

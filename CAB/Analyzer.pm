@@ -5,7 +5,7 @@
 ## Description: generic analyzer API
 
 package DTA::CAB::Analyzer;
-use DTA::CAB::Utils;
+use DTA::CAB::Utils ':threads';
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
@@ -53,6 +53,8 @@ $EXPORT_TAGS{child} = [@EXPORT_OK];
 ##     enabled => $bool,   ##-- set to false, non-undef value to disable this analyzer
 ##     initQuiet => $bool, ##-- if true, initInfo() will not print any output
 ##     traceLevel => $level, ##-- log-level for trace messages (default=undef: none)
+##     semaphore => $sem,    ##-- Thread::Semaphore object for local pseudo-locking (default: undef: no pseudo-locking)
+##     doSemaphore => $bool, ##-- whether to do default object-locking (default: false)
 ##    )
 sub new {
   my $that = shift;
@@ -107,20 +109,13 @@ sub typeKeys {
 ##  + prepares $anl to run in threaded mode
 ##  + should be called from main thread BEFORE sub-threads are created
 ##  + default implementation does:
-##    - creates a semaphore $anl->{$anl->semaphoreKey()} if not already present
+##    - creates a semaphore $anl->{semaphore} if undefined and $anl->{doSemaphore} is true
 ##    - propagates call to subAnalyzers(\%opts)
 sub threadPrepare {
   my $anl = shift;
-  my $skey = $anl->semaphoreKey;
-  $anl->{$skey} = Thread::Semaphore->new() if (defined($skey));
+  $anl->{semaphore} = Thread::Semaphore->new() if (!defined($anl->{semaphore}) && $anl->{doSemaphore});
   $_->threadPrepare(@_) foreach (@{$anl->subAnalyzers(@_)});
   return $anl;
-}
-
-## $key_or_undef = $anl->semaphoreKey()
-##  + returns semaphore key for default threadPrepare(), or undef (default)
-sub semaphoreKey {
-  return undef;
 }
 
 ## undef = $anl->threadInit()
@@ -140,6 +135,17 @@ sub threadFree {
   my $anl = shift;
   $_->threadFree(@_) foreach (@{$anl->subAnalyzers(@_)});
 }
+
+## $rc = $anl->threadProtect(\&sub)  ##-- scalar context
+## @rc = $anl->threadProtect(\&sub)  ##-- list context
+##  + thread-safe wrapper for code in \&sub()
+##  + if running under threads and $anl->{semaphore} is defined,
+##    wraps sub() in a semaphore-protected block using DTA::CAB::Utils::downup()
+sub threadProtect {
+  return downup($_[0]{semaphore}, $_[1]) if (defined($_[0]{semaphore}) && threads_enabled);
+  return $_[1]->();
+}
+
 
 ##==============================================================================
 ## Methods: I/O
@@ -306,21 +312,23 @@ sub subAnalyzers {
 ##      $anl->analyzeClean($doc,\%opts)     if ($anl->doAnalyze(\%opts,'Clean'));
 sub analyzeDocument {
   my ($anl,$doc,$opts) = @_;
-  return $doc if (!$anl->enabled($opts));  ##-- disabled analyzer
-  #return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
-  return $doc if (!$anl->canAnalyze);      ##-- ok... (?)
-  $doc = toDocument($doc);
-  my ($types);
-  if ($anl->doAnalyze($opts,'Types')) {
-    $types = $anl->getTypes($doc);
-    $anl->analyzeTypes($doc,$types,$opts);
-    $anl->expandTypes($doc,$types,$opts);
-    $anl->clearTypes($doc);
-  }
-  $anl->analyzeTokens($doc,$opts)    if ($anl->doAnalyze($opts,'Tokens'));
-  $anl->analyzeSentences($doc,$opts) if ($anl->doAnalyze($opts,'Sentences'));
-  $anl->analyzeLocal($doc,$opts)     if ($anl->doAnalyze($opts,'Local'));
-  $anl->analyzeClean($doc,$opts)     if ($anl->doAnalyze($opts,'Clean'));
+  $anl->threadProtect(sub {
+			return $doc if (!$anl->enabled($opts));  ##-- disabled analyzer
+			#return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
+			return $doc if (!$anl->canAnalyze);      ##-- ok... (?)
+			$doc = toDocument($doc);
+			my ($types);
+			if ($anl->doAnalyze($opts,'Types')) {
+			  $types = $anl->getTypes($doc);
+			  $anl->analyzeTypes($doc,$types,$opts);
+			  $anl->expandTypes($doc,$types,$opts);
+			  $anl->clearTypes($doc);
+			}
+			$anl->analyzeTokens($doc,$opts)    if ($anl->doAnalyze($opts,'Tokens'));
+			$anl->analyzeSentences($doc,$opts) if ($anl->doAnalyze($opts,'Sentences'));
+			$anl->analyzeLocal($doc,$opts)     if ($anl->doAnalyze($opts,'Local'));
+			$anl->analyzeClean($doc,$opts)     if ($anl->doAnalyze($opts,'Clean'));
+		      });
   return $doc;
 }
 

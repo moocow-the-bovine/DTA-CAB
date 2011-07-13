@@ -26,7 +26,7 @@ our %EXPORT_TAGS =
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
      profile => [qw(si_str profile_str)],
      version => [qw(cab_version)],
-     threads => [qw(downup)],
+     threads => [qw(threads_enabled downup)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -35,12 +35,21 @@ $EXPORT_TAGS{all} = [@EXPORT_OK];
 ## Functions: threads & semaphores
 ##==============================================================================
 
+## $bool = threads_enabled()
+##  + should return a true value iff the 'threads' module has been loaded
+##  + realls just checks for $threads::VERSION
+sub threads_enabled {
+  return defined($threads::VERSION);
+}
+
+
 ## @rc = downup($semaphore,\&sub,$count=1)          ##-- list context
 ## $rc = downup($semaphore,\&sub,$count=1)          ##-- scalar context
 ##  + wraps sub() call in { $semaphore->down() ... $semaphore->up() }, catching die()
 sub downup {
   my ($sem,$sub,$count) = @_;
   $count = 1 if (!defined($count));
+  DTA::CAB->trace("downup($sem): DOWN");
   $sem->down($count);
   my (@rc);
   if (wantarray) {
@@ -48,6 +57,7 @@ sub downup {
   } else {
     eval { $rc[0] = $sub->(); };
   }
+  DTA::CAB->trace("downup($sem): UP");
   $sem->up($count);
   die ($@) if ($@);
   return wantarray ? @rc : $rc[0];
