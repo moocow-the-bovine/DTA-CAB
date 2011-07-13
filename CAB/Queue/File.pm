@@ -25,11 +25,16 @@ our @ISA = qw(DTA::CAB::Logger File::Queue);
 ##    (
 ##     file => $filename,   ##-- basename of queue file (will have .dat,.idx suffixes)
 ##     mode => $mode,       ##-- creation mode (default=0660)
-##     separator => $str,   ##-- item separator string (default=$/)
+##     seperator => $str,   ##-- item separator string (default=$/) [typo in name is (sic): bummer]
 ##    )
 sub new {
   my ($that,%args) = @_;
-  my $q = $that->SUPER::new(separator=>$/,%args);
+  if (exists($args{separator})) {
+    ##-- annoying typo in File::Queue
+    $args{seperator} = $args{separator};
+    CORE::delete($args{separator});
+  }
+  my $q = $that->SUPER::new(seperator=>$/,%args);
   @$q{keys %args} = values %args; ##-- save args
   return $q;
 }
@@ -42,7 +47,7 @@ BEGIN {
 }
 sub reopen {
   my $q = shift;
-  %$q = %{ref($q)->new(file=>$q->{file},mode=>$q->{mode},separator=>$q->{separator})};
+  %$q = %{ref($q)->new(file=>$q->{file},mode=>$q->{mode},seperator=>$q->{seperator})};
   return $q;
 }
 
@@ -63,6 +68,7 @@ sub reopen {
 
 ## undef = $q->delete()
 ##  + delete queue file(s)
+*unlink = \&File::Queue::delete;
 
 1;
 
