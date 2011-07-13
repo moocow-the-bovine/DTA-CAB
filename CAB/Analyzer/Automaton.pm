@@ -7,12 +7,6 @@
 package DTA::CAB::Analyzer::Automaton;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Unify ':all';
-use DTA::CAB::Utils ':threads';
-
-use threads;
-use Thread::Semaphore;
-use Data::Structure::Util 'unbless';
-
 use Gfsm;
 use Encode qw(encode decode);
 use IO::File;
@@ -88,8 +82,6 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
 ##     typeKeys => \@keys, ##-- type-wise keys to expand
-##     semaphore => $semaphore, ##-- object-local Thread::Semaphore for pseudo-locking (created by threadPrepare())
-##     doSemaphore => $bool,    ##-- OVERRIDE: use object-local semaphore protection
 ##    )
 sub new {
   my $that = shift;
@@ -97,9 +89,6 @@ sub new {
 			      ##-- filenames
 			      fstFile => undef,
 			      labFile => undef,
-
-			      ##-- threading
-			      doSemaphore => 1,
 
 			      ##-- analysis objects
 			      fst=>undef,
@@ -150,30 +139,6 @@ sub clear {
 
   return $aut;
 }
-
-##==============================================================================
-## Methods: Threads
-##==============================================================================
-
-## undef = $anl->threadInit()
-## undef = $anl->threadInit(\%opts)
-##  + initializes analyzer to run in a new thread; called from sub-thread
-##  + default implementation just propagates call to subAnalyzers(\%opts)
-##INHERITED
-
-## undef = $anl->threadFree()
-## undef = $anl->threadFree(\%opts)
-##  + shuts down analyzer running in a sub-thread
-##  + default implementation just propagates call to subAnalyzers(\%opts)
-##  + override un-blesses opaque C pointers to avoid double-free
-sub threadFree {
-  my $anl = shift;
-  unbless($anl->{fst}) if (defined($anl->{fst}));
-  unbless($anl->{lab}) if (defined($anl->{lab}));
-  unbless($anl->{result}) if (defined($anl->{result}));
-  return $anl->SUPER::threadFree(@_);
-}
-
 
 ##==============================================================================
 ## Methods: Generic

@@ -38,6 +38,7 @@ $EXPORT_TAGS{all} = [@EXPORT_OK];
 ## $bool = threads_enabled()
 ##  + should return a true value iff the 'threads' module has been loaded
 ##  + realls just checks for $threads::VERSION
+##  + thread support is basically BROKEN (see the v1.16-threads-argh branch for a start)
 sub threads_enabled {
   return defined($threads::VERSION);
 }
@@ -46,6 +47,7 @@ sub threads_enabled {
 ## @rc = downup($semaphore,\&sub,$count=1)          ##-- list context
 ## $rc = downup($semaphore,\&sub,$count=1)          ##-- scalar context
 ##  + wraps sub() call in { $semaphore->down() ... $semaphore->up() }, catching die()
+##  + thread support is basically BROKEN (see the v1.16-threads-argh branch for a start)
 sub downup {
   my ($sem,$sub,$count) = @_;
   $count = 1 if (!defined($count));

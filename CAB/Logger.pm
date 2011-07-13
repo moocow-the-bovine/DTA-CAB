@@ -85,7 +85,6 @@ log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the s
   $cfg .= "
 ##-- Appenders: Utilities
 log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename(\"$::0\"); }
-log4perl.PatternLayout.cspec.i = sub { return threads->tid(); }
 ";
 
   ##-- appender: stderr
@@ -95,7 +94,7 @@ log4perl.appender.AppStderr = Log::Log4perl::Appender::Screen
 log4perl.appender.AppStderr.stderr = 1
 log4perl.appender.AppStderr.binmode = :utf8
 log4perl.appender.AppStderr.layout = Log::Log4perl::Layout::PatternLayout
-log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P/%i] %p: %c: %m%n
+log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P] %p: %c: %m%n
 ";
 
   ##-- appender: syslog
@@ -128,7 +127,7 @@ log4perl.appender.AppFile.mode = append
 log4perl.appender.AppFile.size = 10485760
 log4perl.appender.AppFile.max  = 10
 log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayout
-log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P/%i] (%p) %c: %m%n
+log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
 ";
   }
   elsif ($opts{file}) {
@@ -140,7 +139,7 @@ log4perl.appender.AppFile.filename = $opts{file}
 log4perl.appender.AppFile.mode = append
 log4perl.appender.AppFile.utf8 = 1
 log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayoutl
-log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P/%i] (%p) %c: %m%n
+log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
 ";
   }
 
