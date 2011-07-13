@@ -59,6 +59,8 @@ WriteMakefile
 		    'Storable'=>undef,
 		    'Time::HiRes'=>undef,
 		    ##--
+		    File::Queue => undef,
+		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,
 		    'RPC::XML' => 0.59,

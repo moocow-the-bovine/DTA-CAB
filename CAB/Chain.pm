@@ -30,12 +30,16 @@ BEGIN {
 ##    (
 ##     ##-- Analyzers
 ##     chain => [ $a1, $a2, ..., $aN ],        ##-- default analysis chain; see also chain() method (default: empty)
+##
+##     ##-- verbose trace
+##     logTrace => $level,                     ##-- trace sub-analyzer execution
 ##    )
 sub new {
   my $that = shift;
   my $ach = bless({
 		   ##-- user args
 		   chain => [],
+		   logTrace => 'trace',
 		   @_
 		  }, ref($that)||$that);
   $ach->initialize();
@@ -196,7 +200,9 @@ sub initInfo {
 sub analyzeTypes {
   my ($ach,$doc,$types,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeTypes($doc,$types,$opts) if ($_->doAnalyze($opts,'Types'));
+    next if (!$_->doAnalyze($opts,'Types'));
+    $ach->vlog($ach->{logTrace},"analyzeTypes: $_->{label}");
+    $_->analyzeTypes($doc,$types,$opts);
   }
   return $doc;
 }
@@ -212,7 +218,9 @@ sub analyzeTypes {
 sub analyzeSentences {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeSentences($doc,$opts) if ($_->doAnalyze($opts,'Sentences'));
+    next if (!$_->doAnalyze($opts,'Sentences'));
+    $ach->vlog($ach->{logTrace},"analyzeSentences: $_->{label}");
+    $_->analyzeSentences($doc,$opts);
   }
   return $doc;
 }
@@ -223,7 +231,9 @@ sub analyzeSentences {
 sub analyzeLocal {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeLocal($doc,$opts)}) if ($_->doAnalyze($opts,'Local'));
+    next if (!$_->doAnalyze($opts,'Local'));
+    $ach->vlog($ach->{logTrace},"analyzeLocal: $_->{label}");
+    $_->analyzeLocal($doc,$opts);
   }
   return $doc;
 }
@@ -235,7 +245,9 @@ sub analyzeLocal {
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    $_->analyzeClean($doc,$opts) if ($_->doAnalyze($opts,'Clean'));
+    next if (!$_->doAnalyze($opts,'Clean'));
+    $ach->vlog($ach->{logTrace},"analyzeClean: $_->{label}");
+    $_->analyzeClean($doc,$opts);
   }
   return $ach->SUPER::analyzeClean($doc,$opts) if ($ach->doAnalyze($opts,'Clean'));
   return $doc;
