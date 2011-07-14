@@ -28,9 +28,27 @@ our %EXPORT_TAGS =
      version => [qw(cab_version)],
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile)],
+     getopt => [qw(GetArrayOptions GetStringOptions)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
+
+##==============================================================================
+## Functions: options
+##==============================================================================
+
+## $bool = GetArrayOptions(\@pseudo_argv,  %options)
+##  + wrapper for Getopt::Long::GetOptionsFromArray()
+sub GetArrayOptions {
+  return Getopt::Long::GetOptionsFromArray(@_);
+}
+
+## $bool          = GetStringOptions($argv_string, %options)
+## ($bool,\@args) = GetStringOptions($argv_string, %options)
+##  + wrapper for Getopt::Long::GetOptionsFromString()
+sub GetStringOptions {
+  return Getopt::Long::GetOptionsFromString(@_);
+}
 
 ##==============================================================================
 ## Functions: temporaries
@@ -38,10 +56,10 @@ $EXPORT_TAGS{all} = [@EXPORT_OK];
 
 ## $dir = tmpfsdir()
 ##  + gets temporary directory:
-##  + first writable directory among @ENV{qw(TMP TMPDIR)},"/tmpfs","/dev/shm","/tmp","."
+##  + first writable directory among @ENV{qw(CAB_TMPDIR TMPDIR TMP)},"/tmpfs","/dev/shm","/tmp","."
 ##  + returns undef if none of the above succeeds
 sub tmpfsdir {
-  foreach (@ENV{qw(TMP TMPDIR)},qw(/tmpfs /dev/shm /tmp .)) {
+  foreach (@ENV{qw(CAB_TMPDIR TMP TMPDIR)},qw(/tmpfs /dev/shm /tmp .)) {
     return $_ if (defined($_) && -d $_ && -w $_);
   }
   return undef;

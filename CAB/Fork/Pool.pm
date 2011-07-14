@@ -38,6 +38,7 @@ our @ISA = qw(DTA::CAB::Logger);
 ##     logSpawn         => $level,   ##-- log-level for spawning subprocesses [default: 'info']
 ##     logReap          => $level,   ##-- log-level for messages caught with default catch() [default: 'fatal']
 ##     propagateErrors  => $bool,    ##-- if true (default), default 'reap' method will exit() the whole process
+##     installReaper    => $bool,    ##-- if true (default), spawn() sets $SIG{CHLD}=$fp->reaper()
 ##     ##
 ##     ##-- Low-level data
 ##     pids => \@pids,           ##-- PIDs of spawned subprocesses
@@ -58,6 +59,7 @@ sub new {
 		  logSpawn => 'info',
 		  logReap => 'info',
 		  propagateErrors => 1,
+		  installReaper => 1,
 		  pids => [],
 		  ppid => $$,
 		  @_,
@@ -76,7 +78,7 @@ sub new {
 sub spawn {
   my $fp = shift;
   $fp->{pids} = [] if (!$fp->{pids});
-  $SIG{CHLD} = $fp->reaper() if (!defined($SIG{CHLD}));
+  $SIG{CHLD} = $fp->reaper() if ($fp->{installReaper});
   while (@{$fp->{pids}} < $fp->{njobs}) {
     my $pid = fork();
     if ($pid) {
@@ -89,6 +91,12 @@ sub spawn {
     }
   }
   return $fp;
+}
+
+## $fp = $fp->is_child()
+##  + returns true if current process is a child; wraps ($fp->{ppid} && $$!=$fp->{ppid})
+sub is_child {
+  return $_[0]{ppid} && $$!=$_[0]{ppid};
 }
 
 ## $fp = $fp->abort()
@@ -122,6 +130,16 @@ sub pids {
 ## $fp = $fp->waitall()
 ##  + waits on all child pids
 sub waitall {
+  my $fp = shift;
+  my ($child);
+  while (($child = waitpid(-1,0))>0) {
+    $fp->{reap}->($fp,$child,$?) if ($fp->{reap});
+    @{$fp->{pids}} = grep {$_ != $child} @{$fp->{pids}};
+  }
+  return $fp;
+}
+
+sub waitall_old {
   my $fp = shift;
   my ($pid);
   while (defined($pid=shift(@{$fp->{pids}}))) {
@@ -171,6 +189,12 @@ sub deq {
 ##  + preview next $count items without de-queueing
 sub peek {
   $_[0]{queue}->peek(@_[1..$#_]);
+}
+
+## undef = $fp->clear()
+##  + clears the queue
+sub clear {
+  $_[0]{queue}->clear();
 }
 
 ## undef = $fp->unlink()
@@ -223,6 +247,7 @@ sub reap {
   my ($fp,$pid,$status) = @_;
   $fp->vlog($fp->{logReap},"reaped subprocess $pid with exit status $status");
   if ($fp->{propagateErrors} && $status != 0) {
+    $fp->abort();
     $fp->logdie("subprocess $pid exited with abnormal status $status");
   }
 }

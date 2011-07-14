@@ -4,6 +4,8 @@ use lib '.', 'MUDL';
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
 use DTA::CAB::Datum ':all';
+use DTA::CAB::Fork::Pool;
+use DTA::CAB::Queue::File;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use IO::File;
@@ -12,6 +14,8 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
 #use DTA::CAB::Analyzer::Moot2; ##-- DEBUG
+
+use strict;
 
 ##==============================================================================
 ## Constants & Globals
@@ -25,6 +29,12 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
+##-- forking options
+our $njobs = 0; ##-- default: 0 jobs (process everything in the main thread)
+our $jqfile = tmpfsfile("qjobs_dta_cab_${$}_XXXX", UNLINK=>1);
+our $sqfile = tmpfsfile("qstat_dta_cab_${$}_XXXX", UNLINK=>1);
+our $keeptmp = 0;
+
 ##-- Log options (see %DTA::CAB::Logger::defaultLogOpts)
 
 ##-- Analysis Options
@@ -37,49 +47,70 @@ our $doProfile = 1;
 our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
 our $inputWords  = 0;      ##-- inputs are words, not filenames
+our $inputList   = 0;      ##-- inputs are command-line lists, not filenames (main thread only)
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
 
 our $blocksize   = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
 our $block_sents = 0;           ##-- must block boundaries coincide with sentence boundaries?
 our $default_blocksize = 65535; ##-- default block size if -block is specified
-our $outfile     = '-';
+our $outfmt      = '-';         ##-- can use macros %d=dirname($infile), %b=basename($infile), %x=extension($infile), %f=%d/%b
+our ($outfile);
 
 ##==============================================================================
 ## Command-line
-GetOptions(##-- General
-	   'help|h'    => \$help,
-	   'man|M'     => \$man,
-	   'version|V' => \$version,
-	   #'verbose|v|log-level=s' => sub { $logOpts{level}=uc($_[1]); }, ##-- see log-level
 
-	   ##-- Analysis
-	   'configuration|c=s'    => \$rcFile,
-	   'analyzer-class|analyze-class|analysis-class|ac|a=s' => \$analyzeClass,
-	   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => \%analyzeOpts,
-	   'profile|p!' => \$doProfile,
+## %global_opts : Getopt::Long specs only relevant for main thread
+our %global_opts =
+  (
+   ##-- General
+   'help|h'    => \$help,
+   'man|M'     => \$man,
+   'version|V' => \$version,
 
-	   ##-- I/O: input
-	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
-	   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
-	   'input-option|io|parser-option|po=s'      => \%inputOpts,
-	   'tokens|t|words|w!'                       => \$inputWords,
-	   'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
-	   'noblock|B' => sub { undef $blocksize; },
-	   'block-sentences|block-sents|bS!'         => \$block_sents,
-	   'block-tokens|block-toks|bT'              => sub { $block_sents=!$_[1]; },
+   ##-- Parallelization
+   'jobs|jn|j=i'                         => \$njobs,
+   'job-queue-file|job-queue|jqf|jq=s'   => \$jqfile,
+   'stat-queue-file|stat-queue|sqf|sq=s' => \$sqfile,
+   'input-list|il|l!'                    => \$inputList,
+   'keeptmp|keeptemp|keep!'              => \$keeptmp,
 
-	   ##-- I/O: output
-	   'output-class|oc|format-class|fc=s'        => \$outputClass,
-	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
-	   'output-option|oo=s'                       => \%outputOpts,
-	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
-	   'output-file|output|o=s' => \$outfile,
+   ##-- Analysis
+   'configuration|c=s'    => \$rcFile,
+   'analyzer-class|analyze-class|analysis-class|ac|a=s' => \$analyzeClass,
+   #'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => \%analyzeOpts,
+   #'profile|p!' => \$doProfile,
 
-	   ##-- Log4perl stuff
-	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
-	  );
+   ##-- Log4perl stuff
+   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
+  );
 
+## %child_opts : Getopt::Long specs overridable by child threads
+our %child_opts =
+  (
+   ##-- Analysis
+   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => \%analyzeOpts,
+   'profile|p!' => \$doProfile,
+
+   ##-- I/O: input
+   'input-class|ic|parser-class|pc=s'        => \$inputClass,
+   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
+   'input-option|io|parser-option|po=s'      => \%inputOpts,
+   'tokens|t|words|w!'                       => \$inputWords,
+   'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
+   'noblock|B' => sub { undef $blocksize; },
+   'block-sentences|block-sents|bS!'         => \$block_sents,
+   'block-tokens|block-toks|bT'              => sub { $block_sents=!$_[1]; },
+
+   ##-- I/O: output
+   'output-class|oc|format-class|fc=s'       => \$outputClass,
+   'output-encoding|oe|format-encoding|fe=s' => \$outputOpts{encoding},
+   'output-option|oo=s'                      => \%outputOpts,
+   'output-level|ol|format-level|fl=s'       => \$outputOpts{level},
+   'output-format|output-file|output|o=s'    => \$outfmt,
+  );
+
+GetOptions(%global_opts, %child_opts);
 if ($version) {
   print cab_version;
   exit(0);
@@ -90,17 +121,53 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 #pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
 
 ##==============================================================================
-## MAIN
+## MAIN: Initialize (main thread only)
 ##==============================================================================
 
-##-- log4perl initialization
+##-- main: init: globals
+our ($ifmt,$ofmt,$doc, $forkp,$statq);
+our $blocki=0;  ##-- should re-initialize $blocki=0 for each document in each child process!
+our $ntoks = 0; ##-- TODO: pass $ntoks,$nchrs back to parent process (e.g. in separate queue file)
+our $nchrs = 0;
+
+##-- save per-job overridable options
+our $_inputClass = $inputClass;
+our %_inputOpts  = %inputOpts;
+our $_inputWords = $inputWords;
+our $_blocksize  = $blocksize;
+our $_block_sents = $block_sents;
+our $_outputClass = $outputClass;
+our %_outputOpts  = %outputOpts;
+our $_outfmt      = $outfmt;
+
+##-- main: init: log4perl
 DTA::CAB::Logger->logInit();
 
-##-- hack: set utf8 mode on stdio
+##-- main: init: hack: set utf8 mode on stdio
 binmode(STDOUT,':utf8');
 binmode(STDERR,':utf8');
 
-##-- analyzer
+##------------------------------------------------------
+## main: init: queues
+
+##-- main: init: queues: job-queue (parent->child)
+$forkp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, qfile=>$jqfile, work=>\&cb_work, installReaper=>0)
+  or die("$0: could not create fork-pool with job-queue '$jqfile'.(dat|idx): $!");
+$forkp->clear()
+  or die("$0: could not clear job-queue '$jqfile'.(dat|idx): $!");
+DTA::CAB->info("created job queue with queue file '$jqfile'.(dat|idx)");
+
+##-- main: init: queues: stats-queue (child->parent)
+if ($doProfile) {
+  $statq = DTA::CAB::Queue::File->new(file=>$sqfile)
+    or die("$0: could not create stat-queue file '$sqfile'.(dat|idx): $!");
+  $statq->clear()
+    or die("$0: could not clear stat-queue file '$sqfile'.(dat|idx): $!");
+  DTA::CAB->info("create stat-queue file '$sqfile'.(dat|idx)");
+}
+
+##------------------------------------------------------
+## main: init: analyzer
 $analyzeClass = "DTA::CAB::Analyzer::$analyzeClass" if ($analyzeClass !~ /\:\:/);
 eval "use $analyzeClass;";
 die("$prog: could not load analyzer class '$analyzeClass': $@") if ($@);
@@ -113,43 +180,191 @@ if (defined($rcFile)) {
     or die("$0: $analyzeClass->new() failed: $!");
 }
 
-##======================================================
-## Input & Output Formats
-
-if ($blocksize) {
-  require Lingua::TT;
-  DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
-  DTA::CAB->debug("using ", ($block_sents ? "sentence" : "token"), "-level block boundaries");
-  $inputClass=$outputClass='TT';
-}
-
-$ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
-  or die("$0: could not create input parser of class $inputClass: $!");
-
-$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
-$ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,,%outputOpts)
-  or die("$0: could not create output formatter of class $outputClass: $!");
-
-DTA::CAB->debug("using input format class ", ref($ifmt));
-DTA::CAB->debug("using output format class ", ref($ofmt));
-
-##======================================================
-## Prepare
-
+##------------------------------------------------------
+## main: init: prepare (load data)
 $cab->prepare(\%analyzeOpts)
   or die("$0: could not prepare analyzer: $!");
 
-##-- profiling
+##------------------------------------------------------
+## main: init: profiling
 our $tv_started = [gettimeofday] if ($doProfile);
-our $ntoks = 0;
-our $nchrs = 0;
 
-##======================================================
+##======================================================================
+## Subs: parse subprocess options
+
+## ($rc,\@argv) = GetChildOptions(\@argv)
+## ($rc,\@argv) = GetChildOptions($argv_str)
+sub GetChildOptions {
+  my ($args) = @_;
+
+  ##-- re-set overridable options
+  our $inputClass = $_inputClass;
+  our %inputOpts  = %_inputOpts;
+  our $inputWords = $_inputWords;
+  our $blocksize  = $_blocksize;
+  our $block_sents = $_block_sents;
+  our $outputClass = $_outputClass;
+  our %outputOpts  = %_outputOpts;
+  our $outfmt      = $_outfmt;
+
+  ##-- parse arguments
+  my ($rc,$argv);
+  if (UNIVERSAL::isa($args,'ARRAY')) {
+    $rc = Getopt::Long::GetOptionsFromArray($args,%child_opts);
+  } else {
+    ($rc,$argv) = Getopt::Long::GetOptionsFromString($args,%child_opts);
+  }
+  return ($rc,$argv);
+}
+
+##======================================================================
+## Subs: instantiate output file
+
+## $outfile = outfilename($infile,$outfile)
+sub outfilename {
+  my ($infile,$outfmt) = @_;
+  my $d = File::Basename::dirname($infile);
+  my $b = File::Basename::basename($infile);
+  my $x = '';
+  if ($b =~ /^(.*)\.([^\.\/]*)$/) {
+    ($b,$x) = ($1,$2);
+  }
+  my $outfile = $outfmt;
+  $outfile =~ s|%f|%d/%b|g;
+  $outfile =~ s|%d|$d|g;
+  $outfile =~ s|%b|$b|g;
+  $outfile =~ s|%x|$x|g;
+  return $outfile;
+}
+
+##======================================================================
+## Subs: child process callback
+
+## cb_work(\@args)
+## cb_work($args_str)
+##  + worker callback for child threads
+sub cb_work {
+  my ($forkp,$args) = @_;
+
+  ##----------------------------------------------------
+  ## parse/override options
+  my ($rc,$argv) = GetChildOptions($args);
+
+  ##----------------------------------------------------
+  ## Global (re-)initialization
+  $blocki=0;
+  $outfile=outfilename(($argv->[0]||'out'),$outfmt); ##-- may be overridden
+  if ($forkp->is_child) {
+    $ntoks=0;
+    $nchrs=0;
+    #DTA::CAB->logdie("dying to debug") if (!@{$forkp->{pids}}); ##-- DEBUG
+  }
+
+  ##----------------------------------------------------
+  ## Input & Output Formats
+  if ($blocksize) {
+    require Lingua::TT;
+    DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
+    DTA::CAB->debug("using ", ($block_sents ? "sentence" : "token"), "-level block boundaries");
+    $inputClass='TT'         if (!defined($inputClass)  || (uc($inputClass)  !~ /^T[TJ]$/));
+    $outputClass=$inputClass if (!defined($outputClass) || (uc($outputClass) !~ /^T[TJ]$/));
+  }
+
+  $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$argv->[0],%inputOpts)
+    or die("$0: could not create input parser of class $inputClass: $!");
+
+  $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
+  $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOpts)
+    or die("$0: could not create output formatter of class $outputClass: $!");
+
+  DTA::CAB->debug("using input format class ", ref($ifmt));
+  DTA::CAB->debug("using output format class ", ref($ofmt));
+
+  ##----------------------------------------------------
+  ## Analyze
+  our ($file,$doc);
+  if ($inputWords) {
+    ##-- word input mode
+    my @words = map { $inputOpts{encoding} ? decode($inputOpts{encoding},$_) : $_ } @$argv;
+    $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
+
+    $cab->trace("analyzeDocument($words[0], ...)");
+    $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
+
+    $ofmt->trace("putDocumentRaw($words[0], ...)");
+    $ofmt->putDocumentRaw($doc);
+
+    if ($doProfile) {
+      $ntoks += $doc->nTokens;
+      $nchrs += length($_) foreach (@words);
+    }
+
+    $ofmt->trace("toFile($outfile)");
+    $ofmt->toFile($outfile);
+  } elsif (defined($blocksize)) {
+    ##-- file input mode, block-wise tt
+    push(@$argv,'-') if (!@$argv);
+    my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>$outputOpts{encoding})
+      or die("$0: could not open output file '$outfile': $!");
+    my $inbuf = '';
+    my $buflen = 0;
+
+    foreach $file (@$argv) {
+      $cab->info("processing file '$file'");
+      my $ttin = Lingua::TT::IO->fromFile($file,encoding=>$inputOpts{encoding})
+	or die("$0: could not open input file '$file': $!");
+      my $infh = $ttin->{fh};
+      while (defined($_=<$infh>)) {
+	$inbuf .= $_;
+	if (++$buflen >= $blocksize && (!$block_sents || /^$/)) {
+	  analyzeBlock(\$inbuf,$ttout);
+	  $buflen = 0;
+	  $inbuf  = '';
+	}
+      }
+      $infh->close();
+    }
+    analyzeBlock(\$inbuf,$ttout) if ($buflen>0);
+  } else {
+    ##-- file input mode, doc-wise
+    push(@$argv,'-') if (!@$argv);
+    foreach $file (@$argv) {
+      $cab->info("processing file '$file'");
+
+      $ifmt->trace("parseFile($file)");
+      $doc = $ifmt->parseFile($file)
+	or die("$0: parse failed for input file '$file': $!");
+
+      $cab->trace("analyzeDocument($file)");
+      $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
+
+      $ofmt->trace("putDocumentRaw($file)");
+      $ofmt->putDocumentRaw($doc);
+
+      if ($doProfile) {
+	$ntoks += $doc->nTokens;
+	$nchrs += (-s $file) if ($file ne '-');
+      }
+    }
+
+    $ofmt->trace("toFile($outfile)");
+    $ofmt->toFile($outfile);
+  }
+
+  ##-- save profiling info to stat-queue
+  if ($forkp->is_child && $doProfile) {
+    $statq->enq("$ntoks $nchrs");
+  }
+
+  return 0;
+}
+##--/cb_work
+
+##======================================================================
 ## Subs: analyze: block-wise
 
 ## undef = analyzeBlock(\$inbuf,$ttout)
 ## undef = analyzeBlock(\$inbuf,$ttout,$infile)
-our $blocki=0;
 sub analyzeBlock {
   my ($inbufr,$ttout,$infile) = @_;
   ++$blocki;
@@ -166,7 +381,7 @@ sub analyzeBlock {
   $ttout->{fh}->print($ofmt->{outbuf});
   $ofmt->flush;
 
-  if ($doProfile) {
+  if ($forkp->is_child && $doProfile) {
     $ntoks += $doc->nTokens;
     $nchrs += length($$inbufr);
     ##-- show running profile information
@@ -174,87 +389,66 @@ sub analyzeBlock {
   }
 }
 
+##======================================================================
+## MAIN: guts
 
-##======================================================
-## Analyze
-
-our ($file,$doc);
-if ($inputWords) {
-  ##-- word input mode
-  my @words = map { $inputOpts{encoding} ? decode($inputOpts{encoding},$_) : $_ } @ARGV;
-  $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
-
-  $cab->trace("analyzeDocument($words[0], ...)");
-  $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
-
-  $ofmt->trace("putDocumentRaw($words[0], ...)");
-  $ofmt->putDocumentRaw($doc);
-
-  if ($doProfile) {
-    $ntoks += $doc->nTokens;
-    $nchrs += length($_) foreach (@words);
+##------------------------------------------------------
+## main: guts: prepare queue
+my $n_args = 0;
+push(@ARGV,'-') if (!@ARGV);
+if ($inputList) {
+  while (<>) {
+    chomp;
+    next if (/^\s*$/ || /^\s*\#/ || /^\s*\%\%/); ##-- ignore comments and blank lines
+    $forkp->enq($_);
+    ++$n_args;
   }
-
-  $ofmt->trace("toFile($outfile)");
-  $ofmt->toFile($outfile);
+} else {
+  $forkp->enq($_) foreach (@ARGV);
+  $n_args = @ARGV;
 }
-elsif (defined($blocksize)) {
-  ##-- file input mode, block-wise tt
-  push(@ARGV,'-') if (!@ARGV);
-  my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>$outputOpts{encoding})
-    or die("$0: could not open output file '$outfile': $!");
-  my $inbuf = '';
-  my $buflen = 0;
+DTA::CAB->info("populated job-queue '$jqfile'.(dat|idx) with $n_args item(s)");
 
-  foreach $file (@ARGV) {
-    $cab->info("processing file '$file'");
-    my $ttin = Lingua::TT::IO->fromFile($file,encoding=>$inputOpts{encoding})
-      or die("$0: could not open input file '$file': $!");
-    my $infh = $ttin->{fh};
-    while (defined($_=<$infh>)) {
-      $inbuf .= $_;
-      if (++$buflen >= $blocksize && (!$block_sents || /^$/)) {
-	analyzeBlock(\$inbuf,$ttout);
-	$buflen = 0;
-	$inbuf  = '';
-      }
-    }
-    $infh->close();
-  }
-  analyzeBlock(\$inbuf,$ttout) if ($buflen>0);
-}
-else {
-  ##-- file input mode, doc-wise
-  push(@ARGV,'-') if (!@ARGV);
-  foreach $file (@ARGV) {
-    $cab->info("processing file '$file'");
-
-    $ifmt->trace("parseFile($file)");
-    $doc = $ifmt->parseFile($file)
-      or die("$0: parse failed for input file '$file': $!");
-
-    $cab->trace("analyzeDocument($file)");
-    $doc = $cab->analyzeDocument($doc,\%analyzeOpts);
-
-    $ofmt->trace("putDocumentRaw($file)");
-    $ofmt->putDocumentRaw($doc);
-
-    if ($doProfile) {
-      $ntoks += $doc->nTokens;
-      $nchrs += (-s $file) if ($file ne '-');
-    }
-  }
-
-  $ofmt->trace("toFile($outfile)");
-  $ofmt->toFile($outfile);
+##------------------------------------------------------
+## main: guts: process queue
+if ($njobs < 1) {
+  ##-- no (forked) jobs: just process the queue in the main thread
+  $forkp->process();
+} else {
+  ##-- spawn specified number of subprocesses and run them
+  $forkp->{njobs} = $n_args if ($forkp->{njobs} > $n_args); ##-- sanity check: don't fork() more than we need to
+  $forkp->spawn();
 }
 
-##======================================================
-## all done
+##======================================================================
+## MAIN: cleanup
 
+##-- main: cleanup: fork pool
+$SIG{CHLD} = undef; ##-- remove installed reaper-sub, if any
+$forkp->waitall();
+
+##-- main: cleanup: get profiling from stat queue
+if ($doProfile) {
+  my ($statline, $_ntoks,$_nchrs);
+  $statq->reopen();
+  while (defined($statline=$statq->deq)) {
+    ($_ntoks,$_nchrs) = split(' ',$statline);
+    $ntoks += $_ntoks;
+    $nchrs += $_nchrs;
+  }
+}
+
+##-- main: cleanup: profiling
 DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
 DTA::CAB::Logger->info("program exiting normally.");
 
+##-- main: cleanup: queues
+END {
+  if (!$forkp || !$forkp->is_child) {
+    $forkp->unlink() if ($forkp && !$keeptmp);
+    $statq->unlink() if ($statq && !$keeptmp);
+  }
+}
 
 __END__
 =pod
@@ -267,11 +461,17 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
  dta-cab-analyze.perl [OPTIONS...] DOCUMENT_FILE(s)...
 
- General Options:
+ General Options
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- alias for -log-level=LEVEL
+
+ Parallelization Options
+  -jobs NJOBS                     ##-- fork() off up to NJOBS parallel jobs (default=0: don't fork() at all)
+  -job-queue QFILE                ##-- use QFILE as job-queue file (default: temporary)
+  -stat-queue QFILE               ##-- use QFILE as stats-queue file (default: temporary; only if -profile is set)
+  -keep , -nokeep                 ##-- do/don't keep temporary queue files (default: don't)
 
  Analysis Options
   -config PLFILE                  ##-- load analyzer config file PLFILE
@@ -281,7 +481,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
  I/O Options
   -words                          ##-- arguments are word text, not filenames
-  -block-size NLINES              ##-- streaming block-wise analysis (implies -ic=TT -oc=TT)
+  -block-size NLINES              ##-- streaming block-wise analysis (only for 'TT','TJ' classes)
   -block-sents , -block-toks      ##-- do/don't force block boundaries to be EOS (default=don't)
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)

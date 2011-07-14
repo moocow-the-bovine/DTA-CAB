@@ -35,7 +35,7 @@ sub new {
     CORE::delete($args{separator});
   }
   $args{file} = tmpfsfile('qXXXXXXX') if (!defined($args{file}));
-  my $q = $that->SUPER::new(seperator=>$/,%args);
+  my $q = $that->SUPER::new(seperator=>$/,mode=>0600,%args);
   @$q{keys %args} = values %args; ##-- save args
   return $q;
 }
@@ -63,13 +63,14 @@ sub reopen {
 
 ## undef = $q->reset()
 ##  + clear the queue
+sub clear { $_[0]->reset(); }
 
 ## undef = $q->close()
 ##  + close the queue filehandles
 
 ## undef = $q->delete()
 ##  + delete queue file(s)
-*unlink = \&File::Queue::delete;
+sub unlink { $_[0]->delete(); }
 
 1;
 
