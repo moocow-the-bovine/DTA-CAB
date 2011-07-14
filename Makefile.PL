@@ -60,6 +60,7 @@ WriteMakefile
 		    'Time::HiRes'=>undef,
 		    ##--
 		    File::Queue => undef,
+		    File::Temp  => undef,
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,
