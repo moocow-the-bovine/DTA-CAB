@@ -5,7 +5,7 @@
 ## Description: file-based queue
 
 package DTA::CAB::Queue::File;
-use DTA::CAB::Datum;
+use DTA::CAB::Utils ':temp';
 use File::Queue;
 use Carp;
 use strict;
@@ -23,7 +23,7 @@ our @ISA = qw(DTA::CAB::Logger File::Queue);
 ## $q = DTA::CAB::Queue::File->new(%args)
 ##  + %$q, %args:
 ##    (
-##     file => $filename,   ##-- basename of queue file (will have .dat,.idx suffixes)
+##     file => $filename,   ##-- basename of queue file (will have .dat,.idx suffixes); default=tmpfsfile('qXXXXXXX')
 ##     mode => $mode,       ##-- creation mode (default=0660)
 ##     seperator => $str,   ##-- item separator string (default=$/) [typo in name is (sic): bummer]
 ##    )
@@ -34,6 +34,7 @@ sub new {
     $args{seperator} = $args{separator};
     CORE::delete($args{separator});
   }
+  $args{file} = tmpfsfile('qXXXXXXX') if (!defined($args{file}));
   my $q = $that->SUPER::new(seperator=>$/,%args);
   @$q{keys %args} = values %args; ##-- save args
   return $q;

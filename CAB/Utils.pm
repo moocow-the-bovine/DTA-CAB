@@ -27,9 +27,37 @@ our %EXPORT_TAGS =
      profile => [qw(si_str profile_str)],
      version => [qw(cab_version)],
      threads => [qw(threads_enabled downup)],
+     temp => [qw(tmpfsdir tmpfsfile)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
+
+##==============================================================================
+## Functions: temporaries
+##==============================================================================
+
+## $dir = tmpfsdir()
+##  + gets temporary directory:
+##  + first writable directory among @ENV{qw(TMP TMPDIR)},"/tmpfs","/dev/shm","/tmp","."
+##  + returns undef if none of the above succeeds
+sub tmpfsdir {
+  foreach (@ENV{qw(TMP TMPDIR)},qw(/tmpfs /dev/shm /tmp .)) {
+    return $_ if (defined($_) && -d $_ && -w $_);
+  }
+  return undef;
+}
+
+## $filename   = tmpfsfile($template,%args)
+## ($fh,$file) = tmpfsfile($template,%args)
+##   + default %args = (DIR=>tmpfsdir())
+sub tmpfsfile {
+  use File::Temp;
+  my ($template,%args) = @_;
+  my ($fh,$file) = File::Temp::tempfile($template, DIR=>tmpfsdir(), %args);
+  return ($fh,$file) if (wantarray);
+  $fh->close();
+  return $file;
+}
 
 ##==============================================================================
 ## Functions: threads & semaphores
