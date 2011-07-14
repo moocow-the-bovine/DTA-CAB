@@ -460,7 +460,7 @@ DTA::CAB::Logger->info("program exiting normally.");
 sub cleanup {
   if (!$forkp || !$forkp->is_child) {
     #print STDERR "$0: END block running\n"; ##-- DEBUG
-    $forkp->abort();
+    $forkp->abort()  if ($forkp);
     $forkp->unlink() if ($forkp && !$keeptmp);
     $statq->unlink() if ($statq && !$keeptmp);
   }
