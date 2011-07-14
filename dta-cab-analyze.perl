@@ -53,6 +53,7 @@ our %outputOpts  = (encoding=>undef,level=>0);
 
 our $blocksize   = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
 our $block_sents = 0;           ##-- must block boundaries coincide with sentence boundaries?
+our $block_profile = 'debug';   ##-- block log level ('none' to disable)
 our $default_blocksize = 65535; ##-- default block size if -block is specified
 our $outfmt      = '-';         ##-- can use macros %d=dirname($infile), %b=basename($infile), %x=extension($infile), %f=%d/%b
 our ($outfile);
@@ -98,7 +99,9 @@ our %child_opts =
    'input-option|io|parser-option|po=s'      => \%inputOpts,
    'tokens|t|words|w!'                       => \$inputWords,
    'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
-   'noblock|B' => sub { undef $blocksize; },
+   'noblock|B'                               => sub { undef $blocksize; },
+   'block-profile|bp=s'                      => \$block_profile,
+   'noblock-profile|nobp'                    => sub { undef $block_profile; },
    'block-sentences|block-sents|bS!'         => \$block_sents,
    'block-tokens|block-toks|bT'              => sub { $block_sents=!$_[1]; },
 
@@ -146,6 +149,17 @@ DTA::CAB::Logger->logInit();
 ##-- main: init: hack: set utf8 mode on stdio
 binmode(STDOUT,':utf8');
 binmode(STDERR,':utf8');
+
+##------------------------------------------------------
+## main: init: signals
+sub cleandie {
+  cleanup();
+  exit(1);
+}
+$SIG{INT} = \&cleandie;
+$SIG{ABRT} = \&cleandie;
+$SIG{HUP} = \&cleandie;
+$SIG{TERM} = \&cleandie;
 
 ##------------------------------------------------------
 ## main: init: queues
@@ -381,11 +395,11 @@ sub analyzeBlock {
   $ttout->{fh}->print($ofmt->{outbuf});
   $ofmt->flush;
 
-  if ($forkp->is_child && $doProfile) {
+  if ($doProfile) {
     $ntoks += $doc->nTokens;
     $nchrs += length($$inbufr);
     ##-- show running profile information
-    DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
+    DTA::CAB::Logger->logProfile($block_profile, tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
   }
 }
 
@@ -443,11 +457,17 @@ DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $n
 DTA::CAB::Logger->info("program exiting normally.");
 
 ##-- main: cleanup: queues
-END {
+sub cleanup {
   if (!$forkp || !$forkp->is_child) {
+    #print STDERR "$0: END block running\n"; ##-- DEBUG
+    $forkp->abort();
     $forkp->unlink() if ($forkp && !$keeptmp);
     $statq->unlink() if ($statq && !$keeptmp);
   }
+}
+
+END {
+  cleanup();
 }
 
 __END__

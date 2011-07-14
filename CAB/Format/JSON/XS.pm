@@ -37,7 +37,7 @@ BEGIN {
 ##     jxs => $json_xs_object,         ##-- json codec object
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
-##     #encoding => $encoding,         ##-- n/a: always UTF-8 octets
+##     #encoding  => $encoding,         ##-- n/a: always UTF-8 octets
 ##     level     => $formatLevel,      ##-- 0:raw, 1:pretty, ... (default=0)
 ##     outbuf    => $stringBuffer,     ##-- buffered output
 ##    )
@@ -51,7 +51,7 @@ sub new {
 		   #doc => undef,
 
 		   ##-- guts
-		   jxs => JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1),
+		   jxs => JSON::XS->new->utf8(0)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1),
 
 		   ##-- Output
 		   level  => 0,
@@ -108,7 +108,7 @@ sub parseJsonString {
   my $fmt = shift;
   my ($doc);
   #$doc = $fmt->{jxs}->decode($_[0])
-  $doc = $fmt->{jxs}->decode(utf8::is_utf8($_[0]) ? Encode::encode_utf8($_[0]) : $_[0])
+  $doc = $fmt->{jxs}->decode(utf8::is_utf8($_[0]) ? $_[0] :Encode::decode_utf8($_[0]))
     or $fmt->warn("parseJsonString(): JSON::XS::decode() failed: $!");
   $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;

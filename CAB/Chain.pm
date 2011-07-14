@@ -32,14 +32,14 @@ BEGIN {
 ##     chain => [ $a1, $a2, ..., $aN ],        ##-- default analysis chain; see also chain() method (default: empty)
 ##
 ##     ##-- verbose trace
-##     logTrace => $level,                     ##-- trace sub-analyzer execution
+##     logTrace => $level,                     ##-- trace sub-analyzer execution (default: 'none')
 ##    )
 sub new {
   my $that = shift;
   my $ach = bless({
 		   ##-- user args
 		   chain => [],
-		   logTrace => 'trace',
+		   logTrace => 'none',
 		   @_
 		  }, ref($that)||$that);
   $ach->initialize();

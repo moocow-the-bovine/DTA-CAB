@@ -107,7 +107,7 @@ sub fromString {
 sub jsonxs {
   require JSON::XS;
   return $_[0]{jxs} if (defined($_[0]{jxs}));
-  return $_[0]{jxs} = JSON::XS->new->utf8(1)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
+  return $_[0]{jxs} = JSON::XS->new->utf8(0)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
 }
 
 
@@ -120,9 +120,9 @@ sub parseTJString {
   my $fmt = shift;
 
   my $srcr = \$_[0];
-  if (utf8::is_utf8($$srcr)) {
+  if (!utf8::is_utf8($$srcr)) {
     ##-- JSON::XS likes byte-string input
-    my $src = encode_utf8($$srcr);
+    my $src = decode_utf8($$srcr);
     $srcr   = \$src;
   }
 
@@ -149,21 +149,21 @@ sub parseTJString {
 	      qw()
 	    } elsif ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
 	      ##-- (tt-compat) special comment: document attribute: xml:base
-	      $doca{'base'} = decode_utf8($1);
+	      $doca{'base'} = $1;
 	      qw()
 	    } elsif ($_ =~ /^\%\% Sentence (.*)$/) {
 	      ##-- (tt-compat) special comment: sentence attribute: xml:id
-	      $sa{'id'} = decode_utf8($1);
+	      $sa{'id'} = $1;
 	      qw()
 	    } elsif ($_ =~ /^\%\%(.*)$/) {
 	      ##-- (tt-compat) generic line: add to _cmts
-	      push(@{$sa{_cmts}},decode_utf8($1)); ##-- generic doc- or sentence-level comment
+	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
 	      qw()
 	    } else {
 	      ##-- vanilla token
 	      ($text,$json) = split(/\t/,$_,2);
 	      $tok = (defined($json) && $json ne '' ? $jxs->decode($json) : {});
-	      $tok->{text}=decode_utf8($text) if (!defined($tok->{text}));
+	      $tok->{text}=$text if (!defined($tok->{text}));
 	      $tok
 	    }
 	  }
@@ -239,10 +239,8 @@ sub putToken {
 
   $_[0]{outbuf} .=
     (
-     encode_utf8(
-		 ($_[1]{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$_[1]{_cmts}}) : '')
-		 .$_[1]{text}
-		)
+     ($_[1]{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$_[1]{_cmts}}) : '')
+     .$_[1]{text}
      ."\t"
      .$_[0]->jsonxs->encode(($_[0]{level}||0) >= 0
 			    ? $_[1]
@@ -259,7 +257,7 @@ sub putToken {
 sub putSentence {
   #my ($fmt,$sent) = @_;
   my $sh = {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
-  $_[0]{outbuf} .=  encode_utf8('%%$TJ:SENT='.$_[0]->jsonxs->encode($sh)) if (%$sh);
+  $_[0]{outbuf} .=  '%%$TJ:SENT='.$_[0]->jsonxs->encode($sh) if (%$sh);
   $_[0]->putToken($_) foreach (@{toSentence($_[1])->{tokens}});
   $_[0]->{outbuf} .= "\n";
   return $_[0];
@@ -270,7 +268,7 @@ sub putSentence {
 sub putDocument {
   #my ($fmt,$doc) = @_;
   my $dh = {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
-  $_[0]{outbuf} .= encode_utf8('%%$TJ:DOC='.$_[0]->jsonxs->encode($dh)."\n") if (%$dh);
+  $_[0]{outbuf} .= '%%$TJ:DOC='.$_[0]->jsonxs->encode($dh)."\n" if (%$dh);
   $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
   $_[0]->{outbuf} .= "\n";
   return $_[0];

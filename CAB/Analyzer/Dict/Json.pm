@@ -93,7 +93,7 @@ sub ensureLoaded {
     $dic->info("loading dictionary file '$dic->{dictFile}'");
     $rc &&= $dic->{ttd}->loadFile($dic->{dictFile}, encoding=>$dic->{encoding});
 
-    ##-- json likes to parse utf8 byte strings, so we munge them back here
+    ##-- json with utf8(1) wants utf8-encoded octets, so we munge them here
     foreach (values %{$dic->{ttd}{dict}}) {
       $_ = Encode::encode_utf8($_) if (utf8::is_utf8($_));
     }
