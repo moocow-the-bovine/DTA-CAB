@@ -9,6 +9,7 @@ use Exporter;
 use Carp;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
+use File::Temp;
 use strict;
 
 ##==============================================================================
@@ -27,7 +28,7 @@ our %EXPORT_TAGS =
      profile => [qw(si_str profile_str)],
      version => [qw(cab_version)],
      threads => [qw(threads_enabled downup)],
-     temp => [qw(tmpfsdir tmpfsfile)],
+     temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
@@ -55,14 +56,22 @@ sub GetStringOptions {
 ##==============================================================================
 
 ## $dir = tmpfsdir()
-##  + gets temporary directory:
-##  + first writable directory among @ENV{qw(CAB_TMPDIR TMPDIR TMP)},"/tmpfs","/dev/shm","/tmp","."
+##  + gets root temporary directory:
+##    first writable directory among @ENV{qw(CAB_TMPDIR TMPDIR TMP)},"/tmpfs","/dev/shm","/tmp","."
 ##  + returns undef if none of the above succeeds
 sub tmpfsdir {
   foreach (@ENV{qw(CAB_TMPDIR TMP TMPDIR)},qw(/tmpfs /dev/shm /tmp .)) {
     return $_ if (defined($_) && -d $_ && -w $_);
   }
   return undef;
+}
+
+## $dir = mktmpfsdir($template,%args)
+##  + creates new temp directory in tmpfsdir()
+sub mktmpfsdir {
+  my ($template,%args) = @_;
+  $template = "tmpXXXXX" if (!defined($template));
+  return File::Temp::tempdir($template, DIR=>tmpfsdir(), %args);
 }
 
 ## $filename   = tmpfsfile($template,%args)

@@ -188,7 +188,12 @@ sub fromFile {
 ##  + default just calls $fmt->fromString()
 sub fromFh {
   my ($fmt,$fh) = @_;
-  return $fmt->fromString(join('',$fh->getlines));
+  my ($buf);
+  {
+    local $/ = undef;
+    $buf = $fh->getline;
+  }
+  return $fmt->fromString($buf);
 }
 
 ##--------------------------------------------------------------

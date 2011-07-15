@@ -26,6 +26,10 @@ use DTA::CAB::Format::XmlTokWrap;
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
 #use DTA::CAB::Format::XmlVz;
+
+use DTA::CAB::Format::TEI; ##-- debug
+#eval "use DTA::CAB::Format::TEI"; ##-- only available if DTA::TokWrap is installed
+
 use strict;
 
 1; ##-- be happy
