@@ -88,6 +88,7 @@ sub new {
 			      arrayImplicitKeys => {
 						    body=>undef,
 						    tokens=>undef,
+						    'a'=>undef,
 						   },
 
 			      ##-- user args
