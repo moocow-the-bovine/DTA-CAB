@@ -229,6 +229,16 @@ sub parseDocument {
 ## Methods: Output
 ##==============================================================================
 
+##--------------------------------------------------------------
+## Methods: Output: MIME & HTTP stuff
+
+## $short = $fmt->shortName()
+##  + returns "official" short name for this format
+##  + default just returns package suffix
+sub shortName {
+  return 'tei';
+}
+
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format (default='.cab')
 sub defaultExtension { return '.tei.xml'; }

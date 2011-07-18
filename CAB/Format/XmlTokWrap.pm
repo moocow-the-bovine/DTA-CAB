@@ -79,6 +79,10 @@ sub shortName {
   return 'txml';
 }
 
+## $ext = $fmt->defaultExtension()
+##  + returns default filename extension for this format (default='.t.xml')
+sub defaultExtension { return '.t.xml'; }
+
 
 1; ##-- be happy
 
