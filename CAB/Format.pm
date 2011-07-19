@@ -75,6 +75,10 @@ sub new {
   return $fmt;
 }
 
+## undef = $fmt->DESTROY()
+##  + destructor (no default implementation)
+sub DESTROY { ; }
+
 ## $fmt = CLASS->newFormat($class_or_short_or_class_suffix, %opts)
 ##  + wrapper for DTA::CAB::Format::Registry::newFormat(); accepts %opts qw(class file)
 sub newFormat {

@@ -47,6 +47,7 @@ BEGIN {
 ##     ##-- output: new
 ##     arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
 ##     arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
+##     ignoreKeys => \%key2undef,              ##-- keys to ignore for i/o
 ##     key2xml => \%key2xml,                   ##-- maps keys to XML-safe names
 ##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
 ##     ##
@@ -90,6 +91,9 @@ sub new {
 						    tokens=>undef,
 						    'a'=>undef,
 						   },
+			      ignoreKeys => {
+					     'teibufr'=>undef,
+					    },
 
 			      ##-- user args
 			      @_
@@ -124,6 +128,7 @@ sub parseNode {
     ($nod,$cur) = @{pop @stack};
     $name = $nod->nodeName;
     $name = $xml2key->{$name} if (defined($xml2key->{$name}));
+    next if (exists($fmt->{ignoreKeys}{$name}));
 
     if (isa($nod,'XML::LibXML::Element')) {
       ##-- Element

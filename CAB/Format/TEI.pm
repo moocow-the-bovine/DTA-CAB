@@ -83,6 +83,11 @@ sub new {
 			      tw => undef,
 			      twopen => {},
 
+			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
+			      ignoreKeys => {
+					     teibufr=>undef,
+					    },
+
 			      ##-- user args
 			      @_
 			     );
@@ -103,6 +108,15 @@ sub new {
 
   return $fmt;
 }
+
+## $fmt->DESTROY()
+##  + destructor implicitly calls $fmt->rmtmpdir()
+sub DESTROY {
+  my $fmt = shift;
+  $fmt->rmtmpdir();
+  $fmt->SUPER::DESTROY();
+}
+
 
 ##=============================================================================
 ## Methods: Generic
@@ -144,7 +158,9 @@ sub rmtmpdir {
 ##  + close current input source, if any
 sub close {
   my $fmt = shift;
-  $fmt->{tw}->close($fmt->{twdoc}) if ($fmt->{twdoc});
+  $fmt->{twdoc}->close() if ($fmt->{twdoc});
+  delete $fmt->{teibufr};
+  $fmt->rmtmpdir();
   return $fmt->SUPER::close();
 }
 
@@ -163,7 +179,6 @@ sub fromString {
 
   ##-- prepare tei buffer with //c elements
   $str = encode_utf8($str) if (utf8::is_utf8($str));
-  delete($fmt->{teibufr});
 
   if (!$fmt->{addc}) {
     ##-- dump document with predefined //c elements
@@ -181,7 +196,8 @@ sub fromString {
 	or $fmt->logdie("dtatw-add-c.perl failed: $!");
 
     ##-- grab tei buffer
-    $fmt->{teibufr} = DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.chr.xml");
+    $fmt->{teibufr} = DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.chr.xml")
+      if ($fmt->{spliceback});
   }
 
   ##-- run tokwrap
@@ -279,16 +295,12 @@ sub toFh {
 sub putDocument {
   my ($fmt,$doc) = @_;
 
-  ##-- get original TEI-XML buffer
-  my $teibufr = $doc->{teibufr};
-  delete($doc->{teibufr});
-
   ##-- call superclass method
   my $rc = $fmt->SUPER::putDocument($doc);
-  $doc->{teibufr} = $teibufr;
   return $rc if (!$fmt->{spliceback});
 
   ##-- get original TEI-XML buffer
+  my $teibufr = $doc->{teibufr} || $fmt->{teibufr};
   if (!defined($teibufr) || !$$teibufr) {
     $fmt->logwarn("spliceback mode requested but no 'teibufr' document property - using XmlTokWrap format");
     return $rc;
@@ -305,27 +317,33 @@ sub putDocument {
   $fmt->{xdoc}->toFile("$tmpdir/tmp.cab.t.xml")
     or $fmt->logconfess("XML::Document::toFile() failed to $tmpdir/tmp.cab.t.xml: $!");
 
-  ##-- splice in //w, //s
-  DTA::TokWrap::Utils::runcmd("dtatw-add-w.perl -q $tmpdir/tmp.tei.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tw.xml")==0
-      or $fmt->logdie("dtatw-add-w.perl failed: $!");
-  DTA::TokWrap::Utils::runcmd("dtatw-add-s.perl -q $tmpdir/tmp.tei.tw.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tws.xml")==0
+  ##-- splice in //w elements
+  DTA::TokWrap::Utils::runcmd("dtatw-add-w.perl -q $tmpdir/tmp.tei.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tw0.xml")==0
       or $fmt->logdie("dtatw-add-w.perl failed: $!");
 
   ##-- optionally remove //c elements
-  my $spliceback_basefile = "$tmpdir/tmp.tei.tws.xml";
+  my $tw_xml = "$tmpdir/tmp.tei.tw0.xml";
   if (!$fmt->{keepc}) {
-    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $tmpdir/tmp.tei.tws.xml > $tmpdir/tmp.tei.tws.noc.xml")==0
+    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $tmpdir/tmp.tei.tw0.xml > $tmpdir/tmp.tei.tw1.xml")==0
 	or $fmt->logdie("dtatw-rm-c.perl failed: $!");
-    $spliceback_basefile = "$tmpdir/tmp.tei.tws.noc.xml";
+    $tw_xml = "$tmpdir/tmp.tei.tw1.xml";
   }
 
+  ##-- splice in //s elements
+  DTA::TokWrap::Utils::runcmd("dtatw-add-s.perl -q $tw_xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tws.xml")==0
+      or $fmt->logdie("dtatw-add-s.perl failed: $!");
+
   ##-- splice in cab analysis data
-  DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $spliceback_basefile $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
+  DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $tmpdir/tmp.tei.tws.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
       or $fmt->logdie("dtatw-splice.perl failed: $!");
 
   ##-- slurp in spliced-back output
-  my $spliced = DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.tei.spliced.xml");
-  $fmt->{outbuf} = $$spliced;
+  $fmt->{outbuf} = '';
+  DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.tei.spliced.xml",\$fmt->{outbuf})
+      or $fmt->logdie("could not slurp back spliced temp file '$tmpdir/tmp.tei.spliced.xml': $!");
+
+  ##-- cleanup
+  $fmt->rmtmpdir();
 
   return $fmt;
 }
