@@ -102,17 +102,20 @@ GetOptions(##-- General
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O
-	   'query-format-class|format-class|format|fmt|qfc|qf|fc=s' => \$qfo{class},
+	   'query-format-class|query-format|qfmt|qfc|qf=s' => \$qfo{class},
 	   'input-format-class|input-format|ifmt|ifc|if=s' => \$ifo{class},
 	   'output-format-class|output-format|ofmt|ofc|of=s' => \$ofo{class},
+	   'format-class|format|fmt|fc=s' => sub { $qfo{class}=$ifo{class}=$ofo{class}=$_[1]; },
 	   ##
 	   'query-format-option|query-option|qfo|qo=s' => \%qfo,
 	   'input-format-option|input-option|ifo|io=s' => \%ifo,
 	   'output-format-option|ofo|oo=s' => \%ofo,
+	   'format-option|fo=s%' => sub { $qfo{$_[1]}=$ifo{$_[1]}=$ofo{$_[1]}=$_[2]; },
 	   ##
-	   'query-format-encoding|query-encoding|encoding|enc|qfe|qe' => \$qfo{encoding},
+	   'query-format-encoding|query-encoding|qfe|qe' => \$qfo{encoding},
 	   'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
 	   'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
+	   'format-encoding|encoding|enc|fe=s%' => sub { $qfo{encoding}=$ifo{encoding}=$ofo{encoding}=$_[1]; },
 	   ##
 	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => \$ofo{level},
 
@@ -436,6 +439,9 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -query-format-encoding ENC      ##-- select query format encoding (default: 'UTF-8')
   -query-format-option OPT=VALUE  ##-- set query format option
   -(input|output)-format-(class|encoding|option)
+  -format-class CLASS             ##-- set {query,input,output} format classes at once
+  -format-encoding ENC            ##-- set {query,input,output} format encodings at once
+  -format-option                  ##-- set {query,input,output} format options at once
                                   ##-- for non -data mode, set I/O format options
   -output-format-level LEVEL      ##-- override output format level (default: 0)
   -output-file FILE               ##-- set output file (default: STDOUT)

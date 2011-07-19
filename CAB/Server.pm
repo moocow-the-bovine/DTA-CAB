@@ -110,9 +110,10 @@ sub prepareSignalHandlers {
     exit(255);
   };
   my ($sig);
-  foreach $sig (qw(HUP TERM KILL)) {
+  foreach $sig (qw(TERM KILL QUIT INT HUP ABRT SEGV)) {
     $SIG{$sig} = $sig_catcher;
   }
+  #$SIG{$sig} = $sig_catcher foreach $sig (qw(IO URG SYS USR1 USR2)); ##-- DEBUG
   return $sig_catcher;
 }
 

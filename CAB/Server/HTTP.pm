@@ -238,7 +238,14 @@ sub run {
       }
 
     ##-- ... and dump response to client
-    $csock->send_response($rsp) if ($csock->opened);
+    if (!$csock->opened) {
+      $srv->logwarn("client socket closed unexpectedly");
+      next;
+    } elsif ($csock->error) {
+      $srv->logwarn("client socket has errors");
+      next;
+    }
+    $csock->send_response($rsp);
   }
   continue {
     ##-- cleanup after client

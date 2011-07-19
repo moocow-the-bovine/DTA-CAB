@@ -249,7 +249,10 @@ sub xmlNode {
     ($val,$key,$mom) = @{shift @queue};
     $key = $key2xml->{$key} if (defined($key2xml->{$key}));
 
-    if (!defined($val)) {
+    if (exists($fmt->{ignoreKeys}{$key})) {
+      ;##-- ignored: skip it
+    }
+    elsif (!defined($val)) {
       ;##-- undefined: skip it
     }
     elsif (!ref($val)) {
@@ -296,7 +299,7 @@ sub xmlNode {
     else {
       ##-- other: complain
       $fmt->logcarp("xmlNode(): default node generator clause called for key='$key', value='$val'");
-      $nod = $mom->addNewChild
+      $nod = $mom->addNewChild(undef,$key);
     }
   }
 
