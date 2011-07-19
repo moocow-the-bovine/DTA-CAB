@@ -44,7 +44,7 @@ BEGIN {
 ##     ##-- new in TEI
 ##     tmpdir => $dir,                         ##-- temporary directory for this object (default: new)
 ##     keeptmp => $bool,                       ##-- keep temporary directory open
-##     addc => $bool,                          ##-- (input) whether to add //c elements (slow no-op if already present; default=1)
+##     addc => $bool_or_guess,                 ##-- (input) whether to add //c elements (slow no-op if already present; default='guess')
 ##     spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
 ##     keepc => $bool,                         ##-- (output) whether to include //c elements in spliceback-mode output (default=0)
 ##     tw => $tw,                              ##-- underlying DTA::TokWrap object
@@ -75,7 +75,7 @@ sub new {
 			      tmpdir => undef,
 			      keeptmp=>0,
 			      ##
-			      addc => 1,
+			      addc => 'guess',
 			      keepc => 0,
 			      spliceback => 1,
 
@@ -192,7 +192,8 @@ sub fromString {
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.raw.xml: $!");
 
     ##-- ensure //c elements
-    DTA::TokWrap::Utils::runcmd("dtatw-add-c.perl $tmpdir/tmp.raw.xml > $tmpdir/tmp.chr.xml")==0
+    my $addc_args = $fmt->{addc} eq 'guess' ? '-guess' : '-noguess';
+    DTA::TokWrap::Utils::runcmd("dtatw-add-c.perl $addc_args $tmpdir/tmp.raw.xml > $tmpdir/tmp.chr.xml")==0
 	or $fmt->logdie("dtatw-add-c.perl failed: $!");
 
     ##-- grab tei buffer
