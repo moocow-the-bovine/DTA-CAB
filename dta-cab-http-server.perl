@@ -4,6 +4,7 @@ use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Server::HTTP;
 use DTA::CAB::Utils qw(:version);
+use IO::Socket::INET;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
@@ -38,6 +39,7 @@ our $serverPort = undef;
 ##-- Daemon mode options
 our $daemonMode = 0;       ##-- do a fork() ?
 our $pidFile  = undef;     ##-- save PID to a file?
+our $forceStart = undef;   ##-- force start (overwrite old PID file?)
 
 ##-- default log level
 #$DTA::CAB::Logger::defaultLogOpts{level}='INFO';
@@ -58,6 +60,7 @@ GetOptions(##-- General
 	   ##-- Daemon mode options
 	   'daemon|d!'                 => \$daemonMode,
 	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
+	   'force!' => \$forceStart,
 
 	   ##-- Log4perl stuff
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
@@ -120,6 +123,21 @@ sub serverMain {
   $srv->info("exiting");
 }
 
+##-- check whether we can really bind the socket
+my $dargs = $srv->{daemonArgs} || {};
+my $sock  = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN)
+  or DTA::CAB->logdie("cannot bind socket $dargs->{LocalAddr} port $dargs->{LocalPort}: $!");
+undef $sock;
+
+##-- check for existing PID file (don't overrwrite)
+if (defined($pidFile) && -e $pidFile) {
+  if ($forceStart) {
+    $srv->logwarn("serverMain(): PID-file '$pidFile' exists but -force specified: clobbering as requested");
+  } else {
+    $srv->logdie("serverMain(): PID-file '$pidFile' exists: NOT starting a new server (use -force to override)");
+  }
+}
+
 ##-- check for daemon mode
 if ($daemonMode) {
   $SIG{CHLD} = \&CHLD_REAPER; ##-- set handler
@@ -160,8 +178,9 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
   -port   PORT                    ##-- override port to bind (default=8088)
 
  Daemon Mode Options:
+  -pidfile PIDFILE                ##-- save server PID to PIDFILE
   -daemon , -nodaemon             ##-- do/don't fork() a server subprocess
-  -pidfile FILE                   ##-- save server PID to FILE
+  -force  , -noforce              ##-- do/don't overwrite existing PIDFILE (default=don't)
 
  Logging Options:                 ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (internal config only)
