@@ -94,7 +94,7 @@ sub analyzeSentences {
     }
     else {
       ##-- extract lemma from best analysis
-      $m->{lemma} = (sort {$a->{prob}<=>$b->{prob} || $a->{lemma} cmp $b->{lemma}} @a)[0]{lemma};
+      $m->{lemma} = (sort {($a->{prob}||0)<=>($b->{prob}||0) || ($a->{lemma}||'') cmp ($b->{lemma}||'')} @a)[0]{lemma};
     }
   }
 
