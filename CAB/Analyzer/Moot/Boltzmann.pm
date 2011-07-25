@@ -155,6 +155,7 @@ sub {
      } elsif ($w->{msafe}) {
        $mw->{analyses} = [{tag=>'._am_xlit('$w').', prob=>0}];
      } else {
+       $tmp=undef;
        $mw->{analyses} = [
         '._am_dmoot_list2moota(_am_fst_sort(
 					    _am_fst_uniq( ##-- only include cost-minimal unique analyses
