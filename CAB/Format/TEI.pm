@@ -95,6 +95,12 @@ sub new {
 			      @_
 			     );
 
+  if (0) {
+    ##-- DEBUG
+    $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
+    $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
+  }
+
   ##-- temp dir
   my $tmpdir = $fmt->{tmpdir};
   $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_XXXX", CLEAN=>(!$fmt->{keeptmp}))
@@ -207,7 +213,14 @@ sub fromString {
   ##-- run tokwrap
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.chr.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
-  $twdoc->genKey('all')
+  $twdoc->genKey([qw(mkindex),
+		  qw(mkbx0 saveBx0File),
+		  qw(mkbx saveBxFile saveTxtFile),
+		  qw(tokenize0 saveTokFile0),
+		  qw(tokenize1 saveTokFile1),
+		  qw(tok2xml saveXtokFile),
+		  #qw(standoff),
+		 ])
     or $fmt->logdie("could generate $tmpdir/tmp.chr.t.xml with DTA::TokWrap: $!");
   $twdoc->close();
 

@@ -86,13 +86,14 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 sub CHLD_REAPER {
   my $waitedpid = wait();
 
-  ##-- remove pidfile if defined
+  ##-- remove pidfile if it contains the reaped process's PID
   if (defined($pidFile) && -r $pidFile) {
-    open(PIDFILE,"<$pidfile");
-    my $filepid = <PIDFILE>;
-    close PIDFILE;
-    chomp($filepid);
-    unlink($pidFile) if ($filepid && $filepid == $waitedpid);
+    if (open(PIDFILE,"<$pidFile")) {
+      my $filepid = <PIDFILE>;
+      close PIDFILE;
+      chomp($filepid);
+      unlink($pidFile) if ($filepid && $filepid == $waitedpid);
+    }
   }
 
   # loathe sysV: it makes us not only reinstate

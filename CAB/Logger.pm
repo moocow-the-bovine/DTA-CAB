@@ -73,12 +73,12 @@ log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the s
 
   if ($opts{level} && ($opts{stderr} || $opts{file} || $opts{syslog})) {
     ##-- package logger
-    $cfg .= "log4perl.logger.DTA.CAB = $opts{level}, ".join(", ",
+    $cfg .= "log4perl.logger.DTA = $opts{level}, ".join(", ",
 								($opts{stderr} ? 'AppStderr' : qw()),
 								($opts{file}   ? 'AppFile'   : qw()),
 								($opts{syslog} ? 'AppSyslog' : qw()),
 							       )."\n";
-    $cfg .= "log4perl.additivity.DTA.CAB = 0\n";
+    $cfg .= "log4perl.additivity.DTA = 0\n";
   }
 
   ##-- appenders: utils
