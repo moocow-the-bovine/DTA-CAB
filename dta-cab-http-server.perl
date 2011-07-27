@@ -87,7 +87,13 @@ sub CHLD_REAPER {
   my $waitedpid = wait();
 
   ##-- remove pidfile if defined
-  unlink($pidFile) if (defined($pidFile) && -r $pidFile);
+  if (defined($pidFile) && -r $pidFile) {
+    open(PIDFILE,"<$pidfile");
+    my $filepid = <PIDFILE>;
+    close PIDFILE;
+    chomp($filepid);
+    unlink($pidFile) if ($filepid && $filepid == $waitedpid);
+  }
 
   # loathe sysV: it makes us not only reinstate
 

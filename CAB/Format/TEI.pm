@@ -34,6 +34,9 @@ BEGIN {
   *can = \&UNIVERSAL::can;
 }
 
+##-- HACK for broken tokenizer on services.dwds.de (2011-07-27)
+$DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
