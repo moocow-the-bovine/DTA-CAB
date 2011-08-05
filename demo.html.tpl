@@ -8,7 +8,15 @@
     <link rel="stylesheet" type="text/css"  href="/taxi.css" />
     <link rel="icon"       type="image/png" href="/favicon.png"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <script type="ja
+<script type="text/javascript" language="javascript">
+exlexClick() {
+  if (document.getElementById("exlexCheckBox").checked()) {
+    document.getElementById("exlexHidden").value = "1";
+  } else {
+    document.getElementById("exlexHidden").value = "*";
+  }
+}
+</script>
   </head>
   <body>
     <div id="outer">
@@ -81,7 +89,7 @@
                 <tr>
                   <td id="searchLabelE">ExLex:</td>
                   <td>
-                    <label><input type="checkbox" onclick="exlexClick();" checked /></label>
+                    <label><input id="exlexInput" type="checkbox" onclick="exlexClick();" checked /></label>
                   </td>
                 </tr>
                 <tr>
@@ -90,8 +98,8 @@
                 </tr>
               </tbody>
             </table>
-	   <input type="hidden" name="raw" value="1"/>
-	   <input type="hidden" name="exlex_enabled" value="1"/>
+	   <input type="hidden" id="rawHidden" name="raw" value="1"/>
+	   <input type="hidden" id="exlexHidden" name="exlex_enabled" value="1"/>
           </form>
         </div>
       </div>
