@@ -13,7 +13,7 @@ exlexClick() {
   if (document.getElementById("exlexCheckBox").checked()) {
     document.getElementById("exlexHidden").value = "1";
   } else {
-    document.getElementById("exlexHidden").value = "*";
+    document.getElementById("exlexHidden").value = "0";
   }
 }
 </script>
