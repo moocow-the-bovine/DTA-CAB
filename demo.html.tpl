@@ -78,6 +78,12 @@
                   </td>
                 </tr>
                 <tr>
+                  <td id="searchLabelE">ExLex:</td>
+                  <td>
+                    <label><input type="checkbox" name="exlex_enabled" value="1" checked /></label>
+                  </td>
+                </tr>
+                <tr>
                   <td/>
                   <td><input type="submit" name="submit" value="submit" /></td>
                 </tr>
