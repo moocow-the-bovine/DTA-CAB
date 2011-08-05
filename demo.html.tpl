@@ -8,6 +8,7 @@
     <link rel="stylesheet" type="text/css"  href="/taxi.css" />
     <link rel="icon"       type="image/png" href="/favicon.png"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script type="ja
   </head>
   <body>
     <div id="outer">
@@ -80,7 +81,7 @@
                 <tr>
                   <td id="searchLabelE">ExLex:</td>
                   <td>
-                    <label><input type="checkbox" name="exlex_enabled" value="1" checked /></label>
+                    <label><input type="checkbox" onclick="exlexClick();" checked /></label>
                   </td>
                 </tr>
                 <tr>
@@ -90,6 +91,7 @@
               </tbody>
             </table>
 	   <input type="hidden" name="raw" value="1"/>
+	   <input type="hidden" name="exlex_enabled" value="1"/>
           </form>
         </div>
       </div>
