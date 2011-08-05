@@ -154,8 +154,8 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid)\] (.*)$/) {
-		  ##-- token: field: other literal field (exlex, pnd, mapclass, errid)
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|coff|clen|boff|blen)\] (.*)$/) {
+		  ##-- token: field: other literal field (exlex, pnd, mapclass, errid, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
