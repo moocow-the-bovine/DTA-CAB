@@ -20,7 +20,7 @@ our @ISA = qw(DTA::CAB::Format::XmlNative);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:[tuws]\.xml)$/);
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'txml');
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(txml t-xml twxml tw-xml));
 }
 
 BEGIN {

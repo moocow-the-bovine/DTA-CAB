@@ -37,6 +37,7 @@ our $outputClass = undef;  ##-- default output format class
 our %inputOpts   = (encoding=>'UTF-8');
 our %outputOpts  = (encoding=>undef,level=>0);
 our $doProfile   = 1;
+our $listOnly    = 0; ##-- only list formats?
 
 our $outfile = '-';
 
@@ -47,6 +48,7 @@ GetOptions(##-- General
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
 	   'profile|prof!' => \$doProfile,
+	   'list|l!' => \$listOnly,
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
@@ -57,7 +59,7 @@ GetOptions(##-- General
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
 	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
-	   'output-level|ol|format-level|fl|l=s'      => \$outputOpts{level},
+	   'output-level|ol|format-level|fl=s'        => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
 
 	   ##-- Log4perl
@@ -79,6 +81,27 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 
 ##-- log4perl initialization
 DTA::CAB::Logger->logInit();
+
+##======================================================
+## List ?
+sub maxlen {
+  my $max=0;
+  foreach (grep {defined($_)} @_) { $max=length($_) if (length($_)>$max); }
+  return $max;
+}
+if ($listOnly) {
+  my $reg = $DTA::CAB::Format::REG->{reg};
+  my $lshort = maxlen("#CLASS", map {$_->{name}} @$reg)+1;
+  my $llong  = maxlen("#ALIAS", map {$_->{short}} @$reg)+1;
+  #my $lre    = maxlen("#REGEX", map {"$_->{filenameRegex}"} @$reg)+1;
+  my $lfmt   = "%-${lshort}s  %-${llong}s  %s\n";
+  printf $lfmt, '#CLASS','#ALIAS','#REGEX';
+  foreach (@$reg) {
+    printf $lfmt, map {defined($_) ? $_ : '-'} @$_{qw(name short filenameRegex)};
+  }
+  exit 0;
+}
+
 
 ##======================================================
 ## Input & Output Formats
@@ -148,6 +171,7 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
   -help                           ##-- show short usage summary
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
+  -list                           ##-- list all registered output formats and exit
   -verbose LEVEL                  ##-- set default log level
   -profile , -noprofile           ##-- do/don't profile I/O classes (default=do)
 
