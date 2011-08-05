@@ -154,7 +154,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|coff|clen|boff|blen)\] (.*)$/) {
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen)\] (.*)$/) {
 		  ##-- token: field: other literal field (exlex, pnd, mapclass, errid, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
@@ -291,23 +291,13 @@ sub putToken {
   ##-- Location ('loc'), moot compatibile
   $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
 
-  ##-- xml-id
-  $out .= "\t[id] ".$tok->{'id'} if (defined($tok->{id}));
-
   ##-- character list
   #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
 
-  ##-- exception lexicon
-  $out .= "\t[exlex] $tok->{exlex}" if (defined($tok->{exlex}));
-
-  ##-- pnd data
-  $out .= "\t[pnd] $tok->{pnd}" if (defined($tok->{pnd}));
-
-  ##-- cab error-db id
-  $out .= "\t[errid] $tok->{errid}" if (defined($tok->{errid}));
-
-  ##-- mapping class
-  $out .= "\t[mapclass] $tok->{mapclass}" if (defined($tok->{mapclass}));
+  ##-- literal fields
+  foreach (grep {defined($tok->{$_})} qw(id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen)) {
+    $out .= "\t[$_] $tok->{$_}"
+  }
 
   ##-- cab token-preprocessor analyses
   $out .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
