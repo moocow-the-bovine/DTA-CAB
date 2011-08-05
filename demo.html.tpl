@@ -9,13 +9,13 @@
     <link rel="icon"       type="image/png" href="/favicon.png"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <script type="text/javascript" language="javascript">
-exlexClick() {
-  if (document.getElementById("exlexCheckBox").checked()) {
+function exlexClick() {
+  if (document.getElementById("exlexCheckbox").checked) {
     document.getElementById("exlexHidden").value = "1";
   } else {
     document.getElementById("exlexHidden").value = "0";
   }
-}
+};
 </script>
   </head>
   <body>
@@ -89,7 +89,7 @@ exlexClick() {
                 <tr>
                   <td id="searchLabelE">ExLex:</td>
                   <td>
-                    <label><input id="exlexInput" type="checkbox" onclick="exlexClick();" checked /></label>
+                    <label><input id="exlexCheckbox" type="checkbox" onclick="exlexClick();" checked /></label>
                   </td>
                 </tr>
                 <tr>
