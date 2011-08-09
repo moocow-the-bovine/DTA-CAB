@@ -57,9 +57,11 @@ sub new {
 			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),
 			   ##
 			   ##
-			   dmoot => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator
+			   dmoot  => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator ((n>=1)-grams)
+			   dmoot1 => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator (1-grams only)
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),     ##-- moot n-gram disambiguator: sub-morph
-			   moot => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output)
+			   moot  => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; (n>1)-grams)
+			   moot1 => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; 1-grams only)
 			   mootsub => DTA::CAB::Analyzer::MootSub->new(),       ##-- moot tagger, post-processing hacks
 			   mapclass => DTA::CAB::Analyzer::DTAMapClass->new(),  ##-- mapping class (post-moot)
 			   ##
@@ -111,23 +113,26 @@ sub setupChains {
      'default.lts'    =>[@$ach{qw(xlit lts)}],
      'default.eqphox' =>[@$ach{qw(tokpp xlit lts eqphox)}],
      'default.morph'  =>[@$ach{qw(tokpp xlit morph)}],
+     'default.mlatin' =>[@$ach{qw(tokpp xlit       mlatin)}],
      'default.msafe'  =>[@$ach{qw(tokpp xlit morph mlatin msafe)}],
      'default.rw'     =>[@$ach{qw(tokpp xlit rw)}],
      'default.rw.safe'  =>[@$ach{qw(tokpp xlit                  morph mlatin msafe rw)}],
      'default.dmoot'    =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot)}],
-     'default.moot'     =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot dmootsub moot)}],
+     'default.dmoot1'   =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1)}],
+     'default.moot'     =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot)}],
+     'default.moot1'    =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
      'default.base'     =>[@$ach{qw(tokpp xlit exlex lts        morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit exlex lts        morph mlatin msafe rw rwsub)}],
      ##
      'expand.old'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw)}],
      'expand.ext'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
-     'expand.all'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}],
+     'expand.all'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
      'expand.eqpho'   =>[@$ach{qw(exlex       xlit lts                             eqpho)}],
      'expand.eqrw'    =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw             eqrw)}],
-     'expand.eqlemma' =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw                 eqphox dmoot dmootsub moot mootsub eqlemma)}],
-     'default'       =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub)}],
-     'caberr'        =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot dmootsub moot mootsub mapclass)}],
-     'all'           =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot dmootsub moot mootsub eqlemma)}], ##-- dta clients use 'all'!
+     'expand.eqlemma' =>[@$ach{qw(exlex       xlit lts morph mlatin msafe rw                 eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
+     'default'       =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
+     'caberr'        =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
+     'all'           =>[@$ach{qw(exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
@@ -145,7 +150,9 @@ sub setupChains {
   $ach->{chain} = $ach->{chains}{$ach->{defaultChain}};
 
   ##-- force default labels
-  $ach->{$_}{label} = $_ foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach));
+  foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach)) {
+    ($ach->{$_}{label} = $_) =~ s/1$//; ##-- truncate '1' suffix for label (e.g. dmoot1, moot1)
+  }
   return $ach;
 }
 
