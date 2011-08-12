@@ -60,7 +60,7 @@ sub GetStringOptions {
 ##    first writable directory among @ENV{qw(CAB_TMPDIR TMPDIR TMP)},"/tmpfs","/dev/shm","/tmp","."
 ##  + returns undef if none of the above succeeds
 sub tmpfsdir {
-  foreach (@ENV{qw(CAB_TMPDIR TMP TMPDIR)},qw(/tmpfs /dev/shm /tmp .)) {
+  foreach (@ENV{qw(CAB_TMPDIR TMP TMPDIR)},qw(/tmp .)) { #/tmpfs /dev/shm
     return $_ if (defined($_) && -d $_ && -w $_);
   }
   return undef;

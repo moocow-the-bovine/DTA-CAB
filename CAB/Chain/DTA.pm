@@ -58,10 +58,10 @@ sub new {
 			   ##
 			   ##
 			   dmoot  => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator ((n>=1)-grams)
-			   dmoot1 => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator (1-grams only)
+			   #dmoot1 => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator (1-grams only)
 			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),     ##-- moot n-gram disambiguator: sub-morph
 			   moot  => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; (n>1)-grams)
-			   moot1 => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; 1-grams only)
+			   #moot1 => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; 1-grams only)
 			   mootsub => DTA::CAB::Analyzer::MootSub->new(),       ##-- moot tagger, post-processing hacks
 			   mapclass => DTA::CAB::Analyzer::DTAMapClass->new(),  ##-- mapping class (post-moot)
 			   ##
@@ -118,9 +118,9 @@ sub setupChains {
      'default.rw'     =>[@$ach{qw(tokpp xlit rw)}],
      'default.rw.safe'  =>[@$ach{qw(tokpp xlit                  morph mlatin msafe rw)}],
      'default.dmoot'    =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot)}],
-     'default.dmoot1'   =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1)}],
+     #'default.dmoot1'   =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1)}],
      'default.moot'     =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot)}],
-     'default.moot1'    =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
+     #'default.moot1'    =>[@$ach{qw(tokpp xlit       lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
      'default.base'     =>[@$ach{qw(tokpp xlit exlex lts        morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit exlex lts        morph mlatin msafe rw rwsub)}],
      ##
