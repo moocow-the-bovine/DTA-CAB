@@ -32,8 +32,8 @@ our ($help,$man,$version,$verbose);
 
 ##-- forking options
 our $njobs = 0; ##-- default: 0 jobs (process everything in the main thread)
-our $jqfile = tmpfsfile("qjobs_dta_cab_${$}_XXXX", UNLINK=>1);
-our $sqfile = tmpfsfile("qstat_dta_cab_${$}_XXXX", UNLINK=>1);
+our $jqfile = tmpfsfile("dta_cab_qjobs_${$}_XXXX", UNLINK=>1);
+our $sqfile = tmpfsfile("dta_cab_qstat_${$}_XXXX", UNLINK=>1);
 our $keeptmp = 0;
 
 ##-- Log options (see %DTA::CAB::Logger::defaultLogOpts)
@@ -188,15 +188,18 @@ eval "use $analyzeClass;";
 die("$prog: could not load analyzer class '$analyzeClass': $@") if ($@);
 our ($cab);
 if (defined($rcFile)) {
+  DTA::CAB->debug("${analyzeClass}->loadFile($rcFile)");
   $cab = $analyzeClass->loadFile($rcFile)
     or die("$0: load failed for analyzer from '$rcFile': $!");
 } else {
+  DTA::CAB->debug("${analyzeClass}->new()");
   $cab = $analyzeClass->new(%analyzeOpts)
     or die("$0: $analyzeClass->new() failed: $!");
 }
 
 ##------------------------------------------------------
 ## main: init: prepare (load data)
+$cab->debug("prepare()");
 $cab->prepare(\%analyzeOpts)
   or die("$0: could not prepare analyzer: $!");
 
@@ -430,41 +433,46 @@ if ($inputList) {
 
 ##------------------------------------------------------
 ## main: guts: prepare block-wise inputs (pre-split)
-my (@inputs0,@blocks,$blockdir);
 
-my $outfmt0_nb = $outfmt;        ##-- original output format, non-blocked
-my $outfmt0_b  = '%d/%b.out%x';  ##-- temporary output format for block-files
+
+my $_outfmt_nb = $_outfmt;       ##-- original output format, non-blocked
+my $_outfmt_b  = '%d/%b.out%x';  ##-- temporary output format for block-files
+our ($blockdir);                 ##-- temp directory for block files
+our (@blocks);                   ##-- @blocks = ({infile=>$if,outfile=>$of,inblock=>$bif,outblock=>$bof,trim=>$bool})
 if ($blocksize) {
-  $blockdir = mktmpfsdir("blocks${$}_XXXX")
+  $blockdir = mktmpfsdir("dta_cab_blocks_${$}_XXXX")
     or die("$prog: could not create temp directory for block files");
   DTA::CAB->info("splitting inputs into blocks of size <= $blocksize ", ($block_sents ? 'sentences' : 'lines'));
   $blocki = 1;
   foreach my $in_i (0..$#inputs) {
     my $infile  = $inputs[$in_i];
-    my $outfile = outfilename($infile,$outfmt0_nb);
+    my $outfile = outfilename($infile,$_outfmt_nb);
     DTA::CAB->info("splitting input file '$infile'");
     my $infh  = IO::File->new($infile,"<:raw") or die("$prog: could not open input file '$infile': $!");
     my ($blk_i,$blk_n);
     for ($blk_i=0; !$infh->eof(); $blk_i++) {
-      my $inblock  = sprintf("f%0.3d_b%0.3d%s", $in_i, $blk_i, file_extension($infile));
-      my $outblock = outfilename($inblock, $outfmt0_b);
+      my $inblock  = sprintf("%s/f%0.3d_b%0.3d%s", $blockdir, $in_i, $blk_i, file_extension($infile));
+      my $outblock = outfilename($inblock, $_outfmt_b);
       DTA::CAB->info("creating block-input file '$inblock'");
-      my $blkfh = IO::File->new($blkfile,">:raw") or die("$prog: could not open temporary block file '$inblock': $!");
+      my $blkfh = IO::File->new($inblock,">:raw") or die("$prog: could not open temporary block file '$inblock': $!");
       my $blk_n = 0;
+      my $blk_trim = 0;
       while (defined($_=<$infh>)) {
 	$blkfh->print($_);
-	last if (++$blk_n >= $blksize && (!$block_sents || m/^$/));
+	if (++$blk_n >= $blocksize && (!$block_sents || m/^$/)) {
+	  $blk_trim = ($_ =~ m/^$/ ? 0 : 1);
+	  last;
+	}
       }
       $blkfh->close();
       ##-- save block info
-      push(@blocks,{'infile'=>$infile,'outfile'=>$outfile,'inblock'=>$inblock,'outblock'=>$outblock});
+      push(@blocks,{'infile'=>$infile,'outfile'=>$outfile,'inblock'=>$inblock,'outblock'=>$outblock,'trim'=>$blk_trim});
     }
     $infh->close();
   }
 
   ##-- tweak @inputs to read from temporary block-files
-  $outfmt  = $outfmt0_b;
-  @inputs0 = @inputs;
+  $_outfmt = $outfmt = $_outfmt_b;
   @inputs  = (map {$_->{inblock}} @blocks);
 }
 
@@ -502,15 +510,18 @@ if (@blocks) {
   foreach my $blk (@blocks) {
     DTA::CAB->info("merging '$blk->{outblock}' -> '$blk->{outfile}'");
     $outblock = $blk->{outblock};
-    $blkfh = IO::File->new($blkfh,"<:raw")
+    $blkfh = IO::File->new($outblock,"<:raw")
       or die("$prog: open failed for read from block-output file '$outblock': $!");
+    my $blk_trim = $blk->{trim};
     if (!defined($outfile) || $blk->{outfile} ne $outfile) {
       $outfile = $blk->{outfile};
       $outfh->close if (defined($outfh));
       $outfh = IO::File->new($outfile,">:raw")
 	or die("$prog: open failed for output file '$outfile': $!");
     }
-    while (defined($_=<$blkfh>)) { $outfh->print($_); }
+    while (defined($_=<$blkfh>) && (!$blk_trim || !$blkfh->eof)) {
+      $outfh->print($_);
+    }
     $blkfh->close();
   }
 }
