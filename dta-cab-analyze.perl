@@ -7,7 +7,8 @@ use DTA::CAB::Datum ':all';
 use DTA::CAB::Fork::Pool;
 use DTA::CAB::Queue::File;
 use Encode qw(encode decode);
-use File::Basename qw(basename);
+use File::Basename qw(basename dirname);
+use File::Path qw(rmtree);
 use IO::File;
 use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -121,7 +122,7 @@ if ($version) {
 
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
-#pod2usage({-exitval=>0, -verbose=>0, -message=>'No config file specified!'}) if (!defined($rcFile));
+pod2usage({-exitval=>0, -verbose=>0, -message=>'cannot combine -list and -blocksize options'}) if ($blocksize && $inputList);
 
 ##==============================================================================
 ## MAIN: Initialize (main thread only)
@@ -215,8 +216,8 @@ sub GetChildOptions {
   our $inputClass = $_inputClass;
   our %inputOpts  = %_inputOpts;
   our $inputWords = $_inputWords;
-  our $blocksize  = $_blocksize;
-  our $block_sents = $_block_sents;
+#  our $blocksize  = $_blocksize;
+#  our $block_sents = $_block_sents;
   our $outputClass = $_outputClass;
   our %outputOpts  = %_outputOpts;
   our $outfmt      = $_outfmt;
@@ -234,13 +235,23 @@ sub GetChildOptions {
 ##======================================================================
 ## Subs: instantiate output file
 
-## $outfile = outfilename($infile,$outfile)
+## $ext = file_extension($filename)
+##  + returns file extension, including leading '.'
+##  + returns empty string if no dot in filename
+sub file_extension {
+  my $file = shift;
+  chomp($file);
+  return $1 if (File::Basename::basename($file) =~ m/(\.[^\.]*)$/);
+  return '';
+}
+
+## $outfile = outfilename($infile,$outfmt)
 sub outfilename {
   my ($infile,$outfmt) = @_;
   my $d = File::Basename::dirname($infile);
   my $b = File::Basename::basename($infile);
   my $x = '';
-  if ($b =~ /^(.*)\.([^\.\/]*)$/) {
+  if ($b =~ /^(.*)(\.[^\.\/]*)$/) {
     ($b,$x) = ($1,$2);
   }
   my $outfile = $outfmt;
@@ -277,9 +288,9 @@ sub cb_work {
   ##----------------------------------------------------
   ## Input & Output Formats
   if ($blocksize) {
-    require Lingua::TT;
-    DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
-    DTA::CAB->debug("using ", ($block_sents ? "sentence" : "token"), "-level block boundaries");
+#    require Lingua::TT;
+#    DTA::CAB->debug("using TT input buffer size = ", $blocksize, " lines");
+#    DTA::CAB->debug("using ", ($block_sents ? "sentence" : "token"), "-level block boundaries");
     $inputClass='TT'         if (!defined($inputClass)  || (uc($inputClass)  !~ /^T[TJ]$/));
     $outputClass=$inputClass if (!defined($outputClass) || (uc($outputClass) !~ /^T[TJ]$/));
   }
@@ -315,8 +326,9 @@ sub cb_work {
 
     $ofmt->trace("toFile($outfile)");
     $ofmt->toFile($outfile);
-  } elsif (defined($blocksize)) {
-    ##-- file input mode, block-wise tt
+  }
+  elsif (0 && $blocksize) {
+    ##-- file input mode, block-wise tt: DISABLED here (now handled by <split, fork, process, merge> strategy)
     push(@$argv,'-') if (!@$argv);
     my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>$outputOpts{encoding})
       or die("$0: could not open output file '$outfile': $!");
@@ -379,7 +391,7 @@ sub cb_work {
 
 ## undef = analyzeBlock(\$inbuf,$ttout)
 ## undef = analyzeBlock(\$inbuf,$ttout,$infile)
-sub analyzeBlock {
+sub analyzeBlock__OLD {
   my ($inbufr,$ttout,$infile) = @_;
   ++$blocki;
   $ifmt->trace("BLOCK=$blocki: parseString()");
@@ -407,19 +419,60 @@ sub analyzeBlock {
 ## MAIN: guts
 
 ##------------------------------------------------------
-## main: guts: prepare queue
-my $n_args = 0;
+## main: guts: parse inputs
+my (@inputs);
 push(@ARGV,'-') if (!@ARGV);
 if ($inputList) {
-  while (<>) {
-    chomp;
-    next if (/^\s*$/ || /^\s*\#/ || /^\s*\%\%/); ##-- ignore comments and blank lines
-    $forkp->enq($_);
-    ++$n_args;
-  }
+  @inputs = grep {!(m/^\s*$/ || m/^\s*\#/ || m/^\s*\%\%/)} map {chomp; $_} <>;
 } else {
-  $forkp->enq($_) foreach (@ARGV);
-  $n_args = @ARGV;
+  @inputs = @ARGV;
+}
+
+##------------------------------------------------------
+## main: guts: prepare block-wise inputs (pre-split)
+my (@inputs0,@blocks,$blockdir);
+
+my $outfmt0_nb = $outfmt;        ##-- original output format, non-blocked
+my $outfmt0_b  = '%d/%b.out%x';  ##-- temporary output format for block-files
+if ($blocksize) {
+  $blockdir = mktmpfsdir("blocks${$}_XXXX")
+    or die("$prog: could not create temp directory for block files");
+  DTA::CAB->info("splitting inputs into blocks of size <= $blocksize ", ($block_sents ? 'sentences' : 'lines'));
+  $blocki = 1;
+  foreach my $in_i (0..$#inputs) {
+    my $infile  = $inputs[$in_i];
+    my $outfile = outfilename($infile,$outfmt0_nb);
+    DTA::CAB->info("splitting input file '$infile'");
+    my $infh  = IO::File->new($infile,"<:raw") or die("$prog: could not open input file '$infile': $!");
+    my ($blk_i,$blk_n);
+    for ($blk_i=0; !$infh->eof(); $blk_i++) {
+      my $inblock  = sprintf("f%0.3d_b%0.3d%s", $in_i, $blk_i, file_extension($infile));
+      my $outblock = outfilename($inblock, $outfmt0_b);
+      DTA::CAB->info("creating block-input file '$inblock'");
+      my $blkfh = IO::File->new($blkfile,">:raw") or die("$prog: could not open temporary block file '$inblock': $!");
+      my $blk_n = 0;
+      while (defined($_=<$infh>)) {
+	$blkfh->print($_);
+	last if (++$blk_n >= $blksize && (!$block_sents || m/^$/));
+      }
+      $blkfh->close();
+      ##-- save block info
+      push(@blocks,{'infile'=>$infile,'outfile'=>$outfile,'inblock'=>$inblock,'outblock'=>$outblock});
+    }
+    $infh->close();
+  }
+
+  ##-- tweak @inputs to read from temporary block-files
+  $outfmt  = $outfmt0_b;
+  @inputs0 = @inputs;
+  @inputs  = (map {$_->{inblock}} @blocks);
+}
+
+##------------------------------------------------------
+## main: guts: prepare queue
+my $n_args = scalar(@inputs);
+foreach (@inputs) {
+  $forkp->enq($_);
 }
 DTA::CAB->info("populated job-queue '$jqfile'.(dat|idx) with $n_args item(s)");
 
@@ -434,12 +487,36 @@ if ($njobs < 1) {
   $forkp->spawn();
 }
 
-##======================================================================
-## MAIN: cleanup
-
-##-- main: cleanup: fork pool
+##------------------------------------------------------
+## main: guts: wait for workers
 $SIG{CHLD} = undef; ##-- remove installed reaper-sub, if any
 $forkp->waitall();
+
+
+##------------------------------------------------------
+## main: guts: merge blocks (if appropriate)
+if (@blocks) {
+  DTA::CAB->info("merging block outputs to final output file(s)...");
+  $outfile = undef;
+  my ($outblock, $blkfh,$outfh);
+  foreach my $blk (@blocks) {
+    DTA::CAB->info("merging '$blk->{outblock}' -> '$blk->{outfile}'");
+    $outblock = $blk->{outblock};
+    $blkfh = IO::File->new($blkfh,"<:raw")
+      or die("$prog: open failed for read from block-output file '$outblock': $!");
+    if (!defined($outfile) || $blk->{outfile} ne $outfile) {
+      $outfile = $blk->{outfile};
+      $outfh->close if (defined($outfh));
+      $outfh = IO::File->new($outfile,">:raw")
+	or die("$prog: open failed for output file '$outfile': $!");
+    }
+    while (defined($_=<$blkfh>)) { $outfh->print($_); }
+    $blkfh->close();
+  }
+}
+
+##======================================================================
+## MAIN: cleanup
 
 ##-- main: cleanup: get profiling from stat queue
 if ($doProfile) {
@@ -456,13 +533,14 @@ if ($doProfile) {
 DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
 DTA::CAB::Logger->info("program exiting normally.");
 
-##-- main: cleanup: queues
+##-- main: cleanup: queues & temporary files
 sub cleanup {
   if (!$forkp || !$forkp->is_child) {
     #print STDERR "$0: END block running\n"; ##-- DEBUG
     $forkp->abort()  if ($forkp);
     $forkp->unlink() if ($forkp && !$keeptmp);
     $statq->unlink() if ($statq && !$keeptmp);
+    File::Path::rmtree($blockdir) if ($blockdir && !$keeptmp);
   }
 }
 
