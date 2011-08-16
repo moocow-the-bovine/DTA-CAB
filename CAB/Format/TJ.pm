@@ -257,7 +257,7 @@ sub putToken {
 sub putSentence {
   #my ($fmt,$sent) = @_;
   my $sh = {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
-  $_[0]{outbuf} .=  '%%$TJ:SENT='.$_[0]->jsonxs->encode($sh) if (%$sh);
+  $_[0]{outbuf} .=  '%%$TJ:SENT='.$_[0]->jsonxs->encode($sh)."\n" if (%$sh);
   $_[0]->putToken($_) foreach (@{toSentence($_[1])->{tokens}});
   $_[0]->{outbuf} .= "\n";
   return $_[0];
