@@ -442,13 +442,14 @@ our (@blocks);                   ##-- @blocks = ({infile=>$if,outfile=>$of,inblo
 if ($blocksize) {
   $blockdir = mktmpfsdir("dta_cab_blocks_${$}_XXXX")
     or die("$prog: could not create temp directory for block files");
-  DTA::CAB->info("splitting inputs into blocks of size <= $blocksize ", ($block_sents ? 'sentences' : 'lines'));
+  DTA::CAB->info("splitting inputs into blocks of size ~= $blocksize ", ($block_sents ? 'sentences' : 'lines'));
   $blocki = 1;
   foreach my $in_i (0..$#inputs) {
     my $infile  = $inputs[$in_i];
     my $outfile = outfilename($infile,$_outfmt_nb);
     DTA::CAB->info("splitting input file '$infile'");
-    my $infh  = IO::File->new($infile,"<:raw") or die("$prog: could not open input file '$infile': $!");
+    my $infh = IO::File->new("<$infile") or die("$prog: could not open input file '$infile': $!");
+    binmode($infh,':raw');
     my ($blk_i,$blk_n);
     for ($blk_i=0; !$infh->eof(); $blk_i++) {
       my $inblock  = sprintf("%s/f%0.3d_b%0.3d%s", $blockdir, $in_i, $blk_i, file_extension($infile));
@@ -518,8 +519,9 @@ if (@blocks) {
     if (!defined($outfile) || $blk->{outfile} ne $outfile) {
       $outfile = $blk->{outfile};
       $outfh->close if (defined($outfh));
-      $outfh = IO::File->new($outfile,">:raw")
+      $outfh = IO::File->new(">$outfile")
 	or die("$prog: open failed for output file '$outfile': $!");
+      binmode($outfh,':raw');
     }
     while (defined($_=<$blkfh>) && (!$blk_trim || !$blkfh->eof)) {
       $outfh->print($_);

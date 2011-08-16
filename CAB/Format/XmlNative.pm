@@ -69,8 +69,10 @@ sub new {
 			      #},
 
 			      key2xml => {
-					  'id' => 'xml:id',
-					  'base' => 'xml:base',
+					  #'id' => 'id',
+					  'xml:id' => 'id',
+					  #'base' => 'base',
+					  'xml:base' => 'base',
 					  #'text' => 't', ##-- for TokWrap .t.xml
 					 },
 			      xml2key => {
