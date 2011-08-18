@@ -38,7 +38,7 @@ BEGIN {
 ##
 ##     ##-- Common
 ##     raw => $bool,                   ##-- attempt to load/save raw data
-##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
+##     encoding => $encoding,          ##-- default: UTF-8, where applicable
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
 
@@ -215,11 +215,7 @@ sub flush {
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
-##  + default implementation just returns $fmt->{outbuf}
-sub toString {
-  $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
-  return $_[0]{outbuf};
-}
+##  + inherited from TT: just encodes string in $fmt->{outbuf}
 
 ## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle

@@ -257,7 +257,7 @@ sub flush {
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
+##  + override encodes string in $fmt->{outbuf}
 sub toString {
   $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
   return encode($_[0]{encoding},$_[0]{outbuf})
