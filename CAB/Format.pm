@@ -1071,8 +1071,7 @@ Datum parser|formatter: XML: abstract base class.
 =item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
 
 Datum parser|formatter: XML (native).
-Should be compatible with C<.t.xml> files
-as created by L<dta-tokwrap.perl(1)|dta-tokwrap.perl>.
+Nearly compatible with C<.t.xml> files as created by L<dta-tokwrap.perl(1)|dta-tokwrap.perl>.
 Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml)|xml)$/
@@ -1080,6 +1079,13 @@ Registered as:
 and aliased as:
 
  name=>__PACKAGE__, short=>'xml'
+
+=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlTokWrap>
+
+=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlTokWrapFast>
+
+Datum parser|formatter(s): XML (TokWrap).
+
 
 =item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
 

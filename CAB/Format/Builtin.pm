@@ -23,6 +23,7 @@ use DTA::CAB::Format::JSON;
 use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlNative; ##-- load first to avoid clobbering '.xml' extension
 use DTA::CAB::Format::XmlTokWrap;
+use DTA::CAB::Format::XmlTokWrapFast; ##-- quick & dirty tokwrap-style xml output for feeding to dtatw-xml2ddc.perl
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
 #use DTA::CAB::Format::XmlVz;
