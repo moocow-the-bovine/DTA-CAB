@@ -9,6 +9,7 @@ use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
 use DTA::CAB::Analyzer::ExLex;
+use DTA::CAB::Analyzer::TokPP;
 use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::Boltzmann;
 use DTA::CAB::Analyzer::Dict::JsonDB;

@@ -489,13 +489,13 @@ DTA::CAB->info("populated job-queue '$jqfile'.(dat|idx) with $n_args item(s)");
 ## main: guts: process queue
 if ($njobs < 1) {
   ##-- no (forked) jobs: just process the queue in the main thread
-  $forkp->process();
   DTA::CAB->info("requested njobs=$njobs; not forking");
+  $forkp->process();
 } else {
   ##-- spawn specified number of subprocesses and run them
   $forkp->{njobs} = $n_args if ($forkp->{njobs} > $n_args); ##-- sanity check: don't fork() more than we need to
   $forkp->spawn();
-  DTA::CAB->info("spawned $forkp->{njobs} worker subprocesses");
+  DTA::CAB->info("spawned $forkp->{njobs} worker subprocess(es)");
 }
 
 ##------------------------------------------------------

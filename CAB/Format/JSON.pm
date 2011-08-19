@@ -162,6 +162,9 @@ sub flush {
 ##  + default implementation removes typing if ($level < 1)
 sub toString {
   $_[0]->formatLevel($_[1]) if (defined($_[1]));
+  $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
+  return encode($_[0]{encoding},$_[0]{outbuf})
+    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
   return $_[0]{outbuf};
 }
 
