@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Storable.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser using Storable::freeze() & co.
 
 package DTA::CAB::Format::Storable;
@@ -22,6 +22,7 @@ our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:sto|bin)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(sto bin));
 }
 
 ##==============================================================================
