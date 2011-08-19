@@ -9,6 +9,7 @@ use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
 use Carp;
+use Encode qw(encode_utf8 decode_utf8);
 use strict;
 
 ##==============================================================================
@@ -163,8 +164,8 @@ sub flush {
 sub toString {
   $_[0]->formatLevel($_[1]) if (defined($_[1]));
   $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
-  return encode($_[0]{encoding},$_[0]{outbuf})
-    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
+  return Encode::encode_utf8($_[0]{outbuf})
+    if (defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
   return $_[0]{outbuf};
 }
 
