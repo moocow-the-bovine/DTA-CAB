@@ -1,26 +1,39 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::ExLex.pm
+## File: DTA::CAB::Analyzer::ExLex::BDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: DTA exception lexicon: symboluic wrapper
+## Description: DTA exception lexicon
 
 ##==============================================================================
-## Package: ExLex
+## Package: ExLex: BDB
 ##==============================================================================
-package DTA::CAB::Analyzer::ExLex;
+package DTA::CAB::Analyzer::ExLex::BDB;
 use DTA::CAB::Analyzer ':child';
-use DTA::CAB::Analyzer::ExLex::BDB;
-#use DTA::CAB::Analyzer::ExLex::CDB; ##-- TODO: replace BDB with CDB
+use DTA::CAB::Analyzer::Dict::JsonDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::ExLex::BDB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   label => 'exlex',                   ##-- analysis label
-			   typeKeys => [qw(exlex pnd errid)]   ##-- type-wise analysis keys
+			   ##-- overrides
+			   label => 'exlex',
+			   typeKeys => [qw(exlex pnd errid)],
+
+			   analyzeCode =>join("\n",
+					      (
+					       'return if (!defined($val=$dhash->{'
+					       #._am_xlit('$_')
+					       .'$_->{text}'
+					       .'}));'
+					      ),
+					      '$val=$jxs->decode($val);',
+					      '@$_{keys %$val}=values %$val;',
+					     ),
+
+			   ##-- user args
 			   @_
 			  );
 }
@@ -42,7 +55,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::ExLex - DTA exception type-wise exception lexicon
+DTA::CAB::Analyzer::ExLex::BDB - DTA exception lexicon using DTA::CAB::Analyzer::Dict::JsonDB
 
 =cut
 
@@ -64,12 +77,13 @@ DTA::CAB::Analyzer::ExLex - DTA exception type-wise exception lexicon
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::ExLex
-is a just a wrapper for a type-wise exception lexicon
+DTA::CAB::Analyzer::ExLex::BDB
+is a just a wrapper for
+L<DTA::CAB::Analyzer::Dict::JsonDB|DTA::CAB::Analyzer::Dict::JsonDB>
 which sets the following default options:
 
- label => 'exlex',                   ##-- analysis label
- typeKeys => [qw(exlex pnd errid)]   ##-- type-wise analysis keys
+ label => 'exlex',                  ##-- analysis label
+ typeKeys => [qw(exlex pnd errid)]  ##-- type-wise analysis keys
 
 =cut
 

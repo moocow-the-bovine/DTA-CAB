@@ -1,26 +1,41 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::ExLex.pm
+## File: DTA::CAB::Analyzer::ExLex::CDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: DTA exception lexicon: symboluic wrapper
+## Description: DTA exception lexicon
 
 ##==============================================================================
-## Package: ExLex
+## Package
 ##==============================================================================
-package DTA::CAB::Analyzer::ExLex;
+package DTA::CAB::Analyzer::ExLex::CDB;
 use DTA::CAB::Analyzer ':child';
-use DTA::CAB::Analyzer::ExLex::BDB;
-#use DTA::CAB::Analyzer::ExLex::CDB; ##-- TODO: replace BDB with CDB
+use DTA::CAB::Analyzer::Dict::JsonCDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::ExLex::BDB);
+our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonCDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
+##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
 sub new {
   my $that = shift;
   return $that->SUPER::new(
-			   label => 'exlex',                   ##-- analysis label
-			   typeKeys => [qw(exlex pnd errid)]   ##-- type-wise analysis keys
+			   ##-- overrides
+			   label => 'exlex',
+			   typeKeys => [qw(exlex pnd errid)],
+
+			   analyzePre  =>'my $tied=tied($dhash);',
+			   analyzeCode =>join("\n",
+					      (
+					       'return if (!defined($val=$dhash->{'
+					       #._am_xlit('$_')
+					       .'$_->{text}'
+					       .'}));'
+					      ),
+					      '$val=$jxs->decode($val);',
+					      '@$_{keys %$val}=values %$val;',
+					     ),
+
+			   ##-- user args
 			   @_
 			  );
 }
@@ -42,7 +57,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::ExLex - DTA exception type-wise exception lexicon
+DTA::CAB::Analyzer::ExLex - DTA exception lexicon using DTA::CAB::Analyzer::Dict::JsonDB
 
 =cut
 
@@ -52,9 +67,9 @@ DTA::CAB::Analyzer::ExLex - DTA exception type-wise exception lexicon
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::ExLex;
+ use DTA::CAB::Analyzer::ExLex::CDB;
  
- $exlex = DTA::CAB::Analyzer::ExLex->new(%args);
+ $exlex = DTA::CAB::Analyzer::ExLex::CDB->new(%args);
 
 =cut
 
@@ -64,8 +79,9 @@ DTA::CAB::Analyzer::ExLex - DTA exception type-wise exception lexicon
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::ExLex
-is a just a wrapper for a type-wise exception lexicon
+DTA::CAB::Analyzer::ExLex::CDB
+is a just a wrapper for
+L<DTA::CAB::Analyzer::Dict::JsonCDB|DTA::CAB::Analyzer::Dict::JsonCDB>
 which sets the following default options:
 
  label => 'exlex',                   ##-- analysis label
