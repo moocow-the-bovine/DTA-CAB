@@ -17,31 +17,29 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonDB);
 ## $obj = CLASS_OR_OBJ->new(%args)
 sub new {
   my $that = shift;
-  my $cache = $that->SUPER::new(
-				##-- overrides
-				label => 'cache',
-				typeKeys => [], ##-- see below
-
-				analyzeCode =>join("\n",
-						   (
-						    'return if (!defined($val=$dhash->{'
-						    #._am_xlit('$_')
-						    .'$_->{text}'
-						    .'}));'
-						   ),
-						   '$val=$jxs->decode($val);',
-						   '@$_{keys %$val}=values %$val;',
-						  ),
+  my $dic = $that->SUPER::new(
+			      ##-- overrides
+			      label => 'cache',
+			      typeKeys => undef, ##-- see below
+			      analyzeCode =>join("\n",
+						 (
+						  'return if (!defined($val=$dhash->{'
+						  #._am_xlit('$_')
+						  .'$_->{text}'
+						  .'}));'
+						 ),
+						 '$val=$jxs->decode($val);',
+						 '@$_{keys %$val}=(values %$val);',
+						),
 
 				##-- user args
-				@_
-			       );
+			      @_
+			     );
 
   ##-- set type keys from DTA::CAB::Chain::DTA if possible and not already set
-  @{$cache->{typeKeys}} = DTA::CAB::Chain::DTA->new->typeKeys();
-  return $cache;
+  $dic->{typeKeys} = [DTA::CAB::Chain::DTA->new->typeKeys()] if (!$dic->{typeKeys} && DTA::CAB::Chain::DTA->can('new'));
+  return $dic;
 }
-
 
 1; ##-- be happy
 

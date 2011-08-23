@@ -14,11 +14,12 @@ use DTA::CAB::Analyzer::TokPP;
 use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::MorphSafe;
+use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::Boltzmann;
 use DTA::CAB::Analyzer::EqPho;
-use DTA::CAB::Analyzer::EqPhoRW;
 use DTA::CAB::Analyzer::EqPhoX;
+use DTA::CAB::Analyzer::EqRW;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Analyzer::MootSub;
@@ -46,7 +47,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- analyzers
-			   static => DTA::CAB::Analyzer::Cache::Static->new(),
+			   static => DTA::CAB::Analyzer::Cache::Static->new(typeKeys=>[]), ##-- avoid deep recursion
 			   exlex => DTA::CAB::Analyzer::ExLex->new(),
 			   tokpp => DTA::CAB::Analyzer::TokPP->new(),
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),

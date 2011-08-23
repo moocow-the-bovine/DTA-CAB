@@ -86,7 +86,7 @@ sub chain {
     return $_[0]{chains}{$_[1]{chain}} if ($_[0]{chains}{$_[1]{chain}});     ##-- pre defined chain
     return [
 	    grep {ref($_) && $_->enabled($_[1])}
-	    map { @{$_[0]{chains}{$_} || $_[0]{$_} || $_[0]->logconfess("could not resolve chain component '$_'")} }
+	    map { @{$_[0]{chains}{$_} || ($_[0]{$_} ? [$_[0]{$_}] : undef) || $_[0]->logconfess("could not resolve chain component '$_'")} }
 	    split(/[\,\s]+/,$_[1]{chain})
 	   ];
   }

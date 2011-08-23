@@ -18,29 +18,29 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonCDB);
 ##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
 sub new {
   my $that = shift;
-  return $that->SUPER::new(
+  my $dic = $that->SUPER::new(
 			   ##-- overrides
-			   label => 'exlex',
-			   typeKeys => [],
+			      label => 'exlex',
+			      typeKeys => undef, ##-- see below
 
-			   analyzeCode =>join("\n",
-					      (
-					       'return if (!defined($val=$dhash->{'
-					       #._am_xlit('$_')
-					       .'$_->{text}'
-					       .'}));'
-					      ),
-					      '$val=$jxs->decode($val);',
-					      '@$_{keys %$val}=values %$val;',
-					     ),
+			      analyzeCode =>join("\n",
+						 (
+						  'return if (!defined($val=$dhash->{'
+						  #._am_xlit('$_')
+						  .'$_->{text}'
+						  .'}));'
+						 ),
+						 '$val=$jxs->decode($val);',
+						 '@$_{keys %$val}=values %$val;',
+						),
 
-			   ##-- user args
-			   @_
-			  );
+			      ##-- user args
+			      @_
+			     );
 
   ##-- set type keys from DTA::CAB::Chain::DTA if possible and not already set
-  @{$cache->{typeKeys}} = DTA::CAB::Chain::DTA->new->typeKeys();
-  return $cache;
+  $dic->{typeKeys} = [DTA::CAB::Chain::DTA->new->typeKeys()] if (!$dic->{typeKeys} && DTA::CAB::Chain::DTA->can('new'));
+  return $dic;
 }
 
 ## $prefix = $dict->analyzePre()
