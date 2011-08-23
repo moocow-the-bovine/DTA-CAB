@@ -9,10 +9,15 @@ use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
 use DTA::CAB::Analyzer::ExLex;
+use DTA::CAB::Analyzer::Cache::Static;
 use DTA::CAB::Analyzer::TokPP;
+use DTA::CAB::Analyzer::LTS;
+use DTA::CAB::Analyzer::Morph;
+use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Moot;
 use DTA::CAB::Analyzer::Moot::Boltzmann;
-use DTA::CAB::Analyzer::Dict::JsonDB;
+use DTA::CAB::Analyzer::EqPho;
+use DTA::CAB::Analyzer::EqPhoRW;
 use DTA::CAB::Analyzer::EqPhoX;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;

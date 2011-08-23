@@ -1,22 +1,53 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::ExLex.pm
+## File: DTA::CAB::Analyzer::Cache::Static::CDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: DTA exception lexicon: wrapper
+## Description: DTA static cache
 
 ##==============================================================================
-## Package: ExLex
+## Package
 ##==============================================================================
-package DTA::CAB::Analyzer::ExLex;
+package DTA::CAB::Analyzer::Cache::Static::CDB;
 use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Analyzer::Dict::JsonCDB;
 use Carp;
 use strict;
+our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonCDB);
 
-#use DTA::CAB::Analyzer::ExLex::BDB;
-#our @ISA = qw(DTA::CAB::Analyzer::ExLex::BDB);
-##
-use DTA::CAB::Analyzer::ExLex::CDB;
-our @ISA = qw(DTA::CAB::Analyzer::ExLex::CDB);
+## $obj = CLASS_OR_OBJ->new(%args)
+##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
+sub new {
+  my $that = shift;
+  return $that->SUPER::new(
+			   ##-- overrides
+			   label => 'exlex',
+			   typeKeys => [],
+
+			   analyzeCode =>join("\n",
+					      (
+					       'return if (!defined($val=$dhash->{'
+					       #._am_xlit('$_')
+					       .'$_->{text}'
+					       .'}));'
+					      ),
+					      '$val=$jxs->decode($val);',
+					      '@$_{keys %$val}=values %$val;',
+					     ),
+
+			   ##-- user args
+			   @_
+			  );
+
+  ##-- set type keys from DTA::CAB::Chain::DTA if possible and not already set
+  @{$cache->{typeKeys}} = DTA::CAB::Chain::DTA->new->typeKeys();
+  return $cache;
+}
+
+## $prefix = $dict->analyzePre()
+sub analyzePre {
+  my $dic = shift;
+  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
+}
 
 
 1; ##-- be happy
@@ -35,7 +66,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::ExLex - DTA type-wise exception lexicon (wrapper)
+DTA::CAB::Analyzer::Cache::Static - Static cache using DTA::CAB::Analyzer::Dict::JsonDB
 
 =cut
 
@@ -45,9 +76,9 @@ DTA::CAB::Analyzer::ExLex - DTA type-wise exception lexicon (wrapper)
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::ExLex;
+ use DTA::CAB::Analyzer::Cache::Static::CDB;
  
- $exlex = DTA::CAB::Analyzer::ExLex->new(%args);
+ $exlex = DTA::CAB::Analyzer::Cache::Static::CDB->new(%args);
 
 =cut
 
@@ -57,8 +88,9 @@ DTA::CAB::Analyzer::ExLex - DTA type-wise exception lexicon (wrapper)
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::ExLex
-is a just a wrapper for a type-wise exception lexicon
+DTA::CAB::Analyzer::Cache::Static::CDB
+is a just a wrapper for
+L<DTA::CAB::Analyzer::Dict::JsonCDB|DTA::CAB::Analyzer::Dict::JsonCDB>
 which sets the following default options:
 
  label => 'exlex',                   ##-- analysis label
