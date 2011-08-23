@@ -9,21 +9,14 @@
 ##==============================================================================
 package DTA::CAB::Analyzer::ExLex;
 use DTA::CAB::Analyzer ':child';
-use DTA::CAB::Analyzer::ExLex::BDB;
-#use DTA::CAB::Analyzer::ExLex::CDB; ##-- TODO: replace BDB with CDB
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::ExLex::BDB);
 
-## $obj = CLASS_OR_OBJ->new(%args)
-sub new {
-  my $that = shift;
-  return $that->SUPER::new(
-			   label => 'exlex',                   ##-- analysis label
-			   typeKeys => [qw(exlex pnd errid)]   ##-- type-wise analysis keys
-			   @_
-			  );
-}
+#use DTA::CAB::Analyzer::ExLex::BDB;
+#our @ISA = qw(DTA::CAB::Analyzer::ExLex::BDB);
+##
+use DTA::CAB::Analyzer::ExLex::CDB;
+our @ISA = qw(DTA::CAB::Analyzer::ExLex::CDB);
 
 
 1; ##-- be happy

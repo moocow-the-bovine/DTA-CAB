@@ -41,6 +41,7 @@ use DTA::CAB::Analyzer::EqRW;            ##-- default eqrw-expander
 
 use DTA::CAB::Analyzer::Dict;            ##-- generic dictionary-based analyzer (base class)
 use DTA::CAB::Analyzer::Dict::BDB;        ##-- generic DB-dictionary-based analyzer (base class)
+use DTA::CAB::Analyzer::Dict::CDB;        ##-- generic CDB-dictionary-based analyzer (base class)
 #use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander (obsolete, removed)
 
 use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-based analysis)
@@ -118,6 +119,9 @@ Full-form dictionary-based analyzer (aka "cache") using a flat hash.
 
 Full-form dictionary-based analyzer (aka "cache") using Berkeley DB.
 
+=item L<DTA::CAB::Analyzer::Dict::CDB|DTA::CAB::Analyzer::Dict::CDB>
+
+Full-form dictionary-based analyzer (aka "cache") using CDB.
 
 
 =item L<DTA::CAB::Analyzer::EqLemma|DTA::CAB::Analyzer::EqLemma>

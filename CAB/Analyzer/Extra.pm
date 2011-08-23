@@ -9,6 +9,7 @@ use DTA::CAB::Analyzer::Common;
 
 use DTA::CAB::Analyzer::Dict::Json;
 use DTA::CAB::Analyzer::Dict::JsonDB;
+use DTA::CAB::Analyzer::Dict::JsonCDB;
 
 use DTA::CAB::Analyzer::TextPhonetic;
 use DTA::CAB::Analyzer::Koeln;
@@ -25,6 +26,8 @@ use DTA::CAB::Analyzer::DocClassify;     ##-- document classification via DocCla
 use DTA::CAB::Analyzer::DmootSub;        ##-- DTA
 use DTA::CAB::Analyzer::MootSub;         ##-- DTA
 use DTA::CAB::Analyzer::ExLex;           ##-- DTA
+use DTA::CAB::Analyzer::DTAClean;        ##-- DTA
+use DTA::CAB::Analyzer::DTAMapClass;     ##-- DTA
 
 use strict;
 

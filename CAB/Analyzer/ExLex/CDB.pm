@@ -23,7 +23,6 @@ sub new {
 			   label => 'exlex',
 			   typeKeys => [qw(exlex pnd errid)],
 
-			   analyzePre  =>'my $tied=tied($dhash);',
 			   analyzeCode =>join("\n",
 					      (
 					       'return if (!defined($val=$dhash->{'
@@ -38,6 +37,12 @@ sub new {
 			   ##-- user args
 			   @_
 			  );
+}
+
+## $prefix = $dict->analyzePre()
+sub analyzePre {
+  my $dic = shift;
+  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
 }
 
 

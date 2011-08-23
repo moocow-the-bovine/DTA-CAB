@@ -205,11 +205,12 @@ sub analyzeTypes {
 sub analyzePre {
   my $dic = shift;
   return join('',
-	      map {"my $_;\n"}
-	      '$dic=$anl',
-	      '$lab=$dic->{label}',
-	      '$dhash=$dic->dictHash',
-	      '($key,$val,@keys,@vals,%vals)',
+	      (map {"my $_;\n"}
+	       '$dic=$anl',
+	       '$lab=$dic->{label}',
+	       '$dhash=$dic->dictHash',
+	       '($key,$val,@keys,@vals,%vals)'
+	      ),
 	      ($dic->{analyzePre} ? $dic->{analyzePre} : qw()),
 	     );
 }

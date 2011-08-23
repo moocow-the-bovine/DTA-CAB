@@ -12,8 +12,12 @@ use strict;
 #use DTA::CAB::Analyzer::EqPho::FST;
 #our @ISA = qw(DTA::CAB::Analyzer::EqPho::FST);
 ##
-use DTA::CAB::Analyzer::EqPho::BDB;
-our @ISA = qw(DTA::CAB::Analyzer::EqPho::BDB);
+#use DTA::CAB::Analyzer::EqPho::BDB;
+#our @ISA = qw(DTA::CAB::Analyzer::EqPho::BDB);
+##
+##
+use DTA::CAB::Analyzer::EqPho::CDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqPho::CDB);
 
 
 1; ##-- be happy

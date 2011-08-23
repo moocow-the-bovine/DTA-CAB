@@ -10,8 +10,11 @@
 package DTA::CAB::Analyzer::EqLemma;
 use strict;
 
-use DTA::CAB::Analyzer::EqLemma::BDB;
-our @ISA = qw(DTA::CAB::Analyzer::EqLemma::BDB);
+#use DTA::CAB::Analyzer::EqLemma::BDB;
+#our @ISA = qw(DTA::CAB::Analyzer::EqLemma::BDB);
+##
+use DTA::CAB::Analyzer::EqLemma::CDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqLemma::CDB);
 
 1; ##-- be happy
 
