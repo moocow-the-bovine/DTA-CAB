@@ -30,6 +30,7 @@ our %EXPORT_TAGS =
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
+     files => [qw(fhbits)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -413,6 +414,16 @@ sub xsl_stylesheet {
   return $stylesheet;
 }
 
+##==============================================================================
+## Functions: file stuff
+##==============================================================================
+
+## $bits = fhbits(@fhs_or_fds)
+sub fhbits {
+  my $bits='';
+  vec($bits,$_,1)=1 foreach (map {ref($_) ? fileno($_) : $_} @_);
+  return $bits;
+}
 
 1; ##-- be happy
 
