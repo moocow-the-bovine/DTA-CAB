@@ -32,6 +32,7 @@ our @ISA = qw(DTA::CAB::Queue::Socket);
 ##     queue => \@queue,    ##-- actual queue data
 ##     unlink => $bool,     ##-- unlink on DESTROY()? (default=1)
 ##     timeout => $secs,    ##-- default timeout for accept() etc; default=undef (no timeout)
+##     status => $str,      ##-- queue status (defualt: 'active')
 ##    )
 sub new {
   my ($that,%args) = @_;
@@ -41,6 +42,7 @@ sub new {
 			     unlink => 1,
 			     perms  => 0600,
 			     timeout => undef,
+			     status => 'active',
 			     (ref($that) ? (%$that,unlink=>0) : qw()),
 			     fh =>undef,
 			     %args,
@@ -169,44 +171,70 @@ sub accept {
 ## $qs = $qs->process($cli, \&callback)
 ##  + main server loop
 ##  + accepts and processes client connections
-##  + client commands are REF messages $ref=[$cmd, @args]
-##    - ['deq']          : dequeue the first item in the queue; response: $cli->put($item)
-##    - ['deq_str']      : dequeue a raw string; response: $cli->put_str(\$item)
-##    - ['deq_ref']      : dequeue a reference; response: $cli->put_ref($item)
-##    - ['enq']          : enqueue an item (data follows in next messages); no response
-##    - ['enq_str' $str] : enqueue a string; no response
-##    - ['enq_ref' $ref] : enqueue a reference; no response
-##    - ['size']         : get current queue size; response=string
-##    - ['clear']        : clear queue; no response
-##    - ['quit']         : close client connection; no response
-##    - ...              : other messages are passed to $callback->($cli, $cmd, @args)
+##  + each client request is a STRING message (command)
+##    - request arguments (if required) are sent as separate messages following the command request
+##    - server response (if any) depends on command sent
+##  + request commands (case-insensitive) handled by the process() method:
+##     DEQ          : dequeue the first item in the queue; response: $cli->put($item)
+##     DEQ_STR      : dequeue a string reference; response: $cli->put_str(\$item)
+##     DEQ_REF      : dequeue a reference; response: $cli->put_ref($item)
+##     ENQ $item    : enqueue an item; no response
+##     ENQ_STR $str : enqueue a string-reference; no response
+##     ENQ_REF $ref : enqueue a reference; no response
+##     SIZE         : get current queue size; response=STRING $qs->size()
+##     STATUS       : get queue status response: STRING $qs->{status}
+##     CLEAR        : clear queue; no response
+##     QUIT         : close client connection; no response
+##     ...          : other messages are passed to $callback->(\$request,$cli) or produce an error
 ##  + returns: same as $callback->() if called, otherwise $qs
-sub run {
-  my ($qs,$cli,$cb) = @_;
+sub process {
+  my ($qs,$cli,$callback) = @_;
   my $creq = $qs->get();
-  if (!ref($creq) || ref($creq) ne 'ARRAY' || !defined($creq->[0])) {
+  if (!ref($creq) || ref($creq) ne 'SCALAR') {
     $qs->logconfess("could not parse client request");
   }
-  my $cmd = lc($creq->[0]);
-  if ($cmd =~ /^deq(?:_ref|_str)?$/i) {
-    ##-- de-queue an item
+  my $cmd = lc($$creq);
+  my $qu  = $qs->{queue};
+  if ($cmd =~ /^deq(?:_ref|_str)?$/) {
+    ##-- DEQ: dequeue an item
     if    (!@{$qs->{queue}})  { $cli->put_eoq(); }
-    elsif ($cmd eq 'deq')     { $cli->put( $qs->{queue}[0] ); }
-    elsif ($cmd eq 'deq_str') { $cli->put_str( $qs->{queue}[0] ); }
-    elsif ($cmd eq 'deq_ref') { $cli->put_ref( $qs->{queue}[0] ); }
-    shift(@{$qs->{queue}});
+    elsif ($cmd eq 'deq')     { $cli->put( $qu->[0] ); }
+    elsif ($cmd eq 'deq_str') { $cli->put_str( ref($qu->[0]) ? $qu->[0] : \$qu->[0] ); }
+    elsif ($cmd eq 'deq_ref') { $cli->put_ref( ref($qu->[0]) ? $qu->[0] : \$qu->[0] ); }
+    shift(@$qu);
   }
   elsif ($cmd eq 'enq') {
-    ##-- enqueue: separate message
+    ##-- ENQ $item: enqueue a raw scalar or frozen reference
     my $buf = undef;
     my $ref = $cli->get(\$buf);
-    push(@{$qs->{queue}}, ($ref eq \$buf ? $buf : $ref));
+    push(@$qu, ($ref eq \$buf ? $buf : $ref));
   }
-  elsif ($cmd =~ /^enq_(?:str|ref)$/) {
-    ##-- enqueue: string or ref
-    push(@{$qs->{queue}}, $req->[1]);
+  elsif ($cmd eq 'enq_str' || $cmd eq 'enc_ref') {
+    ##-- ENQ_STR $string: enqueue a string-reference
+    ##-- ENQ_REF $ref   : enqueue a frozen reference
+    my $ref = $cli->get();
+    push(@$qu, $ref);
   }
-  ##-- CONTINUE HERE: size, ...
+  elsif ($cmd eq 'size') {
+    my $size = $qs->size;
+    $cli->put_str($size);
+  }
+  elsif ($cmd eq 'status') {
+    my $status = $qs->{status};
+    $cli->put_str($status);
+  }
+  elsif ($cmd eq 'clear') {
+    @$qu = qw();
+  }
+  elsif ($cmd eq 'quit') {
+    $cli->close();
+  }
+  elsif (defined($callback)) {
+    return $callback->($creq,$cli);
+  }
+  else {
+    $qs->logwarn("unknown command '$cmd' from client ignored");
+  }
   return $qs;
 }
 

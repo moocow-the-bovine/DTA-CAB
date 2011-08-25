@@ -149,8 +149,9 @@ sub canwrite {
 ## Socket Communications
 ##  + all socket messages are of the form pack('NN/a*', $flags, $message_data)
 ##  + $flags is a bitmask of DTA::CAB::Queue::Socket flags ($qf_* constants)
+##  + length element (second 'N' of pack format) is always 0 for serialized references
 ##  + $message_data is one of the following:
-##    - if    ($flags & $qf_ref)   -> a reference serialized with Storable::nfreeze(); will be decoded
+##    - if    ($flags & $qf_ref)   -> a reference written with nstore_fd(); will be decoded
 ##    - elsif ($flags & $qf_u8)    -> a UTF-8 encoded string; will be decoded
 ##    - elsif ($flags & $qf_undef) -> a literal undef value
 ##    - elsif ($flags & $qf_eoq)   -> undef as end-of-queue marker
@@ -166,28 +167,46 @@ our $qf_ref   = 0x8;
 ##--------------------------------------------------------------
 ## Socket Communications: Write
 
-## $qs = $qs->put_data($flags, $len, \$data)
-## $qs = $qs->put_data($flags, $len,  $data)
-##  + write some raw data bytes to the socket
-sub put_data {
-  syswrite($_[0]{fh}, pack('NN', @_[1,2]), 8)==8
-    or $_[0]->logconfess("put_data(): could not write message header to socket: $!");
-  if ($_[2]) {
-    syswrite($_[0]{fh}, (ref($_[3]) ? ${$_[3]} : $_[3]), $_[2])==$_[2]
-      or $_[0]->logconfess("put_data(): could not write message data to socket: $!");
-  }
+## $qs = $qs->put_header($flags,$len)
+##  + write a message header to the socket
+sub put_header {
+  $_[0]->canwrite
+    && syswrite($_[0]{fh}, pack('NN', @_[1,2]), 8)==8
+      or $_[0]->logconfess("put_header(): could not write message header to socket: $!");
   return $_[0];
 }
 
+## $qs = $qs->put_data(\$data, $len)
+## $qs = $qs->put_data( $data, $len)
+##  + write some raw data bytes to the socket (header should already have been sent)
+sub put_data {
+  return if (!defined($_[0]));
+  use bytes;
+  my $ref = ref($_[1]) ? $_[1] : \$_[1];
+  my $len = defined($_[2]) ? $_[2] : length($$ref);
+  $_[0]->canwrite
+    && syswrite($_[0]{fh}, $$ref, $len)==$len
+      or $_[0]->logconfess("put_data(): could not write message data to socket: $!");
+  return $_[0];
+}
+
+## $qs = $qs->put_msg($flags,$len, $data)
+## $qs = $qs->put_msg($flags,$len,\$data)
+##  + write a whole message to the socket
+sub put_msg {
+  $_[0]->put_header(@_[1,2]) && $_[0]->put_data(@_[2,3]);
+}
+
+
 ## $qs = $qs->put_ref($ref)
-##  + write a reference to the socket
-##  + auto-magically calls nfreeze()
+##  + write a reference to the socket with Storable::nstore() (length written as 0)
 sub put_ref {
-  my $frozen = Storable::nfreeze(ref($_[1]) ? $_[1] : \$_[1]);
-  {
-    use bytes;
-    $_[0]->put_data( $qf_ref, bytes::length($frozen), \$frozen );
-  }
+  $_[0]->put_header( $qf_ref | (defined($_[1]) ? 0 : $qf_undef), 0 );
+  return $_[0] if (!defined($_[1]));
+  $_[0]->canwrite
+    && Storable::nstore_fd($_[1], $_[0]{fh})
+      or $_[0]->logconfess("put_ref(): nstore_fd() failed for $_[1]: $!");
+  return $_[0];
 }
 
 ## $qs = $qs->put_str(\$str)
@@ -195,25 +214,21 @@ sub put_ref {
 ##  + write a raw string message to the socket
 ##  + auto-magically sets $qf_undef and $qf_u8 flags
 sub put_str {
-  my $ref = ref($_[1]) ? $_[1] : \$_[1];
-  {
-    use bytes;
-    $_[0]->put_data(
-		    (defined($$ref) ? (utf8::is_utf8($$ref) ? $qf_u8  : 0) : $qf_undef),
-		    (defined($$ref) ? length($$ref) : 0),
-		    $ref
-		   );
-  }
+  use bytes;
+  my $ref   = ref($_[1]) ? $_[1] : \$_[1];
+  my $flags = (defined($$ref) ? (utf8::is_utf8($$ref) ? $qf_u8 : 0) : $qf_undef);
+  my $len   = (defined($$ref) ? length($$ref) : 0);
+  $_[0]->put_msg($flags,$len,$ref);
 }
 
 ## $qs = $qs->put_undef()
 sub put_undef {
-  return $_[0]->put_data( $qf_undef, 0, undef );
+  $_[0]->put_msg( $qf_undef, 0, undef );
 }
 
 ## $qs = $qs->put_eoq()
 sub put_eoq {
-  return $_[0]->put_data( $qf_eoq|$qf_undef, 0, undef );
+  $_[0]->put_msg( $qf_eoq|$qf_undef, 0, undef );
 }
 
 
@@ -223,8 +238,9 @@ sub put_eoq {
 ##  + otherwise calls $qs->put_ref($thingy)
 sub put {
   return $_[0]->put_undef() if (!defined($_[1]));
-  return $_[0]->put_str($_[1]) if (!ref($_[1]) || ref($_[1]) eq 'SCALAR');
-  return $_[0]->put_ref($_[1]);
+  return $_[0]->put_str(\$_[1]) if (!ref($_[1]));
+  return $_[0]->put_str( $_[1]) if ( ref($_[1]) eq 'SCALAR');
+  return $_[0]->put_ref( $_[1]);
 }
 
 ##--------------------------------------------------------------
@@ -235,7 +251,8 @@ sub put {
 ##  + gets header from socket
 sub get_header {
   my ($hdr);
-  CORE::sysread($_[0]{fh}, $hdr, 8)==8
+  $_[0]->canread
+    && CORE::sysread($_[0]{fh}, $hdr, 8)==8
     or $_[0]->logconfess("get_header(): could not read message header from socket: $!");
   return wantarray ? unpack('NN',$hdr) : $hdr;
 }
@@ -248,20 +265,21 @@ sub get_data {
   $bufr  = \(my $buf) if (!defined($bufr));
   $$bufr = undef;
   if ($len > 0) {
-    sysread($qs->{fh}, $$bufr, $len)==$len
-      or $qs->logconfess("get_data(): could not read message of length=$len bytes from socket: $!");
+    $_[0]->canread
+      && sysread($qs->{fh}, $$bufr, $len)==$len
+	or $qs->logconfess("get_data(): could not read message of length=$len bytes from socket: $!");
   }
   return $bufr;
 }
 
-## $ref = $qs->get_ref_data($len)
-## $ref = $qs->get_ref_data($len, \$buf)
-##  + reads reference data from the socket (header should already have been read)
+## $ref = $qs->get_ref_data()
+##  + reads reference data from the socket with Storable::fd_retrieve()
+##  + header should already have been read
 sub get_ref_data {
-  my $qs = shift;
-  my $bufr = $qs->get_data(@_);
-  $qs->logconfess("get_ref(): undefined buffer after get_data(): ???") if (!defined($$bufr));
-  return Storable::thaw($$bufr);
+  return
+    $_[0]->canread
+      && Storable::fd_retrieve($_[0]{fh})
+	or $_[0]->logconfess("get_ref_data(): fd_retrieve() failed");
 }
 
 ## \$str_or_undef = $qs->get_str_data($len)
@@ -284,12 +302,10 @@ sub get_str_data {
 ##    - in the case of ref messages, \$buf is the serialized (nfreeze()) reference
 ##    - for undef or end-of-queue messages, $$buf will be set to undef
 sub get {
-  my ($qs,$bufr) = @_;
-  $bufr  = \(my $buf) if (!defined($bufr));
-  $$bufr = undef;
+  my ($qs,$bufr)   = @_;
   my ($flags,$len) = $qs->get_header();
   return undef if ($flags & ($qf_eoq | $qf_undef));
-  return $qs->get_ref_data($len,$bufr) if ($flags & $qf_ref);
+  return $qs->get_ref_data() if ($flags & $qf_ref);
   return $qs->get_str_data($len,$bufr);
 }
 
