@@ -29,6 +29,7 @@ our @ISA = qw(DTA::CAB::Queue::Socket);
 ##     path  => $path,      ##-- path to server socket; default=tmpfsfile('cabqXXXX')
 ##     perms => $perms,     ##-- creation permissions (default=0600)
 ##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the server socket
+##     listen => $qsize,    ##-- queue size for listen (default=SOMAXCONN)
 ##     queue => \@queue,    ##-- actual queue data
 ##     unlink => $bool,     ##-- unlink on DESTROY()? (default=1)
 ##     timeout => $secs,    ##-- default timeout for accept() etc; default=undef (no timeout)
@@ -43,6 +44,7 @@ sub new {
 			     perms  => 0600,
 			     timeout => undef,
 			     status => 'active',
+			     listen => SOMAXCONN,
 			     (ref($that) ? (%$that,unlink=>0) : qw()),
 			     fh =>undef,
 			     %args,
@@ -96,7 +98,7 @@ sub open {
   }
 
   ##-- create a new listen socket
-  $qs->SUPER::open(Local=>$path,Listen=>1)
+  $qs->SUPER::open(Local=>$path,Listen=>($qs->{listen}||SOMAXCONN))
     or $qs->logconfess("cannot create UNIX socket '$path': $!");
 
   ##-- set permissions
@@ -162,7 +164,7 @@ sub accept {
   my $qs = shift;
   if ($qs->canread(@_)) {
     my $fh = $qs->{fh}->accept();
-    return DTA::CAB::Queue::ClientConn->new(path=>$qs->{path}, fh=>$fh);
+    return DTA::CAB::Queue::ClientConn->new(fh=>$fh, path=>$qs->{path}, logTrace=>$qs->{logTrace});
   }
   return undef;
 }
@@ -189,7 +191,7 @@ sub accept {
 ##  + returns: same as $callback->() if called, otherwise $qs
 sub process {
   my ($qs,$cli,$callback) = @_;
-  my $creq = $qs->get();
+  my $creq = $cli->get();
   if (!ref($creq) || ref($creq) ne 'SCALAR') {
     $qs->logconfess("could not parse client request");
   }
@@ -209,7 +211,7 @@ sub process {
     my $ref = $cli->get(\$buf);
     push(@$qu, ($ref eq \$buf ? $buf : $ref));
   }
-  elsif ($cmd eq 'enq_str' || $cmd eq 'enc_ref') {
+  elsif ($cmd =~ /^enq_(?:str|ref)$/) {
     ##-- ENQ_STR $string: enqueue a string-reference
     ##-- ENQ_REF $ref   : enqueue a frozen reference
     my $ref = $cli->get();

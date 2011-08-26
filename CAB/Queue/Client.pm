@@ -62,14 +62,20 @@ sub open {
   $qs->logconfess("cannot open() without a defined path!") if (!defined($path));
 
   ##-- create a new listen socket
-  $qs->SUPER::open(Peer=>$path,Listen=>0)
+  $qs->SUPER::open(Peer=>$path)
     or $qs->logconfess("cannot open UNIX socket at '$path': $!");
 
   ##-- report
-  $qs->vlog('trace', sprintf("opened UNIX socket '%s' as client"));
+  $qs->vtrace(sprintf("opened UNIX socket '%s' as client", ($path||'-')));
 
   ##-- return
   return $qs;
+}
+
+## $qs = $qs->connect()
+##  + wrapper for ($qs->reopen)
+sub connect {
+  return $_[0]->reopen();
 }
 
 ##==============================================================================
