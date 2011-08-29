@@ -5,19 +5,17 @@
 ## Description: UNIX-socket based queue: server
 
 package DTA::CAB::Queue::Server;
-use DTA::CAB::Queue::Socket;
+use DTA::CAB::Socket ':flags';
+use DTA::CAB::Socket::UNIX;
 use DTA::CAB::Queue::Client;
 use DTA::CAB::Utils ':temp', ':files';
-use IO::Socket;
-use IO::Socket::UNIX;
-use Fcntl;
 use Carp;
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
-our @ISA = qw(DTA::CAB::Queue::Socket);
+our @ISA = qw(DTA::CAB::Socket::UNIX);
 
 ##==============================================================================
 ## Constructors etc.
@@ -26,100 +24,52 @@ our @ISA = qw(DTA::CAB::Queue::Socket);
 ## $qs = DTA::CAB::Queue::Server->new(%args)
 ##  + %$qs, %args:
 ##    (
-##     path  => $path,      ##-- path to server socket; default=tmpfsfile('cabqXXXX')
-##     perms => $perms,     ##-- creation permissions (default=0600)
-##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the server socket
-##     listen => $qsize,    ##-- queue size for listen (default=SOMAXCONN)
+##     ##-- NEW in DTA::CAB::Queue::Socket
 ##     queue => \@queue,    ##-- actual queue data
-##     unlink => $bool,     ##-- unlink on DESTROY()? (default=1)
-##     timeout => $secs,    ##-- default timeout for accept() etc; default=undef (no timeout)
 ##     status => $str,      ##-- queue status (defualt: 'active')
+##     ##
+##     ##-- INHERITED from DTA::CAB::Socket::UNIX
+##     local  => $path,     ##-- path to local UNIX socket (for server; set to empty string to use a tempfile)
+##     #peer   => $path,     ##-- path to peer socket (for client)
+##     listen => $n,        ##-- queue size for listen (default=SOMAXCONN)
+##     unlink => $bool,     ##-- if true, server socket will be unlink()ed on DESTROY() (default=true)
+##     perms  => $perms,    ##-- file create permissions for server socket (default=0600)
+##     ##
+##     ##-- INHERITED from DTA::CAB::Socket
+##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the socket
+##     timeout => $secs,    ##-- default timeout for select() (default=undef: none)
+##     logTrace => $level,  ##-- log level for full trace (default=undef (none))
 ##    )
 sub new {
-  my ($that,%args) = @_;
-  my $qs = $that->SUPER::new(
-			     path =>undef,
-			     queue=>[],
-			     unlink => 1,
-			     perms  => 0600,
-			     timeout => undef,
-			     status => 'active',
-			     listen => SOMAXCONN,
-			     (ref($that) ? (%$that,unlink=>0) : qw()),
-			     fh =>undef,
-			     %args,
-			    );
-  return defined($qs->{fh}) ? $qs : $qs->open();
-}
-
-## undef = $qs->DESTROY
-##  + destructor calls close()
-sub DESTROY {
-  $_[0]->unlink() if ($_[0]{unlink});
-}
-
-## $qs = $qs->unlink()
-##  + unlinks $qs->{path} if possible
-##  + implicitly calls close()
-sub unlink {
-  $_[0]->close();
-  CORE::unlink($_[0]{path}) if (-w $_[0]{path});
+  my $that = shift;
+  return $that->SUPER::new(
+			   local => '', ##-- use temp socket if unspecified
+			   queue=>[],
+			   status => 'active',
+			   @_,
+			  );
 }
 
 ##==============================================================================
 ## Open/Close
 
 ## $bool = $qs->opened()
-##  + INHERITED from Queue::Socket
+##  + INHERITED from CAB::Socket::UNIX
 
 ## $qs = $qs->close()
-##  + INHERITED from Queue::Socket
+##  + INHERITED from CAB::Socket::UNIX
 
-## $qs = $qs->open()
-## $qs = $qs->open($path)
+## $qs = $qs->open(%args)
 ##  + override unlinks old path if appropriate, sets permissions, etc.
-sub open {
-  my ($qs,$path) = @_;
-
-  ##-- close and unlink if we can
-  $qs->close() if ($qs->opened);
-  $qs->unlink() if ($qs->{unlink});
-
-  ##-- get new socket path
-  if (!defined($path)) {
-    $path = $qs->{path};
-    $path = tmpfsfile('cabqXXXX') if (!defined($path));
-  }
-  $qs->{path} = $path;
-
-  ##-- unlink any stale files of new pathname
-  if (-e $path) {
-    CORE::unlink($path) or $qs->logconfess("cannot unlink existing file at UNIX socket path '$path': $!");
-  }
-
-  ##-- create a new listen socket
-  $qs->SUPER::open(Local=>$path,Listen=>($qs->{listen}||SOMAXCONN))
-    or $qs->logconfess("cannot create UNIX socket '$path': $!");
-
-  ##-- set permissions
-  !defined($qs->{perms})
-    or chmod($qs->{perms}, $path)
-      or $qs->logconfess(sprintf("cannot set perms=%0.4o for UNIX socket '$path': $!", $qs->{perms}, $path));
-
-  ##-- report
-  $qs->vlog('trace', sprintf("created UNIX socket '%s' with permissions %0.4o", $path, ((stat($path))[2] & 0777)));
-
-  ##-- return
-  return $qs;
-}
+##  + INHERITED from CAB::Socket::UNIX
 
 ##==============================================================================
 ## Socket Communications
-## + INHERITED from Queue::Socket
+## + INHERITED from CAB::Socket::UNIX
 
 ##==============================================================================
 ## Queue Maintenance
-##  + from main thread
+##  + for use from main thread
 
 ## $n_items = $q->size()
 sub size {
@@ -152,31 +102,35 @@ sub clear {
 }
 
 ##==============================================================================
-## Queue Server Protocol
+## Server Methods
+
+## $class = $CLASS_OR_OBJECT->clientClass()
+##  + default client class, used by newClient()
+sub clientClass {
+  return 'DTA::CAB::Queue::ClientConn';
+}
 
 ## $cli_or_undef = $qs->accept()
 ## $cli_or_undef = $qs->accept($timeout_secs)
 ##  + accept incoming client connections with optional timeout
-##  + if a client connection is available, it will be returned as as DTA::CAB::Queue::ClientConn object
-##    (a wrapper subclass for DTA::CAB::Queue::Socket)
-##  + otherwise, if no connection is available, undef will be returned
-sub accept {
-  my $qs = shift;
-  if ($qs->canread(@_)) {
-    my $fh = $qs->{fh}->accept();
-    return DTA::CAB::Queue::ClientConn->new(fh=>$fh, path=>$qs->{path}, logTrace=>$qs->{logTrace});
-  }
-  return undef;
-}
+##  + INHERITED from DTA::CAB::Socket
 
-## $qs = $qs->process($cli)
-## $qs = $qs->process($cli, \&callback)
-##  + main server loop
-##  + accepts and processes client connections
+## $rc = $qs->process($cli)
+## $rc = $qs->process($cli, \&callback)
+##  + handle a single client request
 ##  + each client request is a STRING message (command)
 ##    - request arguments (if required) are sent as separate messages following the command request
 ##    - server response (if any) depends on command sent
-##  + request commands (case-insensitive) handled by the process() method:
+##  + this method parses client request command $cmd and dispatches to
+##    - the method $qs->can("process_".lc($cmd))->($qs,$cli,\$cmd), if available
+##    - the method $qs->can("process_DEFAULT")->($qs,$cli,\$cmd)
+##  + returns whatever the handler subroutine does
+##  + INHERITED from CAB::Socket
+
+##--------------------------------------------------------------
+## Server Methods: Request Handling
+##
+##  + request commands (case-insensitive) handled here:
 ##     DEQ          : dequeue the first item in the queue; response: $cli->put($item)
 ##     DEQ_STR      : dequeue a string reference; response: $cli->put_str(\$item)
 ##     DEQ_REF      : dequeue a reference; response: $cli->put_ref($item)
@@ -189,12 +143,17 @@ sub accept {
 ##     QUIT         : close client connection; no response
 ##     ...          : other messages are passed to $callback->(\$request,$cli) or produce an error
 ##  + returns: same as $callback->() if called, otherwise $qs
-sub process {
-  my ($qs,$cli,$callback) = @_;
-  my $creq = $cli->get();
-  if (!ref($creq) || ref($creq) ne 'SCALAR') {
-    $qs->logconfess("could not parse client request");
-  }
+
+
+## $qs = $qs->process_deq($cli,\$cmd)
+## $qs = $qs->process_deq_str($cli,\$cmd)
+## $qs = $qs->process_deq_ref($cli,\$cmd)
+##  + implements "$item = DEQ", "\$str = DEQ_STR", "$ref = DEQ_REF"
+BEGIN {
+  *process_deq_str = *process_deq_ref = \&process_deq;
+}
+sub process_deq {
+  my ($qs,$cli,$creq) = @_;
   my $cmd = lc($$creq);
   my $qu  = $qs->{queue};
   if ($cmd =~ /^deq(?:_ref|_str)?$/) {
@@ -205,47 +164,67 @@ sub process {
     elsif ($cmd eq 'deq_ref') { $cli->put_ref( ref($qu->[0]) ? $qu->[0] : \$qu->[0] ); }
     shift(@$qu);
   }
-  elsif ($cmd eq 'enq') {
-    ##-- ENQ $item: enqueue a raw scalar or frozen reference
-    my $buf = undef;
-    my $ref = $cli->get(\$buf);
-    push(@$qu, ($ref eq \$buf ? $buf : $ref));
-  }
-  elsif ($cmd =~ /^enq_(?:str|ref)$/) {
-    ##-- ENQ_STR $string: enqueue a string-reference
-    ##-- ENQ_REF $ref   : enqueue a frozen reference
-    my $ref = $cli->get();
-    push(@$qu, $ref);
-  }
-  elsif ($cmd eq 'size') {
-    my $size = $qs->size;
-    $cli->put_str($size);
-  }
-  elsif ($cmd eq 'status') {
-    my $status = $qs->{status};
-    $cli->put_str($status);
-  }
-  elsif ($cmd eq 'clear') {
-    @$qu = qw();
-  }
-  elsif ($cmd eq 'quit') {
-    $cli->close();
-  }
-  elsif (defined($callback)) {
-    return $callback->($creq,$cli);
-  }
-  else {
-    $qs->logwarn("unknown command '$cmd' from client ignored");
-  }
   return $qs;
 }
 
+## $qs = $qs->process_enq($cli,\$cmd)
+##  + implements "ENQ $item"
+sub process_enq {
+  my ($qs,$cli,$creq) = @_;
+  my $buf = undef;
+  my $ref = $cli->get(\$buf);
+  push(@{$qs->{queue}}, ($ref eq \$buf ? $buf : $ref));
+  return $qs;
+}
+
+## $qs = $qs->process_enq_str($cli,\$cmd)
+## $qs = $qs->process_enq_ref($cli,\$cmd)
+##  + implements "ENQ_STR \$str", "ENQ_REF $ref"
+BEGIN {
+  *process_enq_str = *process_enq_ref;
+}
+sub process_enq_ref {
+  my ($qs,$cli,$creq) = @_;
+  my $ref = $cli->get();
+  push(@{$qs->{queue}}, $ref);
+  return $qs;
+}
+
+## $qs = $qs->process_size($cli,$creq)
+##  + implements "$size = SIZE"
+sub process_size {
+  #my ($qs,$cli,$creq) = @_;
+  #my $size = $_[0]->size;
+  $_[1]->put_str($_[0]->size);
+  return $_[0];
+}
+
+## $qs = $qs->process_status($cli,$creq)
+##  + implements "$status = STATUS"
+sub process_status {
+  #my ($qs,$cli,$creq) = @_;
+  $_[1]->put_str($_[0]{status});
+  return $_[0];
+}
+
+## $qs = $qs->process_clear($cli,$creq)
+##  + implements "CLEAR"
+sub process_clear {
+  @{$_[0]{queue}} = qw();
+  return $_[0];
+}
+
+## $qs = $qs->process_quit($cli,$creq)
+sub process_quit {
+  $_[1]->close();
+  return $_[0];
+}
 
 ##==============================================================================
 ## Client Connections
 package DTA::CAB::Queue::ClientConn;
 use strict;
-our @ISA = qw(DTA::CAB::Queue::Socket);
+our @ISA = qw(DTA::CAB::Socket::UNIX);
 
 
 1;
