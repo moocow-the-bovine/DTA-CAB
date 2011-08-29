@@ -37,7 +37,6 @@ BEGIN {
 ##     dumper => $dumper,              ##-- underlying Data::Dumper object
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
-##     #encoding => $encoding,         ##-- n/a
 ##     level     => $formatLevel,      ##-- sets Data::Dumper->Indent() option
 ##     outbuf    => $stringBuffer,     ##-- buffered output
 ##    )
@@ -45,7 +44,7 @@ sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- I/O common
-		   encoding => undef,
+		   utf8 => undef, ##-- n/a
 
 		   ##-- Input
 		   #doc => undef,
@@ -68,7 +67,7 @@ sub new {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
 sub noSaveKeys {
-  return qw(doc outbuf);
+  return ($_[0]->SUPER::noSaveKeys, qw(doc outbuf));
 }
 
 ##==============================================================================
@@ -81,7 +80,15 @@ sub noSaveKeys {
 ## $fmt = $fmt->close()
 sub close {
   delete($_[0]{doc});
-  return $_[0];
+  return $_[0]->SUPER::close(@_[1..$#_]);
+}
+
+## $fmt = $fmt->fromString( $string)
+## $fmt = $fmt->fromString(\$string)
+sub fromString {
+  my $fmt = shift;
+  $fmt->close(1);
+  return $fmt->parsePerlString(ref($_[0]) ? $_[0] : \$_[0]);
 }
 
 ## $fmt = $fmt->fromFile($filename_or_handle)
@@ -89,22 +96,19 @@ sub close {
 
 ## $fmt = $fmt->fromFh($filename_or_handle)
 ##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
-sub fromString {
-  my $fmt = shift;
-  $fmt->close();
-  return $fmt->parsePerlString($_[0]);
+sub fromFh {
+  return shift->SUPER::fromFh_str(@_);
 }
+
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parsePerlString($str)
+## $fmt = $fmt->parsePerlString(\$str)
 sub parsePerlString {
   my $fmt = shift;
   my ($doc);
-  $doc = eval "no strict; $_[0];";
+  $doc = eval "no strict; ".(ref($_[0]) ? ${$_[0]} : $_[0]).";";
   $fmt->warn("parsePerlString(): error in eval: $@") if ($@);
   $doc = DTA::CAB::Utils::deep_utf8_upgrade($doc);
   $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
@@ -123,55 +127,30 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + override returns text/perl
 sub mimeType { return 'text/perl'; }
-
-
-##--------------------------------------------------------------
-## Methods: Output: output selection
-
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
-sub toString { return $_[0]{outbuf}; }
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
 
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['token'])->Values([$_[1]])->Dump."\$token\n";
+  $_[0]{fh}->print($_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['token'])->Values([$_[1]])->Dump."\$token\n");
   return $_[0];
 }
 
 ## $fmt = $fmt->putSentence($sent)
 sub putSentence {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['sentence'])->Values([$_[1]])->Dump."\$sentence\n";
+  $_[0]{fh}->print($_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['sentence'])->Values([$_[1]])->Dump."\$sentence\n");
   return $_[0];
 }
 
 ## $fmt = $fmt->putDocument($doc)
 sub putDocument {
-  $_[0]{outbuf} .= $_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['document'])->Values([$_[1]])->Dump."\$document\n";
+  $_[0]{fh}->print($_[0]{dumper}->Reset->Indent($_[0]{level}||0)->Names(['document'])->Values([$_[1]])->Dump."\$document\n");
   return $_[0];
 }
 

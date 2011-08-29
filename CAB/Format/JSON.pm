@@ -8,8 +8,8 @@ package DTA::CAB::Format::JSON;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
+use JSON::XS;
 use Carp;
-use Encode qw(encode_utf8 decode_utf8);
 use strict;
 
 ##==============================================================================
@@ -18,19 +18,10 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Format);
 
-our $WRAP_CLASS = undef;
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json-xs', filenameRegex=>qr/\.(?i:json(?:[\.\-\_]xs)?)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'json');
 }
-
-foreach my $pmfile (map {"DTA/CAB/Format/JSON/$_.pm"} qw(XS Syck)) {
-  if (eval {require($pmfile)} && !$@ && !defined($WRAP_CLASS)) {
-    $WRAP_CLASS = $pmfile;
-    $WRAP_CLASS =~ s/\//::/g;
-    $WRAP_CLASS =~ s/\.pm$//;
-  }
-}
-$WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 
 ##==============================================================================
 ## Constructors etc.
@@ -44,31 +35,41 @@ $WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 ##     raw => $bool,                   ##-- if true, format parses raw data
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
-##     #encoding => $encoding,         ##-- n/a: always UTF-8 octets
-##     level     => $formatLevel,      ##-- 0:raw, 1:typed, ...
-##     outbuf    => $stringBuffer,     ##-- buffered output
+##     #utf8     => $bool,             ##-- always true
+##     level     => $formatLevel,      ##-- 0:compressed, 1:formatted, ...
+##     #outbuf   => $stringBuffer,     ##-- buffered output
 ##    )
 sub new {
   my $that = shift;
-  if ($that eq __PACKAGE__ && $WRAP_CLASS ne __PACKAGE__) {
-    return $WRAP_CLASS->new(@_);
-  }
-  my $fmt = bless({
-		   ##-- I/O common
-		   encoding => undef,
-		   raw => 0,
+  return $that->SUPER::new(
+			   ##-- I/O common
+			   raw  => 0,
 
-		   ##-- Input
-		   #doc => undef,
+			   ##-- Input
+			   #doc => undef,
 
-		   ##-- Output
-		   level  => 0,
-		   outbuf => '',
+			   ##-- Output
+			   level  => 0,
+			   #outbuf => '',
 
-		   ##-- user args
-		   @_
-		  }, ref($that)||$that);
-  return $fmt;
+			   ##-- common
+			   utf8 => 1,
+			   jxs  => undef, ##-- see jsonxs() method, below
+
+			   ##-- user args
+			   @_
+			  );
+}
+
+## $jxs = $CLASS_OR_OBJECT->jsonxs()
+##  + returns a (new) JSON::XS object
+##  + returns $obj->{jxs} if defined
+##  + otherwise caches $obj->{jxs} as new JSON::XS object
+sub jsonxs {
+  return $_[0]{jxs} if (ref($_[0]) && defined($_[0]{jxs}));
+  my $jxs = JSON::XS->new->utf8(0)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
+  $_[0]{jxs} = $jxs if (ref($_[0]));
+  return $jxs;
 }
 
 ##==============================================================================
@@ -78,7 +79,17 @@ sub new {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
 sub noSaveKeys {
-  return qw(doc outbuf);
+  return ($_[0]->SUPER::noSaveKeys, qw(doc outbuf jxs));
+}
+
+##==============================================================================
+## Methods: I/O: generic
+##==============================================================================
+
+## @layers = $fmt->iolayers()
+##  + override returns only ':raw'
+sub iolayers {
+  return qw(:raw);
 }
 
 ##==============================================================================
@@ -88,34 +99,31 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
+## $fmt = $fmt->fromFh($fh)
+##  + override calls $fmt->fromFh_str
+sub fromFh {
+  return $_[0]->fromFh_str(@_[1..$#_]);
 }
 
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString(\$string)
 sub fromString {
   my $fmt = shift;
   $fmt->close();
-  return $fmt->parseJsonString($_[0]);
+  return $fmt->parseJsonString(ref($_[0]) ? $_[0] : \$_[0]);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseJsonString($str, raw=>$rawMode)
+## $fmt = $fmt->parseJsonString(\$str)
 ##  + must be defined by child classes!
 ##  + if $rawMode is true, no document massaging will be performed
 sub parseJsonString {
   my $fmt = shift;
-  $fmt->logconfess("parseJsonString() not implemented!");
+  my $doc = $fmt->jsonxs->utf8( utf8::is_utf8(${$_[0]}) ? 0 : 1 )->decode(${$_[0]})
+    or $fmt->logcluck("parseJsonString(): JSON::XS::decode() failed: $!");
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
+  return $fmt;
 }
 
 ##--------------------------------------------------------------
@@ -129,7 +137,7 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + override
@@ -150,55 +158,35 @@ sub shortName {
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
+## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+##  + select output to filehandle $fh
+sub toFh {
+  $_[0]->DTA::CAB::Format::toFh(@_[1..$#_]);
+  $_[0]->jsonxs->utf8((grep {$_ eq 'utf8'} PerlIO::get_layers($_[1])) ? 0 : 1)->pretty($_[0]{level}>0 ? 1 : 0);
   return $_[0];
 }
 
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation removes typing if ($level < 1)
-sub toString {
-  $_[0]->formatLevel($_[1]) if (defined($_[1]));
-  $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
-  return Encode::encode_utf8($_[0]{outbuf})
-    if (defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
-  return $_[0]{outbuf};
-}
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
-
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
+##  + these methods just dump raw json
+##  + you're pretty much restricted to dumping a single document here
+
+## $fmt = $fmt->putRef($thingy)
+##  + puts a raw thingy with $fmt->{jxs}->encode()
+sub putRef {
+  $_[0]{fh}->print($_[0]{jxs}->encode($_[1]));
+  return $_[0];
+}
 
 ## $fmt = $fmt->putToken($tok)
-sub putToken {
-  $_[0]->logconfess("putToken() not implemented!");
-}
-
 ## $fmt = $fmt->putSentence($sent)
-sub putSentence {
-  $_[0]->logconfess("putSentence() not implemented!");
-}
-
 ## $fmt = $fmt->putDocument($doc)
-sub putDocument {
-  $_[0]->logconfess("putDocument() not implemented!");
-}
-
 ## $fmt = $fmt->putData($data)
-##  + puts raw data
-sub putData {
-  return $_[0]->putDocument($_[1]);
+BEGIN {
+  *putToken = \&putRef;
+  *putSentence = \&putRef;
+  *putDocument = \&putRef;
+  *putData = \&putRef;
 }
 
 1; ##-- be happy
@@ -213,7 +201,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Format::JSON - Datum parser|formatter: JSON code (generic)
+DTA::CAB::Format::JSON - Datum parser|formatter: JSON code via JSON::XS
 
 =cut
 
@@ -230,18 +218,16 @@ DTA::CAB::Format::JSON - Datum parser|formatter: JSON code (generic)
  ##========================================================================
  ## Methods: Input
  
- $fmt = $fmt->close();
+ $fmt = $fmt->parseJsonString($str);   ##-- guts
  $doc = $fmt->parseDocument();
- $fmt = $fmt->parseJsonString($str);   ##-- abstract
  
  ##========================================================================
  ## Methods: Output
  
- $fmt = $fmt->flush();
- $str = $fmt->toString();
- $fmt = $fmt->putToken($tok);         ##-- abstract
- $fmt = $fmt->putSentence($sent);     ##-- abstract
- $fmt = $fmt->putDocument($doc);      ##-- abstract
+ $fmt = $fmt->toFh($fh);
+ $fmt = $fmt->putToken($tok);
+ $fmt = $fmt->putSentence($sent);
+ $fmt = $fmt->putDocument($doc);
 
 
 =cut
@@ -252,19 +238,8 @@ DTA::CAB::Format::JSON - Datum parser|formatter: JSON code (generic)
 
 =head1 DESCRIPTION
 
-DTA::CAB::Format::JSON is a L<DTA::CAB::Format|DTA::CAB::Format> datum parser/formatter
-which reads & writes data as JSON code.  It really acts as a wrapper for the first available
-subclass among:
-
-=over 4
-
-=item L<DTA::CAB::Format::JSON::XS|DTA::CAB::Format::JSON::XS>
-
-=item L<DTA::CAB::Format::JSON::Syck|DTA::CAB::Format::JSON::Syck>
-
-=item L<DTA::CAB::Format::JSON::JSON|DTA::CAB::Format::JSON::JSON>
-
-=back
+DTA::CAB::Format::JSON::XS is a L<DTA::CAB::Format|DTA::CAB::Format> datum parser/formatter
+which reads & writes data as JSON::XS code using the JSON::XS module.
 
 =cut
 
@@ -286,7 +261,7 @@ L<DTA::CAB::Format|DTA::CAB::Format>.
 
 DTA::CAB::Format::JSON registers the filename regex:
 
- /\.(?i:yaml|yml)$/
+ /\.(?i:json(?:[\.\-\_]xs)?)$/
 
 with L<DTA::CAB::Format|DTA::CAB::Format>.
 
@@ -313,13 +288,9 @@ Constructor.
  ##---- Input
  doc    => $doc,                 ##-- buffered input document
  ##
- ##---- Output
- dumper => $dumper,              ##-- underlying Data::Dumper object
- ##
  ##---- INHERITED from DTA::CAB::Format
- #encoding => $encoding,         ##-- n/a
- level     => $formatLevel,      ##-- sets Data::Dumper->Indent() option
- outbuf    => $stringBuffer,     ##-- buffered output
+ #utf8     => $bool,             ##-- output is always UTF-8
+ level     => $formatLevel,      ##-- sets $jsonxs->pretty() level
 
 =back
 
@@ -352,23 +323,29 @@ This implementation returns C<qw(doc outbuf)>.
 
 =over 4
 
-=item close
+=item iolayers
 
- $fmt = $fmt->close();
+ $fmt = $fmt->iolayers()
 
-Override: close currently selected input source.
+Override always returns ':raw'.
 
 =item fromString
 
- $fmt = $fmt->fromString($string)
+ $fmt = $fmt->fromString(\$string)
 
 Override: select input from the string $string.
 
-=item parseJSONString
+=item fromFh($fh)
+
+ $fmt = $fmt->fromFh($fh)
+
+Override calls $fmt->fromFh_str().
+
+=item parseJsonString
 
  $fmt = $fmt->parseJsonString($str);
 
-Evaluates $str as perl code, which is expected to
+Evaluates $str as JSON code, which is expected to
 return a L<DTA::CAB::Document|DTA::CAB::Document>
 object (or something which can be massaged into one),
 and sets $fmt-E<gt>{doc} to this new document object.
@@ -392,20 +369,13 @@ e.g. the most recently parsed document.
 
 =over 4
 
-=item flush
+=item toFh
 
- $fmt = $fmt->flush();
+ $fmt = $fmt->toFh($fh)
+ $fmt = $fmt->toFh($fh, $formatLevel)
 
-Override: flush accumulated output.
-
-=item toString
-
- $str = $fmt->toString();
- $str = $fmt->toString($formatLevel)
-
-Override: flush buffered output document to byte-string.
-This implementation just returns $fmt-E<gt>{outbuf},
-which should already be a UTF-8 byte-string, and has no need of encoding.
+Override: select output to filehandle $fh.
+Creates and caches $fmt->{jxs} as a side effect.
 
 =item putToken
 
@@ -605,7 +575,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Jurish
+Copyright (C) 2010,2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

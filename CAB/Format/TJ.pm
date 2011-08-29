@@ -1,14 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::TJ.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser: one-token-per-line text
 
 package DTA::CAB::Format::TJ;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
-use Encode qw(encode decode encode_utf8 decode_utf8);
 use Carp;
 use strict;
 
@@ -33,12 +32,11 @@ BEGIN {
 ##     doc => $doc,                    ##-- buffered input document
 ##
 ##     ##-- Output
-##     outbuf  => $stringBuffer,     ##-- buffered output
+##     #outbuf  => $stringBuffer,     ##-- buffered output
 ##     level   => $formatLevel,      ##-- <0:no 'text' attribute; >=0: all attributes
 ##
 ##     ##-- Common
 ##     raw => $bool,                   ##-- attempt to load/save raw data
-##     encoding => $encoding,          ##-- default: UTF-8, where applicable
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
 
@@ -53,7 +51,7 @@ sub new {
 		   level => 0,
 
 		   ##-- common
-		   encoding => 'UTF-8',
+		   utf8 => 1,
 		   defaultFieldName => '',
 
 		   ##-- user args
@@ -70,38 +68,12 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(doc outbuf jxs);
+  return ($_[0]->SUPER::noSaveKeys, qw(doc outbuf jxs));
 }
 
 ##==============================================================================
-## Methods: Input
+## Methods: I/O: Generic
 ##==============================================================================
-
-##--------------------------------------------------------------
-## Methods: Input: Input selection
-
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
-}
-
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
-##  + select input from string $string
-sub fromString {
-  my $fmt = shift;
-  $fmt->close();
-  return $fmt->parseTJString($_[0]);
-}
-
-##--------------------------------------------------------------
-## Methods: utilities
 
 ## $jxs = $fmt->jsonxs()
 sub jsonxs {
@@ -111,20 +83,35 @@ sub jsonxs {
 }
 
 
+##==============================================================================
+## Methods: Input
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Input: Input selection
+
+## $fmt = $fmt->fromFh($filename_or_handle)
+##  + override calls fromFh_str()
+sub fromFh {
+  return $_[0]->fromFh_str(@_[1..$#_]);
+}
+
+## $fmt = $fmt->fromString(\$string)
+##  + select input from string $string
+sub fromString {
+  my $fmt = shift;
+  $fmt->close();
+  return $fmt->parseTJString(ref($_[0]) ? $_[0] : \$_[0]);
+}
+
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseTJString($str)
+## $fmt = $fmt->parseTJString(\$str)
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseTJString {
-  my $fmt = shift;
-
-  my $srcr = \$_[0];
-  if (!utf8::is_utf8($$srcr)) {
-    ##-- JSON::XS likes byte-string input
-    my $src = decode_utf8($$srcr);
-    $srcr   = \$src;
-  }
+  my ($fmt,$src) = @_;
+  utf8::upgrade($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
 
   my $jxs = $fmt->jsonxs();
 
@@ -170,7 +157,7 @@ sub parseTJString {
 	  split(/\n/, $_)
 	 ];
        (%sa || @$toks ? {%sa,tokens=>$toks} : qw())
-     } split(/\n\n+/, $$srcr)
+     } split(/\n\n+/, $$src)
     ];
 
   ##-- construct & buffer document
@@ -192,7 +179,7 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -204,26 +191,7 @@ sub defaultExtension { return '.tj'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
-
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + inherited from TT: just encodes string in $fmt->{outbuf}
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
+##  + inherited
 
 
 ##--------------------------------------------------------------
@@ -233,16 +201,16 @@ sub flush {
 sub putToken {
   #my ($fmt,$tok) = @_;
 
-  $_[0]{outbuf} .=
+  $_[0]{fh}->print
     (
-     ($_[1]{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$_[1]{_cmts}}) : '')
-     .$_[1]{text}
-     ."\t"
-     .$_[0]->jsonxs->encode(($_[0]{level}||0) >= 0
-			    ? $_[1]
-			    : {(map {$_ eq 'text' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})}
-			   )
-     ."\n"
+     ($_[1]{_cmts} ? join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$_[1]{_cmts}}) : ''),
+     $_[1]{text},
+     "\t",
+     $_[0]->jsonxs->encode(($_[0]{level}||0) >= 0
+			   ? $_[1]
+			   : {(map {$_ eq 'text' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})}
+			  ),
+     "\n",
     );
 
   return $_[0];
@@ -253,9 +221,9 @@ sub putToken {
 sub putSentence {
   #my ($fmt,$sent) = @_;
   my $sh = {(map {$_ eq 'tokens' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
-  $_[0]{outbuf} .=  '%%$TJ:SENT='.$_[0]->jsonxs->encode($sh)."\n" if (%$sh);
+  $_[0]{fh}->print('%%$TJ:SENT=', $_[0]->jsonxs->encode($sh), "\n") if (%$sh);
   $_[0]->putToken($_) foreach (@{toSentence($_[1])->{tokens}});
-  $_[0]->{outbuf} .= "\n";
+  $_[0]{fh}->print("\n");
   return $_[0];
 }
 
@@ -264,9 +232,9 @@ sub putSentence {
 sub putDocument {
   #my ($fmt,$doc) = @_;
   my $dh = {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
-  $_[0]{outbuf} .= '%%$TJ:DOC='.$_[0]->jsonxs->encode($dh)."\n" if (%$dh);
+  $_[0]{fh}->print('%%$TJ:DOC=', $_[0]->jsonxs->encode($dh), "\n") if (%$dh);
   $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
-  $_[0]->{outbuf} .= "\n";
+  $_[0]{fh}->print("\n");
   return $_[0];
 }
 
@@ -274,7 +242,7 @@ sub putDocument {
 ## $fmt = $fmt->putData($data)
 ##  + puts raw data (json)
 sub putData {
-  $_[0]{outbuf} .= $_[0]->jsonxs->encode($_[1]);
+  $_[0]{fh}->print($_[0]->jsonxs->encode($_[1]));
 }
 
 

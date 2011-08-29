@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Raw.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser: raw untokenized text (hack)
 
 package DTA::CAB::Format::Raw;
@@ -43,19 +43,19 @@ our (%ABBREVS);
 ##     #level    => $formatLevel,      ##-- n/a
 ##
 ##     ##-- Common
-##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
+##     utf8 => $bool,
 sub new {
   my $that = shift;
   my $fmt = bless({
+		   ##-- common
+		   utf8 => 1,
+
 		   ##-- input
 		   doc => undef,
 		   abbrevs => \%ABBREVS,
 
 		   ##-- output
 		   #outbuf => '',
-
-		   ##-- common
-		   encoding => 'UTF-8',
 
 		   ##-- user args
 		   @_
@@ -71,7 +71,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(doc outbuf);
+  return (shift->SUPER::noSaveKeys(), qw(doc outbuf));
 }
 
 ##==============================================================================
@@ -84,47 +84,48 @@ sub noSaveKeys {
 ## $fmt = $fmt->close()
 sub close {
   delete($_[0]{doc});
-  return $_[0];
+  return $_[0]->SUPER::close(@_[1..$#_]);
 }
 
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString( $string)
+## $fmt = $fmt->fromString(\$string)
 ##  + select input from string $string
 sub fromString {
   my $fmt = shift;
   $fmt->close();
-  return $fmt->parseRawString($_[0]);
+  return $fmt->parseRawString(ref($_[0]) ? $_[0] : \$_[0]);
+}
+
+## $fmt = $fmt->fromFh($fh)
+##  + override calls $fmt->fromFh_str()
+sub fromFh {
+  return $_[0]->fromFh_str(@_[1..$#_]);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseRawString($str)
+## $fmt = $fmt->parseRawString(\$str)
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseRawString {
   my ($fmt,$src) = @_;
-  $src = decode($fmt->{encoding},$src) if ($fmt->{encoding} && !utf8::is_utf8($src));
+  utf8::upgrade($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
 
   ##-- step 1: basic tokenization
   my (@toks);
-  while ($src =~ m/(
-		     (?:([[:alpha:]\-\#]+)[\-\¬](?:\n\s*)([[:alpha:]\-\#]+))   ##-- line-broken alphabetics
-		   | (?i:[IVXLCDM\#]+\.)                           ##-- dotted roman numerals (hack)
-		   | (?:[[:alpha:]\#]\.)                           ##-- dotted single-letter abbreviations
-		   | (?:[[:digit:]\#]+[[:alpha:]\#]+)              ##-- numbers with optional alphabetic suffixes
-		   | (?:[\-\+]?[[:digit:]\#]*[[:digit:]\,\.\#]+)   ##-- comma- and\/or dot-separated numbers
-		   | (?:\,\,|\`\`|\'\'|\-+|\_+|\.\.+)              ##-- special punctuation sequences
-		   | (?:[[:alpha:]\-\¬\#]+)                        ##-- "normal" alphabetics (with "#" ~= unknown)
-		   | (?:[[:punct:]]+)                              ##-- "normal" punctuation characters
-		   | (?:[^[:punct:][:digit:][:space:]]+)           ##-- "normal" alphabetic tokens
-		   | (?:\S+)                                       ##-- HACK: anything else
-		   )
-		  /xsg)
+  while ($$src =~ m/(
+		      (?:([[:alpha:]\-\#]+)[\-\¬](?:\n\s*)([[:alpha:]\-\#]+))   ##-- line-broken alphabetics
+		    | (?i:[IVXLCDM\#]+\.)                           ##-- dotted roman numerals (hack)
+		    | (?:[[:alpha:]\#]\.)                           ##-- dotted single-letter abbreviations
+		    | (?:[[:digit:]\#]+[[:alpha:]\#]+)              ##-- numbers with optional alphabetic suffixes
+		    | (?:[\-\+]?[[:digit:]\#]*[[:digit:]\,\.\#]+)   ##-- comma- and\/or dot-separated numbers
+		    | (?:\,\,|\`\`|\'\'|\-+|\_+|\.\.+)              ##-- special punctuation sequences
+		    | (?:[[:alpha:]\-\¬\#]+)                        ##-- "normal" alphabetics (with "#" ~= unknown)
+		    | (?:[[:punct:]]+)                              ##-- "normal" punctuation characters
+		    | (?:[^[:punct:][:digit:][:space:]]+)           ##-- "normal" alphabetic tokens
+		    | (?:\S+)                                       ##-- HACK: anything else
+		    )
+		   /xsg)
     {
       push(@toks, (defined($2) ? "$2$3" : $1));
     }
@@ -154,9 +155,9 @@ sub parseRawString {
 
   ##-- step 3: build doc
   foreach (@sents) {
-    @$_ = map {bless({text=>$_},'DTA::CAB::Token')} @$_;
+    @$_ = map { {text=>$_} } @$_;
   }
-  $fmt->{doc} = bless({body=>[map {bless({tokens=>$_},'DTA::CAB::Sentence')} @sents]}, 'DTA::CAB::Document');
+  $fmt->{doc} = bless({body=>[map { {tokens=>$_} } @sents]}, 'DTA::CAB::Document');
   return $fmt;
 }
 
@@ -165,16 +166,18 @@ sub parseRawString {
 ## Methods: Input: Generic API
 
 ## $doc = $fmt->parseDocument()
-sub parseDocument { return $_[0]{doc}; }
+sub parseDocument {
+  return $_[0]{doc};
+}
 
 
 ##==============================================================================
 ## Methods: Output
-##  + nothing here
+##  + output not supported
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -364,7 +367,7 @@ DTA::CAB::Format::Raw - Document parser: raw untokenized text
  $fmt = DTA::CAB::Format::Raw->new(%args);
  @keys = $class_or_obj->noSaveKeys();
  $fmt = $fmt->close();
- $fmt = $fmt->parseRawString($str);
+ $fmt = $fmt->parseRawString(\$str);
  $doc = $fmt->parseDocument();
  $type = $fmt->mimeType();
  $ext = $fmt->defaultExtension();
@@ -448,7 +451,7 @@ Select input from string $string.
 
 =item parseRawString
 
- $fmt = $fmt->parseRawString($str);
+ $fmt = $fmt->parseRawString(\$str);
 
 Guts for fromString(): parse string $str into local document buffer.
 

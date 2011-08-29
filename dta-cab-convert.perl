@@ -34,8 +34,8 @@ our $doprofile = 0; ##-- compatibility only; has no other effect
 ##-- Formats
 our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
-our %inputOpts   = (encoding=>'UTF-8');
-our %outputOpts  = (encoding=>undef,level=>0);
+our %inputOpts   = ();
+our %outputOpts  = (level=>0);
 our $doProfile   = 1;
 our $listOnly    = 0; ##-- only list formats?
 
@@ -52,12 +52,12 @@ GetOptions(##-- General
 
 	   ##-- I/O: input
 	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
-	   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
+	   #'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
 	   'input-option|io|parser-option|po=s'      => \%inputOpts,
 
 	   ##-- I/O: output
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
-	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
+	   #'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'        => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
@@ -109,7 +109,6 @@ if ($listOnly) {
 $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
-$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
 $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
@@ -126,25 +125,32 @@ our $oelapsed = 0;
 our ($file,$doc);
 our ($ntoks,$nchrs) = (0,0);
 push(@ARGV,'-') if (!@ARGV);
+$ofmt->toFile($outfile);
+
 foreach $file (@ARGV) {
 
+  ##-- read
   $t0 = [gettimeofday];
   $doc = $ifmt->parseFile($file)
     or die("$0: parse failed for input file '$file': $!");
-  $t1 = [gettimeofday];
+  $ifmt->close();
 
+  ##-- write
+  $t1 = [gettimeofday];
   $ofmt->putDocumentRaw($doc);
 
   if ($doProfile) {
     $ielapsed += tv_interval($t0,$t1);
-    $oelapsed  += tv_interval($t1,[gettimeofday]);
+    $oelapsed += tv_interval($t1,[gettimeofday]);
 
     $ntoks += $doc->nTokens;
     $nchrs += (-s $file) if ($file ne '-');
   }
 }
+
+##-- final output
 $t1 = [gettimeofday];
-$ofmt->toFile($outfile);
+$ofmt->flush->close();
 $oelapsed  += tv_interval($t1,[gettimeofday]);
 
 ##-- profiling
@@ -177,11 +183,9 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
 
  I/O Options
   -input-class CLASS              ##-- select input parser class (default: Text)
-  -input-encoding ENCODING        ##-- override input encoding (default: UTF-8)
   -input-option OPT=VALUE         ##-- set input parser option
 
   -output-class CLASS             ##-- select output formatter class (default: Text)
-  -output-encoding ENCODING       ##-- override output encoding (default: input encoding)
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
@@ -249,10 +253,6 @@ Set default log level (trace|debug|info|warn|error|fatal).
 
 Select input parser class (default: Text)
 
-=item -input-encoding ENCODING
-
-Override input encoding (default: UTF-8)
-
 =item -input-option OPT=VALUE
 
 Set arbitrary input parser option C<OPT> to C<VALUE>.
@@ -261,10 +261,6 @@ May be multiply specified.
 =item -output-class CLASS
 
 Select output formatter class (default: Text).
-
-=item -output-encoding ENCODING
-
-Override output encoding (default: input encoding).
 
 =item -output-option OPT=VALUE
 

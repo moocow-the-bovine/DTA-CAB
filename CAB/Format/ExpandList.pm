@@ -37,11 +37,11 @@ BEGIN {
 ##
 ##     ##---- Output
 ##     #level    => $formatLevel,      ##-- output formatting level: n/a
-##     outbuf    => $stringBuffer,     ##-- buffered output
+##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw)])
 ##
 ##     ##---- Common
-##     encoding  => $encoding,         ##-- default: 'UTF-8'
+##     utf8  => $bool,                 ##-- default: 1
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    )
 ## + inherited from DTA::CAB::Format::TT
@@ -96,7 +96,7 @@ sub new {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -109,33 +109,14 @@ sub defaultExtension { return '.xl'; }
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-##  + inherited from DTA::CAB::Format::TT
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
-##  + inherited from DTA::CAB::Format::TT
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
-
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
 ## $fmt = $fmt->putToken($tok)
-##  + appends $tok to output buffer
-## $fmt = $fmt->putToken($tok)
+##  + appends $tok to $fmt->{fh}
 sub putToken {
   my ($fmt,$tok) = @_;
-  $fmt->{outbuf} .= join("\t",
+  $fmt->{fh}->print(join("\t",
 			 grep {defined($_) && $_ ne ''}
 			 map {
 			   (UNIVERSAL::isa($_,'HASH')
@@ -146,18 +127,11 @@ sub putToken {
 			 }
 			 map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
 			 @$tok{@{$fmt->{keys}}}
-			)."\n";
+			),
+		    "\n");
   return $fmt;
 }
 
-
-## $fmt = $fmt->putSentence($sent)
-##  + concatenates formatted tokens, adding sentence-id comment if available
-##  + inherited from DTA::CAB::Format::TT
-
-## $out = $fmt->formatDocument($doc)
-##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
-##  + inherited from DTA::CAB::Format::TT
 
 1; ##-- be happy
 

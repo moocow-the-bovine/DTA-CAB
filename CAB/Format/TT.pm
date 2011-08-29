@@ -1,14 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::TT.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser: one-token-per-line text
 
 package DTA::CAB::Format::TT;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
-use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -38,7 +37,8 @@ BEGIN {
 ##
 ##     ##-- Common
 ##     raw => $bool,                   ##-- attempt to load/save raw data
-##     encoding => $inputEncoding,     ##-- default: UTF-8, where applicable
+##     fh  => $fh,                     ##-- IO::Handle for read/write
+##     utf8 => $bool,                  ##-- read/write utf8?
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    }
 
@@ -48,11 +48,8 @@ sub new {
 		   ##-- input
 		   doc => undef,
 
-		   ##-- output
-		   #outbuf => '',
-
 		   ##-- common
-		   encoding => 'UTF-8',
+		   utf8 => 1,
 		   defaultFieldName => '',
 
 		   ##-- user args
@@ -69,8 +66,15 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(doc outbuf);
+  return ($_[0]->SUPER::noSaveKeys, qw(doc outbuf));
 }
+
+##==============================================================================
+## Methods: I/O: Generic
+##==============================================================================
+
+## $fmt = $fmt->close()
+##  + inherited
 
 ##==============================================================================
 ## Methods: Input
@@ -79,38 +83,28 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
+## $fmt = $fmt->fromFh($filename_or_handle)
+##  + override calls fromFh_str()
+sub fromFh {
+  return $_[0]->fromFh_str(@_[1..$#_]);
 }
 
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString(\$string)
 ##  + select input from string $string
 sub fromString {
   my $fmt = shift;
   $fmt->close();
-  return $fmt->parseTTString($_[0]);
+  return $fmt->parseTTString(ref($_[0]) ? $_[0] : \$_[0]);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseTTString($str)
+## $fmt = $fmt->parseTTString(\$str)
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseTTString {
-  my $fmt = shift;
-  my $srcr = \$_[0];
-  if ($fmt->{encoding} && !utf8::is_utf8($$srcr)) {
-    my $src=decode($fmt->{encoding},$$srcr);
-    $srcr = \$src;
-  }
+  my ($fmt,$src) = @_;
+  utf8::upgrade($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
 
   my %f2key =
     ('morph/lat'=>'mlatin',
@@ -212,7 +206,7 @@ sub parseTTString {
 	  split(/\n/, $_)
 	 ];
        (%sa || @$toks ? {%sa,tokens=>$toks} : qw())
-     } split(/\n\n+/, $$srcr)
+     } split(/\n\n+/, $$src)
     ];
 
   ##-- construct & buffer document
@@ -234,7 +228,7 @@ sub parseDocument { return $_[0]{doc}; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -244,26 +238,9 @@ sub mimeType { return 'text/plain'; }
 ##  + returns default filename extension for this format
 sub defaultExtension { return '.tt'; }
 
-##--------------------------------------------------------------
-## Methods: Output: output selection
-
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
-}
-
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
-##  + override encodes string in $fmt->{outbuf}
-sub toString {
-  $_[0]{outbuf}  = '' if (!defined($_[0]{outbuf}));
-  return encode($_[0]{encoding},$_[0]{outbuf})
-    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
-  return $_[0]{outbuf};
-}
 
 ## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
@@ -272,63 +249,70 @@ sub toString {
 ## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
 ##  + flush buffered output document to filehandle $fh
 ##  + default implementation calls to $fmt->formatString($formatLevel)
-
+sub toFh {
+  $_[0]->DTA::CAB::Format::toFh(@_[1..$#_]);
+  $_[0]->setLayers();
+  return $_[0];
+}
 
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
-## $fmt = $fmt->putToken($tok)
-sub putToken {
-  my ($fmt,$tok) = @_;
-  my $out = '';
+## \$buf = $fmt->token2buf($tok,\$buf)
+##  + buffer output for a single token
+##  + called by putToken()
+sub token2buf {
+  my ($fmt,$tok,$bufr) = @_;
+  $bufr  = \(my $buf='') if (!defined($bufr));
+  $$bufr = '';
 
   ##-- pre-token comments
-  $out .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$tok->{_cmts}}) if ($tok->{_cmts});
+  $$bufr .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$tok->{_cmts}}) if ($tok->{_cmts});
 
   ##-- text
-  $out .= $tok->{text};
+  $$bufr .= $tok->{text};
 
   ##-- Location ('loc'), moot compatibile
-  $out .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
+  $$bufr .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
 
   ##-- character list
-  #$out .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
+  #$$bufr .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));
 
   ##-- literal fields
   foreach (grep {defined($tok->{$_})} qw(id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen)) {
-    $out .= "\t[$_] $tok->{$_}"
+    $$bufr .= "\t[$_] $tok->{$_}"
   }
 
   ##-- cab token-preprocessor analyses
-  $out .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
+  $$bufr .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
 
   ##-- tokenizer-supplied analyses
-  $out .= join('', map {"\t[toka] $_"} grep {defined($_)} @{$tok->{toka}}) if ($tok->{toka});
+  $$bufr .= join('', map {"\t[toka] $_"} grep {defined($_)} @{$tok->{toka}}) if ($tok->{toka});
 
   ##-- Transliterator ('xlit')
-  $out .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
+  $$bufr .= "\t[xlit] l1=$tok->{xlit}{isLatin1} lx=$tok->{xlit}{isLatinExt} l1s=$tok->{xlit}{latin1Text}"
     if (defined($tok->{xlit}));
 
   ##-- LTS ('lts')
-  $out .= join('', map { "\t[lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{lts}})
+  $$bufr .= join('', map { "\t[lts] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{lts}})
     if ($tok->{lts});
 
   ##-- phonetic digests ('soundex', 'koeln', 'metaphone')
-  $out .= "\t[soundex] $tok->{soundex}"     if (defined($tok->{soundex}));
-  $out .= "\t[koeln] $tok->{koeln}"         if (defined($tok->{koeln}));
-  $out .= "\t[metaphone] $tok->{metaphone}" if (defined($tok->{metaphone}));
+  $$bufr .= "\t[soundex] $tok->{soundex}"     if (defined($tok->{soundex}));
+  $$bufr .= "\t[koeln] $tok->{koeln}"         if (defined($tok->{koeln}));
+  $$bufr .= "\t[metaphone] $tok->{metaphone}" if (defined($tok->{metaphone}));
 
   ##-- Phonetic Equivalents ('eqpho')
-  $out .= join('', map { "\t[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqpho}})
+  $$bufr .= join('', map { "\t[eqpho] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqpho}})
     if ($tok->{eqpho});
 
   ##-- Known Phonetic Equivalents ('eqphox')
-  $out .= join('', map { "\t[eqphox] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqphox}})
+  $$bufr .= join('', map { "\t[eqphox] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqphox}})
     if ($tok->{eqphox});
 
   ##-- Morph ('morph')
   if ($tok->{morph}) {
-    $out .= join('',
+    $$bufr .= join('',
 		 map {("\t[morph] "
 		       .(defined($_->{lo}) ? "$_->{lo} : " : '')
 		       .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
@@ -337,14 +321,14 @@ sub putToken {
   }
 
   ##-- Morph::Latin ('morph/lat')
-  $out .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
+  $$bufr .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
     if ($tok->{mlatin});
 
   ##-- MorphSafe ('morph/safe')
-  $out .= "\t[morph/safe] ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));
+  $$bufr .= "\t[morph/safe] ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));
 
   ##-- Rewrites + analyses
-  $out .= join('',
+  $$bufr .= join('',
 	       map {
 		 ("\t[rw] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>",
 		  (##-- rw/lts
@@ -364,16 +348,16 @@ sub putToken {
     if ($tok->{rw});
 
   ##-- Rewrite Equivalents ('eqrw')
-  $out .= join('', map { "\t[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqrw}})
+  $$bufr .= join('', map { "\t[eqrw] ".(ref($_) ? "$_->{hi} <$_->{w}>" : $_) } grep {defined($_)} @{$tok->{eqrw}})
     if ($tok->{eqrw});
 
   ##-- dmoot
   if ($tok->{dmoot}) {
     ##-- dmoot/tag
-    $out .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
+    $$bufr .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
 
     ##-- dmoot/morph
-    $out .= join('', map {("\t[dmoot/morph] "
+    $$bufr .= join('', map {("\t[dmoot/morph] "
 			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
 			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
 			   ."$_->{hi} <$_->{w}>"
@@ -381,23 +365,23 @@ sub putToken {
       if ($tok->{dmoot}{morph});
 
     ##-- dmoot/analyses
-    $out .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{prob}||$_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
+    $$bufr .= join('', map {"\t[dmoot/analysis] $_->{tag} ~ $_->{details} <".($_->{prob}||$_->{cost}||0).">"} @{$tok->{dmoot}{analyses}})
       if ($tok->{dmoot}{analyses});
   }
 
   ##-- moot
   if ($tok->{moot}) {
     ##-- moot/word
-    $out .= "\t[moot/word] $tok->{moot}{word}" if (defined($tok->{moot}{word}));
+    $$bufr .= "\t[moot/word] $tok->{moot}{word}" if (defined($tok->{moot}{word}));
 
     ##-- moot/tag
-    $out .= "\t[moot/tag] $tok->{moot}{tag}";
+    $$bufr .= "\t[moot/tag] $tok->{moot}{tag}";
 
     ##-- moot/lemma
-    $out .= "\t[moot/lemma] $tok->{moot}{lemma}" if (defined($tok->{moot}{lemma}));
+    $$bufr .= "\t[moot/lemma] $tok->{moot}{lemma}" if (defined($tok->{moot}{lemma}));
 
     ##-- moot/morph (UNUSED)
-    $out .= join('', map {("\t[moot/morph] "
+    $$bufr .= join('', map {("\t[moot/morph] "
 			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
 			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
 			   ."$_->{hi} <$_->{w}>"
@@ -405,7 +389,7 @@ sub putToken {
       if ($tok->{moot}{morph});
 
     ##-- moot/analyses
-    $out .= join('', map {("\t[moot/analysis] $_->{tag}"
+    $$bufr .= join('', map {("\t[moot/analysis] $_->{tag}"
 			   .(defined($_->{lemma}) ? " \@ $_->{lemma}" : '')
 			   ." ~ $_->{details} <".($_->{prob}||$_->{cost}||0).">"
 			  )} @{$tok->{moot}{analyses}})
@@ -413,7 +397,7 @@ sub putToken {
   }
 
   ##-- lemma equivalents
-  $out .= join('', map {("\t[eqlemma] "
+  $$bufr .= join('', map {("\t[eqlemma] "
 			 .(defined($_->{lo}) ? "$_->{lo} : " : '')
 			 .$_->{hi}
 			 .(defined($_->{w}) ? " <$_->{w}>" : '')
@@ -424,7 +408,7 @@ sub putToken {
   ##-- unparsed fields (pass-through)
   if ($tok->{other}) {
     my ($name);
-    $out .= ("\t"
+    $$bufr .= ("\t"
 	     .join("\t",
 		   (map { $name=$_; map { "[$name] $_" } @{$tok->{other}{$name}} }
 		    sort grep {$_ ne $fmt->{defaultFieldName}} keys %{$tok->{other}}
@@ -436,29 +420,40 @@ sub putToken {
 	    );
   }
 
-  ##-- ... ???
-  $fmt->{outbuf} .= $out."\n";
-  return $fmt;
+  ##-- return
+  $$bufr .= "\n";
+  return $bufr;
+}
+
+## $fmt = $fmt->putToken($tok)
+## $fmt = $fmt->putToken($tok,\$buf)
+sub putToken {
+  $_[0]{fh}->print(${$_[0]->token2buf(@_[1..$#_])});
+  return $_[0];
 }
 
 ## $fmt = $fmt->putSentence($sent)
+## $fmt = $fmt->putSentence($sent,\$buf)
 ##  + concatenates formatted tokens, adding sentence-id comment if available
 sub putSentence {
-  my ($fmt,$sent) = @_;
-  $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}}) if ($sent->{_cmts});
-  $fmt->{outbuf} .= "%% Sentence $sent->{id}\n" if (defined($sent->{id}));
-  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
-  $fmt->{outbuf} .= "\n";
+  my ($fmt,$sent,$bufr) = @_;
+  $bufr = \(my $buf='') if (!defined($bufr));
+  $fmt->{fh}->print(join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}})) if ($sent->{_cmts});
+  $fmt->{fh}->print("%% Sentence $sent->{id}\n") if (defined($sent->{id}));
+  $fmt->putToken($_,$bufr) foreach (@{toSentence($sent)->{tokens}});
+  $fmt->{fh}->print("\n");
   return $fmt;
 }
 
 ## $fmt = $fmt->putDocument($doc)
+## $fmt = $fmt->putDocument($doc,\$buf)
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
 sub putDocument {
-  my ($fmt,$doc) = @_;
-  $fmt->{outbuf} .= join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}}) if ($doc->{_cmts});
-  $fmt->{outbuf} .= "%% base=$doc->{base}\n\n" if (defined($doc->{base}));
-  $fmt->putSentence($_) foreach (@{toDocument($doc)->{body}});
+  my ($fmt,$doc,$bufr) = @_;
+  $bufr = \(my $buf='') if (!defined($bufr));
+  $fmt->{fh}->print(join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$doc->{_cmts}})) if ($doc->{_cmts});
+  $fmt->{fh}->print("%% base=$doc->{base}\n\n") if (defined($doc->{base}));
+  $fmt->putSentence($_,$bufr) foreach (@{toDocument($doc)->{body}});
   return $fmt;
 }
 

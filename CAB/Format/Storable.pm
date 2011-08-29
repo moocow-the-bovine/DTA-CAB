@@ -34,14 +34,15 @@ BEGIN {
 ##    (
 ##     ##---- Input
 ##     doc => $doc,                    ##-- buffered input document
+##     raw => $bool,                   ##-- uses forceDocument() if false (default)
 ##
 ##     ##---- Output
-##     docbuf   => $obj,               ##-- an output object buffer (DTA::CAB::Document object)
+##     #docbuf  => $obj,               ##-- an output object buffer (DTA::CAB::Document object)
 ##     netorder => $bool,              ##-- if true (default), then store in network order
 ##
 ##     ##---- INHERITED from DTA::CAB::Format
-##     #encoding => $encoding,         ##-- n/a
-##     #level    => $formatLevel,      ##-- sets Data::Dumper->Indent() option
+##     #utf8     => $bool,             ##-- n/a
+##     #level    => $formatLevel,      ##-- sets output level: n/a
 ##     #outbuf   => $stringBuffer,     ##-- buffered output
 ##    )
 sub new {
@@ -51,11 +52,11 @@ sub new {
 		   #doc => undef,
 
 		   ##-- output
-		   docbuf   => DTA::CAB::Document->new(),
+		   #docbuf   => DTA::CAB::Document->new(),
 		   netorder => 1,
 
 		   ##-- i/o common
-		   encoding => undef, ##-- not applicable
+		   utf8 => undef, ##-- not applicable
 
 		   ##-- user args
 		   @_
@@ -74,52 +75,32 @@ sub noSaveKeys {
 }
 
 ##=============================================================================
+## Methods: I/O: Generic
+##==============================================================================
+
+## $fmt = $fmt->close()
+##  + deletes $fmt->{doc} if present
+
+## @layers = $fmt->iolayers
+sub iolayers {
+  return (':raw');
+}
+
+##=============================================================================
 ## Methods: Input
 ##==============================================================================
 
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
-}
-
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
 ## $fmt = $fmt->fromFh($fh)
 sub fromFh {
   my ($fmt,$fh) = @_;
-  $fmt->close;
+  $fmt->DTA::CAB::Format::fromFh($fh);
   $fmt->{doc} = Storable::retrieve_fd($fh)
     or $fmt->logconfess("fromFh(): Storable::retrieve_fd() failed: $!");
   return $fmt;
 }
-
-## $fmt = $fmt->fromString( $string)
-## $fmt = $fmt->fromString(\$string)
-##  + requires perl 5.8 or better with PerlIO layer for "real" string I/O handles
-sub fromString {
-  my $fmt = shift;
-  my $fh  = IO::Handle->new();
-  my $str = shift;
-  CORE::open($fh,'<',(ref($str) ? $str : \$str))
-      or $fmt->logconfess("could not open() filehandle for string ref");
-  #$fh->binmode();
-  my $rc = $fmt->fromFh($fh);
-  $fh->close();
-  return $fmt;
-}
-sub fromString_freeze {
-  my $fmt = shift;
-  $fmt->close;
-  $fmt->{doc} = Storable::thaw($_[0])
-    or $fmt->logconfess("fromString(): Storable::thaw() failed: $!");
-  return $fmt;
-}
-
 
 ##--------------------------------------------------------------
 ## Methods: Input: Generic API
@@ -136,7 +117,7 @@ sub parseDocument {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -149,94 +130,34 @@ sub defaultExtension { return '.bin'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
-
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  $_[0]{docbuf} = DTA::CAB::Document->new();
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel=!$netorder)
-##  + flush buffered output in $fmt->{docbuf} to byte-string (using Storable::freeze())
-sub toString {
-  my $fmt = shift;
-  my $fh  = IO::Handle->new();
-  my $str = '';
-  CORE::open($fh,'>',\$str)
-      or $fmt->logconfess("could not open() filehandle for string ref");
-  #$fh->binmode();
-  my $rc = $fmt->toFh($fh,@_);
-  $fh->close();
-  return $str;
-}
-sub toString_freeze {
-  my $fmt = shift;
-  return $fmt->{netorder} ? Storable::nfreeze($fmt->{docbuf}) : Storable::freeze($fmt->{docbuf});
-}
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-sub toFh {
-  my ($fmt,$fh) = @_;
-  if ($fmt->{netorder}) {
-    Storable::nstore_fd($fmt->{docbuf},$fh);
-  } else {
-    Storable::store_fd($fmt->{docbuf}, $fh);
-  }
-  return $fmt;
-}
+##  + inherited
 
 ##--------------------------------------------------------------
 ## Methods: Output: Recommended API
 
+## $fmt = $fmt->putRef($ref)
+##  + wrapper for Storable::nstore_fd() rsp store_fd()
+sub putRef {
+  if ($_[0]{netorder}) {
+    Storable::nstore_fd($_[1],$_[0]{fh})
+	or $_[0]->logconfess("Storable::nstore_fd() failed for $_[1]: $!");
+  } else {
+    Storable::store_fd($_[1],$_[0]{fh})
+	or $_[0]->logconfess("Storable::store_fd() failed for $_[1]: $!");
+  }
+  return $_[0];
+}
+
+
 ## $fmt = $fmt->putToken($tok)
-sub putToken { $_[0]->putTokenRaw(Storable::dclone($_[1])); }
-sub putTokenRaw {
-  my ($fmt,$tok) = @_;
-  my $buf = $fmt->{docbuf};
-  if (@{$buf->{body}}) {
-    push(@{$buf->{body}[$#{$buf->{body}}]}, $tok);
-  } else {
-    push(@{$buf->{body}}, toSentence([$tok]));
-  }
-}
-
 ## $fmt = $fmt->putSentence($sent)
-sub putSentence { $_[0]->putSentenceRaw(Storable::dclone($_[1])); }
-sub putSentenceRaw {
-  my ($fmt,$sent) = @_;
-  push(@{$fmt->{docbuf}{body}}, $sent);
-  return $fmt;
-}
-
-##--------------------------------------------------------------
-## Methods: Output: Required API
-
 ## $fmt = $fmt->putDocument($doc)
-sub putDocument { $_[0]->putDocumentRaw(Storable::dclone($_[1])); }
-sub putDocumentRaw {
-  my ($fmt,$doc) = @_;
-  my $buf = $fmt->{docbuf};
-  if (scalar(keys(%$buf))==1 && !@{$buf->{body}}) {
-    ##-- steal $doc
-    $fmt->{docbuf} = $doc;
-  } else {
-    ##-- append $doc->{body} onto $buf->{body}
-    push(@{$buf->{body}}, @{$doc->{body}});
-    foreach (grep {$_ ne 'body'} keys(%$doc)) {
-      $buf->{$_} = $doc->{$_}; ##-- clobber existing keys
-    }
-  }
-  return $fmt;
+BEGIN {
+  *putToken = \&putRef;
+  *putSentence = \&putRef;
+  *putDocument = \&putRef;
+  *putData = \&putRef;
 }
-
-## $fmt = $fmt->putData($data)
-sub putData { return $_[0]->putDocument($_[1]); }
 
 ##==============================================================================
 ## Package Aliases

@@ -7,7 +7,6 @@
 package DTA::CAB::Format::Null;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
-use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -30,16 +29,12 @@ BEGIN {
 ##  + object structure: assumed HASH
 ##    (
 ##     ##---- INHERITED from DTA::CAB::Format
-##     #encoding => $encoding,         ##-- n/a
-##     level     => $formatLevel,      ##-- sets Data::Dumper->Indent() option
-##     outbuf    => $stringBuffer,     ##-- buffered output
 ##    )
 sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- I/O common
-		   encoding => undef,
-		   outbuf => '',
+		   utf8 => undef,
 
 		   ##-- user args
 		   @_
@@ -60,25 +55,6 @@ sub new {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Input: Input selection
-
-## $fmt = $fmt->close()
-## + default
-
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
-sub fromString {
-  my $fmt = shift;
-  $fmt->close();
-  return $fmt;
-}
-
-##--------------------------------------------------------------
 ## Methods: Input: Generic API
 
 ## $doc = $fmt->parseDocument()
@@ -90,7 +66,7 @@ sub parseDocument { return DTA::CAB::Document->new; }
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -101,24 +77,14 @@ sub mimeType { return 'text/plain'; }
 sub defaultExtension { return '.null'; }
 
 ##--------------------------------------------------------------
-## Methods: Output: output selection
-
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
-sub toString { return ''; }
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
+## Methods: Output: API
 
 ## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
 ##  + flush buffered output document to filehandle $fh
 ##  + default implementation calls to $fmt->formatString($formatLevel)
+sub toFh {
+  return $_[0];
+}
 
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API

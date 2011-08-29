@@ -14,6 +14,7 @@ use DTA::CAB::Token;
 use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 use IO::File;
+use IO::Handle;
 use Carp;
 use strict;
 
@@ -47,7 +48,7 @@ BEGIN {
 ##  + object structure: assumed HASH
 ##    {
 ##     ##-- DTA::CAB::IO: common
-##     encoding => $inputEncoding,  ##-- default: UTF-8, where applicable
+##     utf8 => $bool,                 ##-- use UTF-8 I/O, where applicable; default=1
 ##
 ##     ##-- DTA::CAB::IO: input parsing
 ##     #(none)
@@ -60,7 +61,7 @@ sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- DTA::CAB::IO: common
-		   encoding => 'UTF-8',
+		   utf8 => 1,
 
 		   ##-- DTA::CAB::IO: input parsing
 		   #(none)
@@ -76,8 +77,11 @@ sub new {
 }
 
 ## undef = $fmt->DESTROY()
-##  + destructor (no default implementation)
-sub DESTROY { ; }
+##  + destructor
+##  + default implementation calls close()
+sub DESTROY {
+  $_[0]->close();
+}
 
 ## $fmt = CLASS->newFormat($class_or_short_or_class_suffix, %opts)
 ##  + wrapper for DTA::CAB::Format::Registry::newFormat(); accepts %opts qw(class file)
@@ -150,13 +154,52 @@ sub base2reg {
 
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
-##  + default ignores 'outbuf'
+##  + default returns qw(outbuf fh tmpfh)
 sub noSaveKeys {
-  return qw(outbuf);
+  return qw(outbuf fh tmpfh);
 }
 
 ## $loadedObj = $CLASS_OR_OBJ->loadPerlRef($ref)
 ##  + default inherited from DTA::CAB::Persistent
+
+##==============================================================================
+## Methods: I/O : Generic
+##==============================================================================
+
+## $fmt = $fmt->close()
+## $fmt = $fmt->close($savetmp)
+##  + close current input source, if any
+##  + default calls $fmt->{tmpfh}->close() if available and $savetmp is false (default)
+##  + always deletes $fmt->{fh} and $fmt->{doc}
+sub close {
+  if (!$_[1] && $_[0]{tmpfh}) {
+    $_[0]{tmpfh}->close() if ($_[0]{tmpfh}->opened);
+    delete($_[0]{tmpfh});
+  }
+  #$_[0]{fh}->close() if ($_[0]{fh} && $_[0]{fh}->opened());
+  delete(@{$_[0]}{qw(fh doc)});
+  return $_[0];
+}
+
+## @layers = $fmt->iolayers()
+##  + returns PerlIO layers to use for I/O handles
+##  + default returns ':utf8' if $fmt->{utf8} is true, otherwise ':raw'
+sub iolayers {
+  return $_[0]{utf8} ? ':utf8' : ':raw';
+}
+
+## $fmt = $fmt->setLayers()
+## $fmt = $fmt->setLayers($fh)
+## $fmt = $fmt->setLayers($fh,@layers)
+##  + wrapper for binmode($fh,$_) foreach (@layers ? @layers : $fmt->iolayers)
+sub setLayers {
+  my ($fmt,$fh,@layers) = @_;
+  $fh = $fmt->{fh} if (!defined($fh));
+  return $fmt if (!defined($fh));
+  binmode($fh,$_) foreach (@layers ? @layers : $fmt->iolayers);
+  return $fmt;
+}
+
 
 ##==============================================================================
 ## Methods: Input
@@ -165,39 +208,64 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-##  + close current input source, if any
-sub close { return $_[0]; }
-
-## $fmt = $fmt->fromString($string)
-##  + select input from string $string
-sub fromString {
-  my ($fmt,$str) = @_;
-  $fmt->close;
-  $fmt->logconfess("fromString(): not implemented");
+## $fmt = $fmt->from(fh=>$fh)
+## $fmt = $fmt->from(file=>$file)
+## $fmt = $fmt->from(string=>$str)
+## $fmt = $fmt->from(string=>\$str)
+##  + open $fmt for input from specified source
+##  + wraps fromFh(), fromFile(), fromString()
+sub from {
+  my $fmt   = shift;
+  my $which = shift;
+  return $fmt->fromFh(@_)   if ($which eq 'fh');
+  return $fmt->fromFile(@_) if ($which eq 'file');
+  return $fmt->fromString(@_);
 }
 
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
+## $fmt = $fmt->fromString( $string)
+## $fmt = $fmt->fromString(\$string)
+##  + select input from string $string
+##  + default calls $fmt->fromFh($fmt->{tmpfh}=$new_fh)
+sub fromString {
+  my $fmt = shift;
+  $fmt->close;
+  my $fh = IO::Handle->new();
+  CORE::open($fh, '<', ref($_[0]) ? $_[0] : \$_[0])
+      or $fmt->logconfess("fromString(): open failed for string input: $!");
+  return $fmt->fromFh($fmt->{tmpfh}=$fh);
+}
+
+## $fmt = $fmt->fromFile($filename)
+##  + default calls $fmt->fromFh($fmt->{tmpfh}=new_fh)
 sub fromFile {
   my ($fmt,$file) = @_;
-  my $fh = ref($file) ? $file : IO::File->new("<$file");
-  $fmt->logconfess("fromFile(): open failed for file '$file'") if (!$fh);
-  my $rc = $fmt->fromFh($fh);
-  $fh->close if (!ref($file));
-  return $rc;
+  $fmt->close;
+  my $fh = (ref($file) ? $file : IO::File->new("<$file"))
+    or $fmt->logconfess("fromFile(): open failed for '$file'");
+  return $fmt->fromFh($fmt->{tmpfh}=$fh);
 }
 
-## $fmt = $fmt->fromFh($handle)
-##  + default just calls $fmt->fromString()
+## $fmt = $fmt->fromFh($fh)
+##  + default version just calls $fmt->close(1) and sets $fmt->{fh}=$fh
 sub fromFh {
   my ($fmt,$fh) = @_;
-  my ($buf);
-  {
-    local $/ = undef;
-    $buf = $fh->getline;
-  }
-  return $fmt->fromString($buf);
+  $fmt->logconfess("fromFh(): abstract method called for object instance") if ($fmt->can('fromFh') eq \&fromFh); ##-- sanity check
+  $fmt->close(1);            ##-- keep $fmt->{tmpfh} for auto-close
+  $fmt->{fh} = $fh;          ##-- save this handle for later use
+  #$fmt->setLayers();        ##-- set perlIO layers
+  #$fmt->logconfess("fromFh() not implemented");
+  return $fmt;
+}
+
+## $fmt = $fmt->fromFh_str($fh)
+##  + alternate default which slurps contents of $fh and calls $fmt->fromString(\$str)
+sub fromFh_str {
+  my ($fmt,$fh) = @_;
+  $fmt->DTA::CAB::Format::fromFh($fh);
+  $fmt->setLayers();
+  local $/ = undef;
+  my $str = <$fh>;
+  return $fmt->fromString(\$str);
 }
 
 ##--------------------------------------------------------------
@@ -210,24 +278,30 @@ sub parseDocument {
   $fmt->logconfess("parseDocument() not implemented!");
 }
 
-## $doc = $fmt->parseString($str)
-##   + wrapper for $fmt->fromString($str)->parseDocument()
+## $doc = $fmt->parseString( $str)
+## $doc = $fmt->parseString(\$str)
+##   + wrapper for $fmt->fromString(\$str)->parseDocument()
 sub parseString {
-  return $_[0]->fromString($_[1])->parseDocument;
+  my $doc = $_[0]->fromString($_[1])->parseDocument;
+  $_[0]->close();
+  return $doc;
 }
 
 ## $doc = $fmt->parseFile($filename_or_fh)
 ##   + wrapper for $fmt->fromFile($filename_or_fh)->parseDocument()
 sub parseFile {
-  return $_[0]->fromFile($_[1])->parseDocument;
+  my $doc = $_[0]->fromFile($_[1])->parseDocument;
+  $_[0]->close();
+  return $doc;
 }
 
 ## $doc = $fmt->parseFh($fh)
 ##   + wrapper for $fmt->fromFh($filename_or_fh)->parseDocument()
 sub parseFh {
-  return $_[0]->fromFh($_[1])->parseDocument;
+  my $doc = $_[0]->fromFh($_[1])->parseDocument;
+  $_[0]->close();
+  return $doc;
 }
-
 
 
 ##--------------------------------------------------------------
@@ -301,7 +375,7 @@ sub forceDocument {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME & HTTP stuff
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + default returns text/plain
@@ -322,9 +396,6 @@ sub shortName {
   return lc($short);
 }
 
-##--------------------------------------------------------------
-## Methods: Output: accessors
-
 ## $lvl = $fmt->formatLevel()
 ## $fmt = $fmt->formatLevel($level)
 ##  + set output formatting level
@@ -335,49 +406,87 @@ sub formatLevel {
   return $fmt;
 }
 
-##--------------------------------------------------------------
-## Methods: Output: output selection
-
 ## $fmt = $fmt->flush()
 ##  + flush accumulated output
-##  + default implementation just deletes $fmt->{outbuf}
+##  + deletes $fmt->{outbuf}
+##  + calls $fmt->{fh}->flush()
 sub flush {
   delete($_[0]{outbuf});
+  $_[0]{fh}->flush() if ($_[0]{fh});
   return $_[0];
 }
 
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
-sub toString {
-  $_[0]->formatLevel($_[1]) if (defined($_[1]));
-  return encode($_[0]{encoding},$_[0]{outbuf})
-    if ($_[0]{encoding} && defined($_[0]{outbuf}) && utf8::is_utf8($_[0]{outbuf}));
-  return $_[0]{outbuf};
+##--------------------------------------------------------------
+## Methods: Output: output selection
+
+## $fmt = $fmt->to(fh=>$fh)
+## $fmt = $fmt->to(file=>$file)
+## $fmt = $fmt->to(string=>\$str)
+##  + open $fmt for output to specified destination
+##  + wraps toFh(), toFile(), toString()
+sub to {
+  my $fmt  = shift;
+  my $which = shift;
+  return $fmt->toFh(@_)   if ($which eq 'fh');
+  return $fmt->toFile(@_) if ($which eq 'file');
+  return $fmt->toString(@_);
 }
 
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+
+## $fmt = $fmt->toString(\$str, $level)
+##  + select output to $str
+##  + default implementation just wraps $fmt->toFh($fmt->{tmpfh}=$new_fh, $level)
+sub toString {
+  my $fmt = shift;
+  $fmt->close;
+  my $fh = IO::Handle->new();
+  CORE::open($fh, '>', ref($_[0]) ? $_[0] : \$_[0])
+      or $fmt->logconfess("toString(): open failed for string output: $!");
+  return $fmt->toFh($fmt->{tmpfh}=$fh, $_[1]);
+}
+
+## $fmt_or_undef = $fmt->toFile($filename, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
+##  + default implementation just wraps $fmt->toFh($fmt->{tmpfh}=$new_fh, $level)
 sub toFile {
   my ($fmt,$file,$level) = @_;
-  my $fh = ref($file) ? $file : IO::File->new(">$file");
-  $fmt->logdie("toFile(): open failed for file '$file': $!") if (!$fh);
-  $fh->binmode();
-  my $rc = $fmt->toFh($fh,$level);
-  $fh->close() if (!ref($file));
-  return $rc;
+  $fmt->close;
+  my $fh = (ref($file) ? $file : IO::File->new(">$file"))
+    or $fmt->logconfess("toFile(): open failed for '$file'");
+  return $fmt->toFh($fmt->{tmpfh}=$fh, $level);
 }
 
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
+## $fmt_or_undef = $fmt->toFh($fh,$level)
 ##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
+##  + default implementation just calls $fmt->formatLevel($level) and sets $fmt->{fh}=$fh
 sub toFh {
   my ($fmt,$fh,$level) = @_;
-  $fh->print($fmt->toString($level));
+  #$fmt->logconfess("toFh(): abstract method called for object instance") if ($fmt->can('toFh') eq \&toFh); ##-- sanity check
+  $fmt->formatLevel($level) if (defined($level));
+  $fmt->{fh}=$fh;
+  #$fmt->setLayers($fh) ##-- set I/O layers
+  #$fh->print($fmt->{outbuf});
   return $fmt;
 }
+
+## $fmt_or_undef = $fmt->toString_buf(\$str)
+##  + toFh() implementation which sets $str=$fmt->{outbuf}
+sub toString_buf {
+  my $fmt = shift;
+  ${$_[1]} = $_[0]{outbuf};
+  utf8::encode($_[1]) if (utf8::is_utf8($_[1]));
+  return $fmt;
+}
+
+## $fmt_or_undef = $fmt->toFh_buf($fh,$formatLevel)
+##  + toFh() implementation which dumps $fmt->{outbuf} to $fmt->{fh}=$fh
+#sub toFh_buf {
+#  my $fmt = shift;
+#  $fmt->DTA::CAB::Format::toFh($fmt,@_);    ##-- set $fmt->{level}, $fmt->{fh}
+#  binmode($fmt->{fh}, (utf8::is_utf8($fmt->{outbuf}) ? ':utf8' : ':raw'));
+#  $fmt->{fh}->print($fmt->{outbuf});
+#  return $fmt;
+#}
 
 ##--------------------------------------------------------------
 ## Methods: Output: Recommended API
@@ -502,7 +611,7 @@ DTA::CAB::Format - Base class for DTA::CAB::Datum I/O
  
  $lvl = $fmt->formatLevel();
  $fmt = $fmt->flush();
- $str = $fmt->toString();
+ $fmt_or_undef = $fmt->toString(\$str);
  $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel);
  $fmt_or_undef = $fmt->toFh($fh,$formatLevel);
  $fmt = $fmt->putDocument($doc);
@@ -580,7 +689,6 @@ Constructor.
 %args, %$fmt:
 
  ##-- DTA::CAB::Format: common
- encoding => $inputEncoding,  ##-- default: UTF-8, where applicable
  ##
  ##-- DTA::CAB::Format: input parsing
  #(none)
@@ -882,11 +990,11 @@ Default implementation just deletes $fmt-E<gt>{outbuf}.
 
 =item toString
 
- $str = $fmt->toString();
- $str = $fmt->toString($formatLevel)
+ $str = $fmt->toString(\$str);
+ $str = $fmt->toString(\$str,$formatLevel)
 
-Flush buffered output document to byte-string, and return it.
-Fefault implementation just encodes string in $fmt-E<gt>{outbuf}.
+Flush buffered output document to byte-string.
+Default implementation just encodes string in $fmt-E<gt>{outbuf}.
 
 =item toFile
 

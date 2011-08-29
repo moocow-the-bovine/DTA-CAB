@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Text.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser: verbose human-readable text
 
 package DTA::CAB::Format::Text;
@@ -9,7 +9,6 @@ use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
 use IO::File;
-use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -21,6 +20,7 @@ our @ISA = qw(DTA::CAB::Format::TT);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text|cab\-txt|cab\-text)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'txt');
 }
 
 ##==============================================================================
@@ -35,10 +35,10 @@ BEGIN {
 ##
 ##     ##---- Output
 ##     #level    => $formatLevel,      ##-- output formatting level: n/a
-##     outbuf    => $stringBuffer,     ##-- buffered output
+##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##
 ##     ##---- Common
-##     encoding  => $encoding,         ##-- default: 'UTF-8'
+##     utf8 => $bool,                  ##-- default: 1
 ##     defaultFieldName => $name,      ##-- default name for unnamed fields; parsed into @{$tok->{other}{$name}}; default=''
 ##    )
 ## + inherited from DTA::CAB::Format::TT
@@ -47,48 +47,23 @@ BEGIN {
 ## Methods: Persistence
 ##==============================================================================
 
-## @keys = $class_or_obj->noSaveKeys()
-##  + returns list of keys not to be saved: qw(doc outbuf)
-##  + inherited from DTA::CAB::Format::TT
-
 ##==============================================================================
 ## Methods: Input
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Input: Input selection
-
-## $fmt = $fmt->close()
-##  + inherited from DTA::CAB::Format::TT
-
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($fh)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
-##  + wrapper for: $fmt->close->parseTTString($_[0])
-##  + inherited from DTA::CAB::Format::TT
-##  + name is aliased here to parseTextString() !
-
-##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseTextString($string)
+## $fmt = $fmt->parseTextString(\$string)
 BEGIN { *parseTTString = \&parseTextString; }
 sub parseTextString {
   my ($fmt,$src) = @_;
-  $src =~ s/\r?\n\t\+?/\t/sg;
+  $$src =~ s/\r?\n\t\+?/\t/sg;
   return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Generic API
-
-## $doc = $fmt->parseDocument()
-##  + just returns $fmt->{doc}
-##  + inherited from DTA::CAB::Format::TT
 
 
 ##==============================================================================
@@ -96,11 +71,7 @@ sub parseTextString {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
-
-## $type = $fmt->mimeType()
-##  + default returns text/plain
-sub mimeType { return 'text/plain'; }
+## Methods: Output: Generic
 
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format
@@ -109,37 +80,15 @@ sub defaultExtension { return '.txt'; }
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-##  + inherited from DTA::CAB::Format::TT
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation just encodes string in $fmt->{outbuf}
-##  + override re-formats TT output string
-sub toString {
-  $_[0]->tt2text(\$_[0]{outbuf});
-  return $_[0]->SUPER::toString(@_[1..$#_]);
-}
-
-## \$bufr = $fmt->tt2text(\$buffer)
-##   + convert TT buffer \$buffer to text
-##   + should be a null-op if \$buffer is already text format
-sub tt2text {
-  my $bufr = $_[1];
+## \$buf = $fmt->token2buf($tok,\$buf)
+##  + buffer output for a single token
+##  + override converts from TT->Text
+sub token2buf {
+  my $bufr = DTA::CAB::Format::TT::token2buf(@_);
   $$bufr =~ s/(?<!\n)\t/\n\t/sg;
   $$bufr =~ s/^\t\[/\t+\[/mg;
   return $bufr;
 }
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
 
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
