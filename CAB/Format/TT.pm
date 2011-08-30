@@ -9,6 +9,7 @@ use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
 use Carp;
+use Fcntl qw(:seek); ##-- for blockScan()
 use strict;
 
 ##==============================================================================
@@ -75,6 +76,86 @@ sub noSaveKeys {
 
 ## $fmt = $fmt->close()
 ##  + inherited
+
+##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## \@blocks = $fmt->blockScan($filename, %opts)
+##  + scans $filename for block boundaries according to $bspec
+sub blockScan {
+  my ($fmt,$infile,%opts) = @_;
+  my $bsize = $opts{size} || 128*1024;
+  my $eob   = ($opts{eob}||'')=~/^s/i ? 's' : 't';
+  $fmt->vlog('trace', "blockScan($infile): size=$bsize, eob=$eob");
+
+  my $infh = IO::File->new("<$infile") or $fmt->logconfess("blockScan(): open failed for '$infile': $!");
+  binmode($infh,':raw');
+  my $fsize = ($infh->stat)[7];
+  my $blocks = [];
+
+  my ($off0,$off1,$eos);
+  for ($off0=0, $off1=$off0+$bsize; $off1 < $fsize; $off1=$off0+$bsize) {
+    $infh->seek($off1, SEEK_SET)
+      or $fmt->logconfess("blockScan(): seek failed to offset $off1 for file $infile: $!");
+
+    $_=<$infh>; ##-- gobble the rest of the remaining line
+    if ($eob eq 's') {
+      while (defined($_=<$infh>) && $_ !~ /^$/) { ; }
+      $eos  = 1;
+      $off1 = $infh->tell;
+    } else {
+      $_=<$infh>;
+      if ($eos=!defined($_) || $_ =~ /^$/) {
+	$off1 = $infh->tell;
+      } else {
+	$off1 = $infh->tell;
+	$_=<$infh>;
+	if ($eos=!defined($_) || $_ =~ /^$/) {
+	  $off1 = $infh->tell;
+	}
+      }
+    }
+    push(@$blocks, {off=>$off0, len=>($off1-$off0), file=>$infile, eos=>($eos ? 1 : 0)});
+    $off0 = $off1;
+  }
+  push(@$blocks, {off=>$off0, len=>($fsize-$off0), file=>$infile, eos=>1}) if ($off0 < $fsize);
+
+  $infh->close();
+  return $blocks;
+}
+
+## $fmt_or_undef = $fmt->blockAppend($block,$filename)
+##  + append a block $block to a file $filename
+##  + $block is a HASH-ref as returned by blockScan()
+sub blockAppend {
+  my ($fmt,$block,$file) = @_;
+  #$fmt->vlog('trace', "blockAppend($file): off=$block->{off}, len=$block->{len}");
+
+  my $outfh = IO::File->new(($block->{off}==0 ? '>' : '>>').$file)
+    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
+  binmode($outfh, utf8::is_utf8(${$block->{data}}) ? ':utf8' : ':raw');
+
+
+  ##-- truncate extraneous newlines from data
+  use bytes;
+  if (!$block->{eos}) {
+    ${$block->{data}} =~ s/\n\K(\n+)$//s;
+    $block->{datalen} -= length($1) if (defined($block->{datalen}));
+  } else {
+    ${$block->{data}} =~ s/\n\n\K(\n+)$//s;
+    $block->{datalen} -= length($1) if (defined($block->{datalen}));
+  }
+
+  ##-- actual write
+  $block->{datalen} = length(${$block->{data}}) if (!defined($block->{datalen}));
+  syswrite($outfh, ${$block->{data}}, $block->{datalen})==$block->{datalen}
+    or $fmt->logconfess("blockAppend(): syswrite failed to '$file': $!");
+
+  $outfh->close;
+  return $fmt;
+}
+
 
 ##==============================================================================
 ## Methods: Input

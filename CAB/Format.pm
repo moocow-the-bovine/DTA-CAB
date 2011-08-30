@@ -202,6 +202,65 @@ sub setLayers {
 
 
 ##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## %blockOpts = $CLASS_OR_OBJECT->parseBlockOpts($block_spec)
+##  + parses $block_spec as a block-boundary spec, which is a string of the form
+##            MIN_BYTES[{k,M,G,T}][@EOB]
+##    where:
+##    - MIN_BYTES[{k,M,G,T}] is the minimum block size in bytes, with optional SI suffix
+##    - EOB indicates desired block boundary: either 's' (sentence) or 't' (token)
+##  + returns a hash with 'size' and 'where' keys
+##  + pukes if not parseable
+sub parseBlockOpts {
+  my ($fmt,$bspec) = @_;
+  if ($bspec =~ /^([0-9]*)([bkmgt])?(?:[:\@](.*))?$/i) {
+    my ($n,$suff,$eob) = ($1,lc($2),$3);
+    $n *= 2**10 if ($suff eq 'k');
+    $n *= 2**20 if ($suff eq 'm');
+    $n *= 2**30 if ($suff eq 'g');
+    $n *= 2**40 if ($suff eq 't');
+    return (size=>$n,eob=>$eob);
+  }
+  $fmt->logconfess("parseBlockOpts(): could not parse block specification '$bspec'");
+  return qw();
+}
+
+## \@blocks = $fmt->blockScan($filename, %opts)
+##  + scans $filename for block boundaries according to %opts, which may contain:
+##     size => $bytes,     ##-- minimum block-size in bytes
+##     eob  => $eob,       ##-- block boundary type; either 's' (sentence) or 't' (token); default='t'
+##  + other
+##  + returns an ARRAY ref of block specifications \@blocks = [$blk1,$blk2,...]
+##    where each $blk \in @blocks is a HASH-ref containing at least the following keys:
+##     {
+##      file => $infile,  ##-- input file
+##      off => $offset,   ##-- byte-offset of block beginning in $infile
+##      len => $len,      ##-- byte-length of block in $infile
+##     }
+##  + additionally, $blk may contain the following keys:
+##     {
+##      eos => $bool,     ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
+##      data => \$data,   ##-- block data octets (for blockAppend())
+##      datalen => $len,  ##-- length in bytes of $data
+##     }
+##  + default implementation just dies
+sub blockScan {
+  my ($fmt,$filename,%opts) = @_;
+  $fmt->logconfess("blockScan(): method not implemented in abstract base class ", __PACKAGE__);
+}
+
+## $fmt_or_undef = $fmt->blockAppend($block,$filename)
+##  + append a block $block to a file $filename
+##  + $block is a HASH-ref as returned by blockScan()
+##  + default implementation just dies
+sub blockAppend {
+  my ($fmt,$block,$file) = @_;
+  $fmt->logconfess("blockAppend(): method not implemented in abstract base class ", __PACKAGE__);
+}
+
+##==============================================================================
 ## Methods: Input
 ##==============================================================================
 
@@ -304,7 +363,6 @@ sub parseFh {
   $_[0]->close();
   return $doc;
 }
-
 
 ##--------------------------------------------------------------
 ## Methods: Input: Utilties
