@@ -10,7 +10,6 @@ package DTA::CAB::Server::HTTP::Handler::Query;
 use DTA::CAB::Server::HTTP::Handler::CGI;
 use HTTP::Status;
 use URI::Escape qw(uri_escape uri_escape_utf8);
-use Encode qw(encode decode);
 use CGI ':standard';
 use Carp;
 use strict;
@@ -37,7 +36,7 @@ BEGIN {
 ## %$h, %options:
 ##  (
 ##   ##-- INHERITED from Handler::CGI
-##   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+##   #encoding => $defaultEncoding,  ##-- default encoding (now always UTF-8)
 ##   allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##   allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##   #allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
@@ -57,7 +56,7 @@ BEGIN {
 sub new {
   my $that = shift;
   my $h =  $that->SUPER::new(
-			     encoding=>'UTF-8', ##-- default CGI parameter encoding
+			     #encoding=>'UTF-8', ##-- default CGI parameter encoding (now always UTF-8)
 			     allowGet=>1,
 			     allowPost=>1,
 			     logVars => undef,
@@ -96,14 +95,14 @@ sub prepare {
 ##    qd   => $queryData,            ##-- query data (formatted document)
 ##    a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
 ##    fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
-##    enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
+##    #enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
 ##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 ##    pretty => $level,              ##-- response format level
 ##    clean  => $clean,              ##-- request doAnalyzeClean() if true
 ##    ##
 ##    $opt => $value,                ##-- other options are passed to analyzeDocument() (if $h->{allowUserOptions} is true)
 ##   )
-our %localParams = map {($_=>undef)} qw(q qd a fmt enc raw pretty clean);
+our %localParams = map {($_=>undef)} qw(q qd a fmt raw pretty clean);
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -120,8 +119,8 @@ sub run {
   $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars'])) if ($h->{logVars});
 
   ##-- get parameters: encodings
-  my $enc = $h->getEncoding(@$vars{qw(encoding enc)},$hreq,$h->{encoding});
-  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+  #my $enc = $h->getEncoding(@$vars{qw(encoding enc)},$hreq,$h->{encoding});
+  #return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
   ##-- pre-process query parameters
   $h->decodeVars($vars, vars=>[qw(q a format fmt)], allowHtmlEscapes=>0);
@@ -148,21 +147,23 @@ sub run {
 
   ##-- get format class
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
-  my $fmt = $h->{formats}->newFormat($fc, encoding=>$enc, level=>$vars->{pretty})
+  my $fmt = $h->{formats}->newFormat($fc, level=>$vars->{pretty})
     or return $h->cerror($c, undef, "unknown format '$fc'");
 
   ##-- parse input query
   my ($qdoc);
   if (defined($vars->{q})) {
+    ##-- raw untokenized query document
     my $qsrc = defined($vars->{q}) ? $vars->{q} : '';
     $qsrc    = join("\n", @$qsrc) if (ref($qsrc));
-    my $qfmt = $h->{formats}->newFormat('raw', encoding=>$enc)
+    my $qfmt = $h->{formats}->newFormat('raw')
       or return $h->cerror($c, undef, "cannot create 'raw' format for query parameter 'q'");
-    $qdoc = $qfmt->parseString($vars->{q})
+    $qdoc = $qfmt->parseString(\$vars->{q})
       or $qfmt->logwarn("parseString() failed for raw query parameter 'q'");
   }
   elsif (defined($vars->{qd})) {
-    $qdoc = $fmt->parseString($vars->{qd})
+    ##-- pre-tokenized query document
+    $qdoc = $fmt->parseString(\$vars->{qd})
       or $fmt->logwarn("parseString() failed for query parameter 'qd' via format '$fc'");
   }
   else {
@@ -175,8 +176,9 @@ sub run {
     or return $h->cerror($c, undef, "analyzeDocument() failed");
 
   ##-- format
-  my $rstr = $fmt->flush->putDocument($qdoc)->toString;
-  $rstr    = encode($enc,$rstr) if (utf8::is_utf8($rstr));
+  my ($rstr);
+  $fmt->flush->toString(\$rstr)->putDocument($qdoc)->flush;
+  utf8::encode($rstr) if (utf8::is_utf8($rstr));
   return $h->cerror($c, undef, "could format output document using format '$fc': $@") if (!defined($rstr));
 
   ##-- dump to client
@@ -186,7 +188,7 @@ sub run {
   return $h->dumpResponse(\$rstr,
 			  raw=>$vars->{raw},
 			  type=>$fmt->mimeType,
-			  charset=>$enc,
+			  charset=>'UTF-8',
 			  filename=>$filename);
 }
 
@@ -206,10 +208,10 @@ sub runList {
   my $vars = $h->cgiParams($c,$hreq) or return undef;
   $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
 
-  my $enc = $h->getEncoding(@$vars{qw(enc encoding)},$hreq,$h->{encoding});
-  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+  #my $enc = $h->getEncoding(@$vars{qw(enc encoding)},$hreq,$h->{encoding});
+  #return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
-  $h->decodeVars($vars, vars=>[qw(a fmt format)], encoding=>$enc, allowHtmlEscapes=>0);
+  $h->decodeVars($vars, vars=>[qw(a fmt format)], allowHtmlEscapes=>0);
   $h->trimVars($vars,  vars=>[qw(a fmt format)]);
 
   ##-- get matching analyzers
@@ -222,7 +224,7 @@ sub runList {
 
   ##-- get format
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
-  my $fmt = $h->{formats}->newFormat($fc,encoding=>$enc,level=>$vars->{pretty})
+  my $fmt = $h->{formats}->newFormat($fc,level=>$vars->{pretty})
     or return $h->cerror($c, undef, "unknown format '$fc': $@");
 
   ##-- dump analyzers
@@ -234,22 +236,22 @@ sub runList {
   elsif ($fmt->isa('DTA::CAB::Format::XmlNative')) {
     $fmt->{arrayEltKeys}{tokens} = 'a';
     $fmt->{key2xml}{text} = 'name';
-    $fmt->putDocument({tokens=>[map {{text=>$_}} @as]});
+    $fmt->toString(\$ostr)->putDocument({tokens=>[map {{text=>$_}} @as]});
     my $odoc = $fmt->xmlDocument;
     $odoc->documentElement->setNodeName('analyzers');
     ##
-    $ostr = $fmt->toString;
+    $ostr = $odoc->toString($fmt->{level}||0);
   }
   else {
-    $ostr = $fmt->putData(\@as)->toString;
+    $fmt->toString(\$ostr)->putData(\@as)->flush;
   }
-  $ostr = encode($enc,$ostr) if (utf8::is_utf8($ostr));
+  utf8::encode($ostr) if (utf8::is_utf8($ostr));
 
   ##-- dump response
   return $h->dumpResponse(\$ostr,
 			  raw=>$vars->{raw},
 			  type=>$fmt->mimeType,
-			  charset=>$enc,
+			  charset=>'UTF-8',
 			  filename=>("analyzers".$fmt->defaultExtension),
 			 );
 }
@@ -347,7 +349,7 @@ Default allowed formats.
 
   (
    ##-- INHERITED from Handler::CGI
-   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+   #encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
    allowGet => $bool,             ##-- allow GET requests? (default=1)
    allowPost => $bool,            ##-- allow POST requests? (default=1)
    pushMode => $mode,             ##-- push mode for addVars (default='keep')
@@ -380,7 +382,7 @@ The following CGI form parameters are supported:
   qd   => $queryData,            ##-- query data (formatted document)
   a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
   fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
-  enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
+  #enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
   raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
   pretty => $level,              ##-- response format level
   ##

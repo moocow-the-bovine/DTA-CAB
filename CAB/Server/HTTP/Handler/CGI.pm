@@ -10,7 +10,6 @@ package DTA::CAB::Server::HTTP::Handler::CGI;
 use DTA::CAB::Server::HTTP::Handler;
 use HTTP::Status;
 use URI::Escape qw(uri_escape uri_escape_utf8);
-use Encode qw(encode decode);
 use CGI;
 use Carp;
 use strict;
@@ -31,7 +30,7 @@ BEGIN {
 
 ## $h = $class_or_obj->new(%options)
 ## + %options:
-##     encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+##     #encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##     allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##     allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##     pushMode => $mode,             ##-- push mode for addVars (dfefault='push')
@@ -46,7 +45,7 @@ BEGIN {
 sub new {
   my $that = shift;
   my $h =  bless {
-		  encoding=>'UTF-8', ##-- default CGI parameter encoding
+		  #encoding=>'UTF-8', ##-- default CGI parameter encoding
 		  allowGet=>1,
 		  allowPost=>1,
 		  pushMode => 'push',
@@ -86,10 +85,10 @@ sub decodeVars {
 
 ## \$string = $h->decodeString(\$string,%opts); ##-- decodes in-place
 ## $decoded = $h->decodeString( $string,%opts); ##-- decode by copy
-##  + decodes string as $h->{encoding}, optionally handling HTML-style escapes
+##  + decodes string as UTF-8, optionally handling HTML-style escapes
 ##  + %opts:
 ##     allowHtmlEscapes => $bool,    ##-- whether to handle HTML escapes (default=false)
-##     encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
+##     #encoding        => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
 sub decodeString {
   my ($h,$str,%opts) = @_;
   return $h->decodeStringRef($str,%opts) if (ref($str));
@@ -97,14 +96,14 @@ sub decodeString {
 }
 
 ## \$string = $h->decodeStringRef(\$string,%opts); ##-- decodes in-place
-##  + decodes string in-place as $h->{encoding}, optionally handling HTML-style escapes
+##  + decodes string in-place as UTF-8, optionally handling HTML-style escapes
 ##  + %opts:
 ##     allowHtmlEscapes => $bool,    ##-- whether to handle HTML escapes (default=false)
-##     encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
+##     #encoding         => $enc,     ##-- source encoding (default=$h->{encoding}; see also $h->requestEncoding())
 sub decodeStringRef {
   my ($h,$sref,%opts) = @_;
   return $sref if (!defined($sref) || !ref($sref));
-  $$sref = decode(($opts{encoding}||$h->{encoding}), $$sref) if (!utf8::is_utf8($$sref) && ($opts{encoding}||$h->{encoding}));
+  utf8::decode($$sref) if (!utf8::is_utf8($$sref));
   if ($opts{allowHtmlEscapes}) {
     $$sref =~ s/\&\#(\d+)\;/pack('U',$1)/eg;
     $$sref =~ s/\&\#x([[:xdigit:]]+)\;/pack('U',hex($1))/eg;
@@ -190,11 +189,11 @@ sub uriParams_CGI {
 ##    but content is present, returns $hreq
 ##  + %opts:
 ##      defaultName => $name,       ##-- default parameter name (default='POSTDATA')
-##      defaultCharset => $charset, ##-- default charset
+##      #defaultCharset => $charset, ##-- default charset (always UTF-8)
 sub contentParams {
   my ($h,$hreq,%opts) = @_;
   my $dkey = defined($opts{defaultName}) ? $opts{defaultName} : 'POSTDATA';
-  my $denc = defined($opts{defaultCharset}) ? $opts{defaultCharset} : $h->requestEncoding($hreq);
+  #my $denc = defined($opts{defaultCharset}) ? $opts{defaultCharset} : $h->requestEncoding($hreq);
   if ($hreq->content_type eq 'application/x-www-form-urlencoded') {
     ##-- x-www-form-urlencoded
     #return scalar(CGI->new($hreq->content)->Vars); ##-- : parse with CGI module
@@ -207,22 +206,19 @@ sub contentParams {
     foreach $part ($hreq->parts) {
       my $dis = $part->header('Content-Disposition');
       $penc = $h->messageEncoding($part);
-      $penc = $denc if (!defined($penc));
+      $penc = 'UTF-8' if (!defined($penc));
       if ($dis =~ /^form-data\b/) {
 	##-- multipart/form-data: part: form-data
 	if ($dis =~ /\bname=[\"\']?([\w\-\.\,\+]*)[\'\"]?/) {
 	  ##-- multipart/form-data: part: form-data; name="PARAMNAME"
-	  #$h->addVars($vars, { $1 => $part->decoded_content(default_charset=>$penc) });
 	  $h->addVars($vars, { $1 => $part->content });
 	} else {
 	  ##-- multipart/form-data: part: form-data
-	  #$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
 	  $h->addVars($vars, { $opts{defaultName} => $part->content });
 	}
       }
       else {
 	##-- multipart/form-data: part: anything other than 'form-data'
-	#$h->addVars($vars, { $opts{defaultName}=>$part->decoded_content(default_charset=>$penc) });
 	$h->addVars($vars, { $opts{defaultName} => $part->content });
       }
     }
@@ -231,7 +227,6 @@ sub contentParams {
   elsif ($hreq->content_length > 0) {
     ##-- unknown content: use default data key
     return {
-	    #$opts{defaultName} => $hreq->decoded_content(default_charset=>$denc)
 	    $opts{defaultName} => $hreq->content
 	   };
   }
@@ -275,7 +270,7 @@ sub cgiParams {
   return {};
 }
 
-## $enc = $h->messageEncoding($httpMessage,$default)
+## $enc = $h->messageEncoding($httpMessage,$defaultEncoding)
 ##  + attempts to guess messagencoding from (in order of descending priority):
 ##    - HTTP::Message header Content-Type charset variable
 ##    - HTTP::Message header Content-Encoding

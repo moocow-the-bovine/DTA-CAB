@@ -10,7 +10,6 @@ package DTA::CAB::Server::HTTP::Handler::XmlRpc;
 use DTA::CAB::Server::HTTP::Handler;
 use DTA::CAB::Server::XmlRpc;
 use HTTP::Status;
-use Encode qw(encode decode);
 use CGI;
 use Carp;
 use strict;

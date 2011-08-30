@@ -11,7 +11,6 @@ use DTA::CAB::Cache::LRU;
 use HTTP::Daemon;
 use HTTP::Status;
 use POSIX ':sys_wait_h';
-use Encode qw(encode decode);
 use Socket qw(SOMAXCONN);
 use Carp;
 use strict;

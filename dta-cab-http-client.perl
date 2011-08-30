@@ -102,9 +102,9 @@ GetOptions(##-- General
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O
-	   'query-format-class|query-format|qfmt|qfc|qf=s' => \$qfo{class},
-	   'input-format-class|input-format|ifmt|ifc|if=s' => \$ifo{class},
-	   'output-format-class|output-format|ofmt|ofc|of=s' => \$ofo{class},
+	   'query-format-class|query-format|qfmt|qfc|qf|qc=s' => \$qfo{class},
+	   'input-format-class|input-format|ifmt|ifc|if|ic=s' => \$ifo{class},
+	   'output-format-class|output-format|ofmt|ofc|of|oc=s' => \$ofo{class},
 	   'format-class|format|fmt|fc=s' => sub { $qfo{class}=$ifo{class}=$ofo{class}=$_[1]; },
 	   ##
 	   'query-format-option|query-option|qfo|qo=s' => \%qfo,

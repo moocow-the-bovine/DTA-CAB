@@ -77,7 +77,7 @@ GetOptions(##-- General
 	   'sentence|S' => sub { $action='sentence'; },
 	   'document|d' => sub { $action='document'; },
 	   'data|D' => sub { $action='data'; }, ##-- server-side parsing
-	   'raw|r' => sub { $action='raw'; },
+	   #'raw|r' => sub { $action='raw'; },
 	   'bench|b:i' => sub { $action='bench'; $bench_iters=$_[1]; },
 
 	   ##-- I/O: input
@@ -248,10 +248,10 @@ elsif ($action eq 'data') {
     }
   }
 }
-elsif ($action eq 'raw') {
-  ##-- action: 'raw': use raw request
-  die("$0: -raw option not yet implemented!");
-}
+#elsif ($action eq 'raw') {
+#  ##-- action: 'raw': use raw request
+#  die("$0: -raw option not yet implemented!");
+#}
 elsif ($action eq 'bench') {
   $doProfile=1;
   our ($bench_i);
@@ -313,7 +313,7 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -token                          ##-- ARGUMENTS are token text
   -sentence                       ##-- ARGUMENTS are analyzed as a sentence
   -document                       ##-- ARGUMENTS are filenames, analyzed as documents
-  -raw                            ##-- ARGUMENTS are filenames, server-side parsing & formatting
+  -data                           ##-- ARGUMENTS are filenames, server-side parsing & formatting
 
  I/O Options:
   -input-class CLASS              ##-- select input parser class (default: Text)
@@ -441,7 +441,7 @@ Interpret ARGUMENTS as a sentence (list of tokens).
 
 Interpret ARGUMENTS as filenames, to be analyzed as documents.
 
-=item -raw
+=item -data
 
 Interpret ARGUMENTS as filenames (as for L</-document>),
 but file contents are passed as raw strings to the server,

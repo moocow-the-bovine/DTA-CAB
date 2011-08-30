@@ -10,7 +10,6 @@ package DTA::CAB::Server::HTTP::Handler::QueryList;
 use DTA::CAB::Server::HTTP::Handler::Query;
 use HTTP::Status;
 use URI::Escape qw(uri_escape uri_escape_utf8);
-use Encode qw(encode decode);
 use CGI ':standard';
 use Carp;
 use strict;
@@ -36,7 +35,7 @@ BEGIN {
 ## %$h, %options:
 ##  (
 ##   ##-- INHERITED from Handler::CGI
-##   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+##   #encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
 ##   allowGet => $bool,             ##-- allow GET requests? (default=1)
 ##   allowPost => $bool,            ##-- allow POST requests? (default=1)
 ##   allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
@@ -49,7 +48,7 @@ sub new {
   my $that = shift;
   my $h =  $that->SUPER::new(
 			     qh => undef,
-			     encoding=>'UTF-8', ##-- default CGI parameter encoding
+			     #encoding=>'UTF-8', ##-- default CGI parameter encoding
 			     allowGet=>1,
 			     allowPost=>1,
 			     @_,
@@ -71,11 +70,11 @@ sub prepare {
 ##   (
 ##    a    => $analyzerRegex,        ##-- analyzer key in %{$qh->{allowAnalyzers}}, %{$srv->{as}}
 ##    fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
-##    enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
+##    #enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
 ##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 ##    pretty => $level,              ##-- response format level
 ##   )
-our %localParams = map {($_=>undef)} qw(q fmt enc raw pretty);
+our %localParams = map {($_=>undef)} qw(q fmt raw pretty);
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -86,10 +85,10 @@ sub run {
   my $vars = $h->cgiParams($c,$hreq) or return undef;
   $h->vlog($h->{logVars}, "got query params:\n", Data::Dumper->Dump([$vars],['vars']));
 
-  my $enc = $h->getEncoding(@$vars{qw(enc encoding)},$hreq,$h->{encoding});
-  return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
+  #my $enc = $h->getEncoding(@$vars{qw(enc encoding)},$hreq,$h->{encoding});
+  #return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
-  $h->decodeVars($vars, vars=>[qw(a fmt format)], encoding=>$enc, allowHtmlEscapes=>0);
+  $h->decodeVars($vars, vars=>[qw(a fmt format)], allowHtmlEscapes=>0);
   $h->trimVars($vars,  vars=>[qw(a fmt format)]);
 
   ##-- get matching analyzers
@@ -103,7 +102,7 @@ sub run {
 
   ##-- get format
   my $fc  = $vars->{format} || $vars->{fmt} || $qh->{defaultFormat};
-  my $fmt = $qh->{formats}->newFormat($fc,encoding=>$enc,level=>$vars->{pretty})
+  my $fmt = $qh->{formats}->newFormat($fc,level=>$vars->{pretty})
     or return $h->cerror($c, undef, "unknown format '$fc': $@");
 
   ##-- dump analyzers
@@ -115,22 +114,21 @@ sub run {
   elsif ($fmt->isa('DTA::CAB::Format::XmlNative')) {
     $fmt->{arrayEltKeys}{tokens} = 'a';
     $fmt->{key2xml}{text} = 'name';
-    $fmt->putDocument({tokens=>[map {{text=>$_}} @as]});
+    $fmt->toString(\$ostr)->putDocument({tokens=>[map {{text=>$_}} @as]});
     my $odoc = $fmt->xmlDocument;
     $odoc->documentElement->setNodeName('analyzers');
-    ##
-    $ostr = $fmt->toString;
+    $ostr = $odoc->toString($fmt->{level});
   }
   else {
-    $ostr = $fmt->putData(\@as)->toString;
+    $fmt->toString(\$ostr)->putData(\@as)->flush;
   }
-  $ostr = encode($enc,$ostr) if (utf8::is_utf8($ostr));
+  utf8::encode($ostr) if (utf8::is_utf8($ostr));
 
   ##-- dump response
   return $h->dumpResponse(\$ostr,
 			  raw=>$vars->{raw},
 			  type=>$fmt->mimeType,
-			  charset=>$enc,
+			  charset=>'UTF-8',
 			  filename=>("analyzers".$fmt->defaultExtension),
 			 );
 }
@@ -226,7 +224,7 @@ L<DTA::CAB::Server::HTTP::Handler> API.
 
   (
    ##-- INHERITED from Handler::CGI
-   encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
+   #encoding => $defaultEncoding,  ##-- default encoding (UTF-8)
    allowGet => $bool,             ##-- allow GET requests? (default=1)
    allowPost => $bool,            ##-- allow POST requests? (default=1)
    allowList => $bool,            ##-- if true, allowed analyzers will be listed for 'PATHROOT/.../list' paths
@@ -252,7 +250,7 @@ The following CGI form parameters are supported:
  (
   a => $analyerRegex,            ##-- analyzer regex in %{$srv->{as}}
   fmt => $format,                ##-- I/O format
-  enc => $enc,                   ##-- I/O encoding
+  #enc => $enc,                   ##-- I/O encoding
   pretty => $level,              ##-- pretty-printing level
   raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
  )
