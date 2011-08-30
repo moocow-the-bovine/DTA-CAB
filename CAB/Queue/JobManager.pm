@@ -59,7 +59,22 @@ sub new {
 }
 
 ##==============================================================================
-## Open/Close
+## Local Methods
+##  + for use from main thread
+
+##--------------------------------------------------------------
+## Local Methods: Statistics
+
+## ($ntok,$nchr) = $jm->totals($ntok,$nchr)
+##  + get or add to total number of (tokens,character) processed
+sub totals {
+  $_[0]{ntok} += $_[1] if (defined($_[1]));
+  $_[0]{nchr} += $_[2] if (defined($_[2]));
+  return @{$_[0]}{qw(ntok nchr)};
+}
+
+##==============================================================================
+## Socket: Open/Close
 
 ## $bool = $jm->opened()
 ##  + INHERITED from CAB::Socket::UNIX
@@ -72,7 +87,7 @@ sub new {
 ##  + INHERITED from CAB::Socket::UNIX
 
 ##==============================================================================
-## Socket Communications
+## Socket: Protocol
 ## + INHERITED from CAB::Socket::UNIX
 
 ##==============================================================================
@@ -99,19 +114,6 @@ sub new {
 ##  + INHERITED from CAB::Queue::Server
 
 ##==============================================================================
-## Statistics tracking
-##  + for use from main thread
-
-## ($ntok,$nchr) = $jm->stats($ntok,$nchr)
-##  + add to total number of (tokens,character) processed
-sub stats {
-  $_[0]{ntok} += $_[1] if (defined($_[1]));
-  $_[0]{nchr} += $_[2] if (defined($_[2]));
-  return @{$_[0]}{qw(ntok nchr)};
-}
-
-
-##==============================================================================
 ## Server Methods
 
 ## $class = $CLASS_OR_OBJECT->clientClass()
@@ -132,9 +134,9 @@ sub stats {
 ## Server Methods: Request Handling
 ##
 ##  + request commands handled here:
-##     STATS "$ntok $nchr" : track total number of (tokens,characters) processed
-##     BLOCK $blk $data    : block output ($blk is a HASH-ref, $data a raw string)
-##                           + $blk should have keys: (off=>BYTES, len=>BYTES, outfile=>FILENAME, fmt=>CLASS, ...)
+##     TOTALS "$ntok $nchr" : add to total number of (tokens,characters) processed
+##     BLOCK $blk $data     : block output ($blk is a HASH-ref, $data a raw string)
+##                            + $blk should have keys: (off=>BYTES, len=>BYTES, outfile=>FILENAME, fmt=>CLASS, ...)
 ##
 ##  + request commands (case-insensitive) handled by DTA::CAB::Queue::Server:
 ##     DEQ          : dequeue the first item in the queue; response: $cli->put($item)
@@ -150,11 +152,11 @@ sub stats {
 ##     ...          : other messages are passed to $callback->(\$request,$cli) or produce an error
 ##  + returns: same as $callback->() if called, otherwise $jm
 
-## $qs = $qs->process_stats($cli,\$cmd)
-sub process_stats {
+## $qs = $qs->process_totals($cli,\$cmd)
+sub process_totals {
   my ($jm,$cli,$creq) = @_;
   my $buf = $cli->get();
-  $jm->stats(split(' ',$$buf,2));
+  $jm->totals(split(' ',$$buf,2));
   return $jm;
 }
 
