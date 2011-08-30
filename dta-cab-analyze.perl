@@ -6,7 +6,7 @@ use DTA::CAB::Utils ':all';
 use DTA::CAB::Datum ':all';
 use DTA::CAB::Fork::Pool;
 use DTA::CAB::Queue::File;
-use Encode qw(encode decode);
+#use Encode qw(encode decode);
 use File::Basename qw(basename dirname);
 use File::Path qw(rmtree);
 use IO::File;
@@ -49,8 +49,8 @@ our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
 our $inputWords  = 0;      ##-- inputs are words, not filenames
 our $inputList   = 0;      ##-- inputs are command-line lists, not filenames (main thread only)
-our %inputOpts   = (encoding=>'UTF-8');
-our %outputOpts  = (encoding=>undef,level=>0);
+our %inputOpts   = ();
+our %outputOpts  = (level=>0);
 
 our $blocksize   = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
 our $block_sents = 0;           ##-- must block boundaries coincide with sentence boundaries?
@@ -96,7 +96,7 @@ our %child_opts =
 
    ##-- I/O: input
    'input-class|ic|parser-class|pc=s'        => \$inputClass,
-   'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
+   #'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
    'input-option|io|parser-option|po=s'      => \%inputOpts,
    'tokens|t|words|w!'                       => \$inputWords,
    'block-size|blocksize|block|bs|b:i'       => sub {$blocksize=($_[1]||$default_blocksize)},
@@ -108,7 +108,7 @@ our %child_opts =
 
    ##-- I/O: output
    'output-class|oc|format-class|fc=s'       => \$outputClass,
-   'output-encoding|oe|format-encoding|fe=s' => \$outputOpts{encoding},
+   #'output-encoding|oe|format-encoding|fe=s' => \$outputOpts{encoding},
    'output-option|oo=s'                      => \%outputOpts,
    'output-level|ol|format-level|fl=s'       => \$outputOpts{level},
    'output-format|output-file|output|o=s'    => \$outfmt,
@@ -301,19 +301,20 @@ sub cb_work {
   $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$argv->[0],%inputOpts)
     or die("$0: could not create input parser of class $inputClass: $!");
 
-  $outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
   $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOpts)
     or die("$0: could not create output formatter of class $outputClass: $!");
 
   DTA::CAB->debug("using input format class ", ref($ifmt));
   DTA::CAB->debug("using output format class ", ref($ofmt));
 
+
   ##----------------------------------------------------
   ## Analyze
+  $ofmt->toFile($outfile);
   our ($file,$doc);
   if ($inputWords) {
     ##-- word input mode
-    my @words = map { $inputOpts{encoding} ? decode($inputOpts{encoding},$_) : $_ } @$argv;
+    my @words = map { utf8::decode($_) if (!utf8::is_utf8($_)); $_ } @$argv;
     $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
 
     $cab->trace("analyzeDocument($words[0], ...)");
@@ -326,9 +327,6 @@ sub cb_work {
       $ntoks += $doc->nTokens;
       $nchrs += length($_) foreach (@words);
     }
-
-    $ofmt->trace("toFile($outfile)");
-    $ofmt->toFile($outfile);
   }
   elsif (0 && $blocksize) {
     ##-- file input mode, block-wise tt: DISABLED here (now handled by <split, fork, process, merge> strategy)
@@ -375,10 +373,8 @@ sub cb_work {
 	$nchrs += (-s $file) if ($file ne '-');
       }
     }
-
-    $ofmt->trace("toFile($outfile)");
-    $ofmt->toFile($outfile);
   }
+  $ofmt->flush();
 
   ##-- save profiling info to stat-queue
   if ($forkp->is_child && $doProfile) {

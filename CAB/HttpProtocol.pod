@@ -71,14 +71,6 @@ API, since the returned data are really just a flat list of strings and not
 The default format is 'TT', which returns a flat newline-separated list
 of analyzers names.
 
-=item enc =E<gt> $enc
-
-Alias: encoding
-
-Encoding with which to interpret query and in which analyzer
-list is to be returned.  Must be compatible with the selected
-$fmt.
-
 =back
 
 The list of analyzers is returned in the requested format as the response content.
@@ -132,11 +124,9 @@ the formatted document to be queried.
 =item qd =E<gt> $queryDocument
 
 A L<DTA::CAB::Document|DTA::CAB::Document>
-in the format and encoding specified by the
+in the format specified by the
 L<'fmt'|/"fmt =E<gt> $fmt">
-and
-L<'enc'|/"enc =E<gt> $enc">
-parameters.
+parameter.
 
 If $queryDocument does not conform to the structural
 conventions of a L<DTA::CAB::Document|DTA::CAB::Document>
@@ -170,14 +160,6 @@ as used by L<DTA::CAB::Format::newFormat|DTA::CAB::Format/newFormat>.
 
 The default format is given by the query handler's 'defaultFormat' field,
 which by default is set to $DTA::CAB::Format::CLASS_DEFAULT (usually 'TT').
-
-=item enc =E<gt> $enc
-
-Alias: encoding
-
-Encoding with which to interpret query data and in which the
-formatted analysis output document is to be returned.
-Must be compatible with the selected $fmt.
 
 =item raw =E<gt> $bool
 
