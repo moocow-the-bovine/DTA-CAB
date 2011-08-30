@@ -109,7 +109,7 @@ sub fromFh {
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseRawString {
   my ($fmt,$src) = @_;
-  utf8::upgrade($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
+  utf8::decode($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
 
   ##-- step 1: basic tokenization
   my (@toks);

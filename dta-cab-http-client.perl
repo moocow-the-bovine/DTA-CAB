@@ -5,7 +5,7 @@ use DTA::CAB;
 use DTA::CAB::Client::HTTP;
 use DTA::CAB::Utils ':all';
 use DTA::CAB::Datum ':all';
-use Encode qw(encode decode);
+#use Encode qw(encode decode);
 use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -60,7 +60,7 @@ our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
 our $outfile     = '-';
 our %qfo = (
-	    encoding => 'UTF-8',
+	    #encoding => 'UTF-8',
 	   );
 our (%ifo,%ofo, $qfmt,$ifmt,$ofmt);
 
@@ -112,10 +112,10 @@ GetOptions(##-- General
 	   'output-format-option|ofo|oo=s' => \%ofo,
 	   'format-option|fo=s%' => sub { $qfo{$_[1]}=$ifo{$_[1]}=$ofo{$_[1]}=$_[2]; },
 	   ##
-	   'query-format-encoding|query-encoding|qfe|qe' => \$qfo{encoding},
-	   'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
-	   'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
-	   'format-encoding|encoding|enc|fe=s%' => sub { $qfo{encoding}=$ifo{encoding}=$ofo{encoding}=$_[1]; },
+	   #'query-format-encoding|query-encoding|qfe|qe' => \$qfo{encoding},
+	   #'input-format-encoding|input-encoding|ife|ie=s' => \$ifo{encoding},
+	   #'output-format-encoding|output-encoding|ofe|oe=s' => \$ofo{encoding},
+	   #'format-encoding|encoding|enc|fe=s%' => sub { $qfo{encoding}=$ifo{encoding}=$ofo{encoding}=$_[1]; },
 	   ##
 	   'output-format-level|ofl|format-level|fl|output-level|ol|pretty=s' => \$ofo{level},
 
@@ -161,7 +161,7 @@ if (defined($trace_request_file)) {
 ##-- create client object
 our $cli = DTA::CAB::Client::HTTP->new(%clientOpts,
 				       serverURL => $serverURL,
-				       encoding => $qfo{encoding},
+				       #encoding => $qfo{encoding},
 				       tracefh=>$tracefh,
 				      );
 $cli->connect() or die("$0: connect() failed: $!");
@@ -225,7 +225,7 @@ DTA::CAB->debug("using output format class ", ref($ofmt), "(level=", ($ofmt->{le
 		%analyzeOpts,
 		fmt         => $qfmt->shortName,
 		contentType => $qfmt->mimeType,
-		encoding    => $qfmt->{encoding},
+		#encoding   => $qfmt->{encoding},
 		pretty      => $qfmt->{level},
 	       );
 
@@ -268,6 +268,7 @@ profile_start() if ($doProfile);
 
 ##======================================================
 ## Actions
+$ofmt->toFh($outfh);
 
 if ($action eq 'list') {
   ##-- action: list
@@ -278,19 +279,17 @@ elsif ($action eq 'token') {
   ##-- action: 'tokens'
   $doProfile = 0;
   my ($tokin,$tokout);
-  foreach $tokin (map {DTA::CAB::Utils::deep_decode($ifmt->{encoding},$_)} @ARGV) {
+  foreach $tokin (map {DTA::CAB::Utils::deep_decode('utf8',$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     $ofmt->putTokenRaw($tokout);
   }
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   $doProfile = 0;
-  my $s_in  = DTA::CAB::Utils::deep_decode($ifmt->{encoding}, toSentence([map {toToken($_)} @ARGV]));
+  my $s_in  = DTA::CAB::Utils::deep_decode('utf8', toSentence([map {toToken($_)} @ARGV]));
   my $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   $ofmt->putSentenceRaw($s_out);
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'document') {
   ##-- action: 'document'
@@ -315,7 +314,6 @@ elsif ($action eq 'document') {
       profile_start();
     }
   }
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'data' || $action eq 'rawfile') {
   $cunit = 'chr';
@@ -346,7 +344,7 @@ elsif ($action eq 'raw') {
   $cunit = 'chr';
 
   my $s_in  = join(' ', @ARGV);
-  $s_in     = decode($ifmt->{encoding}, $s_in) if (defined($ifmt->{encoding}));
+  #utf8::decode($s_in) if (!utf8::is_utf8($s_in) && $ifmt->{utf8});
 
   my $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts,qraw=>1});
   $outfh->print($s_out);
@@ -384,6 +382,7 @@ elsif ($action eq 'bench') {
 else {
   die("$0: unknown action '$action'");
 }
+$ofmt->flush();
 $cli->disconnect();
 
 ##-- profiling
@@ -435,12 +434,8 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -rawfile                        ##-- ARGUMENTS are filenames, analyed as raw untokenized text
 
  I/O Options:
-  -query-format-class CLASS       ##-- select query format class (default: 'TT')
-  -query-format-encoding ENC      ##-- select query format encoding (default: 'UTF-8')
-  -query-format-option OPT=VALUE  ##-- set query format option
-  -(input|output)-format-(class|encoding|option)
+  -(input|query|output)-format-(class|option)
   -format-class CLASS             ##-- set {query,input,output} format classes at once
-  -format-encoding ENC            ##-- set {query,input,output} format encodings at once
   -format-option                  ##-- set {query,input,output} format options at once
                                   ##-- for non -data mode, set I/O format options
   -output-format-level LEVEL      ##-- override output format level (default: 0)

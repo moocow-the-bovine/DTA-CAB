@@ -111,7 +111,7 @@ sub fromString {
 ##  + guts for fromString(): parse string $str into local document buffer.
 sub parseTJString {
   my ($fmt,$src) = @_;
-  utf8::upgrade($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
+  utf8::decode($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
 
   my $jxs = $fmt->jsonxs();
 

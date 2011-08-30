@@ -33,8 +33,8 @@ our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Lo
 
 ##-- Client Options
 our $serverURL  = 'http://localhost:8088/xmlrpc';
-our $serverEncoding = 'UTF-8';
-our $localEncoding  = 'UTF-8';
+#our $serverEncoding = 'UTF-8';
+#our $localEncoding  = 'UTF-8';
 our $timeout = 65535;   ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
 our $test_connect = 1;
 
@@ -47,8 +47,8 @@ our $doProfile = undef;
 ##-- I/O Options
 our $inputClass  = undef;  ##-- default parser class
 our $outputClass = undef;  ##-- default format class
-our %inputOpts   = (encoding=>undef);
-our %outputOpts  = (encoding=>undef,level=>0);
+our %inputOpts   = ();
+our %outputOpts  = (level=>0);
 our $outfile     = '-';
 
 our $bench_iters = 1; ##-- number of benchmark iterations for -bench mode
@@ -63,8 +63,8 @@ GetOptions(##-- General
 
 	   ##-- Client Options
 	   'server-url|serverURL|server|url|s|u=s' => \$serverURL,
-	   'local-encoding|le=s'  => \$localEncoding,
-	   'server-encoding|se=s' => \$serverEncoding,
+	   #'local-encoding|le=s'  => \$localEncoding,
+	   #'server-encoding|se=s' => \$serverEncoding,
 	   'timeout|T=i' => \$timeout,
 	   'test-connect|tc!' => \$test_connect,
 
@@ -86,7 +86,7 @@ GetOptions(##-- General
 
 	   ##-- I/O: output
 	   'output-class|oc|format-class|fc=s'        => \$outputClass,
-	   'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
+	   #'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'      => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
@@ -130,7 +130,7 @@ if (defined($trace_request_file)) {
 ##-- create client object
 our $cli = DTA::CAB::Client::XmlRpc->new(
 					 serverURL=>$serverURL,
-					 serverEncoding=>$serverEncoding,
+					 serverEncoding=>'UTF-8',
 					 timeout=>$timeout,
 					 tracefh=>$tracefh,
 					 testConnect => $test_connect,
@@ -141,12 +141,9 @@ $cli->connect() or die("$0: connect() failed: $!");
 ##======================================================
 ## Input & Output Formats
 
-$inputOpts{encoding} = $localEncoding if (!defined($inputOpts{encoding}) && $localEncoding);
 $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,($action =~ m(raw|doc) ? (file=>$ARGV[0]) : qw()),%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
-$outputOpts{encoding}=$localEncoding if (!defined($outputOpts{encoding}) && $localEncoding);
-$outputOpts{encoding}=$inputOpts{encoding} if (!defined($outputOpts{encoding}));
 $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,($action !~ m(list) ? (file=>$outfile) : qw()),%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
@@ -188,6 +185,7 @@ profile_start() if ($doProfile);
 
 ##======================================================
 ## Actions
+$ofmt->toFh($outfh);
 
 if ($action eq 'list') {
   ##-- action: list
@@ -197,19 +195,17 @@ if ($action eq 'list') {
 elsif ($action eq 'token') {
   ##-- action: 'tokens'
   $doProfile = 0;
-  foreach $tokin (map {DTA::CAB::Utils::deep_decode($localEncoding,$_)} @ARGV) {
+  foreach $tokin (map {DTA::CAB::Utils::deep_decode('UTF-8',$_)} @ARGV) {
     $tokout = $cli->analyzeToken($analyzer, $tokin, \%analyzeOpts);
     $ofmt->putTokenRaw($tokout);
   }
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'sentence') {
   ##-- action: 'sentence'
   $doProfile = 0;
-  our $s_in  = DTA::CAB::Utils::deep_decode($localEncoding,[@ARGV]);
+  our $s_in  = DTA::CAB::Utils::deep_decode('UTF-8',[@ARGV]);
   our $s_out = $cli->analyzeSentence($analyzer, $s_in, \%analyzeOpts);
   $ofmt->putSentenceRaw($s_out);
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'document') {
   ##-- action: 'document': interpret args as filenames & parse 'em!
@@ -224,7 +220,6 @@ elsif ($action eq 'document') {
       $nchrs += (-s $doc_filename);
     }
   }
-  $ofmt->toFh($outfh);
 }
 elsif ($action eq 'data') {
   ##-- action: 'data': do server-side parsing
@@ -241,12 +236,8 @@ elsif ($action eq 'data') {
       local $/=undef;
       $s_in = <DOC>;
     }
-    $s_in = decode($ifmt->{encoding}, $s_in)
-      if (0 && $ifmt->{encoding} && defined($ifmt->new->{encoding}));
     close(DOC);
     $s_out = $cli->analyzeData($analyzer, $s_in, {%analyzeOpts, inputClass=>$inputClass, outputClass=>$outputClass});
-    $s_out = encode($ofmt->{encoding}, $s_out)
-      if (0 && $ofmt->{encoding} && utf8::is_utf8($s_out) && defined($ofmt->new->{encoding}));
     $outfh->print( $s_out );
     if ($doProfile) {
       $nchrs += length($s_in);
@@ -311,8 +302,6 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
 
  Client Options:
   -server URL                     ##-- set server URL (default: http://localhost:8088/xmlrpc)
-  -server-encoding ENCODING       ##-- set server encoding (default: UTF-8)
-  -local-encoding ENCODING        ##-- set local encoding (default: UTF-8)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
   -test-connect , -notest-connect ##-- do/don't send a test query to the server (default: do)
 
@@ -331,7 +320,6 @@ dta-cab-xmlrpc-client.perl - XML-RPC client for DTA::CAB server queries
   -input-option OPT=VALUE         ##-- set input parser option
   -output-class CLASS             ##-- select output formatter class (default: Text)
   -output-option OPT=VALUE        ##-- set output formatter option
-  -output-encoding ENCODING       ##-- override output encoding (default: -local-encoding)
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
 
@@ -402,14 +390,6 @@ Set default log level (trace|debug|info|warn|error|fatal).
 =item -server URL
 
 Set server URL (default: localhost:8000).
-
-=item -server-encoding ENCODING
-
-Set server encoding (default: UTF-8).
-
-=item -local-encoding ENCODING
-
-Set local encoding (default: UTF-8).
 
 =item -timeout SECONDS
 
@@ -502,10 +482,6 @@ May be multiply specified.
 
 Set an arbitrary output formatter option.
 May be multiply specified.
-
-=item -output-encoding ENCODING
-
-Override output encoding (default: -local-encoding).
 
 =item -output-level LEVEL
 

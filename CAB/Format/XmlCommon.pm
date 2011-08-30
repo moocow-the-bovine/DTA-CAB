@@ -82,7 +82,7 @@ sub noSaveKeys {
 ## $fmt = $fmt->close($savetmp=0)
 ##  + override calls $fmt->flush() and deletes @$fmt{qw(xdoc output)}
 sub close {
-  $_[0]->flush();
+  $_[0]->flush();# if (!$_[0]{flushing});
   delete @{$_[0]}{qw(xdoc output)};
   return $_[0]->SUPER::close(@_[1..$#_]);
 }
@@ -101,7 +101,7 @@ sub flush {
   my $fmt = shift;
   if (defined(my $xdoc=$fmt->{xdoc}) && defined(my $out=$fmt->{output})) {
     if ($out->[0] eq 'string') {
-      ${$out->[1]} = $fmt->toString($fmt->{level} || 0)
+      ${$out->[1]} = $xdoc->toString($fmt->{level} || 0)
 	or $fmt->logconfess(ref($xdoc)."::toString() failed: $!");
     }
     if ($out->[0] eq 'file') {

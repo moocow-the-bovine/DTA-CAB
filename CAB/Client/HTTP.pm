@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Client::HTTP.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: DTA::CAB generic HTTP server clients
 
 package DTA::CAB::Client::HTTP;
@@ -14,7 +14,7 @@ use LWP::UserAgent;
 use HTTP::Status;
 use HTTP::Request::Common;
 use URI::Escape qw(uri_escape_utf8);
-use Encode qw(encode decode encode_utf8 decode_utf8);
+#use Encode qw(encode decode encode_utf8 decode_utf8);
 use Carp qw(confess);
 use strict;
 
@@ -45,7 +45,7 @@ BEGIN {
 ##     rpcpath => $path,              ##-- path part of URL for XML-RPC (default='/xmlrpc')
 ##
 ##     format   => $formatName,       ##-- default query I/O format (default='json')
-##     encoding => $encoding,         ##-- query encoding (default='UTF-8')
+##     #encoding => $encoding,         ##-- query encoding (always utf8)
 ##     cacheGet => $bool,             ##-- allow cached response from server? (default=1)
 ##     cacheSet => $bool,             ##-- allow caching of server response? (default=1)
 ##
@@ -65,7 +65,7 @@ sub new {
   return $that->SUPER::new(
 			   ##-- server
 			   serverURL  => 'http://localhost:8000',
-			   encoding => 'UTF-8',
+			   #encoding => 'UTF-8',
 			   timeout => 300,
 			   testConnect => 1,
 			   mode => 'xpost',
@@ -78,7 +78,6 @@ sub new {
 			   cacheSet=>1,
 			   ##
 			   format => 'json',
-			   encoding => 'UTF-8',
 			   ##
 			   ##-- low-level stuff
 			   ua => undef,
@@ -170,10 +169,10 @@ sub urlEncode {
   my ($cli,$form) = @_;
   my $uri = URI->new;
   if (isa($form,'ARRAY')) {
-    $uri->query_form([map {utf8::is_utf8($_) ? Encode::encode_utf8($_) : $_} @$form]);
+    $uri->query_form([map {utf8::encode($_) if (utf8::is_utf8($_)); $_} @$form]);
   }
   elsif (isa($form,'HASH')) {
-    $uri->query_form([map {utf8::is_utf8($_) ? Encode::encode_utf8($_) : $_}
+    $uri->query_form([map {utf8::encode($_) if (utf8::is_utf8($_)); $_}
 		      map {($_=>$form->{$_})}
 		      sort keys %$form]);
   }
@@ -253,14 +252,13 @@ sub uxpost {
 sub getFormat {
   my ($cli,$opts) = @_;
   my $fc  = $opts->{format} || $opts->{fmt} || $cli->{format} || $DTA::CAB::Format::CLASS_DEFAULT;
-  my $enc = $opts->{encoding} || $opts->{enc} || $cli->{encoding};
-  return DTA::CAB::Format->newFormat($fc, encoding=>$enc);
+  return DTA::CAB::Format->newFormat($fc);
 }
 
 ## $response = $cli->analyzeDataRef($analyzer, \$data_str, \%opts)
 ##  + client-side %opts
 ##     contentType => $mimeType,      ##-- Content-Type to apply for mode='xpost'
-##     encoding    => $charset,       ##-- character set for mode='xpost'; also used by server
+##     #encoding    => $charset,       ##-- character set for mode='xpost'; also used by server
 ##     qraw        => $bool,          ##-- if true, query is a raw untokenized string (default=false)
 ##     headers     => $headers,       ##-- HASH or ARRAY or HTTP::Headers object
 ##     cacheGet    => $bool,          ##-- locally override $cli->{cacheGet}
@@ -293,13 +291,13 @@ sub analyzeDataRef {
   ##-- build form
   my %form = (
 	      fmt=>$cli->{format},
-	      enc=>$cli->{encoding},
+	      #enc=>$cli->{encoding},
 	      ($opts ? %$opts : qw()),
 	      a=>$aname,
 	     );
 
   ##-- sanity checks (long parameter names clobber short names)
-  $form{enc} = $form{encoding} if ($form{encoding});
+  #$form{enc} = $form{encoding} if ($form{encoding});
   $form{fmt} = $form{format} if ($form{format});
   delete(@form{qw(format encoding qraw headers cacheGet cacheSet)});
   delete(@form{grep {!defined($form{$_})} keys %form});
@@ -325,24 +323,27 @@ sub analyzeDataRef {
   }
   else {
     ##-- encode (for HTTP::Request v5.810 e.g. on services)
-    if ($form{enc}) {
-      foreach (values %form) {
-	$_ = encode($form{enc},$_) if (utf8::is_utf8($_));
-      }
+    foreach (values %form) {
+      utf8::encode($_) if (utf8::is_utf8($_));
     }
 
+    ##-- encode dataref
+    utf8::encode($$dataref) if (utf8::is_utf8($$dataref));
+
     if ($qmode eq 'post') {
-      $form{$qname} = $form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref;
+      ##-- post most
+      $form{$qname} = $$dataref;
       $rsp = $cli->upost($cli->{serverURL}, \%form,
 			 @$headers,
 			 ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
 			);
     }
     elsif ($qmode eq 'xpost') {
-      $ctype .= "; charset=\"$form{enc}\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
+      ##-- xpost mode
+      $ctype .= "; charset=\"UTF-8\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
       $rsp = $cli->uxpost($cli->{serverURL},
 			  \%form,
-			  ($form{enc} && utf8::is_utf8($$dataref) ? encode($form{enc},$$dataref) : $$dataref),
+			  $$dataref,
 			  @$headers,
 			  'Content-Type'=>$ctype);
     }
@@ -387,19 +388,19 @@ sub analyzeDocument {
   my ($cli,$aname,$doc,$opts) = @_;
   return $cli->rclient->analyzeDocument($cli->{rpcns}.$aname,$doc,$opts) if ($cli->{mode} eq 'xmlrpc');
   ##
-  my $fmt = $cli->getFormat($opts);
-  $fmt->putDocument($doc)
+  my ($str);
+  my $fmt = $cli->getFormat($opts)
+    or $cli->logdie("analyzeDocument(): could not create document formatter");
+  $fmt->toString(\$str)->putDocument($doc)->flush()
     or $cli->logdie("analyzeDocument(): could not format document with class ".ref($fmt).": $!");
-  my $str = $fmt->toString;
-  $fmt->flush;
   ##
   my $rsp = $cli->analyzeDataRef($aname,\$str,{($opts ? %$opts : qw()),
 					       fmt => $fmt->shortName,
-					       enc => $fmt->{encoding},
+					       #enc => $fmt->{encoding},
 					       contentType=>$fmt->mimeType,
 					      });
   return $cli->serverError($rsp) if ($rsp->is_error);
-  return $fmt->parseString($rsp->content);
+  return $fmt->parseString($rsp->content_ref);
 }
 
 ## $sent = $cli->analyzeSentence($analyzer, $sent, \%opts)

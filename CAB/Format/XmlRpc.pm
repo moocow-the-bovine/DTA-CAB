@@ -92,16 +92,18 @@ sub close {
   return $_[0];
 }
 
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString(\$string)
 sub fromString {
   my $fmt = shift;
   $fmt->close;
-  $fmt->{rxdata} = $fmt->{rxprs}->parse($_[0]);
+  $fmt->{rxdata} = $fmt->{rxprs}->parse(ref($_[0]) ? ${$_[0]} : $_[0]);
   return $fmt->checkData();
 }
 
 ## $fmt = $fmt->fromFile($filename_or_handle)
-sub fromFile { return $_[0]->DTA::CAB::Format::fromFile(@_[1..$#_]); }
+sub fromFile {
+  return $_[0]->DTA::CAB::Format::fromFile(@_[1..$#_]);
+}
 
 ## $fmt = $fmt->fromFh($handle)
 sub fromFh {
