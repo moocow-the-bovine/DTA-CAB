@@ -41,9 +41,14 @@ sub new {
 
 ##  + creates a new token object or returns its argument
 sub toToken {
+#  return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Token'));
+#  return bless({text=>$_[0]},'DTA::CAB::Token') if (!ref($_[0]));
+#  return bless($_[0],'DTA::CAB::Token') if (ref($_[0]) eq 'HASH' && exists($_[0]{text}));
+#  return DTA::CAB::Token->new(@_); ##-- default
+##--
   return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Token'));
-  return bless({text=>$_[0]},'DTA::CAB::Token') if (!ref($_[0]));
-  return bless($_[0],'DTA::CAB::Token') if (ref($_[0]) eq 'HASH' && exists($_[0]{text}));
+  return {text=>$_[0]} if (!ref($_[0]));
+  return $_[0] if (ref($_[0]) eq 'HASH' && exists($_[0]{text}));
   return DTA::CAB::Token->new(@_); ##-- default
 }
 
@@ -51,9 +56,14 @@ sub toToken {
 ## $sent = CLASS::toSentence(\@tokens)
 ##  + creates a new sentence object or returns its argument
 sub toSentence {
+#  return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Sentence'));
+#  return bless({tokens=>$_[0]},'DTA::CAB::Sentence') if (UNIVERSAL::isa($_[0],'ARRAY'));
+#  return bless($_[0],'DTA::CAB::Sentence') if (ref($_[0]) eq 'HASH' && exists($_[0]{tokens}));
+#  return DTA::CAB::Sentence->new(@_); ##-- default
+##--
   return $_[0] if (UNIVERSAL::isa($_[0],'DTA::CAB::Sentence'));
-  return bless({tokens=>$_[0]},'DTA::CAB::Sentence') if (UNIVERSAL::isa($_[0],'ARRAY'));
-  return bless($_[0],'DTA::CAB::Sentence') if (ref($_[0]) eq 'HASH' && exists($_[0]{tokens}));
+  return {tokens=>$_[0]} if (UNIVERSAL::isa($_[0],'ARRAY'));
+  return $_[0] if (ref($_[0]) eq 'HASH' && exists($_[0]{tokens}));
   return DTA::CAB::Sentence->new(@_); ##-- default
 }
 
