@@ -31,8 +31,9 @@ our @ISA = qw(DTA::CAB::Format);
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
 ##     ##-- output
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #utf8  => $bool,                         ##-- always true
 ##     level => $level,                        ##-- output formatting level (default=0)
+##     output => [$how,$arg]                   ##-- either ['fh',$fh], ['file',$filename], or ['str',\$buf]
 ##
 ##     ##-- common
 ##    )
@@ -40,12 +41,13 @@ sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- input
-		   xprs => libxml_parser(),
+		   xprs => undef, ##-- see xmlparser() method, below
 		   xdoc => undef,
 
 		   ##-- output
-		   encoding => 'UTF-8',
+		   utf8  => 1,
 		   level => 0,
+		   output => undef,
 
 		   ##-- common
 
@@ -55,6 +57,14 @@ sub new {
   return $fmt;
 }
 
+## $xmlparser = $fmt->xmlparser()
+##  + returns cached $fmt->{xprs} if available
+##  + otherwise caches & returns DTA::CAB::Utils::libxml_parser()
+sub xmlparser {
+  return $_[0]{xprs} if (ref($_[0]) && defined($_[0]{xprs}));
+  return $_[0]{xprs} = DTA::CAB::Utils::libxml_parser();
+}
+
 ##==============================================================================
 ## Methods: Persistence
 ##==============================================================================
@@ -62,7 +72,49 @@ sub new {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
 sub noSaveKeys {
-  return qw(xdoc xprs);
+  return ($_[0]->SUPER::noSaveKeys, qw(xdoc xprs));
+}
+
+##=============================================================================
+## Methods: I/O: generic
+##==============================================================================
+
+## $fmt = $fmt->close($savetmp=0)
+##  + override calls $fmt->flush() and deletes @$fmt{qw(xdoc output)}
+sub close {
+  $_[0]->flush();
+  delete @{$_[0]}{qw(xdoc output)};
+  return $_[0]->SUPER::close(@_[1..$#_]);
+}
+
+## @layers = $fmt->iolayers()
+##  + returns PerlIO layers to use for I/O handles
+##  + override returns ':raw'
+sub iolayers {
+  return qw(:raw);
+}
+
+## $fmt = $fmt->flush()
+##  + flush any buffered output to selected output channel
+##  + override dumps buffered $fmt->{xdoc} to output sink in @$fmt{qw(outputTo outputArg)} and deletes $fmt->{xdoc}
+sub flush {
+  my $fmt = shift;
+  if (defined(my $xdoc=$fmt->{xdoc}) && defined(my $out=$fmt->{output})) {
+    if ($out->[0] eq 'string') {
+      ${$out->[1]} = $fmt->toString($fmt->{level} || 0)
+	or $fmt->logconfess(ref($xdoc)."::toString() failed: $!");
+    }
+    if ($out->[0] eq 'file') {
+      $xdoc->toFile($out->[1], $fmt->{level} || 0)
+	or $fmt->logconfess(ref($xdoc)."::toFile() failed for $out->[1]: $!");
+    }
+    elsif ($out->[0] eq 'fh') {
+      $xdoc->toFH($out->[1], $fmt->{level} || 0)
+	or $fmt->logconfess(ref($xdoc)."::toFH() failed for $out->[1]: $!");
+    }
+  }
+  delete $fmt->{xdoc};
+  return $fmt;
 }
 
 ##=============================================================================
@@ -72,34 +124,31 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{xdoc});
-  return $_[0];
+## $fmt = $fmt->fromString(\$string)
+##  + input from string: override buffers XML document in $fmt->{xdoc}
+sub fromString {
+  my $fmt = shift;
+  $fmt->{xdoc} = $fmt->xmlparser->parse_string(ref($_[0]) ? ${$_[0]} : $_[0])
+    or $fmt->logconfess("XML::LibXML::parse_string() failed: $!");
+  return $fmt;
 }
 
-## $fmt = $fmt->fromFile($filename_or_handle)
+## $fmt = $fmt->fromFile($filename)
+##  + input from named file: override buffers XML document in $fmt->{xdoc}
 sub fromFile {
   my ($fmt,$file) = @_;
   return $fmt->fromFh($file) if (ref($file));
-  $fmt->{xdoc} = $fmt->{xprs}->parse_file($file)
+  $fmt->{xdoc} = $fmt->xmlparser->parse_file($file)
     or $fmt->logconfess("XML::LibXML::parse_file() failed for '$file': $!");
   return $fmt;
 }
 
 ## $fmt = $fmt->fromFh($handle)
+##  + input from filehandle: override buffers XML document in $fmt->{xdoc}
 sub fromFh {
   my ($fmt,$fh) = @_;
-  $fmt->{xdoc} = $fmt->{xprs}->parse_fh($fh)
+  $fmt->{xdoc} = $fmt->xmlparser->parse_fh($fh)
     or $fmt->logconfess("XML::LibXML::parse_fh() failed for handle '$fh': $!");
-  return $fmt;
-}
-
-## $fmt = $fmt->fromString($string)
-sub fromString {
-  my $fmt = shift;
-  $fmt->{xdoc} = $fmt->{xprs}->parse_string($_[0])
-    or $fmt->logconfess("XML::LibXML::parse_string() failed for '$_[0]': $!");
   return $fmt;
 }
 
@@ -107,8 +156,12 @@ sub fromString {
 ## Methods: Input: Generic API
 
 ## $doc = $fmt->parseDocument()
-##  + nothing here
-
+##   + parse document from currently selected input source
+##   + to be overridden by child classes
+sub parseDocument {
+  my $fmt = shift;
+  $fmt->logconfess("parseDocument() not implemented in abstract base class ", __PACKAGE__);
+}
 
 
 ##==============================================================================
@@ -116,7 +169,7 @@ sub fromString {
 ##==============================================================================
 
 ##--------------------------------------------------------------
-## Methods: Output: MIME
+## Methods: Output: Generic
 
 ## $type = $fmt->mimeType()
 ##  + override returns text/xml
@@ -129,34 +182,46 @@ sub defaultExtension { return '.xml'; }
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{xdoc});
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
+## $fmt = $fmt->toString(\$str)
+## $fmt = $fmt->toString(\$str, $formatLevel)
+##  + select output to string
+##  + override sets $fmt->{output}=['str',\$str]
 sub toString {
-  my $xdoc = $_[0]->xmlDocument;
-  $xdoc->setEncoding($_[0]{encoding}) if ($_[0]{encoding} ne $xdoc->encoding);
-  return $xdoc->toString(defined($_[1]) ? $_[1] : $_[0]{level});
+  my $fmt = shift;
+  $fmt->close;
+  $fmt->{output} = ['string', ref($_[0]) ? $_[0] : \$_[0]];
+  $fmt->formatlevel($_[1]) if (defined($_[1]));
+  #$fmt->xmlDocument(); ##-- prepare document
+  return $fmt;
 }
 
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
+## $fmt_or_undef = $fmt->toFile($filename, $formatLevel)
+##  + select output to file
+##  + override sets $fmt->{output}=['file',\$filename]
+sub toFile {
+  my $fmt = shift;
+  return $fmt->toFh(@_)       if (ref($_[0]));
+  return $fmt->toFh(\*STDOUT) if ($_[0] eq '-');
+  $fmt->close;
+  $fmt->{output} = ['file', $_[0]];
+  $fmt->formatlevel($_[1]) if (defined($_[1]));
+  #$fmt->xmlDocument(); ##-- prepare document
+  return $fmt;
+}
+
+## $fmt_or_undef = $fmt->toFh($handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
+##  + override sets $fmt->{output}=['fh',$handle]
 sub toFh {
-  my $xdoc = $_[0]->xmlDocument;
-  $xdoc->setEncoding($_[0]{encoding}) if ($_[0]{encoding} ne $xdoc->encoding);
-  $xdoc->toFH($_[1], (defined($_[2]) ? $_[2] : $_[0]{level}));
-  return $_[0];
+  my $fmt = shift;
+  $fmt->close;
+  $fmt->{output} = ['fh', $_[0]];
+  binmode($_[0],':raw'); ##-- set raw mode for XML output
+  $fmt->formatlevel($_[1]) if (defined($_[1]));
+  #$fmt->xmlDocument();   ##-- prepare document
+  return $fmt;
 }
+
 
 ##--------------------------------------------------------------
 ## Methods: Output: local
@@ -165,7 +230,7 @@ sub toFh {
 ##  + create or return output buffer $fmt->{xdoc}
 sub xmlDocument {
   return $_[0]{xdoc} if (defined($_[0]{xdoc}));
-  return $_[0]{xdoc} = XML::LibXML::Document->new("1.0",$_[0]{encoding});
+  return $_[0]{xdoc} = XML::LibXML::Document->new("1.0","UTF-8");
 }
 
 ## $rootnode = $fmt->xmlRootNode()
@@ -185,9 +250,9 @@ sub xmlRootNode {
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
-sub putToken { $_[0]->logconfess("putToken(): not implemented"); }
-sub putSentence { $_[0]->logconfess("putSentence(): not implemented"); }
-sub putDocument { $_[0]->logconfess("putDocument(): not implemented"); }
+sub putToken    { $_[0]->logconfess("putToken(): not implemented in abstract base class ", __PACKAGE__); }
+sub putSentence { $_[0]->logconfess("putSentence(): not implemented in abstract base class ", __PACKAGE__); }
+sub putDocument { $_[0]->logconfess("putDocument(): not implemented in abstract base class ", __PACKAGE__); }
 
 
 ##--------------------------------------------------------------
@@ -257,57 +322,6 @@ sub defaultXmlNode {
 }
 
 
-sub defaultXmlNode__old {
-  my ($fmt,$val) = @_;
-  my ($vnod);
-  if (UNIVERSAL::can($val,'xmlNode') && UNIVERSAL::can($val,'xmlNode') ne \&defaultXmlNode) {
-    ##-- xml-aware object (avoiding circularities): $val->xmlNode()
-    return $val->xmlNode(@_[2..$#_]);
-  }
-  elsif (!ref($val)) {
-    ##-- non-reference: <VALUE>$val</VALUE> or <VALUE undef="1"/>
-    $vnod = XML::LibXML::Element->new("VALUE");
-    if (defined($val)) {
-      $vnod->appendText($val);
-    } else {
-      $vnod->setAttribute("undef","1");
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'HASH')) {
-    ##-- HASH ref: <HASH ref="$ref"> ... <ENTRY key="$eltKey">defaultXmlNode($eltVal)</ENTRY> ... </HASH>
-    $vnod = XML::LibXML::Element->new("HASH");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'HASH');
-    foreach (keys(%$val)) {
-      my $enod = $vnod->addNewChild(undef,"ENTRY");
-      $enod->setAttribute("key",$_);
-      $enod->addChild($fmt->defaultXmlNode($val->{$_}));
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'ARRAY')) {
-    ##-- ARRAY ref: <ARRAY ref="$ref"> ... xmlNode($eltVal) ... </ARRAY>
-    $vnod = XML::LibXML::Element->new("ARRAY");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'ARRAY');
-    foreach (@$val) {
-      $vnod->addChild($fmt->defaultXmlNode($_));
-    }
-  }
-  elsif (UNIVERSAL::isa($val,'SCALAR')) {
-    ##-- SCALAR ref: <SCALAR ref="$ref"> xmlNode($$val) </SCALAR>
-    $vnod = XML::LibXML::Element->new("SCALAR");
-    $vnod->setAttribute("ref",ref($val)); #if (ref($val) ne 'SCALAR');
-    $vnod->addChild($fmt->defaultXmlNode($$val));
-  }
-  else {
-    ##-- other reference (CODE,etc.): <VALUE ref="$ref" unknown="1">"$val"</VALUE>
-    $fmt->logcarp("defaultXmlNode(): default node generator clause called for value '$val'");
-    $vnod = XML::LibXML::Element->new("VALUE");
-    $vnod->setAttribute("ref",ref($val));
-    $vnod->setAttribute("unknown","1");
-    $vnod->appendText("$val");
-  }
-  return $vnod;
-}
-
 
 1; ##-- be happy
 
@@ -351,7 +365,9 @@ DTA::CAB::Format::XmlCommon - Datum parser|formatter: XML: base class
  ## Methods: Output
  
  $fmt = $fmt->flush();
- $str = $fmt->toString();
+ $fmt = $fmt->toString(\$str);
+ $fmt = $fmt->toFile($file);
+ $fmt = $fmt->toFh($fh);
  $xmldoc = $fmt->xmlDocument();
  $rootnode = $fmt->xmlRootNode();
  $nod = $fmt->defaultXmlNode($value,\%opts);

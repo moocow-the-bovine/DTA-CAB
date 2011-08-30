@@ -65,7 +65,7 @@ $DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
 ##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
 ##     ##
 ##     ##-- output: inherited from XmlNative
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##
 ##     ##-- common: safety
@@ -170,34 +170,31 @@ sub close {
   $fmt->{twdoc}->close() if ($fmt->{twdoc});
   delete $fmt->{teibufr};
   $fmt->rmtmpdir();
-  return $fmt->SUPER::close();
+  return $fmt->SUPER::close(@_);
 }
 
-## $doc = $fmt->parseDocument()
-##  + parses buffered XML::LibXML::Document
-##  + INHERITED from Format::XmlTokWrap
-
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString(\$string)
 ##  + select input from string $string
 sub fromString {
-  my ($fmt,$str) = @_;
+  my $fmt = shift;
+  my $str = ref($_[0]) ? $_[0] : \$_[0];
   $fmt->close();
 
   ##-- ensure tmpdir exists
   my $tmpdir = $fmt->mktmpdir;
 
   ##-- prepare tei buffer with //c elements
-  $str = encode_utf8($str) if (utf8::is_utf8($str));
+  utf8::encode($$str) if (utf8::is_utf8($$str));
 
   if (!$fmt->{addc}) {
     ##-- dump document with predefined //c elements
-    DTA::TokWrap::Utils::ref2file(\$str,"$tmpdir/tmp.chr.xml")
+    DTA::TokWrap::Utils::ref2file($str,"$tmpdir/tmp.chr.xml")
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.chr.xml: $!");
-    $fmt->{teibufr} = \$str if ($fmt->{spliceback});
+    $fmt->{teibufr} = $str if ($fmt->{spliceback});
   }
   else {
     ##-- dump raw document
-    DTA::TokWrap::Utils::ref2file(\$str,"$tmpdir/tmp.raw.xml")
+    DTA::TokWrap::Utils::ref2file($str,"$tmpdir/tmp.raw.xml")
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.raw.xml: $!");
 
     ##-- ensure //c elements
@@ -237,15 +234,13 @@ sub fromString {
 ## $fmt = $fmt->fromFile($filename_or_handle)
 ##  + calls $fmt->fromFh()
 sub fromFile {
-  my $fmt = shift;
-  return $fmt->DTA::CAB::Format::fromFile(@_);
+  return $_[0]->DTA::CAB::Format::fromFile(@_[1..$#_]);
 }
 
 ## $fmt = $fmt->fromFh($handle)
 ##  + just calls $fmt->fromString()
 sub fromFh {
-  my $fmt = shift;
-  return $fmt->DTA::CAB::Format::fromFh(@_);
+  return $_[0]->DTA::CAB::Format::fromFh_str(@_[1..$#_]);
 }
 
 ## $doc = $fmt->parseDocument()
@@ -279,29 +274,35 @@ sub defaultExtension { return '.tei.xml'; }
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
 
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + override reverts to DTA::CAB::Format::toString()
-sub toString {
+## $fmt = $fmt->flush()
+##  + flush any buffered output to selected output source
+##  + override calls $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh})
+sub flush {
   my $fmt = shift;
-  return $fmt->DTA::CAB::Format::toString(@_);
+  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
+  $fmt->SUPER::flush(@_);
 }
 
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
+## $fmt = $fmt->toString(\$str)
+## $fmt = $fmt->toString(\$str,$formatLevel)
+##  + select output to byte-string
+##  + override reverts to DTA::CAB::Format::toString()
+sub toString {
+  return $_[0]->DTA::CAB::Format::toString(@_[1..$#_]);
+}
+
+## $fmt_or_undef = $fmt->toFile($filename, $formatLevel)
+##  + select output to $filename
 ##  + override reverts to DTA::CAB::Format::toFile()
 sub toFile {
-  my $fmt = shift;
-  return $fmt->DTA::CAB::Format::toFile(@_);
+  return $_[0]->DTA::CAB::Format::toFile(@_[1..$#_]);
 }
 
 ## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
+##  + select output to filehandle $fh
 ##  + override reverts to DTA::CAB::Format::toFh()
 sub toFh {
-  my $fmt = shift;
-  return $fmt->DTA::CAB::Format::toFh(@_);
+  return $_[0]->DTA::CAB::Format::toFh(@_[1..$#_]);
 }
 
 ##--------------------------------------------------------------
@@ -354,7 +355,7 @@ sub putDocument {
   DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $tmpdir/tmp.tei.tws.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
       or $fmt->logdie("dtatw-splice.perl failed: $!");
 
-  ##-- slurp in spliced-back output
+  ##-- slurp in spliced-back output to $fmt->{outbuf}
   $fmt->{outbuf} = '';
   DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.tei.spliced.xml",\$fmt->{outbuf})
       or $fmt->logdie("could not slurp back spliced temp file '$tmpdir/tmp.tei.spliced.xml': $!");

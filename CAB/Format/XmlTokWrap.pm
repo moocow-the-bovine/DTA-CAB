@@ -46,7 +46,7 @@ BEGIN {
 ##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
 ##     ##
 ##     ##-- output: inherited
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##
 ##     ##-- common: safety

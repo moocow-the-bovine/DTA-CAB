@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::XmlPerl.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser|formatter: XML (perl-near)
 
 package DTA::CAB::Format::XmlPerl;
@@ -21,6 +21,7 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)perl|perl(?:[\-\.]?)xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(xml-perl xml_perl));
 }
 
 ##==============================================================================
@@ -35,7 +36,7 @@ BEGIN {
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
 ##     ##-- output
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##     hashElt => $elt,                        ##-- output hash element (default='map')
 ##     listElt => $elt,                        ##-- ouput list element (default='list')
@@ -51,7 +52,6 @@ sub new {
 			   xprs => libxml_parser(keep_blanks=>0),
 
 			   ##-- output
-			   encoding => 'UTF-8',
 			   level    => 0,
 
 			   hashElt => 'm',

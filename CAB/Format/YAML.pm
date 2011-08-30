@@ -7,6 +7,7 @@
 package DTA::CAB::Format::YAML;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
+use YAML::XS qw();
 use IO::File;
 use Carp;
 use strict;
@@ -18,18 +19,9 @@ use strict;
 our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:yaml|yml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:ya?ml(?:[\.\-\_]xs)?)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(yamlxs yaml-xs yml ymlxs yml-xs));
 }
-
-our $WRAP_CLASS = undef;
-foreach my $pmfile (map {"DTA/CAB/Format/YAML/$_.pm"} qw(XS Syck Lite)) {
-  if (eval {require($pmfile)} && !$@ && !defined($WRAP_CLASS)) {
-    $WRAP_CLASS = $pmfile;
-    $WRAP_CLASS =~ s/\//::/g;
-    $WRAP_CLASS =~ s/\.pm$//;
-  }
-}
-$WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 
 ##==============================================================================
 ## Constructors etc.
@@ -49,12 +41,9 @@ $WRAP_CLASS = __PACKAGE__ if (!defined($WRAP_CLASS)); ##-- dummy
 ##    )
 sub new {
   my $that = shift;
-  if ($that eq __PACKAGE__ && $WRAP_CLASS ne __PACKAGE__) {
-    return $WRAP_CLASS->new(@_);
-  }
   my $fmt = bless({
 		   ##-- I/O common
-		   encoding => undef,
+		   #utf8 => 1, ##-- always true, but we don't want the I/O flag set
 
 		   ##-- Input
 		   #doc => undef,
@@ -76,7 +65,18 @@ sub new {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved
 sub noSaveKeys {
-  return qw(doc outbuf);
+  return ($_[0]->SUPER::noSaveKeys, qw(doc outbuf));
+}
+
+##==============================================================================
+## Methods: I/O: generic
+##==============================================================================
+
+## @layers = $fmt->iolayers()
+##  + returns PerlIO layers to use for I/O handles
+##  + override returns ':raw'
+sub iolayers {
+  return (':raw');
 }
 
 ##==============================================================================
@@ -86,33 +86,36 @@ sub noSaveKeys {
 ##--------------------------------------------------------------
 ## Methods: Input: Input selection
 
-## $fmt = $fmt->close()
-sub close {
-  delete($_[0]{doc});
-  return $_[0];
-}
-
-## $fmt = $fmt->fromFile($filename_or_handle)
-##  + default calls $fmt->fromFh()
-
-## $fmt = $fmt->fromFh($filename_or_handle)
-##  + default calls $fmt->fromString() on file contents
-
-## $fmt = $fmt->fromString($string)
+## $fmt = $fmt->fromString(\$string)
+##  + override calls $fmt->parseYamlString(\$string)
 sub fromString {
   my $fmt = shift;
   $fmt->close();
-  return $fmt->parseYamlString($_[0]);
+  return $fmt->parseYamlString(ref($_[0]) ? $_[0] : \$_[0]);
+}
+
+## $fmt = $fmt->fromFile($filename_or_handle)
+##  + inherited default calls $fmt->fromFh()
+
+## $fmt = $fmt->fromFh($filename_or_handle)
+##  + override calls $fmt->fromFh_str($fh)
+sub fromFh {
+  return $_[0]->fromFh_str(@_[1..$#_]);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseYamlString($str)
-##  + must be defined by child classes!
+## $fmt = $fmt->parseYamlString(\$str)
+##  + parse a buffered YAML string
 sub parseYamlString {
-  my $fmt = shift;
-  $fmt->logconfess("parseYamlString() not implemented!");
+  my $fmt  = shift;
+  my $bufr = ref($_[0]) ? $_[0] : \$_[0];
+  utf8::encode($$bufr) if (utf8::is_utf8($$bufr));
+  my $doc = YAML::XS::Load($$bufr)
+    or $fmt->logcluck("ParseYamlString(): YAML::XS::Load() failed: $!");
+  $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
+  return $fmt;
 }
 
 ##--------------------------------------------------------------
@@ -146,51 +149,45 @@ sub shortName {
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
+##  + inherited
 
-## $fmt = $fmt->flush()
-##  + flush accumulated output
-sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output document to byte-string
-##  + default implementation removes typing if ($level <= 1)
-sub toString {
-  $_[0]->formatLevel($_[1]) if (defined($_[1]));
-  if (!$_[0]{level} || $_[0]{level} >= 2) {
-    #$_[0]{outbuf} =~ s/^\-\-\- !!perl\/\w+\:[\w\:]+\n/---\n/sg;     ##-- remove yaml typing on doc borders
-    $_[0]{outbuf} =~ s/(?<!^\-\-\- )!!perl\/\w+\:[\w\:]+\n\s*//sg;  ##-- remove yaml typing on content
-  }
-  return $_[0]{outbuf};
-}
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output document to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-##  + flush buffered output document to filehandle $fh
-##  + default implementation calls to $fmt->formatString($formatLevel)
 
 ##--------------------------------------------------------------
 ## Methods: Output: Generic API
 
+## \$buf = $fmt->formatBuf(\$buf)
+##  + formats YAML buffer \$buf according to $fmt->{level}
+sub formatBuf {
+  #if (!$_[0]{level} || $_[0]{level} >= 2) 
+  if ($_[0]{level} && $_[0]{level} >= 2) {
+    #${$_[1]} =~ s/^\-\-\- !!perl\/\w+\:[\w\:]+\n/---\n/sg;     ##-- remove yaml typing on doc borders
+    ${$_[1]} =~ s/(?<!^\-\-\- )!!perl\/\w+\:[\w\:]+\n\s*//sg;  ##-- remove yaml typing on content
+  }
+  return $_[1];
+}
+
+
 ## $fmt = $fmt->putToken($tok)
 sub putToken {
-  $_[0]->logconfess("putToken() not implemented!");
+  my $tmp = YAML::XS::Dump($_[1]);
+  $tmp =~ s/^---\s*//;
+  $_[0]{fh}->print(${$_[0]->formatBuf(\$tmp)});
+  return $_[0];
 }
 
 ## $fmt = $fmt->putSentence($sent)
 sub putSentence {
-  $_[0]->logconfess("putSentence() not implemented!");
+  my $tmp = YAML::XS::Dump($_[1]);
+  $tmp =~ s/^---\s*//;
+  $_[0]{fh}->print(${$_[0]->formatBuf(\$tmp)});
+  return $_[0];
 }
 
 ## $fmt = $fmt->putDocument($doc)
 sub putDocument {
-  $_[0]->logconfess("putDocument() not implemented!");
+  my $tmp = YAML::XS::Dump($_[1]);
+  $_[0]{fh}->print(${$_[0]->formatBuf(\$tmp)});
+  return $_[0];
 }
 
 ## $fmt = $fmt->putData($data)

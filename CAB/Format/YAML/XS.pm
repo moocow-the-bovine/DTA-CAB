@@ -6,7 +6,6 @@
 
 package DTA::CAB::Format::YAML::XS;
 use DTA::CAB::Format;
-#use DTA::CAB::Format::YAML;
 use DTA::CAB::Datum ':all';
 use YAML::XS qw();
 use IO::File;

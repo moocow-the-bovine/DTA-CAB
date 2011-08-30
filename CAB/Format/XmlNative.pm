@@ -9,10 +9,6 @@ use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlXsl;
 use DTA::CAB::Datum ':all';
 use XML::LibXML;
-#BEGIN {
-#  local $^W=0;
-#  require XML::LibXML::Iterator;
-#}
 use IO::File;
 use Carp;
 use strict;
@@ -52,7 +48,7 @@ BEGIN {
 ##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
 ##     ##
 ##     ##-- output: inherited
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##
 ##     ##-- common: safety
@@ -100,7 +96,7 @@ sub new {
 			      ##-- user args
 			      @_
 			     );
-  $fmt->{xprs}->keep_blanks(0);
+  $fmt->xmlparser->keep_blanks(0);
   return $fmt;
 }
 
@@ -140,12 +136,14 @@ sub parseNode {
       }
       elsif ($name eq 's') {
 	##-- Element: special: DTA::CAB::Sentence
-	$nxt = $cs = DTA::CAB::Sentence->new;
+	#$nxt = $cs = DTA::CAB::Sentence->new;
+	$nxt = $cs = {tokens=>[]};
 	push(@{$cd->{body}},$cs);
       }
       elsif ($name eq 'w') {
 	##-- Element: special: DTA::CAB::Token
-	$nxt = $cw = DTA::CAB::Token->new;
+	#$nxt = $cw = DTA::CAB::Token->new;
+	$nxt = $cw = {text=>undef};
 	push(@{$cs->{tokens}},$cw);
       }
       elsif ($name eq 'msafe') {

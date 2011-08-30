@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::XmlRpc.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: Datum parser: XML-RPC using RPC::XML
 
 package DTA::CAB::Format::XmlRpc;
@@ -10,7 +10,6 @@ use DTA::CAB::Datum ':all';
 use RPC::XML;
 use RPC::XML::Parser;
 use IO::File;
-use Encode qw(encode decode);
 use Carp;
 use strict;
 
@@ -22,6 +21,7 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)rpc|rpc(?:[\-\.]?)xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(xml-rpc xml_rpc));
 }
 
 ##==============================================================================
@@ -52,7 +52,7 @@ sub new {
 
 		   ##-- output
 		   docbuf   => DTA::CAB::Document->new(),
-		   encoding => 'UTF-8',
+		   #encoding => 'UTF-8',
 		   level    => 0,
 		   #xprs => XML::LibXML->new, (inherited from XmlCommon)
 		   #xdoc => undef, (inherited from XmlCommon)
@@ -74,7 +74,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return qw(rxprs rxdata docbuf xprs);
+  return ($_[0]->SUPER::noSaveKeys, qw(rxprs rxdata docbuf xprs));
 }
 
 
@@ -165,47 +165,21 @@ sub parseDocument {
 ## $fmt = $fmt->flush()
 ##  + flush accumulated output
 sub flush {
-  $_[0]{docbuf} = DTA::CAB::Document->new();
-  return $_[0];
-}
-
-## $str = $fmt->toString()
-## $str = $fmt->toString($formatLevel)
-##  + flush buffered output in $fmt->{docbuf} to byte-string
-sub toString {
-  my ($fmt,$level) = @_;
-  my $rpcobj = RPC::XML::smart_encode( $fmt->{docbuf} );
-  $level     = $fmt->{level} if (!defined($level));
-  return (defined($level) && $level>0
-	  ? $fmt->rpcXmlDocument($rpcobj)->toString($level)
-	  : encode($fmt->{encoding}, $rpcobj->as_string));
-}
-
-## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
-##  + flush buffered output to $filename_or_handle
-##  + default implementation calls $fmt->toFh()
-
-## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
-sub toFh {
-  my ($fmt,$fh,$level) = @_;
-  my $rpcobj = RPC::XML::smart_encode( $fmt->{docbuf} );
-  $level     = $fmt->{level} if (!defined($level));
-  $fmt->rpcXmlDocument($rpcobj)->toFH($fh,$level);
-  return $fmt;
+  my $fmt = shift;
+  if (defined($fmt->{docbuf}) && defined($fmt->{output})) {
+    my $rpcobj = RPC::XML::smart_encode( $fmt->{docbuf} );
+    $fmt->{xdoc}   = $fmt->rpcXmlDocument($rpcobj);
+    $fmt->{docbuf} = DTA::CAB::Document->new();
+  }
+  return $fmt->SUPER::flush();
 }
 
 ##--------------------------------------------------------------
 ## Methods: Output: Local
 
-## $parser = $fmt->xmlParser()
-sub xmlParser {
-  return $_[0]{xprs} if ($_[0]{xprs});
-  return $_[0]{xprs} = XML::LibXML->new();
-}
-
 ## $xmldoc = $fmt->rpcXmlDocument($rpcobj_or_string)
 sub rpcXmlDocument {
-  return $_[0]->xmlParser->parse_string( ref($_[1]) ? $_[1]->as_string : $_[1] );
+  return $_[0]->xmlparser->parse_string( ref($_[1]) ? $_[1]->as_string : $_[1] );
 }
 
 ##--------------------------------------------------------------

@@ -7,7 +7,6 @@
 package DTA::CAB::Format::XmlTokWrapFast;
 use DTA::CAB::Format::XmlTokWrap;
 use DTA::CAB::Datum ':all';
-use Encode qw(encode_utf8 decode_utf8);
 use IO::File;
 use Carp;
 use strict;
@@ -46,7 +45,7 @@ BEGIN {
 ##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
 ##     ##
 ##     ##-- output: inherited from TokWrapXml
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $encoding,                 ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##
 ##     ##-- common: safety
@@ -82,31 +81,27 @@ sub defaultExtension { return '.ft.xml'; }
 ## $fmt = $fmt->flush()
 ##  + flush accumulated output
 sub flush {
-  delete($_[0]{outbuf});
-  return $_[0];
+  $_[0]->DTA::CAB::Format::flush(@_[1..$#_]);
 }
 
 ## $str = $fmt->toString()
 ## $str = $fmt->toString($formatLevel)
 ##  + flush buffered output document to byte-string
 sub toString {
-  $_[0]{outbuf} = '' if (!defined($_[0]{outbuf}));
-  return encode($_[0]{encoding},$_[0]{outbuf}) if (utf8::is_utf8($_[0]{outbuf}));
-  return $_[0]{outbuf};
+  $_[0]->DTA::CAB::Format::toString(@_[1..$#_]);
 }
 
 ## $fmt_or_undef = $fmt->toFile($filename_or_handle, $formatLevel)
 ##  + flush buffered output document to $filename_or_handle
 ##  + default implementation calls $fmt->toFh()
+sub toFile {
+  $_[0]->DTA::CAB::Format::toFile(@_[1..$#_]);
+}
 
 ## $fmt_or_undef = $fmt->toFh($fh,$formatLevel)
 ##  + flush buffered output document to filehandle $fh
 sub toFh {
-  my ($fmt,$fh,$level) = @_;
-  return $fmt if (!defined($fmt->{outbuf}));
-  binmode($fh, (utf8::is_utf8($fmt->{outbuf}) ? ':utf8' : ':raw'));
-  $fh->print($fmt->{outbuf}) || return undef;
-  return $fmt;
+  $_[0]->DTA::CAB::Format::toFh(@_[1..$#_]);
 }
 
 ##--------------------------------------------------------------
@@ -180,43 +175,44 @@ sub putDocument {
 
 
   ##--------------------
-  ## output buffer
-  my $outbufr = \$fmt->{outbuf};
-  $$outbufr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+  ## output handle
+  my $fh = $fmt->{fh};
+  binmode($fh,':utf8');
+  $fh->print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 
   ##--------------------
   ## guts
   my ($s,$w);
-  $$outbufr .= "\n" . $xmlstart->('doc', base=>$doc->{base});
+  $fh->print("\n", $xmlstart->('doc', base=>$doc->{base}));
   foreach $s (@{$doc->{body}}) {
-    $$outbufr .= "\n\t" . $xmlstart->('s',id=>$s->{id});
+    $fh->print("\n ", $xmlstart->('s',id=>$s->{id}));
     foreach $w (@{$s->{tokens}}) {
-      $$outbufr .= ("\n\t\t"
-		    . $xmlelt->('w',
-				[
-				 ##-- word attributes: literals
-				 (t=>$w->{text}),
-				 (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen msafe)),
-				],
-				##
-				##-- content: tokenizer analyses
-				#(map {$xmlelt->('a',$nil,$xmlescape->($w->{$_}))} @{$w->{toka}||$nil}),
-				#($w->{tokpp} && @{$w->{tokpp}} ? $xmlelt->('tokpp',$nil,map {xmlelt('a',$nil,$xmlescape->($_))} @{$w->{tokpp}}) : qw()),
-				##
-				##-- content: xlit
-				#($w->{xlit} ? $xmlempty->('xlit',%{$w->{xlit}}) : qw()),
-				##
-				##-- content: fsts
-				#(map {$fstelt->($_,'a',$w->{$_})} qw(lts morph rw mlatin eqpho eqrw)),
-				##
-				##-- content: moot
-				#$mootelt->('dmoot','a',$w->{dmoot}),
-				$mootelt->('moot','a',$w->{moot}),
-			       ));
+      $fh->print("\n\t",
+		 $xmlelt->('w',
+			   [
+			    ##-- word attributes: literals
+			    (t=>$w->{text}),
+			    (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen msafe)),
+			   ],
+			   ##
+			   ##-- content: tokenizer analyses
+			   #(map {$xmlelt->('a',$nil,$xmlescape->($w->{$_}))} @{$w->{toka}||$nil}),
+			   #($w->{tokpp} && @{$w->{tokpp}} ? $xmlelt->('tokpp',$nil,map {xmlelt('a',$nil,$xmlescape->($_))} @{$w->{tokpp}}) : qw()),
+			   ##
+			   ##-- content: xlit
+			   #($w->{xlit} ? $xmlempty->('xlit',%{$w->{xlit}}) : qw()),
+			   ##
+			   ##-- content: fsts
+			   #(map {$fstelt->($_,'a',$w->{$_})} qw(lts morph rw mlatin eqpho eqrw)),
+			   ##
+			   ##-- content: moot
+			   #$mootelt->('dmoot','a',$w->{dmoot}),
+			   $mootelt->('moot','a',$w->{moot}),
+			  ));
     }
-    $$outbufr .= "\n\t</s>";
+    $fh->print("\n </s>");
   }
-  $$outbufr .= "\n</doc>\n";
+  $fh->print("\n</doc>\n");
 
   return $fmt;
 }

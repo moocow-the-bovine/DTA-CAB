@@ -34,7 +34,7 @@ BEGIN {
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
 ##     ##-- output
-##     encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
+##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
 ##    }
 sub new {
@@ -45,7 +45,7 @@ sub new {
 			      xdoc => undef,
 
 			      ##-- output
-			      encoding => 'UTF-8',
+			      #encoding => 'UTF-8',
 			      level => 1,
 
 			      ##-- user args
