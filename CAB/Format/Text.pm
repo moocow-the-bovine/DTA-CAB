@@ -48,6 +48,22 @@ BEGIN {
 ##==============================================================================
 
 ##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## \@blocks = $fmt->blockScan($filename, %opts)
+##  + scans $filename for block boundaries according to $bspec
+##  + override pukes
+sub blockScan {
+  $_[0]->logconfess("blockScan(): not implemented");
+}
+
+## $fmt_or_undef = $fmt->blockMerge($block,$filename)
+##  + append a block $block to a file $filename
+##  + $block is a HASH-ref as returned by blockScan()
+##  + inherited from TT
+
+##==============================================================================
 ## Methods: Input
 ##==============================================================================
 

@@ -199,24 +199,33 @@ sub accept {
 }
 
 ## $rc = $qs->process($cli)
-## $rc = $qs->process($cli, \&callback)
+## $rc = $qs->process($cli, %callbacks)
 ##  + handle a single client request
 ##  + each client request is a STRING message (command)
 ##    - request arguments (if required) are sent as separate messages following the command request
 ##    - server response (if any) depends on command sent
 ##  + this method parses client request command $cmd and dispatches to
+##    - the function $callbacks{lc($cmd)}->($qs,$cli,\$cmd), if defined
 ##    - the method $qs->can("process_".lc($cmd))->($qs,$cli,\$cmd), if available
+##    - the function $callbacks{DEFAULT}->($qs,$cli,\$cmd), if defined
 ##    - the method $qs->can("process_DEFAULT")->($qs,$cli,\$cmd)
 ##  + returns whatever the handler subroutine does
 sub process {
-  my ($qs,$cli) = @_;
+  my ($qs,$cli,%callbacks) = @_;
   my $creq = $cli->get();
   $qs->vlog($qs->{logRequest}, "client request: $$creq");
   if (!ref($creq) || ref($creq) ne 'SCALAR' || ref($$creq)) {
     $qs->logconfess("could not parse client request");
   }
+  my $cmd = lc($$creq);
   my ($sub);
-  if (defined($sub=$qs->can("process_".lc($$creq)))) {
+  if (defined($sub=$callbacks{$cmd})) {
+    return $sub->($qs,$cli,$creq);
+  }
+  elsif (defined($sub=$qs->can("process_${cmd}"))) {
+    return $sub->($qs,$cli,$creq);
+  }
+  elsif (defined($sub=$callbacks{DEFAULT})) {
     return $sub->($qs,$cli,$creq);
   }
   elsif (defined($sub=$qs->can("process_DEFAULT"))) {

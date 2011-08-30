@@ -24,7 +24,7 @@ our @ISA = qw(DTA::CAB::Socket::UNIX);
 ## $qs = DTA::CAB::Queue::Server->new(%args)
 ##  + %$qs, %args:
 ##    (
-##     ##-- NEW in DTA::CAB::Queue::Socket
+##     ##-- NEW in DTA::CAB::Queue::Server
 ##     queue => \@queue,    ##-- actual queue data
 ##     status => $str,      ##-- queue status (defualt: 'active')
 ##     ##
@@ -116,15 +116,8 @@ sub clientClass {
 ##  + INHERITED from DTA::CAB::Socket
 
 ## $rc = $qs->process($cli)
-## $rc = $qs->process($cli, \&callback)
+## $rc = $qs->process($cli, %callbacks)
 ##  + handle a single client request
-##  + each client request is a STRING message (command)
-##    - request arguments (if required) are sent as separate messages following the command request
-##    - server response (if any) depends on command sent
-##  + this method parses client request command $cmd and dispatches to
-##    - the method $qs->can("process_".lc($cmd))->($qs,$cli,\$cmd), if available
-##    - the method $qs->can("process_DEFAULT")->($qs,$cli,\$cmd)
-##  + returns whatever the handler subroutine does
 ##  + INHERITED from CAB::Socket
 
 ##--------------------------------------------------------------

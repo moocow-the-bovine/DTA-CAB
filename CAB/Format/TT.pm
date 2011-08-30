@@ -136,7 +136,6 @@ sub blockAppend {
     or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
   binmode($outfh, utf8::is_utf8(${$block->{data}}) ? ':utf8' : ':raw');
 
-
   ##-- truncate extraneous newlines from data
   use bytes;
   if (!$block->{eos}) {
