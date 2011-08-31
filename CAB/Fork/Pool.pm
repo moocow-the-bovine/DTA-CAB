@@ -5,7 +5,7 @@
 ## Description: generic thread pool for DTA::CAB
 
 package DTA::CAB::Fork::Pool;
-use DTA::CAB::Queue::File;
+use DTA::CAB::Queue::Server;
 use POSIX qw(:sys_wait_h);
 use Carp;
 use strict;
@@ -14,7 +14,7 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Logger);
+our @ISA = qw(DTA::CAB::Queue::Server);
 
 ##==============================================================================
 ## Constructors etc.
@@ -23,11 +23,6 @@ our @ISA = qw(DTA::CAB::Logger);
 ## $fp = CLASS_OR_OBJ->new(%args)
 ##  + %$fp, %args:
 ##    {
-##     ##-- queue options (for DTA::CAB::Queue::File::Locked)
-##     qfile => $filename,   ##-- basename of queue file (will have .dat,.idx suffixes; default="/tmp/fpool.$$")
-##     qmode => $mode,       ##-- creation mode (default=0660)
-##     qseparator => $str,   ##-- item separator string (default=$/)
-##
 ##     ##-- high-level subprocess pool options
 ##     njobs  => $n_threads,    ##-- number of subprocesses to fork() off (default=0)
 ##     init   => \&init,        ##-- called as init($fp) in each subprocess after creation (default: $fp->can('init'))
@@ -39,33 +34,59 @@ our @ISA = qw(DTA::CAB::Logger);
 ##     logReap          => $level,   ##-- log-level for messages caught with default catch() [default: 'fatal']
 ##     propagateErrors  => $bool,    ##-- if true (default), default 'reap' method will exit() the whole process
 ##     installReaper    => $bool,    ##-- if true (default), spawn() sets $SIG{CHLD}=$fp->reaper()
-##     ##
+##
 ##     ##-- Low-level data
 ##     pids => \@pids,           ##-- PIDs of spawned subprocesses
 ##     ppid => $ppid,            ##-- parent pid (default=$$)
-##     queue => $queue,          ##-- low-level DTA::CAB::Queue::File::Locked object
+##     qc   => $qclient,         ##-- queue client (subprocesses only; see $fp->qclient(), below)
+##
+##     ##-- INHERITED from DTA::CAB::Queue::Server
+##     queue => \@queue,    ##-- actual queue data
+##     status => $str,      ##-- queue status (default: 'active')
+##     ntok => $ntok,       ##-- total number of tokens processed by clients
+##     nchr => $nchr,       ##-- total number of characters processed by clients
+##     blocks => \%blocks,  ##-- output tracker: %blocks = ($outfile => $po={cur=>$max_input_byte_written, pending=>\@pending}, ...)
+##                          ##   + @pending is a list of pending blocks ($pb={off=>$ioffset, len=>$ilength, data=>\$data, ...}, ...)
+##     logBlock => $level,  ##-- log-level for block merge operations (default=undef (none))
+##
+##     ##-- INHERITED from DTA::CAB::Socket::UNIX
+##     local  => $path,     ##-- path to local UNIX socket (server only; set to empty string to use a tempfile): OVERRIDE default=''
+##     #peer   => $path,     ##-- path to peer socket (client only)
+##     listen => $n,        ##-- queue size for listen (default=SOMAXCONN)
+##     unlink => $bool,     ##-- if true, server socket will be unlink()ed on DESTROY() (default=true)
+##     perms  => $perms,    ##-- file create permissions for server socket (default=0600)
+##     pid => $pid,         ##-- pid of creating process (for auto-unlink)
+##
+##     ##-- INHERITED from DTA::CAB::Socket
+##     fh    => $sockfh,     ##-- an IO::Socket::UNIX object for the socket
+##     timeout => $secs,     ##-- default timeout for select() (default=undef: none); OVERRIDE default=1
+##     nonblocking => $bool, ##-- set O_NONBLOCK on open? (override default=true);    OVERRIDE default=1
+##     logSocket => $level,  ##-- log level for full socket trace (default=undef (none))
+##     logRequest => $level, ##-- log level for client requests (server only; default=undef (none))
 ##    }
 sub new {
   my $that = shift;
-  my $fp = bless {
-		  qfile  => "/tmp/fpool.$$",
-		  qmode  => 0600,
-		  qseparator => $/,
-		  njobs => 0,
-		  init  => $that->can('init'),
-		  work  => $that->can('work'),
-		  reap  => $that->can('reap'),
-		  free  => $that->can('free'),
-		  logSpawn => 'info',
-		  logReap => 'info',
-		  propagateErrors => 1,
-		  installReaper => 1,
-		  pids => [],
-		  ppid => $$,
-		  @_,
-		 }, ref($that)||$that;
-  my %qargs = map {($_=>$fp->{"q$_"})} qw(file mode separator);
-  $fp->{queue} = DTA::CAB::Queue::File::Locked->new(%qargs) if (!$fp->{queue});
+  my $fp = $that->SUPER::new
+    (
+     njobs => 0,
+     init  => $that->can('init'),
+     work  => $that->can('work'),
+     reap  => $that->can('reap'),
+     free  => $that->can('free'),
+     logSpawn => 'info',
+     logReap  => 'info',
+     propagateErrors => 1,
+     installReaper => 1,
+     pids => [],
+     ppid => $$,
+
+     ##-- overrides
+     local => '',
+     timeout => 1,
+     nonblocking => 1,
+
+     @_,
+    );
   return $fp;
 }
 
@@ -87,6 +108,8 @@ sub spawn {
       push(@{$fp->{pids}},$pid);
     } else {
       ##-- child
+      $fp->logconfess("couldn't fork()") if (!defined($pid));
+      $fp->{fh}->close() if ($fp->{fh}); ##-- close server queue socket in child
       exit $fp->childMain();
     }
   }
@@ -117,7 +140,7 @@ sub abort {
 sub reset {
   my $fp = shift;
   $fp->abort();
-  $fp->{queue}->reset();
+  $fp->clear();
   return $fp;
 }
 
@@ -139,18 +162,8 @@ sub waitall {
   return $fp;
 }
 
-sub waitall_old {
-  my $fp = shift;
-  my ($pid);
-  while (defined($pid=shift(@{$fp->{pids}}))) {
-    waitpid($pid,0);
-    $fp->{reap}->($fp,$pid,$?) if ($fp->{reap});
-  }
-  return $fp;
-}
-
 ## \&reaper = $fp->reaper()
-##  + zombie-harvesting code; installed to local %SIG by default
+##  + zombie-harvesting code; installed to local %SIG if $fp->{installReaper} is true (default)
 sub reaper {
   my $fp = shift;
   return sub {
@@ -160,47 +173,49 @@ sub reaper {
       $fp->{reap}->($fp,$child,$?) if ($fp->{reap});
       @{$fp->{pids}} = grep {$_ != $child} @{$fp->{pids}};
     }
+    #$SIG{CHLD}=$fp->reaper() if ($fp->{installReaper}); ##-- re-install reaper for SysV
   };
 }
 
 ##==============================================================================
 ## Methods: Queue Maintainence
-##  + see DTA::CAB::Queue::File
+##  + see DTA::CAB::Queue::Server
 
-## undef = $fp->refresh()
-##  + refreshes queue; probably needed in subprocesses
-sub refresh {
-  $_[0]{queue}->refresh;
+## $client = $fp->qclient()
+##  + returns a (new) pseudo-client for the $fp queue
+##  + just returns $fp in main process
+##  + uses cached $fp->{qc} if available, otherwise caches $fp->{qc} to a new DTA::CAB::Queue::Client
+sub qclient {
+  return $_[0] if ($$ == $_[0]{ppid});      ##-- main process: use $fp methods directly
+  return $_[0]{qc} if (defined($_[0]{qc})); ##-- child with cached client object
+  return $_[0]{qc} = DTA::CAB::Queue::Client->new(peer=>$_[0]{local}, logSocket=>$_[0]{logSocket});
 }
 
-## undef = $fp->enq($item)
-##  + enqueue a single item
-sub enq {
-  $_[0]{queue}->enq(@_[1..$#_]);
+## undef = $fp->qenq($item)
+##  + enqueue a single item; server or client
+sub qenq {
+  $_[0]->client->enq(@_[1..$#_]);
 }
 
-## undef = $fp->deq()
-##  + dequeue a single item
-sub deq {
-  $_[0]{queue}->deq(@_[1..$#_]);
+## $item = $fp->qdeq()
+##  + dequeue a single item; server or client
+sub qdeq {
+  $_[0]->client->deq(@_[1..$#_]);
 }
 
-## undef = $fp->peek($count)
-##  + preview next $count items without de-queueing
-sub peek {
-  $_[0]{queue}->peek(@_[1..$#_]);
+## $size = $fp->qsize()
+sub qsize {
+  $_[0]->client->size;
 }
 
-## undef = $fp->clear()
-##  + clears the queue
-sub clear {
-  $_[0]{queue}->clear();
+## undef = $fp->qaddcounts($ntok,$nchr)
+sub qaddcounts {
+  $_[0]->client->addcounts(@_[1..$#_]);
 }
 
-## undef = $fp->unlink()
-##  + close and un-link the queue
-sub unlink {
-  $_[0]{queue}->unlink(@_[1..$#_]);
+## undef = $fp->qaddblock(\%blk)
+sub qaddblock {
+  $_[0]->client->addblock(@_[1..$#_]);
 }
 
 ##==============================================================================
@@ -217,11 +232,11 @@ sub childMain {
 }
 
 ## undef = PACKAGE::process($fp)
-##   + main queue processing loop (can be called e.g. from main thread)
+##   + main queue processing loop (can be called either from main or child thread)
 sub process {
   my $fp = shift;
   my ($item);
-  while (defined($item=$fp->refresh->deq)) {
+  while (defined($item=$fp->qdeq)) {
     $fp->{work}->($fp,$item) if ($fp->{work});
   }
 }

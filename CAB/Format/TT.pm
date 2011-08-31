@@ -87,7 +87,7 @@ sub blockScan {
   my ($fmt,$infile,%opts) = @_;
   my $bsize = $opts{size} || 128*1024;
   my $eob   = ($opts{eob}||'')=~/^s/i ? 's' : 't';
-  $fmt->vlog('trace', "blockScan($infile): size=$bsize, eob=$eob");
+  $fmt->vlog('trace', "blockScan(size=$bsize, eob=$eob, file=$infile): ");
 
   my $infh = IO::File->new("<$infile") or $fmt->logconfess("blockScan(): open failed for '$infile': $!");
   binmode($infh,':raw');
@@ -130,7 +130,7 @@ sub blockScan {
 ##  + $block is a HASH-ref as returned by blockScan()
 sub blockAppend {
   my ($fmt,$block,$file) = @_;
-  #$fmt->vlog('trace', "blockAppend($file): off=$block->{off}, len=$block->{len}");
+  #$fmt->vlog('trace', "blockAppend(off=$block->{off}, len=$block->{len}, file=$file)");
 
   my $outfh = IO::File->new(($block->{off}==0 ? '>' : '>>').$file)
     or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
