@@ -20,11 +20,11 @@ our @ISA = qw(DTA::CAB::Socket::UNIX);
 ## Constructors etc.
 ##==============================================================================
 
-## $qs = DTA::CAB::Queue::Client->new(%args)
-##  + %$qs, %args:
+## $qc = DTA::CAB::Queue::Client->new(%args)
+##  + %$qc, %args:
 ##    (
 ##     ##-- NEW in DTA::CAB::Queue::Client
-##     peer => $path,       ##-- override suppresses auto-open() behavior
+##     peer => $path,       ##-- constructor override sets $qc->{peer} but suppresses auto-open() on new()
 ##     ##
 ##     ##-- INHERITED from DTA::CAB::Socket::UNIX
 ##     #local  => $path,     ##-- path to local UNIX socket (for server; set to empty string to use a tempfile)
@@ -34,9 +34,10 @@ our @ISA = qw(DTA::CAB::Socket::UNIX);
 ##     perms  => $perms,    ##-- file create permissions for server socket (default=0600)
 ##     ##
 ##     ##-- INHERITED from DTA::CAB::Socket
-##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the socket
-##     timeout => $secs,    ##-- default timeout for select() (default=undef: none)
-##     logTrace => $level,  ##-- log level for full trace (default=undef (none))
+##     fh    => $sockfh,     ##-- an IO::Socket::UNIX object for the socket
+##     timeout => $secs,     ##-- default timeout for select() (default=undef: none)
+##     logSocket => $level,  ##-- log level for full socket I/O trace (default=undef (none))
+##     logRequest => $level, ##-- log level for client requests (server only; default=undef (none))
 ##    )
 sub new {
   my ($that,%args) = @_;
@@ -117,10 +118,20 @@ sub size {
   return $$ref;
 }
 
-## $undef = $qc->clear()
+## undef = $qc->clear()
 ##  + clear the server queue
 sub clear {
-  $_[0]->reopen->put_str('clear');
+  $_[0]->reopen->put_str('clear')->close;
+}
+
+## undef = $qc->addcounts($ntok,$nchr)
+sub addcounts {
+  $_[0]->reopen->put_str('addcounts')->put_str(pack('NN',@_[1,2]))->close;
+}
+
+## undef = $qc->addblock(\%blk)
+sub addblock {
+  $_[0]->reopen->put_str('addblock')->put_ref($_[1])->close;
 }
 
 1;

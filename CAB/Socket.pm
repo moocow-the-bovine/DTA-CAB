@@ -38,7 +38,8 @@ $EXPORT_TAGS{all} = [@EXPORT_OK];
 ##    (
 ##     fh       => $sockfh,  ##-- an IO::Socket object for the socket
 ##     timeout  => $secs,    ##-- default timeout for select() (default=undef: none)
-##     logTrace => $level,   ##-- log level for full trace (default=undef (none))
+##     nonblocking => $bool, ##-- set O_NONBLOCK on open() if true (default=false)
+##     logSocket => $level,  ##-- log level for full socket trace (default=undef (none))
 ##     logRequest => $level, ##-- log level for client requests (default=undef (none))
 ##    )
 sub new {
@@ -46,7 +47,8 @@ sub new {
   my $s = bless({
 		 #path =>undef,
 		 timeout=>undef,
-		 logTrace => undef,
+		 nonblocking => 0,
+		 logSocket => undef,
 		 logRequest => undef,
 		 (ref($that) ? (%$that) : qw()),
 		 fh   =>undef,
@@ -65,8 +67,9 @@ sub DESTROY {
 ## Debug
 
 ## undef = $s->vtrace(@msg)
+##  + logs @msg at $s->{logSocket}
 sub vtrace {
-  $_[0]->vlog($_[0]{logTrace}, join(' ', map {defined($_) ? $_ : '--undef--'} @_[1..$#_]));
+  $_[0]->vlog($_[0]{logSocket}, join(' ', map {defined($_) ? $_ : '--undef--'} @_[1..$#_])) if (defined($_[0]{logSocket}));
 }
 
 ##==============================================================================
@@ -115,6 +118,17 @@ sub flags {
   return fcntl($_[0]{fh}, F_GETFL, 0)
 }
 
+## $bool = $s->nonblocking()
+## $bool = $s->nonblocking($bool)
+##  + get current value of O_NONBLOCK flag
+sub nonblocking {
+  if (@_ > 1) {
+    fcntl($_[0]{fh}, F_SETFL, ($_[1] ? ($_[0]->flags | O_NONBLOCK) : ($_[0]->flags & ~O_NONBLOCK)))
+      or $_[0]->logconfess("canread(): could not set flags on socket fd ", fileno($_[0]{fh}), ": $!");
+  }
+  return $_[0]->flags & O_NONBLOCK;
+}
+
 ## $bool = $s->canread()
 ## $bool = $s->canread($timeout_secs)
 ##  + returns true iff there is readable data on the socket
@@ -122,16 +136,20 @@ sub flags {
 ##  + temporarily sets O_NONBLOCK for the socket
 ##  + should return true for a server socket if at least one client is waiting to connect
 sub canread {
-  #$_[0]->vlog($_[0]{logTrace}, 'canread');
+  #$_[0]->vtrace('canread');
   my $s = shift;
   my $timeout = @_ ? shift : $s->{timeout};
   my $flags0 = $s->flags;
-  fcntl($s->{fh}, F_SETFL, $flags0 | O_NONBLOCK)
-    or $s->logconfess("canread(): could not set O_NOBLOCK on socket: $!");
+  if (!($flags0 & O_NONBLOCK)) {
+    fcntl($s->{fh}, F_SETFL, $flags0 | O_NONBLOCK)
+      or $s->logconfess("canread(): could not set O_NOBLOCK on socket: $!");
+  }
   my $rbits = fhbits($s->{fh});
   my $nfound = select($rbits, undef, undef, $timeout);
-  fcntl($s->{fh}, F_SETFL, $flags0)
-    or $s->logconfess("canread(): could not reset socket flags: $!");
+  if (!($flags0 & O_NONBLOCK)) {
+    fcntl($s->{fh}, F_SETFL, $flags0)
+      or $s->logconfess("canread(): could not reset socket flags: $!");
+  }
   return $nfound;
 }
 
@@ -141,16 +159,20 @@ sub canread {
 ##  + $timeout_secs defaults to $s->{timeout} (0 for none)
 ##  + temporarily sets O_NONBLOCK for the socket
 sub canwrite {
-  #$_[0]->vlog($_[0]{logTrace}, 'canwrite');
+  #$_[0]->vtrace('canwrite');
   my $s = shift;
   my $timeout = @_ ? shift : $s->{timeout};
   my $flags0 = $s->flags;
-  fcntl($s->{fh}, F_SETFL, $flags0 | O_NONBLOCK)
-    or $s->logconfess("canwrite(): could not set O_NOBLOCK on socket: $!");
+  if (!($flags0 & O_NONBLOCK)) {
+    fcntl($s->{fh}, F_SETFL, $flags0 | O_NONBLOCK)
+      or $s->logconfess("canwrite(): could not set O_NOBLOCK on socket: $!");
+  }
   my $wbits = fhbits($s->{fh});
   my $nfound = select(undef, $wbits, undef, $timeout);
-  fcntl($s->{fh}, F_SETFL, $flags0)
-    or $s->logconfess("canwrite(): could not reset socket flags: $!");
+  if (!($flags0 & O_NONBLOCK)) {
+    fcntl($s->{fh}, F_SETFL, $flags0)
+      or $s->logconfess("canwrite(): could not reset socket flags: $!");
+  }
   return $nfound;
 }
 
@@ -193,6 +215,7 @@ sub accept {
   my $timeout = @_ ? shift : $s->{timeout};
   if (!defined($timeout) || $s->canread($timeout)) {
     my $cfh = $s->{fh}->accept();
+    return undef if (!defined($cfh));
     return $s->newClient(fh=>$cfh);
   }
   return undef;
@@ -240,7 +263,7 @@ sub process {
 ## Server Methods: Request Handling
 
 ## undef = $qs->process_DEFAULT($cli,\$cmd)
-##  + default implementation just cluck()s and returns undef
+##  + default implementation just logcluck()s and returns undef
 sub process_DEFAULT {
   $_[0]->logcluck("cannot handle client client request ${$_[2]}");
   return undef;
@@ -264,7 +287,6 @@ our $sf_undef = 0x2;
 our $sf_u8    = 0x4;
 our $sf_ref   = 0x8;
 
-
 ##--------------------------------------------------------------
 ## Protocol: Write
 
@@ -286,8 +308,10 @@ sub put_data {
   use bytes;
   my $ref = ref($_[1]) ? $_[1] : \$_[1];
   my $len = defined($_[2]) ? $_[2] : length($$ref);
-  syswrite($_[0]{fh}, $$ref, $len)==$len
-    or $_[0]->logconfess("put_data(): could not write message data to socket: $!");
+  if ($len > 0) {
+    syswrite($_[0]{fh}, $$ref, $len)==$len
+      or $_[0]->logconfess("put_data(): could not write message data to socket: $!");
+  }
   return $_[0];
 }
 

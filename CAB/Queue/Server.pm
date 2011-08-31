@@ -2,12 +2,14 @@
 ##
 ## File: DTA::CAB::Queue::Server.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: UNIX-socket based queue: server
+## Description: UNIX-socket based queue: server for command-line analyzer
 
 package DTA::CAB::Queue::Server;
 use DTA::CAB::Socket ':flags';
 use DTA::CAB::Socket::UNIX;
 use DTA::CAB::Queue::Client;
+use DTA::CAB::Format;
+use DTA::CAB::Format::Builtin;
 use DTA::CAB::Utils ':temp', ':files';
 use Carp;
 use strict;
@@ -27,25 +29,48 @@ our @ISA = qw(DTA::CAB::Socket::UNIX);
 ##     ##-- NEW in DTA::CAB::Queue::Server
 ##     queue => \@queue,    ##-- actual queue data
 ##     status => $str,      ##-- queue status (defualt: 'active')
+##     ntok => $ntok,       ##-- total number of tokens processed by clients
+##     nchr => $nchr,       ##-- total number of characters processed by clients
+##     blocks => \%blocks,  ##-- output tracker: %blocks = ($outfile => $po={cur=>$max_input_byte_written, pending=>\@pending}, ...)
+##                          ##   + @pending is a list of pending blocks ($pb={off=>$ioffset, len=>$ilength, data=>\$data, ...}, ...)
+##     logBlock => $level,  ##-- log-level for block merge operations (default=undef (none))
 ##     ##
 ##     ##-- INHERITED from DTA::CAB::Socket::UNIX
-##     local  => $path,     ##-- path to local UNIX socket (for server; set to empty string to use a tempfile)
-##     #peer   => $path,     ##-- path to peer socket (for client)
+##     local  => $path,     ##-- path to local UNIX socket (server only; set to empty string to use a tempfile)
+##     #peer   => $path,     ##-- path to peer socket (client only)
 ##     listen => $n,        ##-- queue size for listen (default=SOMAXCONN)
 ##     unlink => $bool,     ##-- if true, server socket will be unlink()ed on DESTROY() (default=true)
 ##     perms  => $perms,    ##-- file create permissions for server socket (default=0600)
+##     pid => $pid,         ##-- pid of creating process (for auto-unlink)
 ##     ##
 ##     ##-- INHERITED from DTA::CAB::Socket
-##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the socket
-##     timeout => $secs,    ##-- default timeout for select() (default=undef: none)
-##     logTrace => $level,  ##-- log level for full trace (default=undef (none))
+##     fh    => $sockfh,     ##-- an IO::Socket::UNIX object for the socket
+##     timeout => $secs,     ##-- default timeout for select() (default=undef: none)
+##     nonblocking => $bool, ##-- set O_NONBLOCK on open? (override default=true)
+##     logSocket => $level,  ##-- log level for full socket trace (default=undef (none))
+##     logRequest => $level, ##-- log level for client requests (server only; default=undef (none))
 ##    )
 sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   local => '', ##-- use temp socket if unspecified
+
+			   ##-- local data
 			   queue=>[],
 			   status => 'active',
+			   ntok => 0,
+			   nchr => 0,
+			   blocks => {},
+
+			   ##-- logging
+			   logBlock   => undef,
+			   logRequest => undef,
+			   logSocket  => undef,
+
+			   ##-- overrides
+			   nonblocking => 1,
+
+			   ##-- user args
 			   @_,
 			  );
 }
@@ -54,18 +79,13 @@ sub new {
 ## Open/Close
 
 ## $bool = $qs->opened()
-##  + INHERITED from CAB::Socket::UNIX
-
 ## $qs = $qs->close()
-##  + INHERITED from CAB::Socket::UNIX
-
 ## $qs = $qs->open(%args)
-##  + override unlinks old path if appropriate, sets permissions, etc.
-##  + INHERITED from CAB::Socket::UNIX
+##  + all INHERITED from CAB::Socket::UNIX
 
 ##==============================================================================
-## Socket Communications
-## + INHERITED from CAB::Socket::UNIX
+## Socket Protocol
+## + all INHERITED from CAB::Socket
 
 ##==============================================================================
 ## Queue Maintenance
@@ -101,6 +121,46 @@ sub clear {
   return $_[0];
 }
 
+## ($ntok,$nchr) = $qs->addcounts($ntok,$nchr)
+##  + get or add to total number of (tokens,character) processed
+BEGIN {
+  *counts = \&addcounts;
+}
+sub addcounts {
+  $_[0]{ntok} += $_[1] if (defined($_[1]));
+  $_[0]{nchr} += $_[2] if (defined($_[2]));
+  return @{$_[0]}{qw(ntok nchr)};
+}
+
+## $qs = $qs->addblock(\%blk)
+##   + append block \%blk to appropriate output file if possible, or save it for later
+##   + %blk should have keys: (off=>$nbytes, len=>$nbytes, ofile=>$ofilename, fmt=>$class, data=>\$data, ...)
+sub addblock {
+  my ($qs,$blk) = @_;
+
+  ##-- push block to block-tracker's ($bt) pending list
+  my ($bt);
+  $bt = $qs->{blocks}{$blk->{ofile}} = {cur=>0,pending=>[]} if (!defined($bt=$qs->{blocks}{$blk->{ofile}}));
+  push(@{$bt->{pending}}, $blk);
+
+  ##-- greedy append
+  if ($blk->{off} == $bt->{cur}) {
+    my $fmt = DTA::CAB::Format->newFormat($blk->{fmt} || $DTA::CAB::Format::CLASS_DEFAULT);
+    @{$bt->{pending}} = sort {$a->{off}<=>$b->{off}} @{$bt->{pending}};
+    while (@{$bt->{pending}} && $bt->{pending}[0]{off}==$bt->{cur}) {
+      $blk=shift(@{$bt->{pending}});
+      $qs->vlog($qs->{logBlock}, "BLOCK_APPEND(ofile=$blk->{ofile}, off=$blk->{off}, len=$blk->{len})");
+      $fmt->blockAppend($blk, $blk->{ofile});
+      $bt->{cur} += $blk->{len};
+    }
+  } else {
+    $qs->vlog($qs->{logBlock}, "BLOCK_DELAY(ofile=$blk->{ofile}, off=$blk->{off}, len=$blk->{len})");
+  }
+
+  return $qs;
+}
+
+
 ##==============================================================================
 ## Server Methods
 
@@ -108,6 +168,14 @@ sub clear {
 ##  + default client class, used by newClient()
 sub clientClass {
   return 'DTA::CAB::Queue::ClientConn';
+}
+
+## $client = $CLASS_OR_OBJECT->newClient(%args)
+##  + wrapper for clients, called by $s->accept()
+##  + default just calls $CLASS_OR_OBJECT->clientClass->new(%args)
+sub newClient {
+  my $that = shift;
+  return $that->clientClass->new(@_, logSocket=>$that->{logSocket});
 }
 
 ## $cli_or_undef = $qs->accept()
@@ -124,17 +192,19 @@ sub clientClass {
 ## Server Methods: Request Handling
 ##
 ##  + request commands (case-insensitive) handled here:
-##     DEQ          : dequeue the first item in the queue; response: $cli->put($item)
-##     DEQ_STR      : dequeue a string reference; response: $cli->put_str(\$item)
-##     DEQ_REF      : dequeue a reference; response: $cli->put_ref($item)
-##     ENQ $item    : enqueue an item; no response
-##     ENQ_STR $str : enqueue a string-reference; no response
-##     ENQ_REF $ref : enqueue a reference; no response
-##     SIZE         : get current queue size; response=STRING $qs->size()
-##     STATUS       : get queue status response: STRING $qs->{status}
-##     CLEAR        : clear queue; no response
-##     QUIT         : close client connection; no response
-##     ...          : other messages are passed to $callback->(\$request,$cli) or produce an error
+##     ADDCOUNTS $NN : add to total number of (tokens,characters) processed; arg (string) $NN=pack('NN',$ntok,$chr); no response
+##     ADDBLOCK $blk : block output; $blk is a HASH-ref passed to $qs->block($blk); no response
+##     DEQ           : dequeue the first item in the queue; response: $cli->put($item)
+##     DEQ_STR       : dequeue a string reference; response: $cli->put_str(\$item)
+##     DEQ_REF       : dequeue a reference; response: $cli->put_ref($item)
+##     ENQ $item     : enqueue an item; no response
+##     ENQ_STR $str  : enqueue a string-reference; no response
+##     ENQ_REF $ref  : enqueue a reference; no response
+##     SIZE          : get current queue size; response=STRING $qs->size()
+##     STATUS        : get queue status response: STRING $qs->{status}
+##     CLEAR         : clear queue; no response
+##     QUIT          : close client connection; no response
+##     ...           : other messages are passed to $callback->(\$request,$cli) or produce an error
 ##  + returns: same as $callback->() if called, otherwise $qs
 
 
@@ -208,9 +278,31 @@ sub process_clear {
 }
 
 ## $qs = $qs->process_quit($cli,$creq)
+##  + implements "QUIT"
+BEGIN {
+  *process_bye = *process_close = *process_exit = \&process_quit;
+}
 sub process_quit {
   $_[1]->close();
   return $_[0];
+}
+
+## $qs = $qs->process_addcounts($cli,\$cmd)
+##  + implements "ADDCOUNTS pack('NN',$ntok,$nchr)"
+sub process_addcounts {
+  my ($qs,$cli,$creq) = @_;
+  my $buf = $cli->get();
+  $qs->addcounts(unpack('NN',$$buf));
+  return $qs;
+}
+
+## $qs = $qs->process_addblock($cli,\$cmd)
+##  + implements "ADDBLOCK \%blk"
+sub process_addblock {
+  my ($qs,$cli,$creq) = @_;
+  my $blk = $cli->get();
+  $qs->addblock($blk);
+  return $qs;
 }
 
 ##==============================================================================

@@ -31,13 +31,16 @@ our @ISA = qw(DTA::CAB::Socket);
 ##     local  => $path,     ##-- path to local UNIX socket (for server; set to empty string to use a tempfile)
 ##     peer   => $path,     ##-- path to peer socket (for client)
 ##     listen => $n,        ##-- queue size for listen (default=SOMAXCONN)
-##     unlink => $bool,     ##-- if true, server socket will be unlink()ed on DESTROY() (default=true)
 ##     perms  => $perms,    ##-- file create permissions for server socket (default=0600)
+##     unlink => $bool,     ##-- if true, server socket will be unlink()ed on DESTROY() (default=true)
+##     pid    => $pid,      ##-- pid of creating process (unlink() is only called if !defined($pid) || $$==$pid); (re-)set by open()
 ##     ##
 ##     ##-- INHERITED from DTA::CAB::Socket
-##     fh    => $sockfh,    ##-- an IO::Socket::UNIX object for the socket
-##     timeout => $secs,    ##-- default timeout for select() (default=undef: none)
-##     logTrace => $level,  ##-- log level for full trace (default=undef (none))
+##     fh    => $sockfh,     ##-- an IO::Socket::UNIX object for the socket
+##     timeout => $secs,     ##-- default timeout for select() (default=undef: none)
+##     nonblocking => $bool, ##-- if true, set O_NONBLOCK on open()
+##     logSocket => $level,  ##-- log level for full trace (default=undef (none))
+##     logRequest => $level, ##-- log level for client requests (server only; default=undef (none))
 ##    )
 sub new {
   my ($that,%args) = @_;
@@ -48,6 +51,7 @@ sub new {
 			    ##-- server-only options
 			    listen =>SOMAXCONN,
 			    unlink =>1,
+			    pid    =>$$,
 			    perms  =>0600,
 			    %args,
 			   );
@@ -58,7 +62,7 @@ sub new {
 ## undef = $qs->DESTROY
 ##  + destructor calls close()
 sub DESTROY {
-  $_[0]->unlink() if ($_[0]{local} && $_[0]{unlink});
+  $_[0]->unlink() if ($_[0]{local} && $_[0]{unlink} && (!defined($_[0]{pid}) || $_[0]{pid}==$$));
 }
 
 ## $path = $s->path()
@@ -92,6 +96,7 @@ sub open {
 
   ##-- clobber %$s with %$args
   @$s{keys %args} = values %args;
+  $s->{pid} = $$;
 
   if (defined($s->{local})) {
     ##-------- server socket
@@ -129,6 +134,9 @@ sub open {
     ##-- unknown
     $s->logconfess("open(): no 'local' or 'peer' argument defined");
   }
+
+  ##-- set non-blocking mode if requested
+  $s->nonblocking(1) if ($s->{nonblocking});
 
   ##-- return
   return $s;
