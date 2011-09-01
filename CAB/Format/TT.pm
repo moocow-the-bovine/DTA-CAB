@@ -83,6 +83,11 @@ sub noSaveKeys {
 
 ## \@blocks = $fmt->blockScan($filename, %opts)
 ##  + scans $filename for block boundaries according to $bspec
+##  + inherited %opts:
+##    (
+##     size => $bytes,     ##-- minimum block-size in bytes
+##     eob  => $eob,       ##-- block boundary type; either 's' (sentence) or 't' (token); default='t'
+##    )
 sub blockScan {
   my ($fmt,$infile,%opts) = @_;
   my $bsize = $opts{size} || 128*1024;

@@ -10,6 +10,7 @@ use DTA::CAB::Datum ':all';
 use DTA::CAB::Utils ':libxml';
 use XML::LibXML;
 use IO::File;
+use Fcntl qw(:seek); ##-- for blockScan()
 use Carp;
 use strict;
 
@@ -116,6 +117,67 @@ sub flush {
   delete $fmt->{xdoc};
   return $fmt;
 }
+
+##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## \@blocks = $fmt->blockScan($filename, %opts)
+##  + scans $filename for block boundaries according to $bspec
+##  + inherited %opts:
+##    (
+##     size => $bytes,     ##-- minimum block-size in bytes
+##     eob  => $eob,       ##-- block boundary type (XML element tag)
+##    )
+sub blockScan_TODO {
+  my ($fmt,$infile,%opts) = @_;
+  my $bsize = $opts{size} || 128*1024;
+  my $eob   = ($opts{eob}||'')=~/^s/i ? 's' : 't';
+  $fmt->vlog('trace', "blockScan(size=$bsize, eob=$eob, file=$infile)");
+
+  my $infh = IO::File->new("<$infile") or $fmt->logconfess("blockScan(): open failed for '$infile': $!");
+  binmode($infh,':raw');
+  my $fsize = ($infh->stat)[7];
+  my $blocks = [];
+
+  my $bufsize = $opts{bufsize} || 8192; ##-- block content scanning buffer size
+
+  my ($off0,$off1,$eos,$buf);
+  for ($off0=0, $off1=$off0+$bsize; $off1 < $fsize; $off1=$off0+$bsize) {
+    $infh->seek($off1, SEEK_SET)
+      or $fmt->logconfess("blockScan(): seek failed to offset $off1 for file $infile: $!");
+
+    $buf='';
+    while ($buf !~ m/<\/${eob} ... /) {
+      ;#???
+    }
+
+    $_=<$infh>; ##-- gobble the rest of the remaining line
+    if ($eob eq 's') {
+      while (defined($_=<$infh>) && $_ !~ /^$/) { ; }
+      $eos  = 1;
+      $off1 = $infh->tell;
+    } else {
+      $_=<$infh>;
+      if ($eos=!defined($_) || $_ =~ /^$/) {
+	$off1 = $infh->tell;
+      } else {
+	$off1 = $infh->tell;
+	$_=<$infh>;
+	if ($eos=!defined($_) || $_ =~ /^$/) {
+	  $off1 = $infh->tell;
+	}
+      }
+    }
+    push(@$blocks, {off=>$off0, len=>($off1-$off0), file=>$infile, eos=>($eos ? 1 : 0)});
+    $off0 = $off1;
+  }
+  push(@$blocks, {off=>$off0, len=>($fsize-$off0), file=>$infile, eos=>1}) if ($off0 < $fsize);
+
+  $infh->close();
+  return $blocks;
+}
+
 
 ##=============================================================================
 ## Methods: Input
