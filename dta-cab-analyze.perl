@@ -52,29 +52,37 @@ our $inputList = 0;      ##-- inputs are command-line lists, not filenames (main
 our $block         = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
 our $block_default = '128k@w';    ##-- default block size if -block='' or -block=0 is specified
 our %blockOpts     = qw();        ##-- parsed block options
+our $logBlockInfo    = 'info';    ##-- log-level for block operations
+our $logBlockTrace   = 'none';    ##-- log-level for block trace
+our $logBlockProfile = 'none';    ##-- log-level for block profiling
 
 ##--------------------------------------------------------------
 ## Options: Subprocess Options
-our %opts =
+
+## %job : job-specific options
+our %job =
   (
     ##-- Options: Child: Analysis
-    analyzeOpts => {},
-    doProfile => 1,
+   analyzeOpts => {},
+   doProfile   => 1,
 
-    ##-- Options: Child: I/O
-    inputClass  => undef,  ##-- default parser class
-    outputClass => undef,  ##-- default format class
-    inputWords  => 0,      ##-- inputs are words, not filenames
-    inputOpts   => {},
-    outputOpts  => {level=>0},
-    outfmt      => '-',    ##-- output format
+   ##-- Options: Child: I/O
+   inputClass  => undef,	##-- default parser class
+   outputClass => undef,	##-- default format class
+   inputWords  => 0,		##-- inputs are words, not filenames
+   inputOpts   => {},
+   outputOpts  => {level=>0},
+   outfmt      => '-',		##-- output format
+
+   ##-- Options: input (not here)
+   input => undef,
   );
 
 ##==============================================================================
 ## Command-line
 
-## %global_opts : Getopt::Long specs only relevant for main thread
-our %global_opts =
+## %global_options : Getopt::Long specs only relevant for main thread
+our %global_options =
   (
    ##-- General
    'help|h'    => \$help,
@@ -90,8 +98,13 @@ our %global_opts =
    ##-- Block-wise processing
    'block|block-size|bs|b=s'             => sub {$block=($_[1]||$block_default)},
    'noblock|B'                           => sub { undef $block; },
-   #'block-profile|bp=s'                  => \$block_profile,
-   #'noblock-profile|nobp'                => sub { undef $block_profile; },
+   'log-block-info|lbi|block-info|bi|log-block|lb=s' => \$logBlockInfo,
+   'log-block-trace|block-trace|lbt|bt=s'            => \$logBlockTrace,
+   'log-block-profile|lbp|block-profile|bp=s'        => \$logBlockProfile,
+   'noblock-info|nobi'    => sub { $logBlockInfo='none'; },
+   'noblock-trace|nobt'   => sub { $logBlockTrace='none'; },
+   'noblock-profile|nobp' => sub { $logBlockProfile='none'; },
+
 
    ##-- Analysis
    'configuration|c=s'    => \$rcFile,
@@ -102,26 +115,26 @@ our %global_opts =
   );
 
 
-## %child_opts : Getopt::Long specs overridable by child threads
-our %child_opts =
+## %child_options : Getopt::Long specs overridable by child threads
+our %child_options =
   (
    ##-- Analysis
-   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => $opts{analyzeOpts},
-   'profile|p!' => \$opts{doProfile},
+   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => $job{analyzeOpts},
+   'profile|p!' => \$job{doProfile},
 
    ##-- I/O: input
-   'input-class|ic|parser-class|pc=s'        => \$opts{inputClass},
-   'input-option|io|parser-option|po=s'      =>  $opts{inputOpts},
-   'tokens|t|words|w!'                       => \$opts{inputWords},
+   'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
+   'input-option|io|parser-option|po=s'      =>  $job{inputOpts},
+   'tokens|t|words|w!'                       => \$job{inputWords},
 
    ##-- I/O: output
-   'output-class|oc|format-class|fc=s'       => \$opts{outputClass},
-   'output-option|oo=s'                      =>  $opts{outputOpts},
-   'output-level|ol|format-level|fl=s'       => \$opts{outputOpts}{level},
-   'output-format|output-file|output|o=s'    => \$opts{outfmt},
+   'output-class|oc|format-class|fc=s'       => \$job{outputClass},
+   'output-option|oo=s'                      =>  $job{outputOpts},
+   'output-level|ol|format-level|fl=s'       => \$job{outputOpts}{level},
+   'output-format|output-file|output|o=s'    => \$job{outfmt},
   );
 
-GetOptions(%global_opts, %child_opts);
+GetOptions(%global_options, %child_options);
 if ($version) {
   print cab_version;
   exit(0);
@@ -135,12 +148,10 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ##==============================================================================
 
 ##-- main: init: globals
-our ($ifmt,$ofmt,$doc, $fp);
-our $ntoks  =0;
-our $nchrs  =0;
+our ($ifmt,$ofmt, $fp);
 
 ##-- save per-job overridable options
-our %opts0 = %opts;
+our $job0 = Storable::dclone(\%job);
 
 ##-- main: init: log4perl
 DTA::CAB::Logger->logInit();
@@ -158,14 +169,6 @@ sub cleandie {
 $SIG{$_}=\&cleandie foreach (qw(TERM KILL HUP INT QUIT ABRT));
 
 ##------------------------------------------------------
-## main: init: queues
-
-##-- main: init: queues: job-queue (parent->child)
-$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, work=>\&cb_work, installReaper=>0)
-  or die("$0: could not create fork-pool with socket '$qpath': $!");
-DTA::CAB->info("created job queue on UNIX socket '$qpath'");
-
-##------------------------------------------------------
 ## main: init: analyzer
 $analyzeClass = "DTA::CAB::Analyzer::$analyzeClass" if ($analyzeClass !~ /\:\:/);
 eval "use $analyzeClass;";
@@ -177,26 +180,27 @@ if (defined($rcFile)) {
     or die("$0: load failed for analyzer from '$rcFile': $!");
 } else {
   DTA::CAB->debug("${analyzeClass}->new()");
-  $cab = $analyzeClass->new(%{$opts{analyzeOpts}})
+  $cab = $analyzeClass->new(%{$job{analyzeOpts}})
     or die("$0: $analyzeClass->new() failed: $!");
 }
 
 ##------------------------------------------------------
 ## main: init: prepare (load data)
-
-DTA::CAB->debug("using default input format class ", ref(new_ifmt()));
-DTA::CAB->debug("using default output format class ", ref(new_ofmt()));
-
 $cab->debug("prepare()");
-$cab->prepare($opts{analyzeOpts})
+$cab->prepare($job{analyzeOpts})
   or die("$0: could not prepare analyzer: $!");
 
 ##------------------------------------------------------
+## main: init: formats (just report)
+DTA::CAB->debug("using default input format class ", ref(new_ifmt()));
+DTA::CAB->debug("using default output format class ", ref(new_ofmt()));
+
+##------------------------------------------------------
 ## main: init: profiling
-our $tv_started = [gettimeofday] if ($opts{doProfile});
+our $tv_started = [gettimeofday] if ($job{doProfile});
 
 ##======================================================================
-## Subs: instantiate output file
+## Subs: I/O
 
 ## $ext = file_extension($filename)
 ##  + returns file extension, including leading '.'
@@ -211,6 +215,7 @@ sub file_extension {
 ## $outfile = outfilename($infile,$outfmt)
 sub outfilename {
   my ($infile,$outfmt) = @_;
+  return $outfmt if (!defined($infile));
   my $d = File::Basename::dirname($infile);
   my $b = File::Basename::basename($infile);
   my $x = '';
@@ -226,47 +231,57 @@ sub outfilename {
 }
 
 ## $ifmt = new_ifmt()
-## $ifmt = new_ifmt(%_opts)
-##   + %_opts is a subprocess option hash like global %opts
+## $ifmt = new_ifmt(%_job)
+##   + %_job is a subprocess option hash like global %job (default)
 sub new_ifmt {
-  my %_opts = (%opts,@_);
-  return $ifmt = DTA::CAB::Format->newReader(class=>$_opts{inputClass},file=>$_opts{input},%{$_opts{inputOpts}||{}})
-    or die("$0: could not create input parser of class $_opts{inputClass}: $!");
+  my %_job = (%job,@_);
+  return $ifmt = DTA::CAB::Format->newReader(class=>$_job{inputClass},file=>$_job{input},%{$_job{inputOpts}||{}})
+    or die("$0: could not create input parser of class $_job{inputClass}: $!");
 }
 
 ## $ofmt = new_ofmt()
-## $ofmt = new_ofmt(%_opts)
-##   + %_opts is a subprocess option hash like global %opts
-##   + uses %_opts{outfile} to guess format from output filename
+## $ofmt = new_ofmt(%_job)
+##   + %_job is a subprocess option hash like global %job (default)
+##   + uses %_job{outfile} to guess format from output filename
 sub new_ofmt {
-  my %_opts = (%opts,@_);
-  return $ofmt = DTA::CAB::Format->newWriter(class=>$_opts{outputClass},file=>$_opts{outfile},%{$_opts{outputOpts}||{}})
-    or die("$0: could not create output formatter of class $_opts{outputClass}: $!");
+  my %_job = (%job,@_);
+  my $outfile = outfilename(@_job{qw(input outfmt)});
+  return $ofmt = DTA::CAB::Format->newWriter(class=>$_job{outputClass},file=>$outfile,%{$_job{outputOpts}||{}})
+    or die("$0: could not create output formatter of class $_job{outputClass}: $!");
 }
 
 ##======================================================================
-## Subs: child process callback
-##  + queue dispatches jobs as HASH-refs \%job
-##  + each \%job has all child-process options described above in %opts
-##  + additionally, $job{input}=$infile is a single job input (string or filename)
-##  + for block-wise input, $job{block}=\%blk contains the block specification
-##    returned by blockScan()
+## Subs: child process callback(s)
 
-## cb_work(\%job)
+## undef = resetOptions()
+##  + resets global %job to a deep copy of %$job0
+sub resetOptions {
+  %job = %{Storable::dclone($job0)};
+}
+
+## undef = cb_work(\%qjob)
 ##  + worker callback for child threads
+##  + queue dispatches jobs as HASH-refs \%qjob
+##  + each \%qjob has a key (opts=>\%job) analagous to global %job
+##  + additionally \%qjob has one of the following keys:
+##    (
+##     block => \%block,       ##-- (block-mode only): block specification as returned by $ifmt->blockScan(),
+##     input => $input,        ##-- (file-mode only): job-specific input source (filename)
+##     indoc => $indoc,        ##-- (words-mode only): input document
+##    )
 sub cb_work {
-  my ($fp,$job) = @_;
+  my ($fp,$qjob) = @_;
 
   ##----------------------------------------------------
   ## parse job options
-  %opts    = (%opts0,%$job);
-  my $argv = $opts{argv};
+  %job = %{ $qjob->{opts} || $job0 };
 
   ##----------------------------------------------------
   ## Global (re-)initialization
-  my $outfile = outfilename(($argv->[0]||'out'),$opts{outfmt}); ##-- may be overridden
-  my $ntoks=0;
-  my $nchrs=0;
+  my $outfile = outfilename(($qjob->{input}||'out'),$job{outfmt}); ##-- may be overridden
+  my $ntok=0;
+  my $nchr=0;
+  my $tv_jstarted = [gettimeofday];
   #DTA::CAB->logdie("dying to debug") if (!@{$fp->{pids}}); ##-- DEBUG
 
   ##----------------------------------------------------
@@ -274,77 +289,96 @@ sub cb_work {
   new_ifmt();
   new_ofmt();
 
-  ##----------------------------------------------------
-  ## Analyze
-  $ofmt->toFile($outfile); ##-- TODO: fix for block-wise input!
-  our ($file,$doc);
-  if ($opts{inputWords}) {
-    ##-- word input mode
-    my @words = map { utf8::decode($_) if (!utf8::is_utf8($_)); $_ } @$argv;
-    $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
+  if ($qjob->{block}) {
+    ##--------------------------------------------------
+    ## Analyze: Block-wise
+    my $blk = $qjob->{block};
+    my $blkid = $blk->{blkid} || "$blk->{file} \@ off=$blk->{off}, len=$blk->{len}";
+    $fp->vlog($logBlockInfo,"BLOCK $blkid");
 
-    $cab->trace("analyzeDocument($words[0], ...)");
-    $doc = $cab->analyzeDocument($doc,$opts{analyzeOpts});
+    ##-- slurp & parse block input buffer
+    $ifmt->vlog($logBlockTrace, "BLOCK $blkid: parseString()");
+    my $ibufr = $ifmt->blockRead($blk);
+    my $doc   = $ifmt->parseString($ibufr);
+    undef $ibufr; ##-- ... we can free up the input buffer after we've parsed it
+    $ifmt->close; ##-- ... close input format too, since it might have a local buffer
 
-    $ofmt->trace("putDocumentRaw($words[0], ...)");
-    $ofmt->putDocumentRaw($doc);
+    ##-- analyze
+    $cab->vlog($logBlockTrace, "BLOCK $blkid: analyzeDocument()");
+    $doc = $cab->analyzeDocument($doc,$job{analyzeOpts});
 
-    if ($opts{doProfile}) {
-      $ntoks += $doc->nTokens;
-      $nchrs += length($_) foreach (@words);
+    ##-- output
+    my $obuf = '';
+    $ofmt->vlog($logBlockTrace, "BLOCK $blkid: putDocumentRaw()");
+    $ofmt->toString(\$obuf);
+    $ofmt->putDocumentRaw($doc)->flush;
+
+    ##-- report: statistics
+    if ($job{doProfile}) {
+      $ntok = $doc->nTokens();
+      $nchr = $blk->{len};
+      $fp->qaddcounts($ntok,$nchr);
+      DTA::CAB::Logger->logProfile($logBlockProfile, tv_interval($tv_jstarted,[gettimeofday]), $ntok,$nchr);
+    }
+    undef $doc; ##-- we can free up the analyzed document now
+
+    ##-- report: block output
+    $blk->{ofile} = $outfile if (!defined($blk->{ofile}));
+    $blk->{data}  = \$obuf;
+    $blk->{fmt}   = $ofmt->shortName;
+    $fp->qaddblock($blk);
+  }
+  elsif ($qjob->{indoc}) {
+    ##--------------------------------------------------
+    ## Analyze: Document: pre-parsed
+    my $doc = $qjob->{indoc};
+    my $docid = '"'.($doc->{body}[0]{tokens}[0] || '(nil)').' ..."';
+
+    ##-- analyze
+    $cab->trace("analyzeDocument($docid)");
+    $doc = $cab->analyzeDocument($doc,$job{analyzeOpts});
+
+    ##-- output
+    $ofmt->trace("putDocumentRaw($docid)");
+    $ofmt->toFile($outfile);
+    $ofmt->putDocumentRaw($doc)->flush;
+
+    ##-- report: statistics
+    if ($job{doProfile}) {
+      use bytes;
+      $ntok  = $doc->nTokens();
+      $nchr += length($_->{text}) foreach (map {@{$_->{tokens}}} @{$doc->{body}}); ##-- hack
+      $fp->qaddcounts($ntok,$nchr);
     }
   }
-  elsif (0 && $block) {
-    ##-- file input mode, block-wise tt: DISABLED here (now handled by <split, fork, process, merge> strategy)
-    push(@$argv,'-') if (!@$argv);
-    my $ttout = Lingua::TT::IO->toFile($outfile,encoding=>'utf8')
-      or die("$0: could not open output file '$outfile': $!");
-    my $inbuf = '';
-    my $buflen = 0;
+  else {
+    ##--------------------------------------------------
+    ## Analyze: Document: file
+    my $infile = $qjob->{input};
+    $fp->info("processing file $infile");
 
-    foreach $file (@$argv) {
-      $cab->info("processing file '$file'");
-      my $ttin = Lingua::TT::IO->fromFile($file,encoding=>'utf8')
-	or die("$0: could not open input file '$file': $!");
-      my $infh = $ttin->{fh};
-      while (defined($_=<$infh>)) {
-	$inbuf .= $_;
-	if (++$buflen >= $block && ($blockOpts{eob}!~/^s/i || /^$/)) {
-	  analyzeBlock(\$inbuf,$ttout);
-	  $buflen = 0;
-	  $inbuf  = '';
-	}
-      }
-      $infh->close();
+    ##-- prase
+    $ifmt->trace("parseFile($infile)");
+    my $doc = $ifmt->parseFile($infile)
+      or die("$prog: parse failed for input file '$infile': $!");
+    $ifmt->close; ##-- ... we can free any format-local input buffers now
+
+    ##-- analyze
+    $cab->trace("analyzeDocument($infile)");
+    $doc = $cab->analyzeDocument($doc,$job{analyzeOpts});
+
+    ##-- output
+    $ofmt->trace("putDocumentRaw($infile -> $outfile)");
+    $ofmt->toFile($outfile)
+      or die("$prog: open failed for output file '$outfile': $!");
+    $ofmt->putDocumentRaw($doc)->flush;
+
+    ##-- report: statistics
+    if ($job{doProfile}) {
+      $ntok = $doc->nTokens;
+      $nchr = (-s $infile) if ($infile ne '-');
+      $fp->qaddcounts($ntok,$nchr);
     }
-    analyzeBlock(\$inbuf,$ttout) if ($buflen>0);
-  } else {
-    ##-- file input mode, doc-wise
-    push(@$argv,'-') if (!@$argv);
-    foreach $file (@$argv) {
-      $cab->info("processing file '$file'");
-
-      $ifmt->trace("parseFile($file)");
-      $doc = $ifmt->parseFile($file)
-	or die("$0: parse failed for input file '$file': $!");
-
-      $cab->trace("analyzeDocument($file)");
-      $doc = $cab->analyzeDocument($doc,$opts{analyzeOpts});
-
-      $ofmt->trace("putDocumentRaw($file)");
-      $ofmt->putDocumentRaw($doc);
-
-      if ($opts{doProfile}) {
-	$ntoks += $doc->nTokens;
-	$nchrs += (-s $file) if ($file ne '-');
-      }
-    }
-  }
-  $ofmt->flush();
-
-  ##-- save profiling info to stat-queue
-  if ($fp->is_child && $opts{doProfile}) {
-    $fp->qaddcounts($ntoks,$nchrs);
   }
 
   return 0;
@@ -356,20 +390,38 @@ sub cb_work {
 ## MAIN: guts
 
 ##------------------------------------------------------
+## main: init: queue
+
+$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, work=>\&cb_work, installReaper=>1)
+  or die("$0: could not create fork-pool with socket '$qpath': $!");
+#DTA::CAB->info("created job queue on UNIX socket '$qpath'");
+
+##------------------------------------------------------
 ## main: parse specified inputs into a job-queue
 my @jobs = qw();
 push(@ARGV,'-') if (!@ARGV);
 if ($inputList) {
+  ##-- list-input mode: push each list item as an individual job
+  die("$0: cannot combine -list and -words options (use TT format to process flat word lists)") if ($job{inputWords});
   while (<>) {
     chomp;
     next if (m/^\s*$/ || m/^\s*\#/ || m/^\s*\%\%/);
-    %opts = %opts0;
-    my ($rc,$argv) = Getopt::Long::GetOptionsFromString($_,%child_opts);
+    %job = %{Storable::dclone($job0)};
+    my ($rc,$argv) = Getopt::Long::GetOptionsFromString($_,%child_options);
     die("$prog: could not parse options-string '$_' at $ARGV line $.") if (!$rc);
-    push(@jobs, map { {%opts,input=>$_} } @$argv);
+    my $jopts = Storable::dclone(\%job);
+    push(@jobs, {opts=>$jopts, input=>$_}) foreach (@$argv);
   }
-} else {
-  @jobs = map { {%opts,input=>$_} } @ARGV;
+}
+elsif ($job{inputWords}) {
+  ##-- word-input mode: pass document on the queue
+  my @words = map { utf8::decode($_) if (!utf8::is_utf8($_)); $_ } @ARGV;
+  my $doc = toDocument([ toSentence([ map {toToken($_)} @words ]) ]);
+  @jobs = ( {opts=>\%job, indoc=>$doc} );
+}
+else {
+  ##-- file-input mode: push arguments as individual jobs
+  @jobs = map { {opts=>\%job, input=>$_} } @ARGV;
 }
 
 ##------------------------------------------------------
@@ -395,47 +447,43 @@ else {
     }
 
     ##-- block-scan
-    %opts = (%opts0,%$job);
-    new_ifmt();
+    new_ifmt(%$job);
     #$ifmt->trace("blockScan($job->{input})");
     my $blocks = $ifmt->blockScan($job->{input}, %blockOpts);
-    $fp->enq({%$job,block=>$_}) foreach (@$blocks);
+    my $blki  = 0;
+    my $nblks = scalar(@$blocks);
+    my $idfmt = "%s [%".length($nblks)."d/%d]";
+    foreach (@$blocks) {
+      $_->{blkid} = sprintf($idfmt, $_->{file}, ++$blki, $nblks);
+      $fp->enq({%$job,block=>$_});
+    }
   }
 }
 DTA::CAB->info("populated job-queue with ", $fp->size, " item(s)");
 #print Data::Dumper->Dump([$fp->{queue}],['QUEUE']), "\n";
-exit 0; ##-- DEBUG
+#exit 0; ##-- DEBUG
 
 
 ##------------------------------------------------------
 ## main: guts: process queue
-if ($njobs < 1) {
-  ##-- no (forked) jobs: just process the queue in the main thread
-  DTA::CAB->info("requested njobs=$njobs; not forking");
-  $fp->process();
-} else {
-  ##-- spawn specified number of subprocesses and run them
-  $fp->{njobs} = $fp->size if ($fp->{njobs} > $fp->size); ##-- sanity check: don't fork() more than we need to
-  $fp->spawn();
-  DTA::CAB->info("spawned $fp->{njobs} worker subprocess(es)");
-}
 
-##------------------------------------------------------
-## main: guts: wait for workers
+$fp->serverMain();
+
+#$fp->debug("waiting for subprocess(es) to terminate...");
 $SIG{CHLD} = undef; ##-- remove installed reaper-sub, if any
 $fp->waitall();
+
+##------------------------------------------------------
+## main: guts: profiling
+
+if ($job{doProfile}) {
+  DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), @$fp{qw(ntok nchr)});
+}
 
 ##======================================================================
 ## MAIN: cleanup
 
-##-- main: cleanup: get profiling from stat queue
-if ($opts{doProfile}) {
-  $ntoks = $fp->{ntok};
-  $nchrs = $fp->{nchr};
-}
-
-##-- main: cleanup: profiling
-DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), $ntoks, $nchrs);
+##-- be nice & say goodbyte
 DTA::CAB::Logger->info("program exiting normally.");
 
 ##-- main: cleanup: queues & temporary files
@@ -625,10 +673,12 @@ Do/don't report profiling information (default: do)
 Arguments are list files (1 input per line), not filenames.
 List-file arguments can actually contain a subset of command-line options
 in addition to input filenames.
+Not compatible with the L<-words> option.
 
 =item -words
 
 Arguments are word text, not filenames.
+Not compatible with the L<-list> option.
 
 =item -block SIZE[{k,M,G,T}][@EOB]
 

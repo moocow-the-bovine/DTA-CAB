@@ -241,14 +241,37 @@ sub parseBlockOpts {
 ##     }
 ##  + additionally, $blk may contain the following keys:
 ##     {
-##      eos => $bool,     ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
-##      data => \$data,   ##-- block data octets (for blockAppend())
-##      datalen => $len,  ##-- length in bytes of $data
+##      eos => $bool,      ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
+##      data => \$data,    ##-- block data octets (for blockAppend())
+##      datalen => $len,   ##-- length in bytes of $data
+##      ofile=>$ofilename, ##-- output filename (for DTA::CAB::Queue::Server::addblock())
+##      fmt=>$class,       ##-- output formatter class or short name (for DTA::CAB::Queue::Server::addblock())
 ##     }
 ##  + default implementation just dies
 sub blockScan {
   my ($fmt,$filename,%opts) = @_;
   $fmt->logconfess("blockScan(): method not implemented in abstract base class ", __PACKAGE__);
+}
+
+## \$buf = $fmt->blockRead(\%blk)
+## \$buf = $fmt->blockRead(\%blk,\$buf)
+##   + reads block input data for \%blk into \$bufr
+##   + default implementation just slurps raw bytes
+sub blockRead {
+  my ($fmt,$blk,$bufr) = @_;
+  $bufr     = \(my $buf) if (!defined($bufr));
+  $$bufr    = '';
+  my $data   = '';
+  my $infile = ($blk->{ifile} || $blk->{file});
+  my $infh   = IO::File->new("<$infile")
+    or $fmt->logconfess("blockRead(): open failed for '$infile': $!");
+  binmode($infh,':raw');
+  sysseek($infh,$blk->{off},SEEK_SET)
+    or $fmt->logconfess("blockRead(): sysseek($blk->{off}) failed for '$infile': $!");
+  sysread($infh,$$bufr,$blk->{len})==$blk->{len}
+    or $fmt->logconfess("blockRead(): sysread(off=$blk->{off},len=$blk->{len}) failed for '$infile': $!");
+  $infh->close();
+  return $bufr;
 }
 
 ## $fmt_or_undef = $fmt->blockAppend($block,$filename)
@@ -445,7 +468,11 @@ sub defaultExtension { return '.cab'; }
 sub shortName {
   my $short = shift;
   $short = ref($short) || $short;
-  $short =~ s/^.*\:\://;
+  if ($short =~ s/^DTA::CAB::Format:://) {
+    $short =~ s/://g;
+  } else {
+    $short =~ s/^.*\:\://;
+  }
   return lc($short);
 }
 

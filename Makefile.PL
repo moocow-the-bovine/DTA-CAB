@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = 1.19;
+my $VERSION = 1.20;
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
@@ -59,7 +59,7 @@ WriteMakefile
 		    'Storable'=>undef,
 		    'Time::HiRes'=>undef,
 		    ##--
-		    File::Queue => undef,
+		    #File::Queue => undef,
 		    File::Temp  => undef,
 		    File::Path  => undef, ##-- for rmtree()
 		    ##--

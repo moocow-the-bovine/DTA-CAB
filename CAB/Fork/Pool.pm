@@ -73,12 +73,17 @@ sub new {
      work  => $that->can('work'),
      reap  => $that->can('reap'),
      free  => $that->can('free'),
-     logSpawn => 'info',
-     logReap  => 'info',
      propagateErrors => 1,
      installReaper => 1,
      pids => [],
      ppid => $$,
+
+     ##-- logging
+     logSpawn => 'info',
+     logReap  => 'info',
+     #logSocket => 'debug',
+     #logRequest => 'trace',
+     #logBlock => 'debug',
 
      ##-- overrides
      local => '',
@@ -169,8 +174,11 @@ sub reaper {
   return sub {
     my ($child);
     while (($child = waitpid(-1,WNOHANG)) > 0) {
-      $fp->vlog($fp->{logReap},"reaper got subprocess pid=$child, status=$?");
-      $fp->{reap}->($fp,$child,$?) if ($fp->{reap});
+      if ($fp->{reap}) {
+	$fp->{reap}->($fp,$child,$?) ;
+      } else {
+	$fp->vlog($fp->{logReap},"reaper got subprocess pid=$child, status=$?");
+      }
       @{$fp->{pids}} = grep {$_ != $child} @{$fp->{pids}};
     }
     #$SIG{CHLD}=$fp->reaper() if ($fp->{installReaper}); ##-- re-install reaper for SysV
@@ -194,46 +202,80 @@ sub qclient {
 ## undef = $fp->qenq($item)
 ##  + enqueue a single item; server or client
 sub qenq {
-  $_[0]->client->enq(@_[1..$#_]);
+  $_[0]->qclient->enq(@_[1..$#_]);
 }
 
 ## $item = $fp->qdeq()
 ##  + dequeue a single item; server or client
 sub qdeq {
-  $_[0]->client->deq(@_[1..$#_]);
+  $_[0]->qclient->deq(@_[1..$#_]);
 }
 
 ## $size = $fp->qsize()
 sub qsize {
-  $_[0]->client->size;
+  $_[0]->qclient->size;
 }
 
 ## undef = $fp->qaddcounts($ntok,$nchr)
 sub qaddcounts {
-  $_[0]->client->addcounts(@_[1..$#_]);
+  $_[0]->qclient->addcounts(@_[1..$#_]);
 }
 
 ## undef = $fp->qaddblock(\%blk)
 sub qaddblock {
-  $_[0]->client->addblock(@_[1..$#_]);
+  $_[0]->qclient->addblock(@_[1..$#_]);
 }
 
 ##==============================================================================
-## Methods: Queue Processing
+## Methods: Main Server Loop
+
+## undef = $fp->serverMain()
+##  + main server loop
+##  + spawns sub-process(es) if $fp->{njobs}>=1
+##  + serves the queue until all subprocesses have existed
+sub serverMain {
+  my $fp = shift;
+
+  ##-- do we need to fork at all?
+  if ($fp->{njobs} < 1) {
+    $fp->info("requested njobs=$fp->{njobs}; not forking");
+    return $fp->processMain();
+  }
+
+  ##-- sanity check(s)
+  $fp->open() if (!defined($fp->{fh}));                   ##-- ensure server socket is open
+  $fp->{njobs} = $fp->size if ($fp->{njobs} > $fp->size); ##-- don't fork() more than we need to
+  $fp->spawn();
+  $fp->info("spawned $fp->{njobs} worker subprocess(es)");
+
+  ##-- serve the queue
+  my ($cli);
+  while (@{$fp->{pids}}) {
+    #$fp->trace("polling for client(s)..."); ##-- DEBUG
+    next if (!defined($cli=$fp->accept));
+    $fp->handleClient($cli);
+    $cli->close();
+  }
+
+  return;
+}
+
+##==============================================================================
+## Methods: Job Processing
 
 ## undef = PACKAGE::childMain($fp)
-##   + queue worker sub which wraps init() and free() calls
+##   + queue worker sub which wraps init() and free() calls around $fp->processMain()
 sub childMain {
   my $fp = shift;
   $fp->{init}->($fp) if ($fp->{init});
-  $fp->process();
+  $fp->processMain();
   $fp->{free}->($fp) if ($fp->{free});
   exit 0;
 }
 
-## undef = PACKAGE::process($fp)
+## undef = PACKAGE::processMain($fp)
 ##   + main queue processing loop (can be called either from main or child thread)
-sub process {
+sub processMain {
   my $fp = shift;
   my ($item);
   while (defined($item=$fp->qdeq)) {
@@ -242,7 +284,7 @@ sub process {
 }
 
 ##==============================================================================
-## Methods: Default Callbacks
+## Methods: Default Child Callbacks
 
 ## undef = init($fp)
 ##  + default thread initializer (no-op)

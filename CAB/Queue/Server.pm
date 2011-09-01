@@ -183,10 +183,10 @@ sub newClient {
 ##  + accept incoming client connections with optional timeout
 ##  + INHERITED from DTA::CAB::Socket
 
-## $rc = $qs->process($cli)
-## $rc = $qs->process($cli, %callbacks)
+## $rc = $qs->handleClient($cli)
+## $rc = $qs->handleClient($cli, %callbacks)
 ##  + handle a single client request
-##  + INHERITED from CAB::Socket
+##  + INHERITED from DTA::CAB::Socket
 
 ##--------------------------------------------------------------
 ## Server Methods: Request Handling
@@ -208,14 +208,14 @@ sub newClient {
 ##  + returns: same as $callback->() if called, otherwise $qs
 
 
-## $qs = $qs->process_deq($cli,\$cmd)
-## $qs = $qs->process_deq_str($cli,\$cmd)
-## $qs = $qs->process_deq_ref($cli,\$cmd)
+## $qs = $qs->handle_deq($cli,\$cmd)
+## $qs = $qs->handle_deq_str($cli,\$cmd)
+## $qs = $qs->handle_deq_ref($cli,\$cmd)
 ##  + implements "$item = DEQ", "\$str = DEQ_STR", "$ref = DEQ_REF"
 BEGIN {
-  *process_deq_str = *process_deq_ref = \&process_deq;
+  *handle_deq_str = *handle_deq_ref = \&handle_deq;
 }
-sub process_deq {
+sub handle_deq {
   my ($qs,$cli,$creq) = @_;
   my $cmd = lc($$creq);
   my $qu  = $qs->{queue};
@@ -230,9 +230,9 @@ sub process_deq {
   return $qs;
 }
 
-## $qs = $qs->process_enq($cli,\$cmd)
+## $qs = $qs->handle_enq($cli,\$cmd)
 ##  + implements "ENQ $item"
-sub process_enq {
+sub handle_enq {
   my ($qs,$cli,$creq) = @_;
   my $buf = undef;
   my $ref = $cli->get(\$buf);
@@ -240,65 +240,65 @@ sub process_enq {
   return $qs;
 }
 
-## $qs = $qs->process_enq_str($cli,\$cmd)
-## $qs = $qs->process_enq_ref($cli,\$cmd)
+## $qs = $qs->handle_enq_str($cli,\$cmd)
+## $qs = $qs->handle_enq_ref($cli,\$cmd)
 ##  + implements "ENQ_STR \$str", "ENQ_REF $ref"
 BEGIN {
-  *process_enq_str = *process_enq_ref;
+  *handle_enq_str = *handle_enq_ref;
 }
-sub process_enq_ref {
+sub handle_enq_ref {
   my ($qs,$cli,$creq) = @_;
   my $ref = $cli->get();
   push(@{$qs->{queue}}, $ref);
   return $qs;
 }
 
-## $qs = $qs->process_size($cli,$creq)
+## $qs = $qs->handle_size($cli,$creq)
 ##  + implements "$size = SIZE"
-sub process_size {
+sub handle_size {
   #my ($qs,$cli,$creq) = @_;
   #my $size = $_[0]->size;
   $_[1]->put_str($_[0]->size);
   return $_[0];
 }
 
-## $qs = $qs->process_status($cli,$creq)
+## $qs = $qs->handle_status($cli,$creq)
 ##  + implements "$status = STATUS"
-sub process_status {
+sub handle_status {
   #my ($qs,$cli,$creq) = @_;
   $_[1]->put_str($_[0]{status});
   return $_[0];
 }
 
-## $qs = $qs->process_clear($cli,$creq)
+## $qs = $qs->handle_clear($cli,$creq)
 ##  + implements "CLEAR"
-sub process_clear {
+sub handle_clear {
   @{$_[0]{queue}} = qw();
   return $_[0];
 }
 
-## $qs = $qs->process_quit($cli,$creq)
+## $qs = $qs->handle_quit($cli,$creq)
 ##  + implements "QUIT"
 BEGIN {
-  *process_bye = *process_close = *process_exit = \&process_quit;
+  *handle_bye = *handle_close = *handle_exit = \&handle_quit;
 }
-sub process_quit {
+sub handle_quit {
   $_[1]->close();
   return $_[0];
 }
 
-## $qs = $qs->process_addcounts($cli,\$cmd)
+## $qs = $qs->handle_addcounts($cli,\$cmd)
 ##  + implements "ADDCOUNTS pack('NN',$ntok,$nchr)"
-sub process_addcounts {
+sub handle_addcounts {
   my ($qs,$cli,$creq) = @_;
   my $buf = $cli->get();
   $qs->addcounts(unpack('NN',$$buf));
   return $qs;
 }
 
-## $qs = $qs->process_addblock($cli,\$cmd)
+## $qs = $qs->handle_addblock($cli,\$cmd)
 ##  + implements "ADDBLOCK \%blk"
-sub process_addblock {
+sub handle_addblock {
   my ($qs,$cli,$creq) = @_;
   my $blk = $cli->get();
   $qs->addblock($blk);

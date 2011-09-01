@@ -87,7 +87,7 @@ sub blockScan {
   my ($fmt,$infile,%opts) = @_;
   my $bsize = $opts{size} || 128*1024;
   my $eob   = ($opts{eob}||'')=~/^s/i ? 's' : 't';
-  $fmt->vlog('trace', "blockScan(size=$bsize, eob=$eob, file=$infile): ");
+  $fmt->vlog('trace', "blockScan(size=$bsize, eob=$eob, file=$infile)");
 
   my $infh = IO::File->new("<$infile") or $fmt->logconfess("blockScan(): open failed for '$infile': $!");
   binmode($infh,':raw');

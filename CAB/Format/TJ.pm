@@ -146,6 +146,9 @@ sub parseTJString {
 	      ##-- (tt-compat) generic line: add to _cmts
 	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
 	      qw()
+	    } elsif ($_ =~ /^$/) {
+	      ##-- empty line (e.g. as first line in file): ignore
+	      qw()
 	    } else {
 	      ##-- vanilla token
 	      ($text,$json) = split(/\t/,$_,2);

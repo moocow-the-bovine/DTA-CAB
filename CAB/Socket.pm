@@ -221,19 +221,19 @@ sub accept {
   return undef;
 }
 
-## $rc = $qs->process($cli)
-## $rc = $qs->process($cli, %callbacks)
+## $rc = $qs->handleClient($cli)
+## $rc = $qs->handleClient($cli, %callbacks)
 ##  + handle a single client request
 ##  + each client request is a STRING message (command)
 ##    - request arguments (if required) are sent as separate messages following the command request
 ##    - server response (if any) depends on command sent
 ##  + this method parses client request command $cmd and dispatches to
 ##    - the function $callbacks{lc($cmd)}->($qs,$cli,\$cmd), if defined
-##    - the method $qs->can("process_".lc($cmd))->($qs,$cli,\$cmd), if available
+##    - the method $qs->can("handle_".lc($cmd))->($qs,$cli,\$cmd), if available
 ##    - the function $callbacks{DEFAULT}->($qs,$cli,\$cmd), if defined
-##    - the method $qs->can("process_DEFAULT")->($qs,$cli,\$cmd)
+##    - the method $qs->can("handle_DEFAULT")->($qs,$cli,\$cmd)
 ##  + returns whatever the handler subroutine does
-sub process {
+sub handleClient {
   my ($qs,$cli,%callbacks) = @_;
   my $creq = $cli->get();
   $qs->vlog($qs->{logRequest}, "client request: $$creq");
@@ -245,13 +245,13 @@ sub process {
   if (defined($sub=$callbacks{$cmd})) {
     return $sub->($qs,$cli,$creq);
   }
-  elsif (defined($sub=$qs->can("process_${cmd}"))) {
+  elsif (defined($sub=$qs->can("handle_${cmd}"))) {
     return $sub->($qs,$cli,$creq);
   }
   elsif (defined($sub=$callbacks{DEFAULT})) {
     return $sub->($qs,$cli,$creq);
   }
-  elsif (defined($sub=$qs->can("process_DEFAULT"))) {
+  elsif (defined($sub=$qs->can("handle_DEFAULT"))) {
     return $sub->($qs,$cli,$creq);
   }
   ##-- should never get here
@@ -262,9 +262,9 @@ sub process {
 ##--------------------------------------------------------------
 ## Server Methods: Request Handling
 
-## undef = $qs->process_DEFAULT($cli,\$cmd)
+## undef = $qs->handle_DEFAULT($cli,\$cmd)
 ##  + default implementation just logcluck()s and returns undef
-sub process_DEFAULT {
+sub handle_DEFAULT {
   $_[0]->logcluck("cannot handle client client request ${$_[2]}");
   return undef;
 }
