@@ -104,14 +104,14 @@ sub blockScanBody {
   my ($fmt,$bufr,$opts) = @_;
 
   ##-- scan blocks into head, body, foot
+  my $fsize  = $opts->{ifsize};
   my $bsize  = $opts->{size};
-  my $fsize  = $opts->{fsize};
   my $eob    = $opts->{eob} =~ /^s/i ? 's' : 'w';
   my $blocks = [];
 
   my ($off0,$off1,$blk);
-  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
-    push(@$blocks, $blk={off=>$off0});
+  for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={ioff=>$off0});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
     if ($eob eq 's' ? $$bufr=~m/\n{2,}/sg : $$bufr=~m/\n{1,}/sg) {
       $off1 = $+[0];
@@ -120,7 +120,7 @@ sub blockScanBody {
       $off1       = $fsize;
       $blk->{eos} = 1;
     }
-    $blk->{len} = $off1-$off0;
+    $blk->{ilen} = $off1-$off0;
   }
 
   return $blocks;
@@ -136,7 +136,7 @@ sub blockAppend {
 
   ##-- truncate extraneous newlines from data
   use bytes;
-  my $bufr = $block->{data};
+  my $bufr = $block->{odata};
   if (!$block->{eos}) {
     $$bufr =~ s/\n\K(\n+)$//s;
   } else {
@@ -144,10 +144,10 @@ sub blockAppend {
   }
 
   ##-- get header for non-initial blocks
-  my $head = $block->{n} > 0 ? $fmt->blockScanHead($bufr,{}) : [0,0];
+  my $head = $block->{id}[0] > 0 ? $fmt->blockScanHead($bufr,{}) : [0,0];
 
   ##-- open & write
-  my $outfh = IO::File->new(($block->{n}==0 ? '>' : '>>').$file)
+  my $outfh = IO::File->new(($block->{id}[0]==0 ? '>' : '>>').$file)
     or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
   binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
   $outfh->print($head->[1] ? substr($$bufr,$head->[0]+$head->[1]) : $$bufr)

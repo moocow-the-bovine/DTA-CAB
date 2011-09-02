@@ -206,6 +206,9 @@ sub setLayers {
 ## Methods: I/O: Block-wise
 ##==============================================================================
 
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Generic
+
 ## %blockOpts = $CLASS_OR_OBJECT->parseBlockOpts($block_spec)
 ##  + parses $block_spec as a block-boundary spec, which is a string of the form
 ##            MIN_BYTES[{k,M,G,T}][@EOB]
@@ -228,39 +231,46 @@ sub parseBlockOpts {
   return qw();
 }
 
-## \@blocks = $fmt->blockScan($filename, %opts)
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Input
+
+## \@blocks = $fmt->blockScan($infile, %opts)
 ##  + scans $filename for block boundaries according to %opts, which may contain:
 ##    (
 ##     size => $bytes,       ##-- minimum block-size in bytes
 ##     eob  => $eob,         ##-- block boundary type; either 's' (sentence) or 't' (word); default='w'
 ##    )
-##  + sets the following keys in a local copy of %opts, passed to sub-methods
+##  + sets local keys in %opts passed to sub-methods blockScan{Head,Body,Foot}()
 ##    (
-##     file => $filename,    ##-- original input filename
-##     fsize => $bytes,      ##-- total size of $filename in bytes (-s $filename)
-##     head => [$off,$len],  ##-- shared header portion in $filename (e.g. doc headers)
-##     foot => [$off,$len],  ##-- shared footer portion of $filename (e.g. doc footers)
-##     body => \@blocks,     ##-- body blocks computed by blockScanBody(); may be used by blockScanFoot()
+##     ifile => $infile,      ##-- (in) input filename
+##     isize => $bytes,       ##-- (in) total size of $infile in bytes (-s $infile)
+##     ihead => [$off,$len],  ##-- (in) offset, length of header in $infile
+##     ifoot => [$off,$len],  ##-- (in) offset, length of footer in $infile
+##     ibody => \@iblocks,    ##-- (in) blocks computed by blockScanBody()
 ##    )
 ##  + returns an ARRAY ref of block specifications \@blocks = [$blk1,$blk2,...]
 ##    where each $blk \in @blocks is a HASH-ref containing at least the following keys:
-##     {
-##      file => $infile,     ##-- input file
-##      off => $offset,      ##-- byte-offset of block beginning in $infile
-##      len => $len,         ##-- byte-length of block in $infile
-##      n   => $n,           ##-- index of this block in the body list (ascending sequential, 0=min; used by blockAppend())
-##     }
+##    {
+##     ifile => $infile,      ##-- (in) input filename
+##     isize => $bytes,       ##-- (in) total size of $filename in bytes (-s $filename)
+##     ioff  => $offset,      ##-- (in) byte-offset of block beginning in $infile
+##     ilen  => $len,         ##-- (in) byte-length of block in $infile
+##     id    => [$i,$N]       ##-- (in/out) indices s.t. $blk=$blocks[$i], $N=$#blocks
+##    }
 ##  + additionally, $blk may contain the following keys:
-##     {
-##      head => [$off,$len], ##-- see above
-##      foot => [$off,$len], ##-- see above
-##      eos  => $bool,       ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
-##      data => \$data,      ##-- block data octets (for blockAppend())
-##      ofile=>$ofilename,   ##-- output filename (for DTA::CAB::Queue::Server::addblock())
-##      fmt=>$class,         ##-- output formatter class or short name (for DTA::CAB::Queue::Server::addblock())
-##     }
+##    {
+##     ihead => [$off,$len],  ##-- (in) set by blockScanHead()
+##     ifoot => [$off,$len],  ##-- (in) set by blockScanFoot()
+##     ibody => \@iblocks,    ##-- (in) blocks computed by blockScanBody()
+##     eos   => $bool,        ##-- (in/out) true if block ends on a sentence boundary (for TT, TJ)
+##     odata => \$odata,      ##-- (out) block data octets (for blockAppend())
+##     ohead => [$off,$len],  ##-- (out) set by blockScanHead() for $odata
+##     ofoot => [$off,$len],  ##-- (out) set by blockScanFoot() for $odata
+##     ofile => $ofilename,   ##-- (out) output filename (for Queue::Server::addblock())
+##     ofmt  => $class,       ##-- (out) output formatter class or short name (for Queue::Server::addblock())
+##    }
 ##  + default implementation here calls $fmt->blockScanHead(), $fmt->blockScanBody(), $fmt->blockScanFoot();
-##    then sets @$blk{qw(file head foot n)} for each body block
+##    then sets @$blk{qw(ifile ihead ifoot id)} for each body block
 sub blockScan {
   my ($fmt,$infile,%opts) = @_;
   $opts{size} = 128*1024 if (!defined($opts{size}));
@@ -268,24 +278,25 @@ sub blockScan {
   $fmt->vlog('trace', "blockScan(size=$opts{size}, eob=$opts{eob}, file=$infile)");
 
   ##-- mmap file
-  $opts{file}  = $infile;
-  $opts{fsize} = (-s $infile);
+  $opts{ifile}  = $infile;
+  $opts{ifsize} = (-s $infile);
   my ($buf);
   File::Map::map_file($buf, $infile,'<',0,$opts{fsize});
 
   ##-- scan blocks into head, body, foot
-  my $head = $opts{head} = $fmt->blockScanHead(\$buf,\%opts);
-  my $body = $opts{body} = $fmt->blockScanBody(\$buf,\%opts);
-  my $foot = $opts{foot} = $fmt->blockScanFoot(\$buf,\%opts);
+  my $ihead = $opts{ihead} = $fmt->blockScanHead(\$buf,\%opts);
+  my $ibody = $opts{ibody} = $fmt->blockScanBody(\$buf,\%opts);
+  my $ifoot = $opts{ifoot} = $fmt->blockScanFoot(\$buf,\%opts);
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
   my ($blk);
   foreach (0..$#$body) {
     $blk = $body->[$_];
-    $blk->{n}    = $_      if (!defined($blk->{n}));
-    $blk->{file} = $infile if (!defined($blk->{file}));
-    $blk->{head} = $head   if (!defined($blk->{head}));
-    $blk->{foot} = $foot   if (!defined($blk->{foot}));
+    $blk->{i}     = $_      if (!defined($blk->{i}));
+    $blk->{N}     = $#$body if (!defined($blk->{N}));
+    $blk->{ifile} = $infile if (!defined($blk->{ifile}));
+    $blk->{ihead} = $head   if (!defined($blk->{ihead}));
+    $blk->{ifoot} = $foot   if (!defined($blk->{ifoot}));
   }
 
   ##-- cleanup & return
@@ -294,23 +305,23 @@ sub blockScan {
 }
 
 ## \@head = $fmt->blockScanHead(\$buf,\%opts)
-##  + scans for block header; returns [$offset,$length] for block header in (mmaped) \$buf
+##  + scans for block header (ihead); returns [$offset,$length] for block header in (mmaped) \$buf
 ##  + defatult implementation just returns [0,0] (empty header)
 sub blockScanHead {
   my ($fmt,$bufr,$opts) = @_;
   return [0,0];
 }
 
-## \@head = $fmt->blockScanFoot(\$buf,\%opts)
-##  + scans for block footer; returns [$offset,$length] for block footer in (mmaped) \$buf
-##  + may adjust contents of $opts{blocks}
+## \@foot = $fmt->blockScanFoot(\$buf,\%opts)
+##  + scans for block footer (ifoot9; returns [$offset,$length] for block footer in (mmaped) \$buf
+##  + may adjust contents of $opts{body}
 ##  + default implementation just returns [0,0] (empty footer)
 sub blockScanFoot {
   my ($fmt,$bufr,$opts) = @_;
-  return [$opts->{fsize}-1, 0];
+  return [0,0];
 }
 
-## \@blockls = $fmt->blockScanBody(\$buf,\%opts)
+## \@blocks = $fmt->blockScanBody(\$buf,\%opts)
 ##  + guts for blockScan()
 ##  + default implementation just dies
 sub blockScanBody {
@@ -352,13 +363,91 @@ sub blockRead {
   return $bufr;
 }
 
-## $fmt_or_undef = $fmt->blockAppend($block,$filename)
+## $doc = $fmt->parseBlock(\%blk)
+##  + parses a block into a DTA::CAB::Document
+##  + wrapper for blockRead(), parseString(), close()
+sub parseBlock {
+  my ($fmt,$blk) = @_;
+  my $ibufr = $ifmt->blockRead($blk);
+  my $doc   = $ifmt->parseString($ibfr);
+  $ifmt->close();
+  return $ifmt;
+}
+
+
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Output
+
+## $blk = $fmt->blockFinish(\$odata,$blk)
+##  + store output buffer \$buf in $blk->{odata}
+##  + additionally store keys qw(ofmt ohead odata ofoot) relative to $blk->{odata}
+##  + default calls blockScanHead(), blockScanFoot() with dummy options
+##  + TODO: tweakable format-local hook(s) here (e.g. for newline trimming in TT::blockAppend)
+sub blockFinish {
+  my ($fmt,$bufr,$blk) = @_;
+
+  use bytes;
+  my %bopt = qw();
+  my $iblk  = {%$blk, ihead=>undef, ifoot=>undef, ifsize=>length($$bufr)}; ##-- dummy input block
+  my $ohead = $bopt{ihead} = $iblk->{ihead} = $fmt->blockScanHead($bufr,\%bopt);
+  my $obody = $bopt{ibody} = [{%$blk, ihead=>$ohead}];
+  my $ofoot = $bopt{ifoot} = $iblk->{ifoot} = $fmt->blockScanFoot($bufr,\%bopt);
+
+  $blk->{ohead} = $blk->{id}[0]==0             ? [0,0] : $ohead;
+  $blk->{ofoot} = $blk->{id}[0]==$blk->{id}[1] ? [0,0] : $ofoot;
+  $blk->{odata} = $bufr;
+  $blk->{ofmt}  = $fmt->shortName if (!defined($blk->{ofmt}));
+
+  return $blk;
+}
+
+## $fmt = $fmt->putDocumentBlock($doc,$blk)
+##  + wrapper for $fmt->toString(\(my $buf))->putDocumentRaw()->flush()->blockFinish(\$buf,$blk)
+sub putDocumentBlock {
+  my ($fmt,$doc,$blk) = @_;
+  my $buf = '';
+  $fmt->toString(\$buf)->putDocumentRaw($doc)->flush()->blockFinish(\$buf,$blk);
+  return $fmt;
+}
+
+## $fmt_or_undef = $fmt->blockAppend($blk,$filename)
 ##  + append a block $block to a file $filename
 ##  + $block is a HASH-ref as returned by blockScan()
-##  + default implementation just dies
+##  + default implementation just dumps $blk->{odata} to $filename;
+##    first removing @$blk{qw(ohead ofoot)} as appropriate
 sub blockAppend {
-  my ($fmt,$block,$file) = @_;
-  $fmt->logconfess("blockAppend(): method not implemented in abstract base class ", __PACKAGE__);
+  my ($fmt,$blk,$file) = @_;
+
+  ##-- common variables
+  use bytes;
+  my $bufr  = $blk->{odata};
+  my $id    = $blk->{id}    || [0,0];
+  my $ohead = $blk->{ohead} || [0,0];
+  my $ofoot = $blk->{ofoot} || [length($$bufr),0];
+
+  my $outfh = IO::File->new(($id->[0]==0 ? '>' : '>>').$file)
+    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
+  binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
+
+  ##-- dump: header (initial block only)
+  if ($id->[0]==0 && $ohead->[1]>0) {
+    $outfh->print(substr($$bufr, $ohead->[0], $ohead->[1]-$ohead->[0]))
+      or $fmt->logconfess("blockAppend(): print failed to '$file' for initial-block header: $!");
+  }
+
+  ##-- dump: body
+  $outfh->print(substr($$bufr, $ohead->[1], $ofoot->[0]-$ohead->[1]))
+    or $fmt->logconfess("blockAppend(): print failed to '$file' for block body: $!");
+
+  ##-- dump: footer (final block only)
+  if ($id->[0]==$id->[1] && $ofoot->[1]>0) {
+    $outfh->print(substr($$bufr, $ofoot->[0], $ofoot->[1]-$ofoot->[0]))
+      or $fmt->logconfess("blockAppend(): print failed to '$file' for final-block footer: $!");
+  }
+
+  ##-- cleanup & return
+  $outfh->close;
+  return $fmt;
 }
 
 ##==============================================================================

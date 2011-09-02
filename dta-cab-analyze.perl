@@ -293,30 +293,25 @@ sub cb_work {
     ##--------------------------------------------------
     ## Analyze: Block-wise
     my $blk = $qjob->{block};
-    my $blkid = $blk->{blkid} || "$blk->{file} \@ off=$blk->{off}, len=$blk->{len}";
+    my $blkid = $blk->{blkid} || "$blk->{ifile} [$blk->{id}[0]/$blk->{id}[1]]";
     $fp->vlog($logBlockInfo,"BLOCK $blkid");
 
     ##-- slurp & parse block input buffer
-    $ifmt->vlog($logBlockTrace, "BLOCK $blkid: parseString()");
-    my $ibufr = $ifmt->blockRead($blk);
-    my $doc   = $ifmt->parseString($ibufr);
-    undef $ibufr; ##-- ... we can free up the input buffer after we've parsed it
-    $ifmt->close; ##-- ... close input format too, since it might have a local buffer
+    $ifmt->vlog($logBlockTrace, "BLOCK $blkid: parseBlock()");
+    my $doc = $ifmt->parseBlock($blk);
 
     ##-- analyze
     $cab->vlog($logBlockTrace, "BLOCK $blkid: analyzeDocument()");
     $doc = $cab->analyzeDocument($doc,$job{analyzeOpts});
 
     ##-- output
-    my $obuf = '';
-    $ofmt->vlog($logBlockTrace, "BLOCK $blkid: putDocumentRaw()");
-    $ofmt->toString(\$obuf);
-    $ofmt->putDocumentRaw($doc)->flush;
+    $ofmt->vlog($logBlockTrace, "BLOCK $blkid: putDocumentBlock()");
+    $ofmt->putDocumentBlock($doc,$blk);
 
     ##-- report: statistics
     if ($job{doProfile}) {
       $ntok = $doc->nTokens();
-      $nchr = $blk->{len};
+      $nchr = $blk->{ilen};
       $fp->qaddcounts($ntok,$nchr);
       DTA::CAB::Logger->logProfile($logBlockProfile, tv_interval($tv_jstarted,[gettimeofday]), $ntok,$nchr);
     }
@@ -324,8 +319,6 @@ sub cb_work {
 
     ##-- report: block output
     $blk->{ofile} = $outfile if (!defined($blk->{ofile}));
-    $blk->{data}  = \$obuf;
-    $blk->{fmt}   = $ofmt->shortName;
     $fp->qaddblock($blk);
   }
   elsif ($qjob->{indoc}) {
@@ -454,7 +447,7 @@ else {
     my $nblks = scalar(@$blocks);
     my $idfmt = "%s [%".length($nblks)."d/%d]";
     foreach (@$blocks) {
-      $_->{blkid} = sprintf($idfmt, $_->{file}, ++$blki, $nblks);
+      $_->{blkid} = sprintf($idfmt, $_->{ifile}, ++$blki, $nblks);
       $fp->enq({%$job,block=>$_});
     }
   }

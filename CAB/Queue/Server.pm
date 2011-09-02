@@ -145,16 +145,16 @@ sub addblock {
 
   ##-- greedy append
   if ($blk->{off} == $bt->{cur}) {
-    my $fmt = DTA::CAB::Format->newFormat($blk->{fmt} || $DTA::CAB::Format::CLASS_DEFAULT);
-    @{$bt->{pending}} = sort {$a->{off}<=>$b->{off}} @{$bt->{pending}};
-    while (@{$bt->{pending}} && $bt->{pending}[0]{off}==$bt->{cur}) {
+    my $fmt = DTA::CAB::Format->newFormat($blk->{ofmt} || $DTA::CAB::Format::CLASS_DEFAULT);
+    @{$bt->{pending}} = sort {$a->{id}[0]<=>$b->{id}[0]} @{$bt->{pending}};
+    while (@{$bt->{pending}} && $bt->{pending}[0]{id}[0]==$bt->{cur}) {
       $blk=shift(@{$bt->{pending}});
-      $qs->vlog($qs->{logBlock}, "BLOCK_APPEND(ofile=$blk->{ofile}, off=$blk->{off}, len=$blk->{len})");
+      $qs->vlog($qs->{logBlock}, "BLOCK_APPEND(ofile=$blk->{ofile}, id=$blk->{id}[0]/$blk->{id}[1])");
       $fmt->blockAppend($blk, $blk->{ofile});
-      $bt->{cur} += $blk->{len};
+      $bt->{cur}++;
     }
   } else {
-    $qs->vlog($qs->{logBlock}, "BLOCK_DELAY(ofile=$blk->{ofile}, off=$blk->{off}, len=$blk->{len})");
+    $qs->vlog($qs->{logBlock}, "BLOCK_DELAY(ofile=$blk->{ofile}, id=$blk->{id}[0]/$blk->{id}[1])");
   }
 
   return $qs;

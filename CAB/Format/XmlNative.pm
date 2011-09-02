@@ -105,7 +105,7 @@ sub new {
 ##==============================================================================
 
 ## \%head = blockScanHead(\$buf,\%opts)
-##  + gets header offset, length from (mmaped) \$buf
+##  + gets header (ihead) offset, length from (mmaped) \$buf
 ##  + %opts are as for blockScan()
 sub blockScanHead {
   my ($fmt,$bufr,$opts) = @_;
@@ -114,19 +114,20 @@ sub blockScanHead {
 }
 
 ## \%head = blockScanFoot(\$buf,\%opts)
-##  + gets footer offset, length from (mmaped) \$buf
+##  + gets footer (ifoot) offset, length from (mmaped) \$buf
+##    - override works from and may alter last body block in $opts->{ibody}
+##    - also uses $opts->{ifsize} to compute footer length
 ##  + %opts are as for blockScan()
-##  + override returns empty
 sub blockScanFoot {
   my ($fmt,$bufr,$opts) = @_;
-  return [0,0] if (!$opts || !$opts->{body} || !@{$opts->{body}});
-  my $blk = $opts->{body}[$#{$opts->{body}}];
+  return [0,0] if (!$opts || !$opts->{ibody} || !@{$opts->{ibody}});
+  my $blk = $opts->{ibody}[$#{$opts->{ibody}}];
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
-  pos($$bufr) = $blk->{off}; ##-- set to offset of final body block
+  pos($$bufr) = $blk->{ioff}; ##-- set to offset of final body block
   if ($$bufr =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
-    my $end     = $+[0];
-    $blk->{len} = $end - $blk->{off};
-    return [$end, $opts->{fsize}-$end];
+    my $end      = $+[0];
+    $blk->{ilen} = $end - $blk->{off};
+    return [$end, $opts->{ifsize}-$end];
   }
   return [0,0];
 }
@@ -138,7 +139,7 @@ sub blockScanBody {
 
   ##-- scan blocks into head, body, foot
   my $bsize  = $opts->{size};
-  my $fsize  = $opts->{fsize};
+  my $fsize  = $opts->{ifsize};
   my $elt    = $opts->{xmlelt} || $opts->{eob} || 'w';
   my $eos    = $elt eq 's' ? 1 : 0;
   my $re_s   = '(?s:<'.quotemeta($elt).'\b)';
@@ -146,8 +147,8 @@ sub blockScanBody {
   my $blocks = [];
 
   my ($off0,$off1,$blk);
-  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
-    push(@$blocks, $blk={off=>$off0, eos=>$eos});
+  for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={ioff=>$off0, eos=>$eos});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
     if ($$bufr =~ m($re)g) {
       $off1 = $-[0];
@@ -161,7 +162,7 @@ sub blockScanBody {
       $off1 = $fsize;
       $blk->{eos} = 1; ##-- for tt 
     }
-    $blk->{len} = $off1-$off0;
+    $blk->{ilen} = $off1-$off0;
   }
 
   return $blocks;

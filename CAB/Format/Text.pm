@@ -58,13 +58,13 @@ sub blockScanBody {
 
   ##-- scan blocks into head, body, foot
   my $bsize  = $opts->{size};
-  my $fsize  = $opts->{fsize};
+  my $fsize  = $opts->{ifsize};
   my $eob    = $opts->{eob} =~ /^s/i ? 's' : 'w';
   my $blocks = [];
 
   my ($off0,$off1,$blk);
-  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
-    push(@$blocks, $blk={off=>$off0});
+  for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={ioff=>$off0});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
     if ($eob eq 's' ? $$bufr=~m/\n{2,}/sg : $$bufr=~m/\n{1,}(?!\t)/sg) {
       $off1 = $+[0];
@@ -73,7 +73,7 @@ sub blockScanBody {
       $off1       = $fsize;
       $blk->{eos} = 1;
     }
-    $blk->{len} = $off1-$off0;
+    $blk->{ilen} = $off1-$off0;
   }
 
   return $blocks;
