@@ -100,6 +100,75 @@ sub new {
   return $fmt;
 }
 
+##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## \%head = blockScanHead(\$buf,\%opts)
+##  + gets header offset, length from (mmaped) \$buf
+##  + %opts are as for blockScan()
+sub blockScanHead {
+  my ($fmt,$bufr,$opts) = @_;
+  my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
+  return $$bufr =~ m(\Q<$elt\E\b) ? [0,$-[0]] : [0,0];
+}
+
+## \%head = blockScanFoot(\$buf,\%opts)
+##  + gets footer offset, length from (mmaped) \$buf
+##  + %opts are as for blockScan()
+##  + override returns empty
+sub blockScanFoot {
+  my ($fmt,$bufr,$opts) = @_;
+  return [0,0] if (!$opts || !$opts->{body} || !@{$opts->{body}});
+  my $blk = $opts->{body}[$#{$opts->{body}}];
+  my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
+  pos($$bufr) = $blk->{off}; ##-- set to offset of final body block
+  if ($$bufr =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
+    my $end     = $+[0];
+    $blk->{len} = $end - $blk->{off};
+    return [$end, $opts->{fsize}-$end];
+  }
+  return [0,0];
+}
+
+## \@blocks = $fmt->blockScanBody(\$buf,\%opts)
+##  + scans $filename for block boundaries according to \%opts
+sub blockScanBody {
+  my ($fmt,$bufr,$opts) = @_;
+
+  ##-- scan blocks into head, body, foot
+  my $bsize  = $opts->{size};
+  my $fsize  = $opts->{fsize};
+  my $elt    = $opts->{xmlelt} || $opts->{eob} || 'w';
+  my $eos    = $elt eq 's' ? 1 : 0;
+  my $re_s   = '(?s:<'.quotemeta($elt).'\b)';
+  my $re     = qr($re_s);
+  my $blocks = [];
+
+  my ($off0,$off1,$blk);
+  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={off=>$off0, eos=>$eos});
+    pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
+    if ($$bufr =~ m($re)g) {
+      $off1 = $-[0];
+#      if (!$eos) {
+#	##-- check for eos : SLOW !!!
+#	pos($$bufr) -= length($elt)+1;
+#	$blk->{eos} = $$bufr =~ m((?:</?s\b[^>]*+>)(?:\s*+)\G)s ? 1 : 0;
+#      }
+
+    } else {
+      $off1 = $fsize;
+      $blk->{eos} = 1; ##-- for tt 
+    }
+    $blk->{len} = $off1-$off0;
+  }
+
+  return $blocks;
+}
+
+
+
 ##=============================================================================
 ## Methods: Input
 ##==============================================================================

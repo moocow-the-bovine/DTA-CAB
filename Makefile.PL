@@ -60,8 +60,9 @@ WriteMakefile
 		    'Time::HiRes'=>undef,
 		    ##--
 		    #File::Queue => undef,
-		    File::Temp  => undef,
-		    File::Path  => undef, ##-- for rmtree()
+		    'File::Temp'  => undef,
+		    'File::Path'  => undef, ##-- for rmtree()
+		    'File::Map'   => undef, ##-- for regex-based blockScan()
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,

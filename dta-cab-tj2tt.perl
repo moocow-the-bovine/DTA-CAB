@@ -4,17 +4,15 @@ use lib '.';
 use JSON::XS;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Format::TJ;
-use Encode;
 
 our $tt = DTA::CAB::Format::TT->new;
 our $tj = DTA::CAB::Format::TJ->new;
+$tt->toFh(\*STDOUT);
 our $sbuf='';
 
 sub tj2tt {
-  $tj->parseTJString($sbuf);
-  $tt->putDocument($tj->{doc});
-  print Encode::encode_utf8($tt->{outbuf}) if (defined($tt->{outbuf}));
-  delete $tt->{outbuf};
+  $tj->parseTJString(\$sbuf);
+  $tt->putDocumentRaw($tj->{doc});
   $sbuf = '';
 }
 
@@ -24,3 +22,4 @@ while (defined($_=<>)) {
   tj2tt() if (/^$/);
 }
 tj2tt() if ($sbuf);
+$tt->flush;

@@ -51,17 +51,33 @@ BEGIN {
 ## Methods: I/O: Block-wise
 ##==============================================================================
 
-## \@blocks = $fmt->blockScan($filename, %opts)
-##  + scans $filename for block boundaries according to $bspec
-##  + override pukes
-sub blockScan {
-  $_[0]->logconfess("blockScan(): not implemented");
-}
+## \@blocks = $fmt->blockScanBody(\$buf,\%opts)
+##  + scans $filename for block boundaries according to \%opts
+sub blockScanBody {
+  my ($fmt,$bufr,$opts) = @_;
 
-## $fmt_or_undef = $fmt->blockMerge($block,$filename)
-##  + append a block $block to a file $filename
-##  + $block is a HASH-ref as returned by blockScan()
-##  + inherited from TT
+  ##-- scan blocks into head, body, foot
+  my $bsize  = $opts->{size};
+  my $fsize  = $opts->{fsize};
+  my $eob    = $opts->{eob} =~ /^s/i ? 's' : 'w';
+  my $blocks = [];
+
+  my ($off0,$off1,$blk);
+  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={off=>$off0});
+    pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
+    if ($eob eq 's' ? $$bufr=~m/\n{2,}/sg : $$bufr=~m/\n{1,}(?!\t)/sg) {
+      $off1 = $+[0];
+      $blk->{eos} = $+[0]-$-[0] > 1 ? 1 : 0;
+    } else {
+      $off1       = $fsize;
+      $blk->{eos} = 1;
+    }
+    $blk->{len} = $off1-$off0;
+  }
+
+  return $blocks;
+}
 
 ##==============================================================================
 ## Methods: Input

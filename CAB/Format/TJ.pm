@@ -82,6 +82,19 @@ sub jsonxs {
   return $_[0]{jxs} = JSON::XS->new->utf8(0)->relaxed(1)->canonical(0)->allow_blessed(1)->convert_blessed(1);
 }
 
+##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+## \%head = blockScanHead(\$buf,\%opts)
+##  + gets header offset, length from (mmaped) \$buf
+##  + %opts are as for blockScan()
+sub blockScanHead {
+  my ($fmt,$bufr,$opts) = @_;
+  return [0,$+[0]] if ($$bufr =~ m(\A\n*+(?:%%\$TJ:DOC=.*\n++)?));
+  return [0,0];
+}
+
 
 ##==============================================================================
 ## Methods: Input
@@ -237,7 +250,6 @@ sub putDocument {
   my $dh = {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
   $_[0]{fh}->print('%%$TJ:DOC=', $_[0]->jsonxs->encode($dh), "\n") if (%$dh);
   $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
-  $_[0]{fh}->print("\n");
   return $_[0];
 }
 

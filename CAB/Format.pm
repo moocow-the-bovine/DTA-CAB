@@ -15,6 +15,7 @@ use DTA::CAB::Sentence;
 use DTA::CAB::Document;
 use IO::File;
 use IO::Handle;
+use File::Map qw();
 use Carp;
 use strict;
 
@@ -210,7 +211,7 @@ sub setLayers {
 ##            MIN_BYTES[{k,M,G,T}][@EOB]
 ##    where:
 ##    - MIN_BYTES[{k,M,G,T}] is the minimum block size in bytes, with optional SI suffix
-##    - EOB indicates desired block boundary: either 's' (sentence) or 't' (token)
+##    - EOB indicates desired block boundary: either 's' (sentence) or 'w' (word)
 ##  + returns a hash with 'size' and 'where' keys
 ##  + pukes if not parseable
 sub parseBlockOpts {
@@ -229,47 +230,124 @@ sub parseBlockOpts {
 
 ## \@blocks = $fmt->blockScan($filename, %opts)
 ##  + scans $filename for block boundaries according to %opts, which may contain:
-##     size => $bytes,     ##-- minimum block-size in bytes
-##     eob  => $eob,       ##-- block boundary type; either 's' (sentence) or 't' (token); default='t'
-##  + other
+##    (
+##     size => $bytes,       ##-- minimum block-size in bytes
+##     eob  => $eob,         ##-- block boundary type; either 's' (sentence) or 't' (word); default='w'
+##    )
+##  + sets the following keys in a local copy of %opts, passed to sub-methods
+##    (
+##     file => $filename,    ##-- original input filename
+##     fsize => $bytes,      ##-- total size of $filename in bytes (-s $filename)
+##     head => [$off,$len],  ##-- shared header portion in $filename (e.g. doc headers)
+##     foot => [$off,$len],  ##-- shared footer portion of $filename (e.g. doc footers)
+##     body => \@blocks,     ##-- body blocks computed by blockScanBody(); may be used by blockScanFoot()
+##    )
 ##  + returns an ARRAY ref of block specifications \@blocks = [$blk1,$blk2,...]
 ##    where each $blk \in @blocks is a HASH-ref containing at least the following keys:
 ##     {
-##      file => $infile,  ##-- input file
-##      off => $offset,   ##-- byte-offset of block beginning in $infile
-##      len => $len,      ##-- byte-length of block in $infile
+##      file => $infile,     ##-- input file
+##      off => $offset,      ##-- byte-offset of block beginning in $infile
+##      len => $len,         ##-- byte-length of block in $infile
+##      n   => $n,           ##-- index of this block in the body list (ascending sequential, 0=min; used by blockAppend())
 ##     }
 ##  + additionally, $blk may contain the following keys:
 ##     {
-##      eos => $bool,      ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
-##      data => \$data,    ##-- block data octets (for blockAppend())
-##      datalen => $len,   ##-- length in bytes of $data
-##      ofile=>$ofilename, ##-- output filename (for DTA::CAB::Queue::Server::addblock())
-##      fmt=>$class,       ##-- output formatter class or short name (for DTA::CAB::Queue::Server::addblock())
+##      head => [$off,$len], ##-- see above
+##      foot => [$off,$len], ##-- see above
+##      eos  => $bool,       ##-- true if block ends on a sentence boundary (used e.g. by TT, TJ)
+##      data => \$data,      ##-- block data octets (for blockAppend())
+##      ofile=>$ofilename,   ##-- output filename (for DTA::CAB::Queue::Server::addblock())
+##      fmt=>$class,         ##-- output formatter class or short name (for DTA::CAB::Queue::Server::addblock())
 ##     }
-##  + default implementation just dies
+##  + default implementation here calls $fmt->blockScanHead(), $fmt->blockScanBody(), $fmt->blockScanFoot();
+##    then sets @$blk{qw(file head foot n)} for each body block
 sub blockScan {
-  my ($fmt,$filename,%opts) = @_;
-  $fmt->logconfess("blockScan(): method not implemented in abstract base class ", __PACKAGE__);
+  my ($fmt,$infile,%opts) = @_;
+  $opts{size} = 128*1024 if (!defined($opts{size}));
+  $opts{eob}  = 'w' if (!defined($opts{eob}));
+  $fmt->vlog('trace', "blockScan(size=$opts{size}, eob=$opts{eob}, file=$infile)");
+
+  ##-- mmap file
+  $opts{file}  = $infile;
+  $opts{fsize} = (-s $infile);
+  my ($buf);
+  File::Map::map_file($buf, $infile,'<',0,$opts{fsize});
+
+  ##-- scan blocks into head, body, foot
+  my $head = $opts{head} = $fmt->blockScanHead(\$buf,\%opts);
+  my $body = $opts{body} = $fmt->blockScanBody(\$buf,\%opts);
+  my $foot = $opts{foot} = $fmt->blockScanFoot(\$buf,\%opts);
+
+  ##-- adopt 'n', 'head', 'foot' keys into body blocks
+  my ($blk);
+  foreach (0..$#$body) {
+    $blk = $body->[$_];
+    $blk->{n}    = $_      if (!defined($blk->{n}));
+    $blk->{file} = $infile if (!defined($blk->{file}));
+    $blk->{head} = $head   if (!defined($blk->{head}));
+    $blk->{foot} = $foot   if (!defined($blk->{foot}));
+  }
+
+  ##-- cleanup & return
+  File::Map::unmap($buf);
+  return $body;
+}
+
+## \@head = $fmt->blockScanHead(\$buf,\%opts)
+##  + scans for block header; returns [$offset,$length] for block header in (mmaped) \$buf
+##  + defatult implementation just returns [0,0] (empty header)
+sub blockScanHead {
+  my ($fmt,$bufr,$opts) = @_;
+  return [0,0];
+}
+
+## \@head = $fmt->blockScanFoot(\$buf,\%opts)
+##  + scans for block footer; returns [$offset,$length] for block footer in (mmaped) \$buf
+##  + may adjust contents of $opts{blocks}
+##  + default implementation just returns [0,0] (empty footer)
+sub blockScanFoot {
+  my ($fmt,$bufr,$opts) = @_;
+  return [$opts->{fsize}-1, 0];
+}
+
+## \@blockls = $fmt->blockScanBody(\$buf,\%opts)
+##  + guts for blockScan()
+##  + default implementation just dies
+sub blockScanBody {
+  my ($fmt,$bufr,$opts) = @_;
+  $fmt->logconfess("blockScanBody(): method not implemented in abstract base class ", __PACKAGE__);
+}
+
+
+## \$buf = $fmt->blockReadChunk($fh,$f_off,$f_len, \$buf, $b_off=length($buf))
+##   + append a string of $f_len bytes starting from $f_off in file $fh to buffer \$buf at $b_off
+sub blockReadChunk {
+  my ($fmt, $fh,$off,$len, $bufr,$boff) = @_;
+  $boff = defined($$bufr) ? length($$bufr) : 0 if (!defined($boff));
+  sysseek($fh, $off, SEEK_SET)
+    or $fmt->logconfess("blockReadChunk(): sysseek($off) failed: $!");
+  sysread($fh, $$bufr, $len, $boff)==$len
+    or $fmt->logconfess("blockReadChunk(): sysread() failed for chunk of length $len: $!");
+  return $bufr;
 }
 
 ## \$buf = $fmt->blockRead(\%blk)
 ## \$buf = $fmt->blockRead(\%blk,\$buf)
 ##   + reads block input data for \%blk into \$bufr
-##   + default implementation just slurps raw bytes
+##   + default implementation just appends raw bytes for $blk{head}, $blk, and $blk{foot}
 sub blockRead {
   my ($fmt,$blk,$bufr) = @_;
   $bufr     = \(my $buf) if (!defined($bufr));
   $$bufr    = '';
-  my $data   = '';
   my $infile = ($blk->{ifile} || $blk->{file});
   my $infh   = IO::File->new("<$infile")
     or $fmt->logconfess("blockRead(): open failed for '$infile': $!");
   binmode($infh,':raw');
-  sysseek($infh,$blk->{off},SEEK_SET)
-    or $fmt->logconfess("blockRead(): sysseek($blk->{off}) failed for '$infile': $!");
-  sysread($infh,$$bufr,$blk->{len})==$blk->{len}
-    or $fmt->logconfess("blockRead(): sysread(off=$blk->{off},len=$blk->{len}) failed for '$infile': $!");
+
+  $fmt->blockReadChunk($infh, @{$blk->{head}}, $bufr)    if ($blk->{head} && $blk->{head}[1]);   ##-- head
+  $fmt->blockReadChunk($infh, @$blk{qw(off len)}, $bufr) if ($blk->{len});                       ##-- body
+  $fmt->blockReadChunk($infh, @{$blk->{foot}}, $bufr)    if ($blk->{foot} && $blk->{foot}[1]);   ##-- foot
+
   $infh->close();
   return $bufr;
 }

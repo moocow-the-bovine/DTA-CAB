@@ -9,7 +9,6 @@ use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
 use Carp;
-use Fcntl qw(:seek); ##-- for blockScan()
 use strict;
 
 ##==============================================================================
@@ -81,54 +80,52 @@ sub noSaveKeys {
 ## Methods: I/O: Block-wise
 ##==============================================================================
 
-## \@blocks = $fmt->blockScan($filename, %opts)
-##  + scans $filename for block boundaries according to $bspec
-##  + inherited %opts:
-##    (
-##     size => $bytes,     ##-- minimum block-size in bytes
-##     eob  => $eob,       ##-- block boundary type; either 's' (sentence) or 't' (token); default='t'
-##    )
-sub blockScan {
-  my ($fmt,$infile,%opts) = @_;
-  my $bsize = $opts{size} || 128*1024;
-  my $eob   = ($opts{eob}||'')=~/^s/i ? 's' : 't';
-  $fmt->vlog('trace', "blockScan(size=$bsize, eob=$eob, file=$infile)");
+## \%head = blockScanHead(\$buf,\%opts)
+##  + gets header offset, length from (mmaped) \$buf
+##  + %opts are as for blockScan()
+sub blockScanHead {
+  my ($fmt,$bufr,$opts) = @_;
+  return [0,$+[0]] if ($$bufr =~ m(\A\n*+(?:%% base=.*\n++)?));
+  return [0,0];
+}
 
-  my $infh = IO::File->new("<$infile") or $fmt->logconfess("blockScan(): open failed for '$infile': $!");
-  binmode($infh,':raw');
-  my $fsize = ($infh->stat)[7];
+## \%head = blockScanFoot(\$buf,\%opts)
+##  + gets footer offset, length from (mmaped) \$buf
+##  + %opts are as for blockScan()
+##  + override returns empty
+sub blockScanFoot {
+  my ($fmt,$bufr,$opts) = @_;
+  return [0,0];
+}
+
+## \@blocks = $fmt->blockScanBody(\$buf,\%opts)
+##  + scans $filename for block boundaries according to \%opts
+sub blockScanBody {
+  my ($fmt,$bufr,$opts) = @_;
+
+  ##-- scan blocks into head, body, foot
+  my $bsize  = $opts->{size};
+  my $fsize  = $opts->{fsize};
+  my $eob    = $opts->{eob} =~ /^s/i ? 's' : 'w';
   my $blocks = [];
 
-  my ($off0,$off1,$eos);
-  for ($off0=0, $off1=$off0+$bsize; $off1 < $fsize; $off1=$off0+$bsize) {
-    $infh->seek($off1, SEEK_SET)
-      or $fmt->logconfess("blockScan(): seek failed to offset $off1 for file $infile: $!");
-
-    $_=<$infh>; ##-- gobble the rest of the remaining line
-    if ($eob eq 's') {
-      while (defined($_=<$infh>) && $_ !~ /^$/) { ; }
-      $eos  = 1;
-      $off1 = $infh->tell;
+  my ($off0,$off1,$blk);
+  for ($off0=$opts->{head}[0]+$opts->{head}[1]; $off0 < $fsize; $off0=$off1) {
+    push(@$blocks, $blk={off=>$off0});
+    pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
+    if ($eob eq 's' ? $$bufr=~m/\n{2,}/sg : $$bufr=~m/\n{1,}/sg) {
+      $off1 = $+[0];
+      $blk->{eos} = $+[0]-$-[0] > 1 ? 1 : 0;
     } else {
-      $_=<$infh>;
-      if ($eos=!defined($_) || $_ =~ /^$/) {
-	$off1 = $infh->tell;
-      } else {
-	$off1 = $infh->tell;
-	$_=<$infh>;
-	if ($eos=!defined($_) || $_ =~ /^$/) {
-	  $off1 = $infh->tell;
-	}
-      }
+      $off1       = $fsize;
+      $blk->{eos} = 1;
     }
-    push(@$blocks, {off=>$off0, len=>($off1-$off0), file=>$infile, eos=>($eos ? 1 : 0)});
-    $off0 = $off1;
+    $blk->{len} = $off1-$off0;
   }
-  push(@$blocks, {off=>$off0, len=>($fsize-$off0), file=>$infile, eos=>1}) if ($off0 < $fsize);
 
-  $infh->close();
   return $blocks;
 }
+
 
 ## $fmt_or_undef = $fmt->blockAppend($block,$filename)
 ##  + append a block $block to a file $filename
@@ -137,24 +134,24 @@ sub blockAppend {
   my ($fmt,$block,$file) = @_;
   #$fmt->vlog('trace', "blockAppend(off=$block->{off}, len=$block->{len}, file=$file)");
 
-  my $outfh = IO::File->new(($block->{off}==0 ? '>' : '>>').$file)
-    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
-  binmode($outfh, utf8::is_utf8(${$block->{data}}) ? ':utf8' : ':raw');
-
   ##-- truncate extraneous newlines from data
   use bytes;
+  my $bufr = $block->{data};
   if (!$block->{eos}) {
-    ${$block->{data}} =~ s/\n\K(\n+)$//s;
-    $block->{datalen} -= length($1) if (defined($block->{datalen}));
+    $$bufr =~ s/\n\K(\n+)$//s;
   } else {
-    ${$block->{data}} =~ s/\n\n\K(\n+)$//s;
-    $block->{datalen} -= length($1) if (defined($block->{datalen}));
+    $$bufr =~ s/\n\n\K(\n+)$//s;
   }
 
-  ##-- actual write
-  $block->{datalen} = length(${$block->{data}}) if (!defined($block->{datalen}));
-  syswrite($outfh, ${$block->{data}}, $block->{datalen})==$block->{datalen}
-    or $fmt->logconfess("blockAppend(): syswrite failed to '$file': $!");
+  ##-- get header for non-initial blocks
+  my $head = $block->{n} > 0 ? $fmt->blockScanHead($bufr,{}) : [0,0];
+
+  ##-- open & write
+  my $outfh = IO::File->new(($block->{n}==0 ? '>' : '>>').$file)
+    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
+  binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
+  $outfh->print($head->[1] ? substr($$bufr,$head->[0]+$head->[1]) : $$bufr)
+    or $fmt->logconfess("blockAppend(): print failed to '$file': $!");
 
   $outfh->close;
   return $fmt;
