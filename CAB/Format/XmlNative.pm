@@ -126,7 +126,7 @@ sub blockScanFoot {
   pos($$bufr) = $blk->{ioff}; ##-- set to offset of final body block
   if ($$bufr =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
     my $end      = $+[0];
-    $blk->{ilen} = $end - $blk->{off};
+    $blk->{ilen} = $end - $blk->{ioff};
     return [$end, $opts->{ifsize}-$end];
   }
   return [0,0];

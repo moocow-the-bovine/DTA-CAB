@@ -290,18 +290,17 @@ sub blockScan {
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
   my ($blk);
-  foreach (0..$#$body) {
-    $blk = $body->[$_];
-    $blk->{i}     = $_      if (!defined($blk->{i}));
-    $blk->{N}     = $#$body if (!defined($blk->{N}));
-    $blk->{ifile} = $infile if (!defined($blk->{ifile}));
-    $blk->{ihead} = $head   if (!defined($blk->{ihead}));
-    $blk->{ifoot} = $foot   if (!defined($blk->{ifoot}));
+  foreach (0..$#$ibody) {
+    $blk = $ibody->[$_];
+    $blk->{id}    = [$_,$#$ibody] if (!defined($blk->{id}));
+    $blk->{ifile} = $infile  if (!defined($blk->{ifile}));
+    $blk->{ihead} = $ihead   if (!defined($blk->{ihead}));
+    $blk->{ifoot} = $ifoot   if (!defined($blk->{ifoot}));
   }
 
   ##-- cleanup & return
   File::Map::unmap($buf);
-  return $body;
+  return $ibody;
 }
 
 ## \@head = $fmt->blockScanHead(\$buf,\%opts)
@@ -368,10 +367,10 @@ sub blockRead {
 ##  + wrapper for blockRead(), parseString(), close()
 sub parseBlock {
   my ($fmt,$blk) = @_;
-  my $ibufr = $ifmt->blockRead($blk);
-  my $doc   = $ifmt->parseString($ibfr);
-  $ifmt->close();
-  return $ifmt;
+  my $ibufr = $fmt->blockRead($blk);
+  my $doc   = $fmt->parseString($ibufr);
+  $fmt->close();
+  return $fmt;
 }
 
 
