@@ -473,7 +473,8 @@ $fp->waitall();
 if ($job{doProfile}) {
   DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), @$fp{qw(ntok nchr)});
 }
-{
+if (0) {
+  ##-- DEBUG memory usage
   select STDERR;
   $|=1;
   print "$0: all done (enter to exit) ";
