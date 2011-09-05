@@ -2,11 +2,12 @@
 ##
 ## File: DTA::CAB::Format::XmlTokWrap.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
-## Description: Datum parser|formatter: XML (tokwrap), fast quick & dirty output
+## Description: Datum parser|formatter: XML (tokwrap), fast quick & dirty I/O for (.ddc).t.xml
 
 package DTA::CAB::Format::XmlTokWrapFast;
 use DTA::CAB::Format::XmlTokWrap;
 use DTA::CAB::Datum ':all';
+use XML::Parser;
 use IO::File;
 use Carp;
 use strict;
@@ -34,28 +35,189 @@ BEGIN {
 ## $fmt = CLASS_OR_OBJ->new(%args)
 ##  + object structure: HASH ref
 ##    {
-##     ##-- input: inherited
-##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
-##     xprs => $xprs,                          ##-- XML::LibXML parser
+##     ##-- input: new
+##     doc   => $doc,         ##-- cached parsed DTA::CAB::Document
 ##
-##     ##-- output: inherited from TokWrapXml
-##     arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
-##     arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
-##     key2xml => \%key2xml,                   ##-- maps keys to XML-safe names
-##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
-##     ##
-##     ##-- output: inherited from TokWrapXml
-##     #encoding => $encoding,                 ##-- default: UTF-8; applies to output only!
+##     ##-- input: inherited (but unused)
+##     #xdoc => $xdoc,                          ##-- XML::LibXML::Document
+##     #xprs => $xprs,                          ##-- override: XML::Parser parser
+##
+##     ##-- output: inherited from DTA::CAB::Format
+##     utf8  => $bool,                         ##-- always true
 ##     level => $level,                        ##-- output formatting level (default=0)
-##
-##     ##-- common: safety
-##     safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
 ##    }
 sub new {
   my $that = shift;
-  my $fmt = $that->SUPER::new(@_);
+  my $fmt = $that->DTA::CAB::Format::XmlCommon::new
+    (
+     xprs => undef,
+     doc => undef,
+     @_
+    );
   return $fmt;
 }
+
+## $xmlparser = $fmt->xmlparser()
+##  + returns cached $fmt->{xprs} if available
+##  + otherwise caches & returns new XML::Parser
+sub xmlparser {
+  return $_[0]{xprs} if (defined($_[0]{xprs}));
+  my $fmt = shift;
+
+  ##--------------------------------------
+  ## globals
+  my ($doc,$body, $s,$stoks, $w,@stack,%attrs);
+
+  ##--------------------------------------
+  ## callbacks
+
+  ## undef = cb_init($expat)
+  my $cb_init = sub {
+    $body = [];
+    $doc  = {body=>$body};
+    @stack = qw();
+  };
+
+  ## undef = cb_start($expat, $elt,%attrs)
+  my $cb_start = sub {
+    %attrs = @_[2..$#_];
+    push(@stack,$_[1]);
+
+    if ($_[1] eq 'w') {
+      ##-- w
+      if (defined($attrs{t}) && !defined($attrs{text})) {
+	$attrs{text} = $attrs{t};
+	delete($attrs{t});
+      }
+      push(@$stoks, $w={%attrs});
+    }
+    elsif ($_[1] eq 'a') {
+      ##-- w/a
+      ; ##-- do nothing
+    }
+    elsif ($_[1] eq 's') {
+      ##-- s
+      push(@$body, $s={%attrs,tokens=>($stoks=[])});
+    }
+    elsif (@stack==1) {
+      ##-- doc
+      if (defined($attrs{'xml:base'})) {
+	$attrs{'base'}=$attrs{'xml:base'};
+	delete($attrs{'xml:base'});
+      }
+      $doc = {%attrs, body=>$body};
+    }
+  };
+
+  ## undef = cb_end($expat,$elt)
+  my $cb_end = sub {
+    pop(@stack);
+  };
+
+  ## undef = cb_char($expat,$string)
+  my $cb_char = sub {
+    push(@{$w->{toka}}, $_[1]) if ($stack[$#stack] eq 'a');
+  };
+
+  ## undef = cb_default($expat, $str)
+  #my $cb_default = sub {};
+
+  ## undef = cb_final($expat)
+  my $cb_final = sub {
+    $body = $s = $stoks = $w = undef;
+    return bless($doc,'DTA::CAB::Document');
+  };
+
+  ##--------------------------------------
+  ## parser
+  my $xprs = XML::Parser->new
+    (
+     ErrorContext => 1,
+     ProtocolEncoding => 'UTF-8',
+     #ParseParamEnt => '???',
+     Handlers => {
+		  Init  => $cb_init,
+		  Char  => $cb_char,
+		  Start => $cb_start,
+		  End   => $cb_end,
+		  #Default => $cb_default,
+		  Final => $cb_final,
+		 },
+    )
+      or $fmt->logconfess("couldn't create XML::Parser");
+
+  return $xprs;
+}
+
+##==============================================================================
+## Methods: Persistence
+##==============================================================================
+
+## @keys = $class_or_obj->noSaveKeys()
+##  + returns list of keys not to be saved
+##  + inherited
+
+##=============================================================================
+## Methods: I/O: generic
+##==============================================================================
+
+## $fmt = $fmt->close($savetmp=0)
+##  + override calls $fmt->flush() and deletes @$fmt{qw(xdoc output)}
+sub close {
+  return $_[0]->DTA::CAB::Format::close(@_[1..$#_]);
+}
+
+## @layers = $fmt->iolayers()
+##  + returns PerlIO layers to use for I/O handles
+##  + override returns ':raw'
+sub iolayers {
+  return qw(:raw);
+}
+
+##=============================================================================
+## Methods: Input
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: Input: Input selection
+
+## $fmt = $fmt->fromString(\$string)
+##  + input from string
+sub fromString {
+  my $fmt = shift;
+  $fmt->{doc} = $fmt->xmlparser->parse(ref($_[0]) ? ${$_[0]} : $_[0])
+    or $fmt->logconfess("fromString(): XML::Parser::parse() failed: $!");
+  return $fmt;
+}
+
+## $fmt = $fmt->fromFile($filename)
+##  + input from named file: override buffers XML document in $fmt->{xdoc}
+sub fromFile {
+  my ($fmt,$file) = @_;
+  $fmt->{doc} = $fmt->xmlparser->parsefile($file)
+    or $fmt->logconfess("fromFile(): XML::Parser::parsefile($file) failed: $!");
+  return $fmt;
+}
+
+## $fmt = $fmt->fromFh($handle)
+##  + input from filehandle: override buffers XML document in $fmt->{xdoc}
+sub fromFh {
+  my ($fmt,$fh) = @_;
+  $fmt->{doc} = $fmt->xmlparser->parse($fh)
+    or $fmt->logconfess("fromFh(): XML::Parser::parse($fh) failed: $!");
+  return $fmt;
+}
+
+##--------------------------------------------------------------
+## Methods: Input: Generic API
+
+## $doc = $fmt->parseDocument()
+##   + parse document from currently selected input source
+##   + override returns buffered $fmt->{doc}
+sub parseDocument {
+  return $_[0]{doc};
+}
+
 
 ##=============================================================================
 ## Methods: Output

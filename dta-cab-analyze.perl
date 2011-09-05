@@ -453,7 +453,7 @@ else {
     }
   }
 }
-DTA::CAB->info("populated job-queue with ", $fp->size, " item(s)");
+$fp->info("populated job-queue with ", $fp->size, " item(s)");
 #print Data::Dumper->Dump([$fp->{queue}],['QUEUE']), "\n";
 #exit 0; ##-- DEBUG
 
@@ -472,6 +472,12 @@ $fp->waitall();
 
 if ($job{doProfile}) {
   DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), @$fp{qw(ntok nchr)});
+}
+{
+  select STDERR;
+  $|=1;
+  print "$0: all done (enter to exit) ";
+  $_=<STDIN>;
 }
 
 ##======================================================================

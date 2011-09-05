@@ -138,7 +138,7 @@ sub blockScanFoot {
   my $blk = $opts->{"${io}body"}[$#{$opts->{"${io}body"}}];
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
   pos($$bufr) = $blk->{"${io}off"} || 0; ##-- set to offset of final body block
-  if ($$bufr  =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
+  if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
     my $end            = $+[0];
     $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
     return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
@@ -232,6 +232,10 @@ sub parseNode {
 	#$nxt = $cw = DTA::CAB::Token->new;
 	$nxt = $cw = {text=>undef};
 	push(@{$cs->{tokens}},$cw);
+      }
+      elsif ($name eq 'a' && $nod->parentNode->nodeName eq 'w') {
+	##-- Element: special: tokenizer analysis (toka)
+	push(@{$cw->{toka}}, $nod->textContent);
       }
       elsif ($name eq 'msafe') {
 	##-- Element: special: msafe (backwards-compatible)
