@@ -209,7 +209,14 @@ sub setLayers {
 ##--------------------------------------------------------------
 ## Methods: I/O: Block-wise: Generic
 
-## %blockOpts = $CLASS_OR_OBJECT->parseBlockOpts($block_spec)
+## %blockOpts = $CLASS_OR_OBJECT->blockDefaults()
+##  + returns default block options as for blockOptions()
+##  + default implementation just returns (bsize=>(128*1024), eob=>'s')
+sub blockDefaults {
+  return (bsize=>(128*1024), eob=>'s');
+}
+
+## %blockOpts = $CLASS_OR_OBJECT->blockOptions($block_spec)
 ##  + parses $block_spec as a block-boundary spec, which is a string of the form
 ##            MIN_BYTES[{k,M,G,T}][@EOB]
 ##    where:
@@ -217,18 +224,18 @@ sub setLayers {
 ##    - EOB indicates desired block boundary: either 's' (sentence) or 'w' (word)
 ##  + returns a hash with 'size' and 'where' keys
 ##  + pukes if not parseable
-sub parseBlockOpts {
+sub blockOptions {
   my ($fmt,$bspec) = @_;
-  if ($bspec =~ /^([0-9]*)([bkmgt])?(?:[:\@](.*))?$/i) {
+  if (($bspec||'') =~ /^([0-9\.]*)([bkmgt])?(?:[:\@](.*))?$/i) {
     my ($n,$suff,$eob) = ($1,lc($2),$3);
     $n *= 2**10 if ($suff eq 'k');
     $n *= 2**20 if ($suff eq 'm');
     $n *= 2**30 if ($suff eq 'g');
     $n *= 2**40 if ($suff eq 't');
-    return (size=>$n,eob=>$eob);
+    return ($fmt->blockDefaults(), ($n ? (bsize=>$n) : qw()), ($eob ? (eob=>$eob) : qw()));
   }
   $fmt->logconfess("parseBlockOpts(): could not parse block specification '$bspec'");
-  return qw();
+  return $fmt->blockDefaults();
 }
 
 ##--------------------------------------------------------------
@@ -237,7 +244,7 @@ sub parseBlockOpts {
 ## \@blocks = $fmt->blockScan($infile, %opts)
 ##  + scans $filename for block boundaries according to %opts, which may contain:
 ##    (
-##     size => $bytes,       ##-- minimum block-size in bytes
+##     bsize => $bytes,      ##-- minimum block-size in bytes
 ##     eob  => $eob,         ##-- block boundary type; either 's' (sentence) or 't' (word); default='w'
 ##    )
 ##  + sets local keys in %opts passed to sub-methods blockScan{Head,Body,Foot}()
@@ -247,6 +254,8 @@ sub parseBlockOpts {
 ##     ihead => [$off,$len],  ##-- (in) offset, length of header in $infile
 ##     ifoot => [$off,$len],  ##-- (in) offset, length of footer in $infile
 ##     ibody => \@iblocks,    ##-- (in) blocks computed by blockScanBody()
+##     ohead => [$off,$len],  ##-- (out) offset, length of header in $$odata
+##     ofoot => [$off,$len],  ##-- (out) offset, length of footer in $$odata
 ##    )
 ##  + returns an ARRAY ref of block specifications \@blocks = [$blk1,$blk2,...]
 ##    where each $blk \in @blocks is a HASH-ref containing at least the following keys:
@@ -259,8 +268,8 @@ sub parseBlockOpts {
 ##    }
 ##  + additionally, $blk may contain the following keys:
 ##    {
-##     ihead => [$off,$len],  ##-- (in) set by blockScanHead()
-##     ifoot => [$off,$len],  ##-- (in) set by blockScanFoot()
+##     ihead => [$off,$len],  ##-- (in) set by blockScanHead() for $infile
+##     ifoot => [$off,$len],  ##-- (in) set by blockScanFoot() for $infile
 ##     ibody => \@iblocks,    ##-- (in) blocks computed by blockScanBody()
 ##     eos   => $bool,        ##-- (in/out) true if block ends on a sentence boundary (for TT, TJ)
 ##     odata => \$odata,      ##-- (out) block data octets (for blockAppend())
@@ -273,9 +282,9 @@ sub parseBlockOpts {
 ##    then sets @$blk{qw(ifile ihead ifoot id)} for each body block
 sub blockScan {
   my ($fmt,$infile,%opts) = @_;
-  $opts{size} = 128*1024 if (!defined($opts{size}));
-  $opts{eob}  = 'w' if (!defined($opts{eob}));
-  $fmt->vlog('trace', "blockScan(size=$opts{size}, eob=$opts{eob}, file=$infile)");
+  $opts{bsize} = 128*1024 if (!defined($opts{bsize}));
+  $opts{eob}   = 'w' if (!defined($opts{eob}));
+  $fmt->vlog('trace', "blockScan(size=$opts{bsize}, eob=$opts{eob}, file=$infile)");
 
   ##-- mmap file
   $opts{ifile}  = $infile;
@@ -284,9 +293,9 @@ sub blockScan {
   File::Map::map_file($buf, $infile,'<',0,$opts{fsize});
 
   ##-- scan blocks into head, body, foot
-  my $ihead = $opts{ihead} = $fmt->blockScanHead(\$buf,\%opts);
-  my $ibody = $opts{ibody} = $fmt->blockScanBody(\$buf,\%opts);
-  my $ifoot = $opts{ifoot} = $fmt->blockScanFoot(\$buf,\%opts);
+  my $ihead = $opts{ihead} = $fmt->blockScanHead(\$buf,'i',\%opts);
+  my $ibody = $opts{ibody} = $fmt->blockScanBody(\$buf,    \%opts);
+  my $ifoot = $opts{ifoot} = $fmt->blockScanFoot(\$buf,'i',\%opts);
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
   my ($blk);
@@ -303,25 +312,25 @@ sub blockScan {
   return $ibody;
 }
 
-## \@head = $fmt->blockScanHead(\$buf,\%opts)
-##  + scans for block header (ihead); returns [$offset,$length] for block header in (mmaped) \$buf
+## \@head = $fmt->blockScanHead(\$buf,$io,\%opts)
+##  + scans for block header (${io}head); returns [$offset,$length] for block header in (mmaped) \$buf
 ##  + defatult implementation just returns [0,0] (empty header)
 sub blockScanHead {
-  my ($fmt,$bufr,$opts) = @_;
+  my ($fmt,$bufr,$io,$opts) = @_;
   return [0,0];
 }
 
-## \@foot = $fmt->blockScanFoot(\$buf,\%opts)
-##  + scans for block footer (ifoot9; returns [$offset,$length] for block footer in (mmaped) \$buf
-##  + may adjust contents of $opts{body}
+## \@foot = $fmt->blockScanFoot(\$buf,$io,\%opts)
+##  + scans for block footer (${io}foot); returns [$offset,$length] for block footer in (mmaped) \$buf
+##  + may adjust contents of $opts{${io}body}
 ##  + default implementation just returns [0,0] (empty footer)
 sub blockScanFoot {
-  my ($fmt,$bufr,$opts) = @_;
+  my ($fmt,$bufr,$io,$opts) = @_;
   return [0,0];
 }
 
 ## \@blocks = $fmt->blockScanBody(\$buf,\%opts)
-##  + guts for blockScan()
+##  + guts for blockScan(); input only
 ##  + default implementation just dies
 sub blockScanBody {
   my ($fmt,$bufr,$opts) = @_;
@@ -344,7 +353,10 @@ sub blockReadChunk {
 ## \$buf = $fmt->blockRead(\%blk)
 ## \$buf = $fmt->blockRead(\%blk,\$buf)
 ##   + reads block input data for \%blk into \$bufr
-##   + default implementation just appends raw bytes for $blk{head}, $blk, and $blk{foot}
+##   + default implementation just appends raw bytes for:
+##     - block header @{$blk{ihead}}
+##     - block body   @blk{qw(ioff ilen)}
+##     - block footer @{$blk{ifoot}}
 sub blockRead {
   my ($fmt,$blk,$bufr) = @_;
   $bufr     = \(my $buf) if (!defined($bufr));
@@ -354,9 +366,9 @@ sub blockRead {
     or $fmt->logconfess("blockRead(): open failed for '$infile': $!");
   binmode($infh,':raw');
 
-  $fmt->blockReadChunk($infh, @{$blk->{head}}, $bufr)    if ($blk->{head} && $blk->{head}[1]);   ##-- head
-  $fmt->blockReadChunk($infh, @$blk{qw(off len)}, $bufr) if ($blk->{len});                       ##-- body
-  $fmt->blockReadChunk($infh, @{$blk->{foot}}, $bufr)    if ($blk->{foot} && $blk->{foot}[1]);   ##-- foot
+  $fmt->blockReadChunk($infh, @{$blk->{ihead}}, $bufr)     if ($blk->{ihead} && $blk->{ihead}[1]);   ##-- head
+  $fmt->blockReadChunk($infh, @$blk{qw(ioff ilen)}, $bufr) if ($blk->{ilen});                        ##-- body
+  $fmt->blockReadChunk($infh, @{$blk->{ifoot}}, $bufr)     if ($blk->{ifoot} && $blk->{ifoot}[1]);  ##-- foot
 
   $infh->close();
   return $bufr;
@@ -370,78 +382,75 @@ sub parseBlock {
   my $ibufr = $fmt->blockRead($blk);
   my $doc   = $fmt->parseString($ibufr);
   $fmt->close();
-  return $fmt;
+  return $doc;
 }
 
 
 ##--------------------------------------------------------------
 ## Methods: I/O: Block-wise: Output
 
-## $blk = $fmt->blockFinish(\$odata,$blk)
+## $blk = $fmt->blockStore(\$odata,$blk,\%bopt={})
 ##  + store output buffer \$buf in $blk->{odata}
 ##  + additionally store keys qw(ofmt ohead odata ofoot) relative to $blk->{odata}
-##  + default calls blockScanHead(), blockScanFoot() with dummy options
-##  + TODO: tweakable format-local hook(s) here (e.g. for newline trimming in TT::blockAppend)
-sub blockFinish {
-  my ($fmt,$bufr,$blk) = @_;
+##  + default calls blockScanHead(), blockScanFoot() with dummy options only if not already set in $blk
+sub blockStore {
+  my ($fmt,$bufr,$blk,$bopt) = @_;
 
-  use bytes;
-  my %bopt = qw();
-  my $iblk  = {%$blk, ihead=>undef, ifoot=>undef, ifsize=>length($$bufr)}; ##-- dummy input block
-  my $ohead = $bopt{ihead} = $iblk->{ihead} = $fmt->blockScanHead($bufr,\%bopt);
-  my $obody = $bopt{ibody} = [{%$blk, ihead=>$ohead}];
-  my $ofoot = $bopt{ifoot} = $iblk->{ifoot} = $fmt->blockScanFoot($bufr,\%bopt);
-
-  $blk->{ohead} = $blk->{id}[0]==0             ? [0,0] : $ohead;
-  $blk->{ofoot} = $blk->{id}[0]==$blk->{id}[1] ? [0,0] : $ofoot;
-  $blk->{odata} = $bufr;
-  $blk->{ofmt}  = $fmt->shortName if (!defined($blk->{ofmt}));
+  $bopt = {} if (!defined($bopt));
+  $blk->{id}    = [0,0] if (!defined($blk->{id}));
+  $blk->{ohead} = ($blk->{id}[0]==0             ? [0,0] : $fmt->blockScanHead($bufr,'o',{%$blk,%$bopt})) if (!defined($blk->{ohead}));
+  $blk->{obody} = [$blk]                                                                                 if (!defined($blk->{obody}));
+  $blk->{ofoot} = ($blk->{id}[0]==$blk->{id}[1] ? [0,0] : $fmt->blockScanFoot($bufr,'o',{%$blk,%$bopt})) if (!defined($blk->{ofoot}));
+  $blk->{odata} = $bufr            if (!defined($blk->{odata}));
+  $blk->{ofmt}  = $fmt->shortName  if (!defined($blk->{ofmt}));
 
   return $blk;
 }
 
 ## $fmt = $fmt->putDocumentBlock($doc,$blk)
-##  + wrapper for $fmt->toString(\(my $buf))->putDocumentRaw()->flush()->blockFinish(\$buf,$blk)
+##  + wrapper for $fmt->toString(\(my $buf))->putDocumentRaw()->flush()->blockStore(\$buf,$blk)
 sub putDocumentBlock {
   my ($fmt,$doc,$blk) = @_;
   my $buf = '';
-  $fmt->toString(\$buf)->putDocumentRaw($doc)->flush()->blockFinish(\$buf,$blk);
+  $fmt->toString(\$buf)->putDocumentRaw($doc)->flush()->blockStore(\$buf,$blk);
   return $fmt;
 }
 
-## $fmt_or_undef = $fmt->blockAppend($blk,$filename)
-##  + append a block $block to a file $filename
+## $fmt_or_undef = $fmt->blockAppend($blk)
+## $fmt_or_undef = $fmt->blockAppend($blk,$ofile)
+##  + append a block $block to a file $ofile (default=$blk->{ofile})
 ##  + $block is a HASH-ref as returned by blockScan()
 ##  + default implementation just dumps $blk->{odata} to $filename;
-##    first removing @$blk{qw(ohead ofoot)} as appropriate
+##    modulo @$blk{qw(ohead ofoot)} as appropriate
 sub blockAppend {
-  my ($fmt,$blk,$file) = @_;
+  my ($fmt,$blk,$ofile) = @_;
+  $ofile = $blk->{ofile} if (!defined($ofile));
 
   ##-- common variables
   use bytes;
   my $bufr  = $blk->{odata};
   my $id    = $blk->{id}    || [0,0];
   my $ohead = $blk->{ohead} || [0,0];
-  my $ofoot = $blk->{ofoot} || [length($$bufr),0];
+  my $ofoot = $blk->{ofoot} || [0,0];
 
-  my $outfh = IO::File->new(($id->[0]==0 ? '>' : '>>').$file)
-    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
+  my $outfh = IO::File->new(($id->[0]==0 ? '>' : '>>').$ofile)
+    or $fmt->logconfess("blockAppend(): open failed for '$ofile': $!");
   binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
 
   ##-- dump: header (initial block only)
   if ($id->[0]==0 && $ohead->[1]>0) {
     $outfh->print(substr($$bufr, $ohead->[0], $ohead->[1]-$ohead->[0]))
-      or $fmt->logconfess("blockAppend(): print failed to '$file' for initial-block header: $!");
+      or $fmt->logconfess("blockAppend(): print failed to '$ofile' for initial-block header: $!");
   }
 
   ##-- dump: body
-  $outfh->print(substr($$bufr, $ohead->[1], $ofoot->[0]-$ohead->[1]))
-    or $fmt->logconfess("blockAppend(): print failed to '$file' for block body: $!");
+  $outfh->print(substr($$bufr, $ohead->[1], ($ofoot->[0]||length($$bufr))-($ohead->[0]+$ohead->[1])))
+    or $fmt->logconfess("blockAppend(): print failed to '$ofile' for block body: $!");
 
   ##-- dump: footer (final block only)
   if ($id->[0]==$id->[1] && $ofoot->[1]>0) {
     $outfh->print(substr($$bufr, $ofoot->[0], $ofoot->[1]-$ofoot->[0]))
-      or $fmt->logconfess("blockAppend(): print failed to '$file' for final-block footer: $!");
+      or $fmt->logconfess("blockAppend(): print failed to '$ofile' for final-block footer: $!");
   }
 
   ##-- cleanup & return

@@ -27,7 +27,7 @@ our ($help,$man,$version,$verbose);
 ##-- Formats
 our $inputClass  = undef;  ##-- default input format class
 our %inputOpts   = ();
-our $block       = '128k@s';
+our $block       = undef;  ##-- block specification; default: format-dependent
 our $outfile     = '-';
 
 ##==============================================================================
@@ -78,7 +78,7 @@ open(OUT,">$outfile") or die("$prog: open failed for output file '$outfile': $!"
 
 ##-- main loop
 push(@ARGV,'-') if (!@ARGV);
-my %blockOpts = $ifmt->parseBlockOpts($block);
+my %blockOpts = $ifmt->blockOptions($block);
 my ($file,$blocks);
 foreach $file (@ARGV) {
   $blocks = $ifmt->blockScan($file, %blockOpts);
@@ -111,7 +111,7 @@ dta-cab-blockscan.perl - scan for block boundaries in DTA::CAB documents
  I/O Options:
   -input-class CLASS              ##-- select input parse class (default: TT)
   -input-option OPT=VALUE         ##-- set input parser option
-  -block SIZE[{k,M,G,T}][@EOB]    ##-- select block boundary specification
+  -block SIZE[{k,M,G,T}][@EOB]    ##-- select block boundary specification (default: format-dependent)
   -output-file FILE               ##-- set output file (default: STDOUT)
 
 =cut

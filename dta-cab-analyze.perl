@@ -49,9 +49,8 @@ our $analyzeClass = 'DTA::CAB::Analyzer';
 our $inputList = 0;      ##-- inputs are command-line lists, not filenames (main thread only)
 
 ##-- Options: Main: block-wise
-our $block         = undef;       ##-- input block size (number of lines); implies -ic=TT -oc=TT -doc
-our $block_default = '128k@w';    ##-- default block size if -block='' or -block=0 is specified
-our %blockOpts     = qw();        ##-- parsed block options
+our $block_spec      = undef;     ##-- input block specification; see DTA::CAB::Format::blockOptions()
+our %blockOpts       = qw();      ##-- parsed block options
 our $logBlockInfo    = 'info';    ##-- log-level for block operations
 our $logBlockTrace   = 'none';    ##-- log-level for block trace
 our $logBlockProfile = 'none';    ##-- log-level for block profiling
@@ -96,8 +95,8 @@ our %global_options =
    'keeptmp|keeptemp|keep!'              => \$keeptmp,
 
    ##-- Block-wise processing
-   'block|block-size|bs|b=s'             => sub {$block=($_[1]||$block_default)},
-   'noblock|B'                           => sub { undef $block; },
+   'block|block-size|bs|b:s'             => sub {$block_spec=($_[1] || '')},
+   'noblock|B'                           => sub { undef $block_spec; },
    'log-block-info|lbi|block-info|bi|log-block|lb=s' => \$logBlockInfo,
    'log-block-trace|block-trace|lbt|bt=s'            => \$logBlockTrace,
    'log-block-profile|lbp|block-profile|bp=s'        => \$logBlockProfile,
@@ -223,7 +222,8 @@ sub outfilename {
     ($b,$x) = ($1,$2);
   }
   my $outfile = $outfmt;
-  $outfile =~ s|%f|%d/%b|g;
+  $outfile =~ s|%F|%d/%b|g;
+  $outfile =~ s|%f|$infile|g;
   $outfile =~ s|%d|$d|g;
   $outfile =~ s|%b|$b|g;
   $outfile =~ s|%x|$x|g;
@@ -235,7 +235,7 @@ sub outfilename {
 ##   + %_job is a subprocess option hash like global %job (default)
 sub new_ifmt {
   my %_job = (%job,@_);
-  return $ifmt = DTA::CAB::Format->newReader(class=>$_job{inputClass},file=>$_job{input},%{$_job{inputOpts}||{}})
+  return $ifmt = DTA::CAB::Format->newReader(class=>$_job{inputClass},file=>($_job{input}||$ARGV[0]),%{$_job{inputOpts}||{}})
     or die("$0: could not create input parser of class $_job{inputClass}: $!");
 }
 
@@ -245,7 +245,7 @@ sub new_ifmt {
 ##   + uses %_job{outfile} to guess format from output filename
 sub new_ofmt {
   my %_job = (%job,@_);
-  my $outfile = outfilename(@_job{qw(input outfmt)});
+  my $outfile = outfilename(($_job{input}||$ARGV[0]), $_job{outfmt});
   return $ofmt = DTA::CAB::Format->newWriter(class=>$_job{outputClass},file=>$outfile,%{$_job{outputOpts}||{}})
     or die("$0: could not create output formatter of class $_job{outputClass}: $!");
 }
@@ -292,8 +292,9 @@ sub cb_work {
   if ($qjob->{block}) {
     ##--------------------------------------------------
     ## Analyze: Block-wise
-    my $blk = $qjob->{block};
-    my $blkid = $blk->{blkid} || "$blk->{ifile} [$blk->{id}[0]/$blk->{id}[1]]";
+    my $blk   = $qjob->{block};
+    $blk->{ofile} = $outfile if (!defined($blk->{ofile}));
+    my $blkid = $blk->{blkid} || "$blk->{ifile} -> $blk->{ofile} [$blk->{id}[0]/$blk->{id}[1]]";
     $fp->vlog($logBlockInfo,"BLOCK $blkid");
 
     ##-- slurp & parse block input buffer
@@ -317,8 +318,7 @@ sub cb_work {
     }
     undef $doc; ##-- we can free up the analyzed document now
 
-    ##-- report: block output
-    $blk->{ofile} = $outfile if (!defined($blk->{ofile}));
+    ##-- dump block output back to server for append
     $fp->qaddblock($blk);
   }
   elsif ($qjob->{indoc}) {
@@ -385,7 +385,7 @@ sub cb_work {
 ##------------------------------------------------------
 ## main: init: queue
 
-$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, work=>\&cb_work, installReaper=>1)
+$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, work=>\&cb_work, installReaper=>1, logBlock=>$logBlockTrace)
   or die("$0: could not create fork-pool with socket '$qpath': $!");
 #DTA::CAB->info("created job queue on UNIX socket '$qpath'");
 
@@ -419,15 +419,14 @@ else {
 
 ##------------------------------------------------------
 ## main: block-scan if requested
-if (!defined($block)) {
+if (!defined($block_spec)) {
   ##-- document-wise processing: just enqueue the parsed jobs
   $fp->enq($_) foreach (@jobs);
 }
 else {
   ##-- block-wise processing: scan for block boundaries and enqueue each block separately
-  $block = $block_default if ($block eq '' || $block eq '0');
-  %blockOpts = DTA::CAB::Format->parseBlockOpts($block);
-  DTA::CAB->info("using block-wise I/O with eob=$blockOpts{eob}, size>=$blockOpts{size}");
+  %blockOpts = $ifmt->blockOptions($block_spec);
+  DTA::CAB->info("using block-wise I/O with eob=$blockOpts{eob}, size>=$blockOpts{bsize}");
 
   foreach my $job (@jobs) {
     if ($job->{input} eq '-') {
@@ -442,12 +441,14 @@ else {
     ##-- block-scan
     new_ifmt(%$job);
     #$ifmt->trace("blockScan($job->{input})");
+    my $ofile  = outfilename($job->{input}, $job->{opts}{outfmt});
     my $blocks = $ifmt->blockScan($job->{input}, %blockOpts);
-    my $blki  = 0;
-    my $nblks = scalar(@$blocks);
-    my $idfmt = "%s [%".length($nblks)."d/%d]";
+    my $nblks  = scalar(@$blocks);
+    my $idfmt  = "%s -> %s [%".length($nblks)."d/%d]";
+    my $blki   = 0;
     foreach (@$blocks) {
-      $_->{blkid} = sprintf($idfmt, $_->{ifile}, ++$blki, $nblks);
+      $_->{ofile} = $ofile;
+      $_->{blkid} = sprintf($idfmt, $_->{ifile}, $_->{ofile}, ++$blki, $nblks);
       $fp->enq({%$job,block=>$_});
     }
   }
@@ -707,9 +708,15 @@ May be multiply specified.
 
 Override output formatter level (default: 1)
 
-=item -output-file FILE
+=item -output-format FORMAT
 
-Set output file (default: STDOUT)
+Set output format (default='-' (STDOUT)), a printf-style format which may contain the following %-escapes:
+
+ %f  : INFILE           : current input file
+ %b  : basename(INFILE) : basename of current input file
+ %d  : dirname(INFILE)  : directory of current input file
+ %x  : extension(INFILE): extension of current input file
+ %F  :                  : alias for %d/%b
 
 =back
 

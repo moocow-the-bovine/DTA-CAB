@@ -104,30 +104,44 @@ sub new {
 ## Methods: I/O: Block-wise
 ##==============================================================================
 
-## \%head = blockScanHead(\$buf,\%opts)
-##  + gets header (ihead) offset, length from (mmaped) \$buf
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Generic
+
+## %blockOpts = $CLASS_OR_OBJECT->blockDefaults()
+##  + returns default block options as for blockOptions()
+##  + override returns as for $CLASS_OR_OBJECT->blockOptions('1M@s')
+sub blockDefaults {
+  return ($_[0]->SUPER::blockDefaults(), bsize=>(512*1024), eob=>'s');
+}
+
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Input
+
+## \%head = blockScanHead(\$buf,$io,\%opts)
+##  + gets header (${io}head) offset, length from (mmaped) \$buf
 ##  + %opts are as for blockScan()
 sub blockScanHead {
-  my ($fmt,$bufr,$opts) = @_;
+  my ($fmt,$bufr,$io,$opts) = @_;
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
   return $$bufr =~ m(\Q<$elt\E\b) ? [0,$-[0]] : [0,0];
 }
 
-## \%head = blockScanFoot(\$buf,\%opts)
-##  + gets footer (ifoot) offset, length from (mmaped) \$buf
-##    - override works from and may alter last body block in $opts->{ibody}
-##    - also uses $opts->{ifsize} to compute footer length
+## \%head = blockScanFoot(\$buf,$io,\%opts)
+##  + gets footer (${io}foot) offset, length from (mmaped) \$buf
+##    - override works from and may alter last body block in $opts->{${io}body}
+##    - also uses $opts->{${io}fsize} (default=length($$buf)) to compute footer length
 ##  + %opts are as for blockScan()
 sub blockScanFoot {
-  my ($fmt,$bufr,$opts) = @_;
-  return [0,0] if (!$opts || !$opts->{ibody} || !@{$opts->{ibody}});
-  my $blk = $opts->{ibody}[$#{$opts->{ibody}}];
+  use bytes;
+  my ($fmt,$bufr,$io,$opts) = @_;
+  return [0,0] if (!$opts || !$opts->{"${io}body"} || !@{$opts->{"${io}body"}});
+  my $blk = $opts->{"${io}body"}[$#{$opts->{"${io}body"}}];
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
-  pos($$bufr) = $blk->{ioff}; ##-- set to offset of final body block
-  if ($$bufr =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
-    my $end      = $+[0];
-    $blk->{ilen} = $end - $blk->{ioff};
-    return [$end, $opts->{ifsize}-$end];
+  pos($$bufr) = $blk->{"${io}off"} || 0; ##-- set to offset of final body block
+  if ($$bufr  =~ m((?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
+    my $end            = $+[0];
+    $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
+    return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
   }
   return [0,0];
 }
@@ -138,7 +152,7 @@ sub blockScanBody {
   my ($fmt,$bufr,$opts) = @_;
 
   ##-- scan blocks into head, body, foot
-  my $bsize  = $opts->{size};
+  my $bsize  = $opts->{bsize};
   my $fsize  = $opts->{ifsize};
   my $elt    = $opts->{xmlelt} || $opts->{eob} || 'w';
   my $eos    = $elt eq 's' ? 1 : 0;
@@ -148,7 +162,7 @@ sub blockScanBody {
 
   my ($off0,$off1,$blk);
   for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
-    push(@$blocks, $blk={ioff=>$off0, eos=>$eos});
+    push(@$blocks, $blk={bsize=>$bsize, eob=>$elt, ioff=>$off0, eos=>$eos});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
     if ($$bufr =~ m($re)g) {
       $off1 = $-[0];
@@ -168,6 +182,9 @@ sub blockScanBody {
   return $blocks;
 }
 
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Output
+##  + inherited from DTA::CAB::Format
 
 
 ##=============================================================================

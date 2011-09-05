@@ -80,21 +80,31 @@ sub noSaveKeys {
 ## Methods: I/O: Block-wise
 ##==============================================================================
 
-## \%head = blockScanHead(\$buf,\%opts)
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Generic
+
+## %blockOpts = $CLASS_OR_OBJECT->blockDefaults()
+##  + returns default block options as for blockOptions()
+##  + inherited default just returns as for $CLASS_OR_OBJECT->blockOptions('128k@w')
+
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Input
+
+## \%head = blockScanHead(\$buf,$io,\%opts)
 ##  + gets header offset, length from (mmaped) \$buf
 ##  + %opts are as for blockScan()
 sub blockScanHead {
-  my ($fmt,$bufr,$opts) = @_;
+  my ($fmt,$bufr,$io,$opts) = @_;
   return [0,$+[0]] if ($$bufr =~ m(\A\n*+(?:%% base=.*\n++)?));
   return [0,0];
 }
 
-## \%head = blockScanFoot(\$buf,\%opts)
+## \%head = blockScanFoot(\$buf,$io,\%opts)
 ##  + gets footer offset, length from (mmaped) \$buf
 ##  + %opts are as for blockScan()
 ##  + override returns empty
 sub blockScanFoot {
-  my ($fmt,$bufr,$opts) = @_;
+  my ($fmt,$bufr,$io,$opts) = @_;
   return [0,0];
 }
 
@@ -105,13 +115,13 @@ sub blockScanBody {
 
   ##-- scan blocks into head, body, foot
   my $fsize  = $opts->{ifsize};
-  my $bsize  = $opts->{size};
+  my $bsize  = $opts->{bsize};
   my $eob    = $opts->{eob} =~ /^s/i ? 's' : 'w';
   my $blocks = [];
 
   my ($off0,$off1,$blk);
   for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
-    push(@$blocks, $blk={ioff=>$off0});
+    push(@$blocks, $blk={bsize=>$bsize,eob=>$eob,ioff=>$off0});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
     if ($eob eq 's' ? $$bufr=~m/\n{2,}/sg : $$bufr=~m/\n{1,}/sg) {
       $off1 = $+[0];
@@ -126,36 +136,31 @@ sub blockScanBody {
   return $blocks;
 }
 
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Output
+
+## $blk = $fmt->blockStore(\$odata,$blk,$bopt)
+##  + store output buffer \$buf in $blk->{odata}
+##  + additionally store keys qw(ofmt ohead odata ofoot) relative to $blk->{odata}
+##  + override truncates trailing newlines according to $blk->{eos} before calling inherited method
+sub blockStore {
+  my ($fmt,$bufr,$blk,$bopt) = @_;
+
+  ##-- truncate extraneous newlines from data
+  use bytes;
+  if (!$blk->{eos}) {
+    $$bufr =~ s/\n\K(\n+)\z//s;
+  } else {
+    $$bufr =~ s/\n\n\K(\n+)\z//s;
+  }
+
+  return $fmt->SUPER::blockStore($bufr,$blk,$bopt);
+}
 
 ## $fmt_or_undef = $fmt->blockAppend($block,$filename)
 ##  + append a block $block to a file $filename
 ##  + $block is a HASH-ref as returned by blockScan()
-sub blockAppend {
-  my ($fmt,$block,$file) = @_;
-  #$fmt->vlog('trace', "blockAppend(off=$block->{off}, len=$block->{len}, file=$file)");
-
-  ##-- truncate extraneous newlines from data
-  use bytes;
-  my $bufr = $block->{odata};
-  if (!$block->{eos}) {
-    $$bufr =~ s/\n\K(\n+)$//s;
-  } else {
-    $$bufr =~ s/\n\n\K(\n+)$//s;
-  }
-
-  ##-- get header for non-initial blocks
-  my $head = $block->{id}[0] > 0 ? $fmt->blockScanHead($bufr,{}) : [0,0];
-
-  ##-- open & write
-  my $outfh = IO::File->new(($block->{id}[0]==0 ? '>' : '>>').$file)
-    or $fmt->logconfess("blockAppend(): open failed for '$file': $!");
-  binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
-  $outfh->print($head->[1] ? substr($$bufr,$head->[0]+$head->[1]) : $$bufr)
-    or $fmt->logconfess("blockAppend(): print failed to '$file': $!");
-
-  $outfh->close;
-  return $fmt;
-}
+##  + INHERITED from DTA::CAB::Format
 
 
 ##==============================================================================
