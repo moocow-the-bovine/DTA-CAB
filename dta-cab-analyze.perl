@@ -80,64 +80,67 @@ our %job =
 ##==============================================================================
 ## Command-line
 
-## %global_options : Getopt::Long specs only relevant for main thread
-our %global_options =
-  (
-   ##-- General
-   'help|h'    => \$help,
-   'man|M'     => \$man,
-   'version|V' => \$version,
+## %specs = globalOptionSpecs() : Getopt::Long specs only relevant for main thread
+sub globalOptionSpecs {
+  return
+    (
+     ##-- General
+     'help|h'    => \$help,
+     'man|M'     => \$man,
+     'version|V' => \$version,
 
-   ##-- Parallelization
-   'jobs|jn|j=i'                         => \$njobs,
-   'job-queue|queue-path|qpath|jq|qp=s'  => \$qpath,
-   'input-list|il|l!'                    => \$inputList,
-   'keeptmp|keeptemp|keep!'              => \$keeptmp,
+     ##-- Parallelization
+     'jobs|jn|j=i'                         => \$njobs,
+     'job-queue|queue-path|qpath|jq|qp=s'  => \$qpath,
+     'input-list|il|l!'                    => \$inputList,
+     'keeptmp|keeptemp|keep!'              => \$keeptmp,
 
-   ##-- Block-wise processing
-   'block|block-size|bs|b:s'             => sub {$block_spec=($_[1] || '')},
-   'noblock|B'                           => sub { undef $block_spec; },
-   'log-block-info|lbi|block-info|bi|log-block|lb=s' => \$logBlockInfo,
-   'log-block-trace|block-trace|lbt|bt=s'            => \$logBlockTrace,
-   'log-block-profile|lbp|block-profile|bp=s'        => \$logBlockProfile,
-   'noblock-info|nobi'    => sub { $logBlockInfo='none'; },
-   'noblock-trace|nobt'   => sub { $logBlockTrace='none'; },
-   'noblock-profile|nobp' => sub { $logBlockProfile='none'; },
-
-
-   ##-- Analysis
-   'configuration|c=s'    => \$rcFile,
-   'analyzer-class|analyze-class|analysis-class|ac|a=s' => \$analyzeClass,
-
-   ##-- Log4perl stuff
-   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
-  );
+     ##-- Block-wise processing
+     'block|block-size|bs|b:s'             => sub {$block_spec=($_[1] || '')},
+     'noblock|B'                           => sub { undef $block_spec; },
+     'log-block-info|lbi|block-info|bi|log-block|lb=s' => \$logBlockInfo,
+     'log-block-trace|block-trace|lbt|bt=s'            => \$logBlockTrace,
+     'log-block-profile|lbp|block-profile|bp=s'        => \$logBlockProfile,
+     'noblock-info|nobi'    => sub { $logBlockInfo='none'; },
+     'noblock-trace|nobt'   => sub { $logBlockTrace='none'; },
+     'noblock-profile|nobp' => sub { $logBlockProfile='none'; },
 
 
-## %child_options : Getopt::Long specs overridable by child threads
-our %child_options =
-  (
-   ##-- Analysis
-   'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => $job{analyzeOpts},
-   'profile|p!' => \$job{doProfile},
+     ##-- Analysis
+     'configuration|c=s'    => \$rcFile,
+     'analyzer-class|analyze-class|analysis-class|ac|a=s' => \$analyzeClass,
 
-   ##.. I/O: generic
-   'format-class|fc=s' => sub {$job{inputClass}=$job{outputClass}=$_[1]},
-   'format-option|fo=s' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
+     ##-- Log4perl stuff
+     DTA::CAB::Logger->cabLogOptions('verbose'=>1),
+    );
+}
 
-   ##-- I/O: input
-   'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
-   'input-option|io|parser-option|po=s'      =>  $job{inputOpts},
-   'tokens|t|words|w!'                       => \$job{inputWords},
+## %specs = childOptionSpecs() : Getopt::Long specs overridable by child threads
+sub childOptionSpecs {
+  return
+    (
+     ##-- Analysis
+     'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => $job{analyzeOpts},
+     'profile|p!' => \$job{doProfile},
 
-   ##-- I/O: output
-   'output-class|oc=s'                       => \$job{outputClass},
-   'output-option|oo=s'                      =>  $job{outputOpts},
-   'output-level|ol|format-level|fl=s'       => \$job{outputOpts}{level},
-   'output-format|output-file|output|o=s'    => \$job{outfmt},
-  );
+     ##.. I/O: generic
+     'format-class|fc=s' => sub {$job{inputClass}=$job{outputClass}=$_[1]},
+     'format-option|fo=s' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
 
-GetOptions(%global_options, %child_options);
+     ##-- I/O: input
+     'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
+     'input-option|io|parser-option|po=s'      =>  $job{inputOpts},
+     'tokens|t|words|w!'                       => \$job{inputWords},
+
+     ##-- I/O: output
+     'output-class|oc=s'                       => \$job{outputClass},
+     'output-option|oo=s'                      =>  $job{outputOpts},
+     'output-level|ol|format-level|fl=s'       => \$job{outputOpts}{level},
+     'output-format|output-file|output|o=s'    => \$job{outfmt},
+    );
+}
+
+GetOptions(globalOptionSpecs(), childOptionSpecs());
 if ($version) {
   print cab_version;
   exit(0);
@@ -411,7 +414,7 @@ if ($inputList) {
     chomp;
     next if (m/^\s*$/ || m/^\s*\#/ || m/^\s*\%\%/);
     %job = %{Storable::dclone($job0)};
-    my ($rc,$argv) = Getopt::Long::GetOptionsFromString($_,%child_options);
+    my ($rc,$argv) = Getopt::Long::GetOptionsFromString($_, childOptionSpecs());
     die("$prog: could not parse options-string '$_' at $ARGV line $.") if (!$rc);
     my $jopts = Storable::dclone(\%job);
     push(@jobs, {opts=>$jopts, input=>$_}) foreach (@$argv);
