@@ -21,7 +21,7 @@ use strict;
 
 ##==============================================================================
 ## Constants & Globals
-##==============================================================================
+## ==============================================================================
 
 ##-- program identity
 our $prog = basename($0);
@@ -121,13 +121,17 @@ our %child_options =
    'analyzer-option|analyze-option|analysis-option|ao|aO|O=s' => $job{analyzeOpts},
    'profile|p!' => \$job{doProfile},
 
+   ##.. I/O: generic
+   'format-class|fc=s' => sub {$job{inputClass}=$job{outputClass}=$_[1]},
+   'format-option|fo=s' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
+
    ##-- I/O: input
    'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
    'input-option|io|parser-option|po=s'      =>  $job{inputOpts},
    'tokens|t|words|w!'                       => \$job{inputWords},
 
    ##-- I/O: output
-   'output-class|oc|format-class|fc=s'       => \$job{outputClass},
+   'output-class|oc=s'                       => \$job{outputClass},
    'output-option|oo=s'                      =>  $job{outputOpts},
    'output-level|ol|format-level|fl=s'       => \$job{outputOpts}{level},
    'output-format|output-file|output|o=s'    => \$job{outfmt},
@@ -259,6 +263,13 @@ sub resetOptions {
   %job = %{Storable::dclone($job0)};
 }
 
+## undef = cb_init()
+##  + child process initialization
+sub cb_init {
+  $fp->{fh}->close() if ($fp->{fh}->opened);
+  @{$fp->{queue}} = @{$fp->{pids}} = %{$fp->{blocks}} = qw();
+}
+
 ## undef = cb_work(\%qjob)
 ##  + worker callback for child threads
 ##  + queue dispatches jobs as HASH-refs \%qjob
@@ -385,7 +396,7 @@ sub cb_work {
 ##------------------------------------------------------
 ## main: init: queue
 
-$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, work=>\&cb_work, installReaper=>1, logBlock=>$logBlockTrace)
+$fp = DTA::CAB::Fork::Pool->new(njobs=>$njobs, local=>$qpath, init=>\&cb_init, work=>\&cb_work, installReaper=>1, logBlock=>$logBlockTrace)
   or die("$0: could not create fork-pool with socket '$qpath': $!");
 #DTA::CAB->info("created job queue on UNIX socket '$qpath'");
 
@@ -467,18 +478,22 @@ $fp->serverMain();
 $SIG{CHLD} = undef; ##-- remove installed reaper-sub, if any
 $fp->waitall();
 
+##-- check for any remaining unflushed data blocks
+my $flushok=1;
+my ($bkey,$bt);
+while (($bkey,$bt)=each(%{$fp->{blocks}||{}})) {
+  next if (!$bt || !$bt->{pending} || !@{$bt->{pending}});
+  $fp->logcarp("found ", scalar(@{$bt->{pending}}), " unflushed data block(s) for '$bkey'");
+  $flushok = 0;
+}
+$fp->logcroak("some data blocks were not flushed to disk") if (!$flushok);
+
+
 ##------------------------------------------------------
 ## main: guts: profiling
 
 if ($job{doProfile}) {
   DTA::CAB::Logger->logProfile('info', tv_interval($tv_started,[gettimeofday]), @$fp{qw(ntok nchr)});
-}
-if (0) {
-  ##-- DEBUG memory usage
-  select STDERR;
-  $|=1;
-  print "$0: all done (enter to exit) ";
-  $_=<STDIN>;
 }
 
 ##======================================================================
@@ -486,6 +501,19 @@ if (0) {
 
 ##-- be nice & say goodbyte
 DTA::CAB::Logger->info("program exiting normally.");
+
+if (1) {
+  ##-- DEBUG memory usage
+  my $memusg = `ps -p $$ -o rss=,vsz=`;
+  chomp($memusg);
+  my ($rss,$vsz) = split(' ',$memusg,2);
+  DTA::CAB->info("Memory usage via ps: RSS=$rss, VSZ=$vsz");
+  #$_=<STDIN>;
+
+  ##-- dummy debug
+  our $cyclic = bless({},'DTA::CAB');
+  $cyclic->{self} = $cyclic;
+}
 
 ##-- main: cleanup: queues & temporary files
 sub cleanup {
@@ -541,6 +569,9 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-format TEMPLATE         ##-- set output format (default=STDOUT)
+
+  -format-class CLASS             ##-- alias for -input-class=CLASS -output-class=CLASS
+  -format-option OPT=VALUE        ##-- alias for -input-option OPT=VALUE -output-option OPT=VALUE
 
  Logging Options                  ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (default=TRACE)

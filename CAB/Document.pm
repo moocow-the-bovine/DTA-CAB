@@ -78,7 +78,7 @@ sub getTypes {
   my ($typ);
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (exists($types->{$_->{text}}));
-    $typ = $types->{$_->{text}} = bless({%$_},'DTA::CAB::Token');
+    $typ = $types->{$_->{text}} = {%$_};
     delete(@$typ{@nokeys});
   }
   return $types;
@@ -93,7 +93,7 @@ sub getTextTypes {
   my ($typ);
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (exists($types->{$_->{text}}));
-    $typ = $types->{$_->{text}} = bless({text=>$_->{text}},'DTA::CAB::Token');
+    $typ = $types->{$_->{text}} = {text=>$_->{text}};
   }
   return $types;
 }

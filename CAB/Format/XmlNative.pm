@@ -109,7 +109,7 @@ sub new {
 
 ## %blockOpts = $CLASS_OR_OBJECT->blockDefaults()
 ##  + returns default block options as for blockOptions()
-##  + override returns as for $CLASS_OR_OBJECT->blockOptions('1M@s')
+##  + override returns as for $CLASS_OR_OBJECT->blockOptions('512k@s')
 sub blockDefaults {
   return ($_[0]->SUPER::blockDefaults(), bsize=>(512*1024), eob=>'s');
 }

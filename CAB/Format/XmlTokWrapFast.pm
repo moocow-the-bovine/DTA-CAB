@@ -62,91 +62,82 @@ sub new {
 ##  + otherwise caches & returns new XML::Parser
 sub xmlparser {
   return $_[0]{xprs} if (defined($_[0]{xprs}));
-  my $fmt = shift;
+  #my $fmt = shift;
 
   ##--------------------------------------
-  ## globals
+  ## closure variables
   my ($doc,$body, $s,$stoks, $w,@stack,%attrs);
 
   ##--------------------------------------
-  ## callbacks
-
-  ## undef = cb_init($expat)
-  my $cb_init = sub {
-    $body = [];
-    $doc  = {body=>$body};
-    @stack = qw();
-  };
-
-  ## undef = cb_start($expat, $elt,%attrs)
-  my $cb_start = sub {
-    %attrs = @_[2..$#_];
-    push(@stack,$_[1]);
-
-    if ($_[1] eq 'w') {
-      ##-- w
-      if (defined($attrs{t}) && !defined($attrs{text})) {
-	$attrs{text} = $attrs{t};
-	delete($attrs{t});
-      }
-      push(@$stoks, $w={%attrs});
-    }
-    elsif ($_[1] eq 'a') {
-      ##-- w/a
-      ; ##-- do nothing
-    }
-    elsif ($_[1] eq 's') {
-      ##-- s
-      push(@$body, $s={%attrs,tokens=>($stoks=[])});
-    }
-    elsif (@stack==1) {
-      ##-- doc
-      if (defined($attrs{'xml:base'})) {
-	$attrs{'base'}=$attrs{'xml:base'};
-	delete($attrs{'xml:base'});
-      }
-      $doc = {%attrs, body=>$body};
-    }
-  };
-
-  ## undef = cb_end($expat,$elt)
-  my $cb_end = sub {
-    pop(@stack);
-  };
-
-  ## undef = cb_char($expat,$string)
-  my $cb_char = sub {
-    push(@{$w->{toka}}, $_[1]) if ($stack[$#stack] eq 'a');
-  };
-
-  ## undef = cb_default($expat, $str)
-  #my $cb_default = sub {};
-
-  ## undef = cb_final($expat)
-  my $cb_final = sub {
-    $body = $s = $stoks = $w = undef;
-    return bless($doc,'DTA::CAB::Document');
-  };
-
-  ##--------------------------------------
   ## parser
-  my $xprs = XML::Parser->new
+  return $_[0]{xprs} = XML::Parser->new
     (
      ErrorContext => 1,
      ProtocolEncoding => 'UTF-8',
      #ParseParamEnt => '???',
      Handlers => {
-		  Init  => $cb_init,
-		  Char  => $cb_char,
-		  Start => $cb_start,
-		  End   => $cb_end,
+		  ##----------------
+		  ## undef = cb_init($expat)
+		  Init => sub {
+		    $body = [];
+		    $doc  = {body=>$body};
+		    @stack = qw();
+		  },
+
+		  ##----------------
+		  ## undef = cb_start($expat, $elt,%attrs)
+		  Start => sub {
+		    %attrs = @_[2..$#_];
+		    push(@stack,$_[1]);
+
+		    if ($_[1] eq 'w') {
+		      ##-- w
+		      if (defined($attrs{t}) && !defined($attrs{text})) {
+			$attrs{text} = $attrs{t};
+			delete($attrs{t});
+		      }
+		      push(@$stoks, $w={%attrs});
+		    } elsif ($_[1] eq 'a') {
+		      ##-- w/a
+		      ;		##-- do nothing
+		    } elsif ($_[1] eq 's') {
+		      ##-- s
+		      push(@$body, $s={%attrs,tokens=>($stoks=[])});
+		    } elsif (@stack==1) {
+		      ##-- doc
+		      if (defined($attrs{'xml:base'})) {
+			$attrs{'base'}=$attrs{'xml:base'};
+			delete($attrs{'xml:base'});
+		      }
+		      $doc = {%attrs, body=>$body};
+		    }
+		  },
+
+		  ##----------------
+		  ## undef = cb_end($expat,$elt)
+		  End => sub {
+		    pop(@stack);
+		  },
+
+		  ##----------------
+		  ## undef = cb_char($expat,$string)
+		  Char  => sub {
+		    push(@{$w->{toka}}, $_[1]) if ($stack[$#stack] eq 'a');
+		  },
+
+		  ##----------------
+		  ## undef = cb_default($expat, $str)
 		  #Default => $cb_default,
-		  Final => $cb_final,
+
+		  ##----------------
+		  ## $parse_rv = cb_final($expat)
+		  Final => sub {
+		    $body = $s = $stoks = $w = undef;
+		    return bless($doc,'DTA::CAB::Document');
+		  },
 		 },
     )
-      or $fmt->logconfess("couldn't create XML::Parser");
-
-  return $xprs;
+      or $_[0]->logconfess("couldn't create XML::Parser");
 }
 
 ##==============================================================================
@@ -172,6 +163,20 @@ sub close {
 ##  + override returns ':raw'
 sub iolayers {
   return qw(:raw);
+}
+
+##==============================================================================
+## Methods: I/O: Block-wise
+##==============================================================================
+
+##--------------------------------------------------------------
+## Methods: I/O: Block-wise: Generic
+
+## %blockOpts = $CLASS_OR_OBJECT->blockDefaults()
+##  + returns default block options as for blockOptions()
+##  + override returns as for $CLASS_OR_OBJECT->blockOptions('2m@s')
+sub blockDefaults {
+  return ($_[0]->SUPER::blockDefaults(), bsize=>(2*1024*1024), eob=>'s');
 }
 
 ##=============================================================================
