@@ -49,7 +49,7 @@ WriteMakefile
 		    'Unicruft' => 0.03,
 		    #'moot' => 0.02, ##-- moot/swig
 		    'Moot' => 0.01,  ##-- moot/xs
-		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File
+		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File, CDB_File
 		    ##--
 		    'Unicode::Normalize' => undef, # 1.02
 		    'Encode'=>undef,
@@ -63,6 +63,9 @@ WriteMakefile
 		    'File::Temp'  => undef,
 		    'File::Path'  => undef, ##-- for rmtree()
 		    'File::Map'   => undef, ##-- for regex-based blockScan()
+		    ##--
+		    'DB_File' => undef,
+		    'CDB_File' => undef,
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,
