@@ -446,7 +446,7 @@ else {
       File::Copy::copy(\*STDIN,$tmpfh)
 	  or die("$prog: could not spool stdin to $tmpfile: $!");
       $tmpfh->close();
-      $_ = $tmpfile;
+      $job->{input} = $tmpfile;
     }
 
     ##-- block-scan
@@ -502,7 +502,7 @@ if ($job{doProfile}) {
 ##-- be nice & say goodbyte
 DTA::CAB::Logger->info("program exiting normally.");
 
-if (1) {
+if (0) {
   ##-- DEBUG memory usage
   my $memusg = `ps -p $$ -o rss=,vsz=`;
   chomp($memusg);
