@@ -6,7 +6,6 @@
 
 package DTA::CAB::Format::XmlNative;
 use DTA::CAB::Format::XmlCommon;
-use DTA::CAB::Format::XmlXsl;
 use DTA::CAB::Datum ':all';
 use XML::LibXML;
 use IO::File;

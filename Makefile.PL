@@ -66,6 +66,11 @@ WriteMakefile
 		    ##--
 		    'DB_File' => undef,
 		    'CDB_File' => undef,
+		    'JSON::XS' => undef,
+		    'YAML::XS' => undef,
+		    'Template' => undef,
+		    'LWP::UserAgent' => undef,
+		    'HTTP::Daemon' => undef,
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,
