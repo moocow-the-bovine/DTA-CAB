@@ -38,7 +38,7 @@ BEGIN {
 ##     ##---- Output
 ##     #level    => $formatLevel,      ##-- output formatting level: n/a
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
-##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw)])
+##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh)])
 ##
 ##     ##---- Common
 ##     utf8  => $bool,                 ##-- default: 1
@@ -47,7 +47,7 @@ BEGIN {
 ## + inherited from DTA::CAB::Format::TT
 sub new {
   my $that = shift;
-  return $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw)]);
+  return $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh)]);
 }
 
 ##==============================================================================

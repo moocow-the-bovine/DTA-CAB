@@ -245,7 +245,7 @@ sub parseTTString {
 		  } else {
 		    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
 		  }
-		} elsif ($field =~ m/^\[(lts|eqpho|eqphox|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|eqrw|moot\/morph|dmoot\/morph)\] (.*)$/) {
+		} elsif ($field =~ m/^\[(lts|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|moot\/morph|dmoot\/morph|eq(?:pho(?:x?)|rw|lemma|tagh))\] (.*)$/) {
 		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph)
 		  ($fkey,$fval) = ($1,$2);
 		  if ($fkey =~ s/^rw\///) {
@@ -491,6 +491,13 @@ sub token2buf {
 			)} grep {defined($_)} @{$tok->{eqlemma}})
     if ($tok->{eqlemma});
 
+  ##-- lemma equivalents / tagh
+  $$bufr .= join('', map {("\t[eqtagh] "
+			 .(defined($_->{lo}) ? "$_->{lo} : " : '')
+			 .$_->{hi}
+			 .(defined($_->{w}) ? " <$_->{w}>" : '')
+			)} grep {defined($_)} @{$tok->{eqtagh}})
+    if ($tok->{eqtagh});
 
   ##-- unparsed fields (pass-through)
   if ($tok->{other}) {
