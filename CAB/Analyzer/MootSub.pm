@@ -93,12 +93,14 @@ sub analyzeSentences {
       $m->{lemma} = $l;
     }
     else {
-      ##-- extract lemma from best analysis
+      ##-- extract lemma from "best" analysis
       @a = grep {($_->{prob}||0) <= ($a[0]{prob}||0)} sort {($a->{prob}||0) <=> ($b->{prob}||0)} @a;
       if (@a > 0) {
+	##-- edit-distance-like heuristics: slows us down from ca. 3.3 tok/sec to ca. 2.9 tok/sec in dta/build/cab_corpus
 	$wr = qr([\Q$m->{word}\E]);
 	$_->{_lsim} = abs(length($m->{word}) - @{[ $_->{lemma} =~ m/$wr/g ]}) foreach (@a);
 	@a = sort {$a->{_lsim} <=> $b->{_lsim}} @a;
+	delete($_->{_lsim}) foreach (@a);
       }
       $m->{lemma} = $a[0]{lemma};
     }
