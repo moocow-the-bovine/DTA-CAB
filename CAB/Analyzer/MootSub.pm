@@ -75,7 +75,7 @@ sub analyzeSentences {
   $lz->_analyzeGuts($toks,$opts) if ($lz->enabled($opts));
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
-  my ($t,$l,@a);
+  my ($t,$l,@a,$wr);
   foreach $tok (@$toks) {
     $m = $tok->{$mlabel};
     $t = $m->{tag};
@@ -94,7 +94,13 @@ sub analyzeSentences {
     }
     else {
       ##-- extract lemma from best analysis
-      $m->{lemma} = (sort {($a->{prob}||0)<=>($b->{prob}||0) || ($a->{lemma}||'') cmp ($b->{lemma}||'')} @a)[0]{lemma};
+      @a = grep {($_->{prob}||0) <= ($a[0]{prob}||0)} sort {($a->{prob}||0) <=> ($b->{prob}||0)} @a;
+      if (@a > 0) {
+	$wr = qr([\Q$m->{word}\E]);
+	$->{_lsim} = abs(length($m->{word}) - @{[ $_->{lemma} =~ m/$wr/g ]}) foreach (@a);
+	@a = sort {$a->{_lsim} <=> $b->{_lsim}} @a;
+      }
+      $m->{lemma} = $a[0]{lemma};
     }
   }
 
