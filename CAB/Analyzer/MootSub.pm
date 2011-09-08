@@ -97,7 +97,7 @@ sub analyzeSentences {
       @a = grep {($_->{prob}||0) <= ($a[0]{prob}||0)} sort {($a->{prob}||0) <=> ($b->{prob}||0)} @a;
       if (@a > 0) {
 	$wr = qr([\Q$m->{word}\E]);
-	$->{_lsim} = abs(length($m->{word}) - @{[ $_->{lemma} =~ m/$wr/g ]}) foreach (@a);
+	$_->{_lsim} = abs(length($m->{word}) - @{[ $_->{lemma} =~ m/$wr/g ]}) foreach (@a);
 	@a = sort {$a->{_lsim} <=> $b->{_lsim}} @a;
       }
       $m->{lemma} = $a[0]{lemma};
