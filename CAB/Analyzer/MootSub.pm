@@ -8,6 +8,7 @@
 package DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Lemmatizer;
+use Text::LevenshteinXS qw();
 use Carp;
 use strict;
 our @ISA = qw(DTA::CAB::Analyzer);
@@ -29,7 +30,7 @@ sub new {
 									 analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
 									 analyzeWhich  =>'Sentences',
 									),
-			       xyTags => {map {($_=>undef)} qw(XY FM)}, #CARDNE ##-- if these tags are assigned, use literal text and not dmoot normalization
+			       xyTags => {map {($_=>undef)} qw(XY FM)}, #CARD NE ##-- use literal text (not dmoot) for these tags
 
 			       ##-- user args
 			       @_
@@ -64,46 +65,65 @@ sub analyzeSentences {
     ##-- ensure that $tok->{moot}, $tok->{moot}{tag} are defined
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
     $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
-
-#    ##-- ensure $tok->{moot}{word} is defined (should already be populated by Moot with wantTaggedWord=>1)
-#    $m->{word} = (defined($tok->{dmoot}) ? $tok->{dmoot}{tag}
-#		  : (defined($tok->{xlit}) ? $tok->{xlit}{latin1Text}
-#		     : $tok->{text})) if (!defined($m->{word}));
   }
 
   ##-- Step 2: run lemmatizer (populates $tok->{moot}{analyses}[$i]{lemma}
   $lz->_analyzeGuts($toks,$opts) if ($lz->enabled($opts));
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
-  my ($t,$l,@a,$wr);
+  my %cache = qw(); ##-- $cache{"$word\t$tag"} = $lemma
+  my ($w,$t,$l,$key,$ma,$maa,%l2d);
   foreach $tok (@$toks) {
-    $m = $tok->{$mlabel};
-    $t = $m->{tag};
-    @a = $m->{analyses} ? grep {$_->{tag} eq $t} @{$m->{analyses}} : qw();
-    @a = ($m->{analyses}[0]) if (!@a && $m->{analyses} && @{$m->{analyses}}); ##-- hack: any analysis is better than none!
-    if (!@a
+    $m      = $tok->{$mlabel};
+    ($w,$t) = @$m{qw(word tag)};
+    $key    = "$w/$t";
+    if (defined($l=$cache{$key})) {
+      ##-- cached value
+      $m->{lemma}=$l;
+      next;
+    }
+
+    ##-- get analyses
+    $ma  = $m->{analyses} || [];                       ##-- all
+    $maa = @$ma ? [grep {$_->{tag} eq $t} @$ma] : $ma; ##-- ... with matching tag?
+    $ma  = $maa if ($maa ne $ma && @$maa);             ##-- ... or without!
+
+    if (!@$ma
 	|| exists($xytags->{$t})
         #|| ($t eq 'NE' && !$tok->{msafe})
-        ) {
-
-      ##-- hack: bash XY-tagged elements to raw (possibly transliterated) text
-      $l = $m->{word} = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
-      $l =~ s/\s+/_/g;
-      $l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
-      $m->{lemma} = $l;
-    }
-    else {
-      ##-- extract lemma from "best" analysis
-      @a = grep {($_->{prob}||0) <= ($a[0]{prob}||0)} sort {($a->{prob}||0) <=> ($b->{prob}||0)} @a;
-      if (@a > 0) {
-	##-- edit-distance-like heuristics: slows us down from ca. 3.3 tok/sec to ca. 2.9 tok/sec in dta/build/cab_corpus
-	$wr = qr([\Q$m->{word}\E]);
-	$_->{_lsim} = abs(length($m->{word}) - @{[ $_->{lemma} =~ m/$wr/g ]}) foreach (@a);
-	@a = sort {$a->{_lsim} <=> $b->{_lsim}} @a;
-	delete($_->{_lsim}) foreach (@a);
+        )
+      {
+	##-- hack: bash XY-tagged elements to raw (possibly transliterated) text
+	$l = $m->{word} = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
+	$l =~ s/\s+/_/g;
+	#$l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
+	$l =~ s/[\x{ac}]//g;
+	$l = lc($l);
+	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/);
+	$m->{lemma} = $cache{$key} = $l;
       }
-      $m->{lemma} = $a[0]{lemma};
-    }
+    else
+      {
+	##-- extract lemma from "best" analysis
+	%l2d = qw();
+	if ($t =~ /^N/) {
+	  ##-- upper-case N* lemmata
+	  $_->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g foreach (@$ma);
+	}
+	foreach (@$ma) {
+	  ##-- get lemma distance
+	  $l2d{$_->{lemma}} = Text::LevenshteinXS::distance($w, $_->{lemma}) if (!defined($l2d{$_->{lemma}}));
+	}
+	$m->{lemma} = $cache{$key} =
+	  (
+	   sort {
+	     (($a->{cost}||$a->{prob}||0)<=>($b->{cost}||$b->{prob}||0)
+	      ||
+	      ($l2d{$a->{lemma}} <=> $l2d{$b->{lemma}})
+	     )
+	   } @$ma
+	  )[0]{lemma};
+      }
   }
 
   ##-- return

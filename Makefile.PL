@@ -58,6 +58,7 @@ WriteMakefile
 		    'Pod::Usage'=>undef,
 		    'Storable'=>undef,
 		    'Time::HiRes'=>undef,
+		    'Text::LevenshteinXS'=>undef, ##-- for Analyzer::MootSub best-lemma heuristics
 		    ##--
 		    #File::Queue => undef,
 		    'File::Temp'  => undef,

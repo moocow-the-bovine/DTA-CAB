@@ -114,15 +114,21 @@ sub _analyzeGuts {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
       $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
-      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:[\\\¬\~\|\=\+\#])//g;
+      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:[\\\~\|\=\+\#\x{ac}])//g;
     } else {
       $lemma = $_->{$lab_txt};
+      $lemma =~ s/\x{ac}//g;
     }
-    $lemma =~ s/^(.)(.*)$/$1\L$2\E/; #if (length($lemma) > 3 && $lemma =~ /[[:lower:]]/);
-    $lemma =~ s/^\s+//;
-    $lemma =~ s/\s+$//;
+    ##-- lemma always lower-case here
+    $lemma =~ s/(?:^\s+|\s+\z)//g;
     $lemma =~ s/\s+/_/g;
-    $_->{$alab} = $lemma;
+    $_->{$alab} = lc($lemma);
+    ##--
+    ##$lemma =~ s/^(.)(.*)$/$1\L$2\E/; #if (length($lemma) > 3 && $lemma =~ /[[:lower:]]/);
+    #$lemma =~ s/^\s+//;
+    #$lemma =~ s/\s+$//;
+    #$lemma =~ s/\s+/_/g;
+    #$_->{$alab} = $lemma;
   }
 
   ##-- postprocessing: re-expand types
