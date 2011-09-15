@@ -95,7 +95,8 @@ sub ensureLoaded {
 
     ##-- json with utf8(1) wants utf8-encoded octets, so we munge them here
     foreach (values %{$dic->{ttd}{dict}}) {
-      $_ = Encode::encode_utf8($_) if (utf8::is_utf8($_));
+      #$_ = Encode::encode_utf8($_) if (utf8::is_utf8($_));
+      utf8::encode($_) if (utf8::is_utf8($_));
     }
   }
   return $rc;

@@ -47,7 +47,7 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- analyzers
-			   static => DTA::CAB::Analyzer::Cache::Static->new(typeKeys=>[]), ##-- avoid deep recursion
+			   static => DTA::CAB::Analyzer::Cache::Static->new(),
 			   exlex => DTA::CAB::Analyzer::ExLex->new(),
 			   tokpp => DTA::CAB::Analyzer::TokPP->new(),
 			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),

@@ -111,7 +111,7 @@ sub analyzeSentences {
 	  $l   = $_->{lemma};
 	  $ld  = $l2d{$l} = Text::LevenshteinXS::distance($w, $l) if (!defined($ld=$l2d{$l}));
 	  $ld += 1000*($_->{cost}||$_->{prob}||0); ##-- hack: morph cost clobbers edit-distance
-	  next if (defined($ld0) || $ld0 <= $ld);
+	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
 	  $l0  = $l;
 	}

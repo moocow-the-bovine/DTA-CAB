@@ -15,13 +15,13 @@ use strict;
 our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonCDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm, DTA::CAB::Analyzer::Automaton
+##  + object structure: see DTA::CAB::Analyzer::Dict::JsonCDB, DTA::CAB::Analyzer::Dict::Json
 sub new {
   my $that = shift;
   my $dic = $that->SUPER::new(
-			   ##-- overrides
+			      ##-- overrides
 			      label => 'exlex',
-			      typeKeys => undef, ##-- see below
+			      typeKeys => undef, ##-- auto-scanned on ensureLoaded() if not defined here
 
 			      analyzeCode =>join("\n",
 						 (
@@ -39,7 +39,7 @@ sub new {
 			     );
 
   ##-- set type keys from DTA::CAB::Chain::DTA if possible and not already set
-  $dic->{typeKeys} = [DTA::CAB::Chain::DTA->new->typeKeys()] if (!$dic->{typeKeys} && DTA::CAB::Chain::DTA->can('new'));
+  #$dic->{typeKeys} = [DTA::CAB::Chain::DTA->new->typeKeys()] if (!$dic->{typeKeys} && DTA::CAB::Chain::DTA->can('new'));
   return $dic;
 }
 
@@ -47,6 +47,37 @@ sub new {
 sub analyzePre {
   my $dic = shift;
   return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
+}
+
+##==============================================================================
+## Methods: I/O
+
+##--------------------------------------------------------------
+## Methods: I/O: Input: all
+
+## $bool = $dic->ensureLoaded()
+##  + ensures analyzer data is loaded from default files
+sub ensureLoaded {
+  my $dic = shift;
+  my $rc = $dic->SUPER::ensureLoaded(@_) || return undef;
+
+  ##-- maybe scan for embedded keys
+  if (!defined($dic->{typeKeys}) && $dic->{dbf} && $dic->{dbf}{tied}) {
+    $dic->info("scanning CDB file for sub-keys...");
+    my $tied  = $dic->{dbf}{tied};
+    my %jkeys = qw();
+    my $jxs   = $dic->jsonxs;
+    my ($t,$js,$j);
+    for ($t=$tied->FIRSTKEY; defined($t); $t=$tied->NEXTKEY($t)) {
+      $js = $tied->FETCH($t);
+      $j  = $jxs->decode($js);
+      @jkeys{keys %$j} = qw() if ((ref($j)||'') eq 'HASH');
+    }
+    $dic->{typeKeys} = [sort keys %jkeys];
+    $dic->info("scanned sub-keys {", join(',', @{$dic->{typeKeys}}), "}");
+  }
+
+  return $rc;
 }
 
 
