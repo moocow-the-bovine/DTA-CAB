@@ -119,16 +119,13 @@ sub _analyzeGuts {
       $lemma = $_->{$lab_txt};
       $lemma =~ s/\x{ac}//g;
     }
-    ##-- lemma always lower-case here
+    ##-- normalization
     $lemma =~ s/(?:^\s+|\s+\z)//g;
     $lemma =~ s/\s+/_/g;
-    $_->{$alab} = lc($lemma);
-    ##--
-    ##$lemma =~ s/^(.)(.*)$/$1\L$2\E/; #if (length($lemma) > 3 && $lemma =~ /[[:lower:]]/);
-    #$lemma =~ s/^\s+//;
-    #$lemma =~ s/\s+$//;
-    #$lemma =~ s/\s+/_/g;
-    #$_->{$alab} = $lemma;
+    $lemma = lc($lemma);
+    $lemma =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g
+      if ($_->{tag} ? ($_->{tag}=~m/^N/) : ($_->{hi} && $_->{hi}=~m/\[_N/));
+    $_->{$alab} = $lemma;
   }
 
   ##-- postprocessing: re-expand types

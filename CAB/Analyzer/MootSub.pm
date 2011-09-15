@@ -59,10 +59,9 @@ sub analyzeSentences {
   my $xytags = $asub->{xyTags};
   my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
-  ##-- Step 1: populate $tok->{moot}{word}
+  ##-- Step 1: ensure $tok->{moot}, $tok->{moot}{tag} are defined (should be obsolete!)
   my ($tok,$m);
   foreach $tok (@$toks) {
-    ##-- ensure that $tok->{moot}, $tok->{moot}{tag} are defined
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
     $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
   }
@@ -72,7 +71,7 @@ sub analyzeSentences {
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
   my %cache = qw(); ##-- $cache{"$word\t$tag"} = $lemma
-  my ($w,$t,$l,$key,$ma,$maa,%l2d);
+  my ($w,$t,$l,$key,$ma,$maa,%l2d, $ld,$ld0, $l0);
   foreach $tok (@$toks) {
     $m      = $tok->{$mlabel};
     ($w,$t) = @$m{qw(word tag)};
@@ -94,35 +93,29 @@ sub analyzeSentences {
         )
       {
 	##-- hack: bash XY-tagged elements to raw (possibly transliterated) text
-	$l = $m->{word} = (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text});
+	$l = $m->{word} = (defined($tok->{exlex}) ? $tok->{exlex} : (defined($tok->{xlit}) && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text}));
 	$l =~ s/\s+/_/g;
 	#$l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
 	$l =~ s/[\x{ac}]//g;
 	$l = lc($l);
-	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/);
+	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
 	$m->{lemma} = $cache{$key} = $l;
       }
     else
       {
 	##-- extract lemma from "best" analysis
 	%l2d = qw();
-	if ($t =~ /^N/) {
-	  ##-- upper-case N* lemmata
-	  $_->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g foreach (@$ma);
-	}
+	$l0 = $ld0 = undef;
 	foreach (@$ma) {
 	  ##-- get lemma distance
-	  $l2d{$_->{lemma}} = Text::LevenshteinXS::distance($w, $_->{lemma}) if (!defined($l2d{$_->{lemma}}));
+	  $l   = $_->{lemma};
+	  $ld  = $l2d{$l} = Text::LevenshteinXS::distance($w, $l) if (!defined($ld=$l2d{$l}));
+	  $ld += 1000*($_->{cost}||$_->{prob}||0); ##-- hack: morph cost clobbers edit-distance
+	  next if (defined($ld0) || $ld0 <= $ld);
+	  $ld0 = $ld;
+	  $l0  = $l;
 	}
-	$m->{lemma} = $cache{$key} =
-	  (
-	   sort {
-	     (($a->{cost}||$a->{prob}||0)<=>($b->{cost}||$b->{prob}||0)
-	      ||
-	      ($l2d{$a->{lemma}} <=> $l2d{$b->{lemma}})
-	     )
-	   } @$ma
-	  )[0]{lemma};
+	$m->{lemma} = $cache{$key} = $l0;
       }
   }
 
