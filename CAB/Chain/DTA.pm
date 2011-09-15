@@ -45,49 +45,50 @@ our @ISA = qw(DTA::CAB::Chain::Multi);
 ##  + object structure: HASH
 sub new {
   my $that = shift;
-  return $that->SUPER::new(
-			   ##-- analyzers
-			   static => DTA::CAB::Analyzer::Cache::Static->new(),
-			   exlex => DTA::CAB::Analyzer::ExLex->new(),
-			   tokpp => DTA::CAB::Analyzer::TokPP->new(),
-			   xlit  => DTA::CAB::Analyzer::Unicruft->new(),
-			   ##
-			   lts   => DTA::CAB::Analyzer::LTS->new(),
-			   ##
-			   morph => DTA::CAB::Analyzer::Morph->new(),
-			   mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
-			   msafe => DTA::CAB::Analyzer::MorphSafe->new(),
-			   rw    => DTA::CAB::Analyzer::Rewrite->new(),
-			   rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
-			   ##
-			   eqphox => DTA::CAB::Analyzer::EqPhoX->new(),
-			   eqpho => DTA::CAB::Analyzer::EqPho->new(),
-			   eqrw  => DTA::CAB::Analyzer::EqRW->new(),
-			   ##
-			   ##
-			   dmoot  => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator ((n>=1)-grams)
-			   dmoot1 => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator (1-grams only)
-			   dmootsub => DTA::CAB::Analyzer::DmootSub->new(),     ##-- moot n-gram disambiguator: sub-morph
-			   moot  => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; (n>1)-grams)
-			   moot1 => DTA::CAB::Analyzer::Moot->new(),             ##-- moot tagger (on dmoot output; 1-grams only)
-			   mootsub => DTA::CAB::Analyzer::MootSub->new(),       ##-- moot tagger, post-processing hacks
-			   mapclass => DTA::CAB::Analyzer::DTAMapClass->new(),  ##-- mapping class (post-moot)
-			   ##
-			   eqlemma  => DTA::CAB::Analyzer::EqLemma->new(),      ##-- eqlemma (best only)
-			   ##
-			   clean => DTA::CAB::Analyzer::DTAClean->new(),
+  return $that->SUPER::new
+    (
+     ##-- analyzers
+     static => DTA::CAB::Analyzer::Cache::Static->new(typeKeys=>[qw(eqphox errid exlex f lts mlatin morph msafe pnd rw xlit)]),
+     exlex => DTA::CAB::Analyzer::ExLex->new(),
+     tokpp => DTA::CAB::Analyzer::TokPP->new(),
+     xlit  => DTA::CAB::Analyzer::Unicruft->new(),
+     ##
+     lts   => DTA::CAB::Analyzer::LTS->new(),
+     ##
+     morph => DTA::CAB::Analyzer::Morph->new(),
+     mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
+     msafe => DTA::CAB::Analyzer::MorphSafe->new(),
+     rw    => DTA::CAB::Analyzer::Rewrite->new(),
+     rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
+     ##
+     eqphox => DTA::CAB::Analyzer::EqPhoX->new(),
+     eqpho => DTA::CAB::Analyzer::EqPho->new(),
+     eqrw  => DTA::CAB::Analyzer::EqRW->new(),
+     ##
+     ##
+     dmoot  => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator ((n>=1)-grams)
+     dmoot1 => DTA::CAB::Analyzer::Moot::Boltzmann->new(), ##-- moot n-gram disambiguator (1-grams only)
+     dmootsub => DTA::CAB::Analyzer::DmootSub->new(), ##-- moot n-gram disambiguator: sub-morph
+     moot  => DTA::CAB::Analyzer::Moot->new(), ##-- moot tagger (on dmoot output; (n>1)-grams)
+     moot1 => DTA::CAB::Analyzer::Moot->new(), ##-- moot tagger (on dmoot output; 1-grams only)
+     mootsub => DTA::CAB::Analyzer::MootSub->new(), ##-- moot tagger, post-processing hacks
+     mapclass => DTA::CAB::Analyzer::DTAMapClass->new(), ##-- mapping class (post-moot)
+     ##
+     eqlemma  => DTA::CAB::Analyzer::EqLemma->new(), ##-- eqlemma (best only)
+     ##
+     clean => DTA::CAB::Analyzer::DTAClean->new(),
 
-			   ##-- security
-			   autoClean => 0,  ##-- always run 'clean' analyzer regardless of options; checked in both doAnalyze(), analyzeClean()
-			   defaultChain => 'default',
+     ##-- security
+     autoClean => 0, ##-- always run 'clean' analyzer regardless of options; checked in both doAnalyze(), analyzeClean()
+     defaultChain => 'default',
 
-			   ##-- user args
-			   @_,
+     ##-- user args
+     @_,
 
-			   ##-- overrides
-			   chains => undef, ##-- see setupChains() method
-			   chain => undef, ##-- see setupChains() method
-			  );
+     ##-- overrides
+     chains => undef,		##-- see setupChains() method
+     chain => undef,		##-- see setupChains() method
+    );
 }
 
 ##==============================================================================

@@ -20,7 +20,9 @@ sub new {
   my $that = shift;
   my $dic = $that->SUPER::new(
 			      ##-- overrides
-			      label => 'exlex',
+			      label => 'static',
+
+			      #typeKeys=>[qw(eqphox errid exlex f lts mlatin morph msafe pnd rw xlit)],
 			      typeKeys => undef, ##-- auto-scanned on ensureLoaded() if not defined here
 
 			      analyzeCode =>join("\n",
