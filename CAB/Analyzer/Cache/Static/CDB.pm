@@ -85,7 +85,7 @@ sub ensureLoaded {
 ## $prefix = $dict->analyzePre()
 sub analyzePre {
   my $dic = shift;
-  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
+  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_);#.' my $tied=tied($dhash);';
 }
 
 
