@@ -5,7 +5,7 @@
 ## Description: lemma-equivalence class expansion: default
 
 ##==============================================================================
-## Package: Analyzer::Morph
+## Package
 ##==============================================================================
 package DTA::CAB::Analyzer::EqLemma;
 use strict;
@@ -13,8 +13,11 @@ use strict;
 #use DTA::CAB::Analyzer::EqLemma::BDB;
 #our @ISA = qw(DTA::CAB::Analyzer::EqLemma::BDB);
 ##
-use DTA::CAB::Analyzer::EqLemma::CDB;
-our @ISA = qw(DTA::CAB::Analyzer::EqLemma::CDB);
+#use DTA::CAB::Analyzer::EqLemma::CDB;
+#our @ISA = qw(DTA::CAB::Analyzer::EqLemma::CDB);
+##
+use DTA::CAB::Analyzer::EqLemma::JsonCDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqLemma::JsonCDB);
 
 1; ##-- be happy
 
@@ -54,7 +57,7 @@ DTA::CAB::Analyzer::EqLemma - lemma-equivalence class expander: default
 =head1 DESCRIPTION
 
 This class is just a convenience wrapper for
-L<DTA::CAB::Analyzer::EqLemma::BDB|DTA::CAB::Analyzer::EqLemma::BDB>.
+L<DTA::CAB::Analyzer::EqLemma::JsonCDB|DTA::CAB::Analyzer::EqLemma::JsonCDB>.
 
 =cut
 

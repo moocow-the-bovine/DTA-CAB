@@ -14,6 +14,7 @@ use Carp;
 use strict;
 our @ISA = qw(DTA::CAB::Analyzer::Dict::JsonCDB);
 
+##--------------------------------------------------------------
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure: see DTA::CAB::Analyzer::Dict::JsonCDB, DTA::CAB::Analyzer::Dict::Json
 sub new {
@@ -45,18 +46,16 @@ sub new {
   return $dic;
 }
 
-## $prefix = $dict->analyzePre()
-sub analyzePre {
-  my $dic = shift;
-  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
+##--------------------------------------------------------------
+## @keys = $anl->typeKeys(\%opts)
+##  + get type keys
+##  + default respects $opts->{"${key}_enabled"}
+sub typeKeys {
+  return qw() if (!$_[0]{typeKeys});
+  return grep {!defined($_[1]{"${_}_enabled"}) || $_[1]{"${_}enabled"}} @{$_[0]{typeKeys}};
 }
 
-##==============================================================================
-## Methods: I/O
-
 ##--------------------------------------------------------------
-## Methods: I/O: Input: all
-
 ## $bool = $dic->ensureLoaded()
 ##  + ensures analyzer data is loaded from default files
 sub ensureLoaded {
@@ -80,6 +79,13 @@ sub ensureLoaded {
   }
 
   return $rc;
+}
+
+##--------------------------------------------------------------
+## $prefix = $dict->analyzePre()
+sub analyzePre {
+  my $dic = shift;
+  return $dic->DTA::CAB::Analyzer::Dict::JsonCDB::analyzePre(@_).' my $tied=tied($dhash);';
 }
 
 
