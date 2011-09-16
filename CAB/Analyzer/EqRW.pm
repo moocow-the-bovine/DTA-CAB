@@ -5,7 +5,7 @@
 ## Description: phonetic equivalence class expansion: default
 
 ##==============================================================================
-## Package: Analyzer::Morph
+## Package
 ##==============================================================================
 package DTA::CAB::Analyzer::EqRW;
 use strict;
@@ -16,8 +16,11 @@ use strict;
 #use DTA::CAB::Analyzer::EqRW::BDB;
 #our @ISA = qw(DTA::CAB::Analyzer::EqRW::BDB);
 ##--
-use DTA::CAB::Analyzer::EqRW::CDB;
-our @ISA = qw(DTA::CAB::Analyzer::EqRW::CDB);
+#use DTA::CAB::Analyzer::EqRW::CDB;
+#our @ISA = qw(DTA::CAB::Analyzer::EqRW::CDB);
+##--
+use DTA::CAB::Analyzer::EqRW::JsonCDB;
+our @ISA = qw(DTA::CAB::Analyzer::EqRW::JsonCDB);
 
 1; ##-- be happy
 
@@ -55,7 +58,7 @@ DTA::CAB::Analyzer::EqRW - rewrite-equivalence class expander: default
 =head1 DESCRIPTION
 
 Default rewrite-equivalence class expander.
-Just a wrapper for L<DTA::CAB::Analyzer::EqRW::CDB|DTA::CAB::Analyzer::EqRW::CDB>.
+Just a wrapper for L<DTA::CAB::Analyzer::EqRW::JsonCDB|DTA::CAB::Analyzer::EqRW::JsonCDB>.
 
 =cut
 
@@ -74,10 +77,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Bryan Jurish
+Copyright (C) 2009-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO

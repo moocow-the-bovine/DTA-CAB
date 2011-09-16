@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::EqPho::JsonCDB.pm
+## File: DTA::CAB::Analyzer::EqRW::JsonCDB.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
 ## Description: dictionary-based equivalence-class expander, phonetic variant
 
-package DTA::CAB::Analyzer::EqPho::JsonCDB;
+package DTA::CAB::Analyzer::EqRW::JsonCDB;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Dict::JsonCDB;
 use strict;
@@ -25,21 +25,20 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- options
-			   label       => 'eqpho',
+			   label       => 'eqrw',
 			   eqIdWeight  => 0,
 			   #allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
-			   allowRegex  => '(?:[[:alpha:]])',
+			   allowRegex  => '[[:alpha:]]',
 			   ##
 			   analyzeCode => join("\n",
 					       'return if (defined($_->{$lab})); ##-- avoid re-analysis',
-					       'if (!defined($val=$tied->FETCH('._am_lts.'))) {',
-					       ' $_->{$lab} = ['._am_id_fst('$_','$dic->{eqIdWeight}').'];',
-					       ' return;',
-					       '}',
-					       '$tmp  = undef; ##-- avoid bleed-over from _am_fst_uniq',
-					       '$val  = $jxs->decode($val);',
-					       '@$val = '._am_fst_usort((_am_id_fst('$_','$dic->{eqIdWeight}').',@$val'),'$tmp').';',
-					       '$_->{$lab} = $val;',
+					       '$tmp=undef; ##-- re-initialize temporary used by _am_fst_uniq',
+					       '$_->{$lab}=['._am_fst_usort((_am_id_fst('$_', '$dic->{eqIdWeight}')
+									     .', map {defined($val=$tied->FETCH($_)) ? @{$jxs->decode($val)} : qw()}'
+									     .join(',', _am_xtext, _am_xlit, _am_rw)
+									    ),
+									    '$tmp'
+									   ).'];',
 					      ),
 
 			   ##-- user args
@@ -53,6 +52,45 @@ sub analyzePre {
   return $dic->SUPER::analyzePre(@_)."\n".'my $tied=tied(%$dhash);'."\n".'my ($tmp);';
 }
 
+##-- DEBUG
+sub analyzeCode_DEBUG {
+  my $anl = shift;
+
+  my $jxs=$anl->jsonxs;
+  my $dic=$anl;
+  my $lab=$dic->{label};
+  my $dhash=$dic->dictHash;
+  my ($key,$val,@keys,@vals,%vals);
+  my $tied=tied(%$dhash);
+  my ($tmp);
+  return sub {
+    return if (defined($_->{$lab})); ##-- avoid re-analysis
+    if (!defined($val=$tied->FETCH(($_->{lts} && @{$_->{lts}} ? $_->{lts}[0]{hi} : $_->{text})))) {
+      $_->{$lab} = [{hi=>($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}),w=>$dic->{eqIdWeight}}]; ##== _am_id_fst
+      return;
+    }
+    $tmp  = undef;
+    $val  = $jxs->decode($val);
+    @$val = (
+	     sort {
+	       ($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")
+	     } (
+		map {
+		  $tmp && $tmp->{hi} eq $_->{hi} ? qw() : ($tmp=$_)
+		}
+		sort {
+		  ($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)
+		}
+		{hi=>($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}),w=>$dic->{eqIdWeight}}, ##== _am_id_fst
+		@$val
+	       ) ##== _am_fst_uniq
+	    ) ##== _am_fst_sort
+      ;
+    $_->{$lab} = $val;
+  };
+}
+
+
 1; ##-- be happy
 
 __END__
@@ -65,7 +103,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::EqPho::JsonCDB - Json-valued CDB dictionary-based phonetic equivalence expander
+DTA::CAB::Analyzer::EqRW::JsonCDB - Json-valued CDB dictionary-based phonetic equivalence expander
 
 =cut
 
@@ -75,12 +113,12 @@ DTA::CAB::Analyzer::EqPho::JsonCDB - Json-valued CDB dictionary-based phonetic e
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::EqPho::JsonCDB;
+ use DTA::CAB::Analyzer::EqRW::JsonCDB;
  
  ##========================================================================
  ## Constructors etc.
  
- $eqp = DTA::CAB::Analyzer::EqPho::JsonCDB->new(%args);
+ $eqp = DTA::CAB::Analyzer::EqRW::JsonCDB->new(%args);
  
 
 =cut
@@ -106,7 +144,7 @@ Composite analyzers should also include an 'lts' phonetic analyzer.
 
 =item Variable: @ISA
 
-DTA::CAB::Analyzer::EqPho::JsonCDB inherits from
+DTA::CAB::Analyzer::EqRW::JsonCDB inherits from
 L<DTA::CAB::Analyzer::Dict::JsonCDB>.
 
 =back
@@ -129,6 +167,7 @@ Constructor.  Sets the following default options:
 
  label       => 'eqpho',
  eqIdWeight  => 0,
+ #allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
  #allowRegex  => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
  allowRegex  => '(?:[[:alpha:]])',
  analyzeCode => ... ##-- see the source
