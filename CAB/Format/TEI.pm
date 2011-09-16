@@ -280,7 +280,9 @@ sub defaultExtension { return '.tei.xml'; }
 sub flush {
   my $fmt = shift;
   $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
-  $fmt->SUPER::flush(@_);
+  #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
+  delete $fmt->{xdoc};
+  return $fmt;
 }
 
 ## $fmt = $fmt->toString(\$str)
