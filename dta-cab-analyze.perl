@@ -159,6 +159,9 @@ our ($ifmt,$ofmt, $fp);
 ##-- save per-job overridable options
 our $job0 = Storable::dclone(\%job);
 
+##-- for cabeval stuff
+our %analyzeOpts = %{$job0->{analyzeOpts}};
+
 ##-- main: init: log4perl
 DTA::CAB::Logger->logInit();
 
