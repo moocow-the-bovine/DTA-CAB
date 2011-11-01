@@ -164,6 +164,7 @@ sub loadCascade {
   $aut->setLookupOptions($aut);
   #$aut->{result} = Gfsm::Automaton->new($csc->semiring_type);  ##-- reset result automaton
   delete($aut->{_analyze});
+  #print STDERR sprintf("loadCascade(): csc=0x%0.8x, cl=0x%0.8x\n", $$csc, ${$aut->{fst}}); ##-- DEBUG
   return $aut;
 }
 

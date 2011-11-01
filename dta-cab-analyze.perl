@@ -92,7 +92,7 @@ sub globalOptionSpecs {
      ##-- Parallelization
      'jobs|jn|j=i'                         => \$njobs,
      'job-queue|queue-path|qpath|jq|qp=s'  => \$qpath,
-     'input-list|il|l!'                    => \$inputList,
+     'input-list|il|list|l!'               => \$inputList,
      'keeptmp|keeptemp|keep!'              => \$keeptmp,
 
      ##-- Block-wise processing
