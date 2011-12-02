@@ -162,7 +162,7 @@ sub shortName {
 ##  + select output to filehandle $fh
 sub toFh {
   $_[0]->DTA::CAB::Format::toFh(@_[1..$#_]);
-  $_[0]->jsonxs->utf8((grep {$_ eq 'utf8'} PerlIO::get_layers($_[1])) ? 0 : 1)->pretty($_[0]{level}>0 ? 1 : 0);
+  $_[0]->jsonxs->utf8((grep {$_ eq 'utf8'} PerlIO::get_layers($_[1])) ? 0 : 1)->pretty(($_[0]{level}||0)>0 ? 1 : 0);
   return $_[0];
 }
 
