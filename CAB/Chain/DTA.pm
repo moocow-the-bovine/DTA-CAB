@@ -138,11 +138,13 @@ sub setupChains {
      'expand.old'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw)}],
      'expand.ext'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
      'expand.all'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
-     'expand.eqpho'   =>[@$ach{qw(static exlex       xlit lts                             eqpho)}],
-     'expand.eqrw'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw            eqrw)}],
-     'expand.eqlemma' =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                 eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
+     'expand.eqpho'  =>[@$ach{qw(static exlex       xlit lts                             eqpho)}],
+     'expand.eqrw'   =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw             eqrw)}],
+     'expand.eqlemma'=>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
      'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
+     'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
      'caberr'        =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
+     'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
      'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
     };
