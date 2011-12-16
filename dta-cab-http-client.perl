@@ -31,8 +31,9 @@ our $VERSION = $DTA::CAB::VERSION;
 our ($help,$man,$version,$verbose);
 #$verbose = 'default';
 
-##-- Log options
-our %logOpts = (rootLevel=>'WARN', level=>'INFO'); ##-- options for DTA::CAB::Logger::ensureLog()
+##-- Logging options
+$DTA::CAB::Logger::defaultLogOpts{rootLevel}='WARN';
+$DTA::CAB::Logger::defaultLogOpts{level}='INFO';
 
 ##-- Client Options
 our $defaultPort = 9099;

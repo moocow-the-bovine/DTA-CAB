@@ -485,10 +485,14 @@ sub token2buf {
 
   ##-- lemma equivalents
   $$bufr .= join('', map {("\t[eqlemma] "
-			 .(defined($_->{lo}) ? "$_->{lo} : " : '')
-			 .$_->{hi}
-			 .(defined($_->{w}) ? " <$_->{w}>" : '')
-			)} grep {defined($_)} @{$tok->{eqlemma}})
+			   .(ref($_)
+			     ? (ref($_) eq 'HASH'
+				? ((defined($_->{lo}) ? "$_->{lo} : " : '')
+				   .$_->{hi}
+				   .(defined($_->{w}) ? " <$_->{w}>" : ''))
+				: $_)
+			     : $_)
+			  )} grep {defined($_)} @{$tok->{eqlemma}})
     if ($tok->{eqlemma});
 
   ##-- lemma equivalents / tagh
