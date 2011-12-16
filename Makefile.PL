@@ -51,27 +51,27 @@ WriteMakefile
 		    'Moot' => 0.01,  ##-- moot/xs
 		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File, CDB_File
 		    ##--
-		    'Unicode::Normalize' => undef, # 1.02
-		    'Encode'=>undef,
-		    'File::Basename'=>undef,
-		    'Getopt::Long'=>undef,
-		    'Pod::Usage'=>undef,
-		    'Storable'=>undef,
-		    'Time::HiRes'=>undef,
-		    'Text::LevenshteinXS'=>undef, ##-- for Analyzer::MootSub best-lemma heuristics
+		    'Unicode::Normalize' =>0, # 1.02
+		    'Encode'=>0,
+		    'File::Basename'=>0,
+		    'Getopt::Long'=>0,
+		    'Pod::Usage'=>0,
+		    'Storable'=>0,
+		    'Time::HiRes'=>0,
+		    'Text::LevenshteinXS'=>0, ##-- for Analyzer::MootSub best-lemma heuristics
 		    ##--
-		    #File::Queue => undef,
-		    'File::Temp'  => undef,
-		    'File::Path'  => undef, ##-- for rmtree()
-		    'File::Map'   => undef, ##-- for regex-based blockScan()
+		    #File::Queue =>0,
+		    'File::Temp'  =>0,
+		    'File::Path'  =>0, ##-- for rmtree()
+		    'File::Map'   =>0, ##-- for regex-based blockScan()
 		    ##--
-		    'DB_File' => undef,
-		    'CDB_File' => undef,
-		    'JSON::XS' => undef,
-		    'YAML::XS' => undef,
-		    'Template' => undef,
-		    'LWP::UserAgent' => undef,
-		    'HTTP::Daemon' => undef,
+		    'DB_File' =>0,
+		    'CDB_File' =>0,
+		    'JSON::XS' =>0,
+		    'YAML::XS' =>0,
+		    'Template' =>0,
+		    'LWP::UserAgent' =>0,
+		    'HTTP::Daemon' =>0,
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 1.07,
@@ -83,9 +83,9 @@ WriteMakefile
 		    #'Lingua::LangId' => 0.01,
 		    ##--
 		    #'Text::Unidecode' => 0.04,
-		    #'Tie::Cache'=>undef,
-		    #'Unicode::UCD' => undef,
-		    #'Unicode::CharName' => undef,
+		    #'Tie::Cache'=>0,
+		    #'Unicode::UCD' =>0,
+		    #'Unicode::CharName' =>0,
 		   },
 
    EXE_FILES   => [glob('dta-cab-*.perl')],

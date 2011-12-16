@@ -53,6 +53,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
 ##     logConnect => $level,        ##-- log successful connections (client IP and requested path) at $level (default='debug')
 ##     logRquestData => $level,     ##-- log full client request data at $level (default=undef: none)
+##     logResponse => $level,       ##-- log full client response at $level (default=undef: none)
 ##     logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
 ##     logClientError => $level,    ##-- log errors to client at $level (default='debug')
 ##     logClose => $level,          ##-- log close client connections (default=undef: none)
@@ -100,6 +101,7 @@ sub new {
 			   logAttempt => 'off',
 			   logConnect => 'debug',
 			   logRequestData => undef,
+                           logResponse => undef,
 			   logCache => 'debug',
 			   logClose => 'off',
 			   logClientError => 'trace',
@@ -204,6 +206,7 @@ sub run {
       {
 	$srv->vlog($srv->{logCache}, "using cached response");
 	$rsp->header('X-Cached' => 1);
+	$srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
 	$csock->send_response($rsp);
 	next;
       }
@@ -244,6 +247,7 @@ sub run {
       $srv->logwarn("client socket has errors");
       next;
     }
+    $srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
     $csock->send_response($rsp);
   }
   continue {
