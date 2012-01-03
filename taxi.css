@@ -3,7 +3,6 @@
  */
 BODY,H1,H2,H3,H4,H5,H6,P,CENTER,TD,TH,UL,DL,DIV {
   font-family: Arial, Bitstream Vera Sans, sans-serif;
-  /*font-family: Bitstream Vera Sans, Geneva, Arial, Helvetica, sans-serif;*/
 }
 H1,H2,H3 {
  text-align: left;
@@ -410,7 +409,7 @@ a[href]:hover   {
 }
 #navLink:hover, #linkButton:hover, #linkButtonSmall:hover, 
 .navLink:hover, .linkButton:hover, .linkButtonSmall:hover, .navTab:hover, .navTabCur:hover,
-.textButton:hover, .textButtonSmall:hover
+.textButton:hover, .textButtonSmall:hover, label.searchLabelE:hover, label.searchLabel:hover
 {
   /*background-color: #ccffff;*/ /*pale teal*/
   /*background-color: #ffffcc;*/ /*pale cream yellow*/
