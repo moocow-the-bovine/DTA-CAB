@@ -118,10 +118,11 @@ function cabQuery() {
     //-- flags
     if (valGet('pretty')) {
 	params['pretty'] = "1";
-	params['raw'] = "1";
+	params['raw']    = "1";
     }
     if (!valGet('exlex_enabled')) {
-	params['exlex_enabled'] = "0";
+	params['exlex_enabled']  = "0";
+	params['static_enabled'] = "0";
     }
 
     //-- query
@@ -133,6 +134,24 @@ function cabQuery() {
 	qp = 'qd';
     }
     params[qp] = q;
+
+    //-- options
+    try {
+	var opts_s = valGet('qo');
+	var opts = JSON.parse(opts_s);
+	if (opts != null) {
+	    for (var o in opts) {
+		if (opts[o] == null) {
+		    delete params[o];
+		} else {
+		    params[o] = opts[o];
+		}
+	    }
+	}
+    }
+    catch (err) {
+	clog("cabQuery(): error parsing user options: " + err.descroption);
+    }
 
     //-- guts
     var caburi = getURI(cab_url_base,params);

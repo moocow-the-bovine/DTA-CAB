@@ -8,7 +8,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <style type="text/css">
 table, th, td, label, input { vertical-align: middle; }
-.cabQuery  { min-width: 32em; }
+.cabQuery, .cabOptions  { min-width: 32em; }
 .cabSelect { width: 16em; }
 .cabFlag { text-align: right; }
 .cabFlagLabel { text-align: right; }
@@ -51,7 +51,7 @@ b { font-weight: bold; color: #000099; }
 	    <table><tbody>
 	      <tr>
 		<td class="searchLabel">Query:</td>
-		<td colspan="4"><input type="text" name="q" size="64" class="cabQuery" /></td>
+		<td colspan="4"><input type="text" name="q" size="64" class="cabQuery" title="Query word, phrase, sentence, or document." /></td>
 		<td style="text-align:right;"><input type="submit" name="_s" value="submit" /></td>
 	      </tr><!--/tr:query+submit-->
 	      <tr>
@@ -105,6 +105,10 @@ b { font-weight: bold; color: #000099; }
 		<td style="text-align:right;"><label class="cabFlagLabel"><input type="checkbox" name="tokenize" value="1" onchange="cabQuery();" checked />tokenize</label></td>
 		<td/>
 	      </tr><!--/tr:flags-->
+	      <tr>
+		<td class="searchLabel">Options:</td>
+		<td colspan="4"><input type="text" name="qo" size="64" class="cabOptions" title="Additional options (JSON format)" value="{}"/></td>
+	      </tr><!--/tr:opts-->
 	    </tbody></table>
           </form>
         </div><!--/div.section-->
