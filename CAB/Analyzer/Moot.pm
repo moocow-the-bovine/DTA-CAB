@@ -37,15 +37,13 @@ my $hmm =$moot->{hmm};
 my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
-my ($msent,$w,$mw,$t);
+my ($msent,$w,$mw,$t,$at);
 sub {
  $msent = [map {
    $w  = $_;
    $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
-   $mw->{analyses} = [
-       map {$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}})); $_}
-      '._am_tagh_list2moota('map {$_ ? @$_ : qw()}
+   $mw->{analyses} = ['._am_tagh_list2moota('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
 			    ($w->{dmoot} ? $w->{dmoot}{morph}
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
@@ -59,6 +57,11 @@ sub {
  foreach (@$msent) {
    $_->{word}=$_->{text};
    delete($_->{text});
+   foreach (@{$_->{analyses}}) {
+     #$_->{mtag} = $_->{tag};
+     $_->{tag}  = $t if (defined($t=$tagx->{$_->{tag}}));
+   }
+   $_->{tag} = $t if (defined($t=$tagx->{$_->{tag}}));
    if ($prune) {
      $t = $_->{tag};
      @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
