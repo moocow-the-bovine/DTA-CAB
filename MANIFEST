@@ -75,8 +75,6 @@ CAB/Format.pm
 CAB/Format/Builtin.pm
 CAB/Format/CSV.pm
 CAB/Format/JSON.pm
-CAB/Format/JSON/Syck.pm
-CAB/Format/JSON/XS.pm
 CAB/Format/Null.pm
 CAB/Format/Perl.pm
 CAB/Format/Raw.pm
@@ -93,8 +91,6 @@ CAB/Format/XmlTokWrap.pm
 CAB/Format/XmlVz.pm
 CAB/Format/XmlXsl.pm
 CAB/Format/YAML.pm
-CAB/Format/YAML/Syck.pm
-CAB/Format/YAML/XS.pm
 CAB/Logger.pm
 CAB/Persistent.pm
 CAB/Sentence.pm
