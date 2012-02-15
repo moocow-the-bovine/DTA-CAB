@@ -114,7 +114,7 @@ sub _analyzeGuts {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
       $lemma =~ s/\[.*$//; ##-- trim everything after first non-character symbol
-      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:[\\\~\|\=\+\#\x{ac}])//g;
+      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\bge\\\|)|(?:[\\\~\|\=\+\#\x{ac}])//g;  ##-- hack: remove "ge\|" prefixes too (but not e.g. "ver\|", "be\|", etc.)
     } else {
       $lemma = $_->{$lab_txt};
       $lemma =~ s/\x{ac}//g;
