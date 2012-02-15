@@ -317,6 +317,7 @@ elsif ($action eq 'document') {
   }
 }
 elsif ($action eq 'data' || $action eq 'rawfile') {
+  binmode($outfh,':raw');
   $cunit = 'chr';
   $analyzeOpts{qraw} = 1 if ($action eq 'rawfile');
 
