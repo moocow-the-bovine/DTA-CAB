@@ -42,11 +42,14 @@ function valGet(id) {
 }
 
 //--------------------------------------------------------------
-// undef = valSet(nod_or_id,val)
+// undef = valSet(nod_or_id_or_name,val)
 function valSet(id,val) {
     var nod = id;
     if (typeof(nod) == 'string') {
 	nod = getid(id);
+	if (nod==null) {
+	    nod = getname(id);
+	}
     }
     if (nod==null) {
 	throw("valSet(): no node for id="+id+", val="+val);
@@ -235,6 +238,22 @@ function clog(msg) {
 }
 
 //======================================================================
+// query parsing
+
+// map = parseQuery(queryStr)
+function parseQuery(qs) {
+    var qm = {};
+    if (qs.substr(0,1)=='?') { qs=qs.substr(1); } //-- strip leading "?"
+    var ql = qs.split("&");
+    for (var i=0; i<ql.length; i++) {
+	var kv = ql[i].split("="); 
+	qm[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+    }
+    return qm;
+}
+
+
+//======================================================================
 // CAB demo stuff
 
 function cabDemoInit() {
@@ -242,4 +261,12 @@ function cabDemoInit() {
     cab_url_base = 'http://' + window.location.host + '/query';
     nod.href = cab_url_base;
     nod.innerHTML = cab_url_base;
+
+    //-- initialize
+    var qm = parseQuery(window.location.search);
+    var qmkeys = ["q","a","fmt","pretty","clean","exlex_enabled","tokenize","qo"];
+    for (var i=0; i<qmkeys.length; i++) {
+	if (qm[qmkeys[i]] != null) { valSet(qmkeys[i], qm[qmkeys[i]]); }
+    }
+    if (String(valGet('q')) != "") { cabQuery(); }
 }
