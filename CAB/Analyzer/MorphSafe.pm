@@ -173,9 +173,9 @@ sub analyzeTypes {
 	      )
 	  )
        || (
-	   $tok->{text}  !~ m/[[:alpha:]\#]/               ##-- non-alphabetic tokens are (usually) "safe"
-	                                                   ##   (replaces /[[:digit:][:punct:]]/ heuristic; Tue, 28 Feb 2012 11:21:29 +0100)
-	   						   ##-- ... unless they contain '#' (placeholder for unrecognized char)
+	   $tok->{text} !~ m/^[\p{Letter}\#]/              ##-- non-alphabetic tokens are (usually) "safe"
+	   						   ##   ... unless they contain '#' (placeholder for unrecognized char)
+	                                                   ##   [replaces /[[:digit:][:punct:]]/ heuristic; Tue, 28 Feb 2012 11:21:29 +0100]
 	  )
        || $tok->{mlatin}                                   ##-- latin words are "safe" [NEW Fri, 01 Apr 2011 11:38:45 +0200]
       );
