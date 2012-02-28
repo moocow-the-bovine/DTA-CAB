@@ -173,8 +173,8 @@ sub analyzeTypes {
 	      )
 	  )
        || (
-	   $tok->{text}  !~ m/[[:alpha:]]/                 ##-- non-alphabetic tokens are (usually) "safe" [replaces /[[:digit:][:punct:]]/ heuristic; Tue, 28 Feb 2012 11:21:29 +0100]
-]
+	   $tok->{text}  !~ m/[[:alpha:]]/                 ##-- non-alphabetic tokens are (usually) "safe"
+	                                                   ##   + replaces /[[:digit:][:punct:]]/ heuristic; Tue, 28 Feb 2012 11:21:29 +0100
 	   &&
 	   $tok->{text} !~ m/\#/                           ##-- ... unless they contain '#' (placeholder for unrecognized char)
 	  )
