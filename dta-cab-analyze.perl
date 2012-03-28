@@ -125,7 +125,7 @@ sub childOptionSpecs {
 
      ##.. I/O: generic
      'format-class|fc=s' => sub {$job{inputClass}=$job{outputClass}=$_[1]},
-     'format-option|fo=s' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
+     'format-option|fo=s%' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
 
      ##-- I/O: input
      'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
