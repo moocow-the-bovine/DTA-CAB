@@ -7,6 +7,9 @@
 
 package DTA::CAB::Analyzer::SynCoPe;
 use DTA::CAB::Analyzer ':child';
+use RPC::XML::Client;
+use Encode qw(encode_utf8 decode_utf8);
+use XML::Parser;
 use Carp;
 use strict;
 our @ISA = qw(DTA::CAB::Analyzer);

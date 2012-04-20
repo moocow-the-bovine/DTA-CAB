@@ -1,7 +1,8 @@
-#!/usr/bin/perl -w
+y#!/usr/bin/perl -w
 
 use RPC::XML;
 use RPC::XML::Client;
+use RPC::XML::Parser;
 use Encode qw(encode decode);
 use Getopt::Long qw(:config no_ignore_case);
 use File::Basename qw(basename);
@@ -90,8 +91,8 @@ if ($fromfile) {
 }
 
 ##-- encoding black magic (ugly ugly ugly)
-$req->{name} = decode($local_encoding,$req->{name}) if (defined($local_encoding));
-$req->{name} = encode($server_encoding,$req->{name}) if (defined($server_encoding));
+$req->{name} = decode($local_encoding,$req->{name})  if (defined($local_encoding)  && !utf8::is_utf8($req->{name}));
+$req->{name} = encode($server_encoding,$req->{name}) if (defined($server_encoding) &&  utf8::is_utf8($req->{name}));
 my @queue = ($req->{args});
 while (defined($ar=shift(@queue))) {
   if (UNIVERSAL::isa($ar,'ARRAY')) {
@@ -101,11 +102,10 @@ while (defined($ar=shift(@queue))) {
     push(@queue, values(%$ar));
   }
   elsif (UNIVERSAL::isa($ar,'SCALAR')) {
-    $$ar = decode($local_encoding,$$ar) if (defined($local_encoding));
-    $$ar = encode($server_encoding,$$ar) if (defined($server_encoding));
+    $$ar = decode($local_encoding,$$ar) if (defined($local_encoding) && !utf8::is_utf8($$ar));
+    $$ar = encode($server_encoding,$$ar) if (defined($server_encoding) && utf8::is_utf8($$ar));
   }
 }
-
 
 ##-- setup client & send off request
 my $cli = RPC::XML::Client->new($server)
@@ -162,7 +162,7 @@ xmlrpc-call.perl - XML RPC command-line tool
  XML-RPC Options:
   -eval , -noeval                 ##-- do/don't eval command-line args as perl code (default=don't)
   -array , -noarray               ##-- do/don't implicitly create an array of arguments (default=don't)
-  -server  URL                    ##-- set server URL (default: http://localhost:8000)
+  -server  URL                    ##-- set server URL (default: http://localhost:8088)
   -from    INPUT_FILE             ##-- read literal query from INPUT_FILE (default=command line)
   -output  OUTPUT_FILE            ##-- XML output (default=-)
   -dump                           ##-- if true, just dump value with Data::Dumper
