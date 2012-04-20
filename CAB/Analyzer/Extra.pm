@@ -29,6 +29,9 @@ use DTA::CAB::Analyzer::ExLex;           ##-- DTA
 use DTA::CAB::Analyzer::DTAClean;        ##-- DTA
 use DTA::CAB::Analyzer::DTAMapClass;     ##-- DTA
 
+use DTA::CAB::Analyzer::SynCoPe;	 ##-- DTA
+use DTA::CAB::Analyzer::SynCoPe::NER;	 ##-- DTA
+
 use strict;
 
 1; ##-- be happy

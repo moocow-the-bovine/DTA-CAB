@@ -25,6 +25,7 @@ use DTA::CAB::Analyzer::DmootSub;
 use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
 use DTA::CAB::Analyzer::DTAMapClass;
+use DTA::CAB::Analyzer::SynCoPe::NER;
 use DTA::CAB::Analyzer::DTAClean;
 
 use IO::File;
@@ -73,6 +74,8 @@ sub new {
      moot1 => DTA::CAB::Analyzer::Moot->new(), ##-- moot tagger (on dmoot output; 1-grams only)
      mootsub => DTA::CAB::Analyzer::MootSub->new(), ##-- moot tagger, post-processing hacks
      mapclass => DTA::CAB::Analyzer::DTAMapClass->new(), ##-- mapping class (post-moot)
+     ##
+     ner => DTA::CAB::Analyzer::SynCoPe::NER->new(), ##-- ne-recognizer (post-moot)
      ##
      eqlemma  => DTA::CAB::Analyzer::EqLemma->new(), ##-- eqlemma (best only)
      ##
@@ -132,6 +135,7 @@ sub setupChains {
      'default.dmoot1'   =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot1)}],
      'default.moot'     =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot)}],
      'default.moot1'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
+     'default.ner'      =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot mootsub ner)}],
      'default.base'     =>[@$ach{qw(tokpp xlit static exlex lts        morph mlatin msafe)}],
      'default.type'     =>[@$ach{qw(tokpp xlit static exlex lts        morph mlatin msafe rw rwsub)}],
      ##
@@ -143,9 +147,10 @@ sub setupChains {
      'expand.eqlemma'=>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
      'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
      'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
+     'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
      'caberr'        =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
      'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
-     'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- dta clients use 'all'!
+     'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];

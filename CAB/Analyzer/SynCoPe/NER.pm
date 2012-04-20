@@ -15,7 +15,7 @@ our @ISA = qw(DTA::CAB::Analyzer::SynCoPe);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, %args:
-##     server => $url,		##-- xml-rpc server url (default: localhost:8081)
+##     server => $url,		##-- xml-rpc server url (default: http://lal.dwds.de:8089/RPC2)
 ##     label  => $label,        ##-- analysis label (default: 'syncope')
 ##     method => $method,       ##-- xml-rpc analysis method (default: 'syncop.ne.analyse')
 ##     useragent => \@args,	##-- args for LWP::UserAgent behind RPC::XML::Client; default: [timeout=>60]
@@ -28,7 +28,7 @@ sub new {
   my $asub = $that->SUPER::new(
 			       ##-- analysis selection
 			       label => 'ner',
-			       server => 'http://lal.dwds.de:8089',
+			       server => 'http://lal.dwds.de:8089/RPC2',
 			       method => 'syncop.ne.analyse',
 			       useragent=>[timeout=>60],
 

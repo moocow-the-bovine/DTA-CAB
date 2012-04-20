@@ -19,7 +19,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, %args:
-##     server => $url,		##-- xml-rpc server url (default: localhost:8081)
+##     server => $url,		##-- xml-rpc server url (default: http://localhost:8081/RPC2)
 ##     label  => $label,        ##-- analysis label (default: 'syncope')
 ##     method => $method,       ##-- xml-rpc analysis method (default: 'syncop.ne.analyse')
 ##     useragent => \@args,	##-- args for LWP::UserAgent behind RPC::XML::Client; default: [timeout=>60]
@@ -72,15 +72,15 @@ sub analyzeSentences {
 ## Local utilities: query preparaion
 
 ## \$querystr = $anl->doc2qstr($doc)
-## \$querystr = $anl->doc2qstr($doc,$label)
+## \$querystr = $anl->doc2qstr($doc,$docname)
 ##  + get query string for document
 ##  + child classes should override this
 ##  + default implementation is appropriate for Didakowski/Drotschmann ne-recognizer v1.2.0.4
 ##  + see http://odo.dwds.de/twiki/bin/view/DWDS/EigennamenErkennung for details
 sub doc2qstr {
-  my ($doc,$label) = @_;
-  $label = $doc->{base}||ref($doc) if (!defined($label));
-  my $qstr = "$label\n";
+  my ($anl,$doc,$docname) = @_;
+  $docname = $doc->{base}||ref($doc) if (!defined($docname));
+  my $qstr = "$docname\n";
   my ($si,$s,$wi,$w,$txt,$typ);
   foreach $si (0..$#{$doc->{body}}) {
     $s = $doc->{body}[$si];
@@ -124,9 +124,12 @@ sub client {
 ##  + warns if something goes wrong
 sub query {
   my ($anl,$qsr) = @_;
+  local $RPC::XML::ENCODING = "UTF-8";
+  local $RPC::XML::FORCE_STRING_ENCODING = 1;
   $$qsr = Encode::encode_utf8($$qsr) if (utf8::is_utf8($$qsr));
   my $rsp = $anl->client->simple_request($anl->{method},$$qsr,'tab','xml(2)');
-  $anl->logwarn("Warning: XML-RPC analysis failed: $XML::RPC::ERROR") if (!$rsp);
+  $anl->logwarn("Warning: XML-RPC analysis failed: $RPC::XML::ERROR") if (!defined($rsp));
+  $anl->logwarn("Warning: XML-RPC analysis failed: $rsp->{faultString}") if (UNIVERSAL::isa($rsp,'HASH') && $rsp->{faultString});
   return $rsp && UNIVERSAL::isa($rsp,'ARRAY') ? \$rsp->[0] : (ref($rsp) ? $rsp : \$rsp);
 }
 
