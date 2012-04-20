@@ -147,7 +147,7 @@ sub setupChains {
      'expand.eqlemma'=>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
      'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
      'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
-     'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
+     'ner'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
      'caberr'        =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
      'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
      'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
