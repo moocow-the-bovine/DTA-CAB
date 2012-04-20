@@ -245,9 +245,10 @@ sub putSentence {
 
 ## $fmt = $fmt->putDocument($doc)
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
+our %TJ_BAD_DOC_KEYS = (body=>1, teibufr=>1);
 sub putDocument {
   #my ($fmt,$doc) = @_;
-  my $dh = {(map {$_ eq 'body' ? qw() : ($_=>$_[1]{$_})} keys %{$_[1]})};
+  my $dh = { (map {($_=>$_[1]{$_})} grep {!exists($TJ_BAD_DOC_KEYS{$_})} keys %{$_[1]}) };
   $_[0]{fh}->print('%%$TJ:DOC=', $_[0]->jsonxs->encode($dh), "\n") if (%$dh);
   $_[0]->putSentence($_) foreach (@{toDocument($_[1])->{body}});
   return $_[0];

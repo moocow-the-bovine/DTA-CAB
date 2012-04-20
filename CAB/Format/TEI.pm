@@ -24,7 +24,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::XmlTokWrap);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei)\.xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei)[\.\-]xml)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
       foreach (qw(c-xml cxml tei-xml teixml tei));
 }

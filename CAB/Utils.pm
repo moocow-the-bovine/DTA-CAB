@@ -21,7 +21,7 @@ our @EXPORT= qw();
 our %EXPORT_TAGS =
     (
      xml  => [qw(xml_safe_string xml_escape)],
-     libxml => [qw(libxml_parser libxml_doc)],
+     libxml => [qw(libxml_parser libxml_doc libxml_xpnodes libxml_xpnode libxml_xpvalue)],
      libxslt => [qw(xsl_stylesheet)],
      data => [qw(path_value)],
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
@@ -377,6 +377,26 @@ sub libxml_doc {
   }
   confess(__PACKAGE__, "::libxml_doc() unknown source type '$which'!");
   return undef;
+}
+
+## \@vals = libxml_xpnodes($nod,$xpath)
+##   + wrapper for scalar($nod->findnodes($xpath)||[])
+sub libxml_xpnodes {
+  return undef if (!defined($_[0]));
+  return scalar($_[0]->findnodes($_[1]));
+}
+
+## \@vals = libxml_xpnode($nod,$xpath)
+##   + wrapper for scalar($nod->findnodes($xpath)||[])->[0]
+sub libxml_xpnode {
+  return (libxml_xpnodes(@_)||[])->[0];
+}
+
+## $val_or_undef = libxml_xpvalue($nod,$xpath)
+##   + wrapper for $nod->findnodes($xpath)->[0]->textContent
+sub libxml_xpvalue {
+  my $nod = libxml_xpnode(@_);
+  return defined($nod) ? $nod->textContent : undef;
 }
 
 ##==============================================================================

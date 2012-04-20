@@ -246,7 +246,7 @@ sub parseTTString {
 		    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
 		  }
 		} elsif ($field =~ m/^\[(lts|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|moot\/morph|dmoot\/morph|eq(?:pho(?:x?)|rw|lemma|tagh))\] (.*)$/) {
-		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph)
+		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph|...)
 		  ($fkey,$fval) = ($1,$2);
 		  if ($fkey =~ s/^rw\///) {
 		    $tok->{rw} = [ {} ] if (!$tok->{rw});
@@ -266,6 +266,9 @@ sub parseTTString {
 		  } else {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 		  }
+		} elsif ($field =~ m/^\[ner\] (?:(\w+) )?\: (\S*)(?: \/ (\S*?))?(?: \<([0-9]+)\>)?$/) {
+		  ##-- token fields: ne-recognizer analysis: $ner
+		  push(@{$tok->{ner}}, { id=>$1, cat=>$2, (defined($3) ? (func=>$3) : qw()), (defined($4) ? (depth=>$4) : qw()) });
 		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] (\d)$/) {
 		  ##-- token: field: morph-safety check (msafe|morph/safe)
 		  $tok->{msafe} = $1;
@@ -502,6 +505,17 @@ sub token2buf {
 			 .(defined($_->{w}) ? " <$_->{w}>" : '')
 			)} grep {defined($_)} @{$tok->{eqtagh}})
     if ($tok->{eqtagh});
+
+  ##-- NE-recognizer ('ner')
+  if ($tok->{ner}) {
+    $$bufr .= join('',
+		 map {("\t[ner] "
+		       .(defined($_->{id}) ? $_->{id} : '')
+		       .(defined($_->{cat}) ? " : $_->{cat}" : '')
+		       .(defined($_->{func}) ? " / $_->{func}" : '')
+		       .(defined($_->{depth}) ? " <$_->{depth}>" : '')
+		      )} @{$tok->{ner}});
+  }
 
   ##-- unparsed fields (pass-through)
   if ($tok->{other}) {
