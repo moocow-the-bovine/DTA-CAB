@@ -338,23 +338,31 @@ sub putDocument {
     or $fmt->logconfess("XML::Document::toFile() failed to $tmpdir/tmp.cab.t.xml: $!");
 
   ##-- splice in //w elements
-  DTA::TokWrap::Utils::runcmd("dtatw-add-w.perl -q $tmpdir/tmp.tei.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tw0.xml")==0
-      or $fmt->logdie("dtatw-add-w.perl failed: $!");
+  my $tw0_xml = "$tmpdir/tmp.tei.xml";
+  if ($$teibufr !~ /\<w\b/) {
+    DTA::TokWrap::Utils::runcmd("dtatw-add-w.perl -q $tmpdir/tmp.tei.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tw0.xml")==0
+	or $fmt->logdie("dtatw-add-w.perl failed: $!");
+    $tw0_xml = "$tmpdir/tmp.tei.tw0.xml";
+  }
 
   ##-- optionally remove //c elements
-  my $tw_xml = "$tmpdir/tmp.tei.tw0.xml";
+  my $tw_xml = $tw0_xml;
   if (!$fmt->{keepc}) {
-    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $tmpdir/tmp.tei.tw0.xml > $tmpdir/tmp.tei.tw1.xml")==0
+    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $tw0_xml > $tmpdir/tmp.tei.tw1.xml")==0
 	or $fmt->logdie("dtatw-rm-c.perl failed: $!");
     $tw_xml = "$tmpdir/tmp.tei.tw1.xml";
   }
 
-  ##-- splice in //s elements
-  DTA::TokWrap::Utils::runcmd("dtatw-add-s.perl -q $tw_xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tws.xml")==0
-      or $fmt->logdie("dtatw-add-s.perl failed: $!");
+  ##-- splice in //s elements if not already present
+  my $tws_xml = $tw_xml;
+  if ($$teibufr !~ /\<s\b/) {
+    DTA::TokWrap::Utils::runcmd("dtatw-add-s.perl -q $tw_xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tws.xml")==0
+	or $fmt->logdie("dtatw-add-s.perl failed: $!");
+    $tws_xml = "$tmpdir/tmp.tei.tws.xml";
+  }
 
-  ##-- splice in cab analysis data
-  DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $tmpdir/tmp.tei.tws.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
+  ##-- splice in cab analysis data (always!)
+  DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $tws_xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
       or $fmt->logdie("dtatw-splice.perl failed: $!");
 
   ##-- slurp in spliced-back output to $fmt->{outbuf}
