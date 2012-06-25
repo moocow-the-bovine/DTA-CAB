@@ -80,6 +80,8 @@ sub new {
      eqlemma  => DTA::CAB::Analyzer::EqLemma->new(), ##-- eqlemma (best only)
      ##
      clean => DTA::CAB::Analyzer::DTAClean->new(),
+     ##
+     null => DTA::CAB::Analyzer::Null->new(), ##-- null analyzer (for 'null' chain)
 
      ##-- security
      autoClean => 0, ##-- always run 'clean' analyzer regardless of options; checked in both doAnalyze(), analyzeClean()
@@ -152,7 +154,7 @@ sub setupChains {
      'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
      'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
-     'null'	     =>[],
+     'null'	     =>[$ach{null}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 
