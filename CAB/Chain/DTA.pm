@@ -27,6 +27,7 @@ use DTA::CAB::Analyzer::EqLemma;
 use DTA::CAB::Analyzer::DTAMapClass;
 use DTA::CAB::Analyzer::SynCoPe::NER;
 use DTA::CAB::Analyzer::DTAClean;
+use DTA::CAB::Analyzer::Null;
 
 use IO::File;
 use Carp;
@@ -154,7 +155,7 @@ sub setupChains {
      'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
      'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
-     'null'	     =>[$ach{null}],
+     'null'	     =>[$ach->{null}],
     };
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 
