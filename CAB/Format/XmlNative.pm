@@ -121,6 +121,8 @@ sub blockDefaults {
 ##  + %opts are as for blockScan()
 sub blockScanHead {
   my ($fmt,$bufr,$io,$opts) = @_;
+  $fmt->debug('blockScanHead');
+
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
   return $$bufr =~ m(\Q<$elt\E\b) ? [0,$-[0]] : [0,0];
 }
@@ -133,15 +135,23 @@ sub blockScanHead {
 sub blockScanFoot {
   use bytes;
   my ($fmt,$bufr,$io,$opts) = @_;
+  $fmt->debug('blockScanFoot');
   return [0,0] if (!$opts || !$opts->{"${io}body"} || !@{$opts->{"${io}body"}});
   my $blk = $opts->{"${io}body"}[$#{$opts->{"${io}body"}}];
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
+
   pos($$bufr) = $blk->{"${io}off"} || 0; ##-- set to offset of final body block
-  if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
-    my $end            = $+[0];
-    $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
-    return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
-  }
+  $fmt->debug("blockScanFoot: pos=".$blk->{"${io}off"}."; len=".bytes::length($$bufr));
+
+  if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg)
+    {
+      $fmt->debug("blockScanFoot: got end");
+      my $end = $+[0];
+      $fmt->debug("blockScanFoot: end=$end");
+      $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
+      return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
+    }
+  $fmt->debug("blockScanFoot: nomatch");
   return [0,0];
 }
 
@@ -149,6 +159,7 @@ sub blockScanFoot {
 ##  + scans $filename for block boundaries according to \%opts
 sub blockScanBody {
   my ($fmt,$bufr,$opts) = @_;
+  $fmt->debug('blockScanBody');
 
   ##-- scan blocks into head, body, foot
   my $bsize  = $opts->{bsize};

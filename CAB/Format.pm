@@ -293,11 +293,13 @@ sub blockScan {
   File::Map::map_file($buf, $infile,'<',0,$opts{fsize});
 
   ##-- scan blocks into head, body, foot
+  $fmt->debug('blockScan: guts');
   my $ihead = $opts{ihead} = $fmt->blockScanHead(\$buf,'i',\%opts);
   my $ibody = $opts{ibody} = $fmt->blockScanBody(\$buf,    \%opts);
   my $ifoot = $opts{ifoot} = $fmt->blockScanFoot(\$buf,'i',\%opts);
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
+  $fmt->debug('blockScan: adopt');
   my ($blk);
   foreach (0..$#$ibody) {
     $blk = $ibody->[$_];
@@ -308,7 +310,10 @@ sub blockScan {
   }
 
   ##-- cleanup & return
+  $fmt->debug('blockScan: unmap');
   File::Map::unmap($buf);
+
+  $fmt->debug('blockScan: return');
   return $ibody;
 }
 
