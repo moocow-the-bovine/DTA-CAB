@@ -121,8 +121,6 @@ sub blockDefaults {
 ##  + %opts are as for blockScan()
 sub blockScanHead {
   my ($fmt,$bufr,$io,$opts) = @_;
-  $fmt->debug('blockScanHead');
-
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
   return $$bufr =~ m(\Q<$elt\E\b) ? [0,$-[0]] : [0,0];
 }
@@ -135,23 +133,39 @@ sub blockScanHead {
 sub blockScanFoot {
   use bytes;
   my ($fmt,$bufr,$io,$opts) = @_;
-  $fmt->debug('blockScanFoot');
   return [0,0] if (!$opts || !$opts->{"${io}body"} || !@{$opts->{"${io}body"}});
   my $blk = $opts->{"${io}body"}[$#{$opts->{"${io}body"}}];
   my $elt = $opts->{xmlelt} || $opts->{eob} || 'w';
-
   pos($$bufr) = $blk->{"${io}off"} || 0; ##-- set to offset of final body block
-  $fmt->debug("blockScanFoot: pos=".$blk->{"${io}off"}."; len=".bytes::length($$bufr));
 
-  if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg)
-    {
-      $fmt->debug("blockScanFoot: got end");
+  if (0) {
+    ##-- use negative lookahead regex match: elegant but buggy under some perls
+    ## + causes segfault on in ddc/dta2012/build/cab_corpus for ddc/dta2012/build/xml_tok/campe_robinson02_1780.TEI-P5.chr.ddc.t.xml
+    ## + bug appears both on kaskade (debian-lenny, perl 5.10.0-19lenny5) and plato (debian-squeeze, perl 5.10.1-17squeeze3)
+    ## + only sefgaults under make (changing make -j , -blockSize , -njobs has no effect)
+    ## + backtrace:
+    ##   #0  0x00002b26f788ef77 in ?? () from /usr/lib/libperl.so.5.10
+    ##   #1  0x00002b26f7896fd0 in ?? () from /usr/lib/libperl.so.5.10
+    ##   #2  0x00002b26f789ad29 in Perl_regexec_flags () from /usr/lib/libperl.so.5.10
+    ##   #3  0x00002b26f7837e76 in Perl_pp_match () from /usr/lib/libperl.so.5.10
+    ##   #4  0x00002b26f7831392 in Perl_runops_standard () from /usr/lib/libperl.so.5.10
+    ##   #5  0x00002b26f782c5df in perl_run () from /usr/lib/libperl.so.5.10
+    ##   #6  0x0000000000400d0c in main ()
+    if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
       my $end = $+[0];
-      $fmt->debug("blockScanFoot: end=$end");
       $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
       return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
     }
-  $fmt->debug("blockScanFoot: nomatch");
+  }
+  else {
+    ##-- !$useNegativeLookaheadRegex : safer but slower
+    my ($end);
+    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E[^>]*/>}sg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E[^>]*/>}sg) { ; }
+    if (defined($end)) {
+      $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
+      return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
+    }
+  }
   return [0,0];
 }
 
@@ -159,7 +173,6 @@ sub blockScanFoot {
 ##  + scans $filename for block boundaries according to \%opts
 sub blockScanBody {
   my ($fmt,$bufr,$opts) = @_;
-  $fmt->debug('blockScanBody');
 
   ##-- scan blocks into head, body, foot
   my $bsize  = $opts->{bsize};

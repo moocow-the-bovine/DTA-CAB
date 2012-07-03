@@ -445,8 +445,6 @@ else {
   %blockOpts = $ifmt->blockOptions($block_spec);
   DTA::CAB->info("using block-wise I/O with eob=$blockOpts{eob}, size>=$blockOpts{bsize}");
 
-  if (0) { DTA::CAB->info("DEBUG/sleep(10)"); sleep(10); DTA::CAB->info("DEBUG/resume"); } ##-- DEBUG
-
   foreach my $job (@jobs) {
     if ($job->{input} eq '-') {
       ##-- stdin hack: spool it to the filesystem for blocking
