@@ -70,7 +70,7 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
 ##     attOutput      => $bool, ##-- if true, generate AT&T escapes in output (default=1)
 ##     allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
-##                              ##   : useful: /(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)/
+##                              ##   : useful: /(?:^[[:alpha:]\-\@]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@]+$)/
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -109,7 +109,7 @@ sub new {
 			      bashWS         => '_',
 			      attInput       => 0,
 			      attOutput      => 1,
-			      allowTextRegex => undef, #'(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
+			      allowTextRegex => undef, #'(?:^[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+$)',
 
 			      ##-- analysis I/O
 			      analyzeSrc => 'text',
