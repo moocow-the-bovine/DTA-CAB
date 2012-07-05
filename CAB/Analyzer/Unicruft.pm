@@ -109,7 +109,7 @@ sub analyzeTypes {
       {
 	$isLatin1 = $isLatinExt = 1;
       }
-    elsif ($uc =~ m(^[\x{00}-\x{ff}\p{Latin}\p{IsPunct}\p{IsMark}\x{a75b}\x{fffd}]*$))
+    elsif ($uc =~ m(^[\x{00}-\x{ff}\p{Latin}\p{IsPunct}\p{IsMark}\x{a75b}\x{fffc}-\x{ffff}]*$))
       {
 	$isLatin1 = 0;
 	$isLatinExt = 1;
