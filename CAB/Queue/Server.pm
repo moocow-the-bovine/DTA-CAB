@@ -149,7 +149,8 @@ sub addblock {
     @{$bt->{pending}} = sort {$a->{id}[0]<=>$b->{id}[0]} @{$bt->{pending}};
     while (@{$bt->{pending}} && $bt->{pending}[0]{id}[0]==$bt->{cur}) {
       $blk=shift(@{$bt->{pending}});
-      $qs->vlog($qs->{logBlock}, "BLOCK_APPEND(ofile=$blk->{ofile}, id=$blk->{id}[0]/$blk->{id}[1])");
+
+      $qs->vlog($qs->{logBlock}, "BLOCK_APPEND(ofile=$blk->{ofile}, id=$blk->{id}[0]/$blk->{id}[1], ioff=$blk->{ioff}, ilen=$blk->{ilen}, iend=".($blk->{ioff}+$blk->{ilen}).")");
       $fmt->blockAppend($blk);
       $bt->{cur}++;
     }

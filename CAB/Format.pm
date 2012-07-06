@@ -41,6 +41,8 @@ BEGIN {
   *can = \&UNIVERSAL::can;
 }
 
+our $LL_BLOCK_DEBUG = undef; ##-- log level for block debugging
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -250,7 +252,7 @@ sub blockOptions {
 ##  + sets local keys in %opts passed to sub-methods blockScan{Head,Body,Foot}()
 ##    (
 ##     ifile => $infile,      ##-- (in) input filename
-##     isize => $bytes,       ##-- (in) total size of $infile in bytes (-s $infile)
+##     ifsize => $bytes,      ##-- (in) total size of $infile in bytes (-s $infile)
 ##     ihead => [$off,$len],  ##-- (in) offset, length of header in $infile
 ##     ifoot => [$off,$len],  ##-- (in) offset, length of footer in $infile
 ##     ibody => \@iblocks,    ##-- (in) blocks computed by blockScanBody()
@@ -261,7 +263,7 @@ sub blockOptions {
 ##    where each $blk \in @blocks is a HASH-ref containing at least the following keys:
 ##    {
 ##     ifile => $infile,      ##-- (in) input filename
-##     isize => $bytes,       ##-- (in) total size of $filename in bytes (-s $filename)
+##     #isize => $bytes,       ##-- (in) total size of $filename in bytes (-s $filename)
 ##     ioff  => $offset,      ##-- (in) byte-offset of block beginning in $infile
 ##     ilen  => $len,         ##-- (in) byte-length of block in $infile
 ##     id    => [$i,$N]       ##-- (in/out) indices s.t. $blk=$blocks[$i], $N=$#blocks
@@ -299,13 +301,17 @@ sub blockScan {
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
   my ($blk);
+  my $llBlockScan = undef;
+  $fmt->vlog($llBlockScan, "blockScan: $infile \[head]: $ihead->[0] +$ihead->[1] =".($ihead->[0]+$ihead->[1])." <$opts{ifsize}");
   foreach (0..$#$ibody) {
     $blk = $ibody->[$_];
     $blk->{id}    = [$_,$#$ibody] if (!defined($blk->{id}));
     $blk->{ifile} = $infile  if (!defined($blk->{ifile}));
     $blk->{ihead} = $ihead   if (!defined($blk->{ihead}));
     $blk->{ifoot} = $ifoot   if (!defined($blk->{ifoot}));
+    $fmt->vlog($llBlockScan, "blockScan: $infile \[".($_+1)."/".($#$ibody+1)."]: $blk->{ioff} +$blk->{ilen} =".($blk->{ioff}+$blk->{ilen})." <$opts{ifsize}");
   }
+  $fmt->vlog($llBlockScan, "blockScan: $infile \[foot]: $ifoot->[0] +$ifoot->[1] =".($ifoot->[0]+$ifoot->[1])." <$opts{ifsize}");
 
   ##-- cleanup & return
   File::Map::unmap($buf);
@@ -436,6 +442,8 @@ sub blockAppend {
   my $outfh = IO::File->new(($id->[0]==0 ? '>' : '>>').$ofile)
     or $fmt->logconfess("blockAppend(): open failed for '$ofile': $!");
   binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
+
+  $fmt->vlog('trace', "blockAppend($ofile): pos=", $outfh->tell);
 
   ##-- dump: header (initial block only)
   if ($id->[0]==0 && $ohead->[1]>0) {
