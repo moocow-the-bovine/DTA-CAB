@@ -317,14 +317,20 @@ sub cb_work {
     ##-- slurp & parse block input buffer
     $ifmt->vlog($logBlockTrace, "BLOCK $blkid: parseBlock()");
     my $doc = $ifmt->parseBlock($blk);
+    #$ifmt->vlog($logBlockInfo, "BLOCK $blkid: parsed ", $doc->nTokens, " tok(s), ", scalar(@{$doc->{body}}), " sent(s)");
 
     ##-- analyze
     $cab->vlog($logBlockTrace, "BLOCK $blkid: analyzeDocument()");
     $doc = $cab->analyzeDocument($doc,$job{analyzeOpts});
+    #$cab->vlog($logBlockInfo, "BLOCK $blkid: analyzed ", $doc->nTokens, " tok(s), ", scalar(@{$doc->{body}}), " sent(s)");
 
     ##-- output
     $ofmt->vlog($logBlockTrace, "BLOCK $blkid: putDocumentBlock()");
     $ofmt->putDocumentBlock($doc,$blk);
+
+    ##-- DEBUG
+    #$ofmt->vlog($logBlockInfo, "BLOCK $blkid: wrote ", $doc->nTokens, " tok(s), ", scalar(@{$doc->{body}}), " sent(s)");
+    #$ofmt->toFile("blk_$blk->{id}[0]")->putDocumentRaw($doc)->flush();
 
     ##-- report: statistics
     if ($job{doProfile}) {
@@ -567,7 +573,6 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
  I/O Options
   -list                           ##-- arguments are list-files, not filenames
   -words                          ##-- arguments are word text, not filenames
-  -block SIZE[{k,M,G,T}][@EOB]    ##-- pseudo-streaming block-wise analysis (only for 'TT','TJ' formats)
   -input-class CLASS              ##-- select input parser class (default: Text)
   -input-option OPT=VALUE         ##-- set input parser option
 
@@ -578,6 +583,13 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
   -format-class CLASS             ##-- alias for -input-class=CLASS -output-class=CLASS
   -format-option OPT=VALUE        ##-- alias for -input-option OPT=VALUE -output-option OPT=VALUE
+
+ Block-wise Processing Options
+  -block SIZE[{k,M,G,T}][@EOB]    ##-- pseudo-streaming block-wise analysis (not for all formats)
+  -noblock                        ##-- disable block-wise processing
+  -log-block-info LEVEL		  ##-- log block-info at LEVEL (default=INFO)
+  -log-block-trace LEVEL          ##-- log block-trace at LEVEL (default=none)
+  -log-block-profile LEVEL        ##-- log block-profile at LEVEL (default=none)
 
  Logging Options                  ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (default=TRACE)

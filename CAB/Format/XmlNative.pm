@@ -139,7 +139,7 @@ sub blockScanFoot {
   pos($$bufr) = $blk->{"${io}off"} || 0; ##-- set to offset of final body block
 
   if (0) {
-    ##-- use negative lookahead regex match: elegant but buggy under some perls
+    ##-- v0: use negative lookahead regex match: elegant but buggy under some perls
     ## + causes segfault on in ddc/dta2012/build/cab_corpus for ddc/dta2012/build/xml_tok/campe_robinson02_1780.TEI-P5.chr.ddc.t.xml
     ## + bug appears both on kaskade (debian-lenny, perl 5.10.0-19lenny5) and plato (debian-squeeze, perl 5.10.1-17squeeze3)
     ## + only sefgaults under make (changing make -j , -blockSize , -njobs has no effect)
@@ -151,17 +151,38 @@ sub blockScanFoot {
     ##   #4  0x00002b26f7831392 in Perl_runops_standard () from /usr/lib/libperl.so.5.10
     ##   #5  0x00002b26f782c5df in perl_run () from /usr/lib/libperl.so.5.10
     ##   #6  0x0000000000400d0c in main ()
-    if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E[^>]*/>)))sg) {
+    if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)))sg) {
       my $end = $+[0];
       $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
       return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
     }
   }
-  else {
-    ##-- !$useNegativeLookaheadRegex : safer but slower
+  elsif (0) {
+    ##-- v1: !$useNegativeLookaheadRegex: use $' (POSTMATCH) safer but __much__ slower
     my ($end);
-    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E[^>]*/>}sg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E[^>]*/>}sg) { ; }
+    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
+      pos($$bufr) = $end = $end+$+[0];
+    }
     if (defined($end)) {
+      $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
+      return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
+    }
+  }
+  else {
+    ##-- v2: !$useNegativeLookaheadRegex : v0.1: use rindex()
+
+    ##-- scan for literal end-of-element with rindex() for a first-stab
+    ## + doesn't find all valid element closers, just the likely ones
+    my $pos0 = pos($$bufr);
+    my $end = rindex(substr($$bufr,$pos0),"</$elt>");             ##-- usual case
+    $end    = rindex(substr($$bufr,$pos0),"<$elt/>") if ($end<0); ##-- empty element
+
+    ##-- now use slow regex scan
+    pos($$bufr) = $pos0+$end if ($end>=0);
+    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
+      pos($$bufr) = $end = $end+$+[0];
+    }
+    if (defined($end) && $end>=0) {
       $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
       return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
     }

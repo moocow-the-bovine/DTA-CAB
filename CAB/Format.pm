@@ -41,7 +41,7 @@ BEGIN {
   *can = \&UNIVERSAL::can;
 }
 
-our $LL_BLOCK_DEBUG = undef; ##-- log level for block debugging
+our $LL_BLK_DEBUG = undef; ##-- log level for block debugging
 
 ##==============================================================================
 ## Constructors etc.
@@ -439,29 +439,35 @@ sub blockAppend {
   my $ohead = $blk->{ohead} || [0,0];
   my $ofoot = $blk->{ofoot} || [0,0];
 
+  my $blkid = "${ofile}:$id->[0]/$id->[1]";
   my $outfh = IO::File->new(($id->[0]==0 ? '>' : '>>').$ofile)
     or $fmt->logconfess("blockAppend(): open failed for '$ofile': $!");
   binmode($outfh, utf8::is_utf8($$bufr) ? ':utf8' : ':raw');
 
-  $fmt->vlog('trace', "blockAppend($ofile): pos=", $outfh->tell);
+  $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): begin: pos=", $outfh->tell, "; buflen=", bytes::length($$bufr));
+  $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): ohead=[$ohead->[0],$ohead->[1]]; ofoot=[$ofoot->[0],$ofoot->[1]]");
 
   ##-- dump: header (initial block only)
   if ($id->[0]==0 && $ohead->[1]>0) {
     $outfh->print(substr($$bufr, $ohead->[0], $ohead->[1]-$ohead->[0]))
       or $fmt->logconfess("blockAppend(): print failed to '$ofile' for initial-block header: $!");
+    $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): wrote ", ($ohead->[1]-$ohead->[0]), " header bytes\n");
   }
 
   ##-- dump: body
   $outfh->print(substr($$bufr, $ohead->[1], ($ofoot->[0]||length($$bufr))-($ohead->[0]+$ohead->[1])))
     or $fmt->logconfess("blockAppend(): print failed to '$ofile' for block body: $!");
+  $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): wrote ", (($ofoot->[0]||length($$bufr))-($ohead->[0]+$ohead->[1])), " data bytes");
 
   ##-- dump: footer (final block only)
   if ($id->[0]==$id->[1] && $ofoot->[1]>0) {
     $outfh->print(substr($$bufr, $ofoot->[0], $ofoot->[1]-$ofoot->[0]))
       or $fmt->logconfess("blockAppend(): print failed to '$ofile' for final-block footer: $!");
+    $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): wrote ", ($ofoot->[1]-$ofoot->[0]), " footer bytes");
   }
 
   ##-- cleanup & return
+  $fmt->vlog($LL_BLK_DEBUG, "blockAppend($blkid): finished, pos=", $outfh->tell);
   $outfh->close;
   return $fmt;
 }
