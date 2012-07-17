@@ -58,6 +58,7 @@ sub new {
 
   $fmt->{key2xml}{text}      = 't';
   $fmt->{xml2key}{t}         = 'text';
+  $fmt->{xml2key}{old}       = 'text';
 
   $fmt->{key2xml}{doc}       = 'sentences';
   $fmt->{xml2key}{sentences} = 'doc';
