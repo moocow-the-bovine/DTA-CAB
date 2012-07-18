@@ -139,8 +139,8 @@ sub setupChains {
      'default.moot'     =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot)}],
      'default.moot1'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
      'default.ner'      =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot mootsub ner)}],
-     'default.base'     =>[@$ach{qw(tokpp xlit static exlex lts        morph mlatin msafe)}],
-     'default.type'     =>[@$ach{qw(tokpp xlit static exlex lts        morph mlatin msafe rw rwsub)}],
+     'default.base'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe)}],
+     'default.type'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe rw rwsub)}],
      ##
      'expand.old'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw)}],
      'expand.ext'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
