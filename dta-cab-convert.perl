@@ -144,7 +144,7 @@ foreach $file (@ARGV) {
     $oelapsed += tv_interval($t1,[gettimeofday]);
 
     $ntoks += $doc->nTokens;
-    $nchrs += (-s $file) if ($file ne '-');
+    $nchrs += (-s $file) if ($file ne '-' && -e $file);
   }
 }
 
