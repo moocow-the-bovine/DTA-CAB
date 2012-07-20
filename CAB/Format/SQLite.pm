@@ -18,7 +18,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'sqlite', filenameRegex=>qr/\.(?i:sqlite)(?:\(.*\))?$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'sqlite', filenameRegex=>qr/\.(?i:sqlite)(?:\:.*)?$/);
 }
 
 ##==============================================================================
@@ -33,9 +33,13 @@ BEGIN {
 ##     db_user => $user,	       ##-- db user (required?)
 ##     db_pass => $pass,	       ##-- db password (required?)
 ##     db_dsn  => $dsn,		       ##-- db dsn (set by fromFile())
-##     db_opts => \%dbopts,	       ##-- additional options for DBI->connect()
-##     where => $where,                ##-- condition string for vtoken query (default=undef: all)
+##     db_opts => \%dbopts,	       ##-- additional options for DBI->connect() ; default={sqlite_unicode=>1}
+##     f_which => $f_which,            ##-- restriction (see fromFile())
+##     f_where => $f_where,            ##-- target value for restriction (see fromFile())
+##     limit => $limit,		       ##-- sql limit clause (default: undef: none)
 ##     history => $bool,	       ##-- if true, parse history as well as raw data (default: 1)
+##     keep_null => $bool,	       ##-- if true, NULL values from db will be kept as undef (default: false)
+##     keep_temp => $bool,	       ##-- if true, temporary tables will be kept (default: false)
 ##
 ##     ##---- Output
 ##     #(disabled)
@@ -57,9 +61,15 @@ sub new {
 			   db_user=>undef,
 			   db_pass=>undef,
 			   db_dsn=>undef,
-			   #db_opts=>{},
-			   where=>undef,
+			   db_opts=>{
+				     sqlite_unicode=>1,
+				    },
+			   f_which=>undef,
+			   f_where=>undef,
+			   limit=>undef,
 			   history=>1,
+			   keep_null=>0,
+			   keep_temp=>0,
 
 			   ##-- Output
 			   #level  => 0,
@@ -69,6 +79,9 @@ sub new {
 			   #utf8 => 1,
 			   #dbh  => undef,
 			   #raw => 0,
+
+			   ##-- logging
+			   trace_level => 'trace',
 
 			   ##-- user args
 			   @_
@@ -123,7 +136,7 @@ sub dbdisconnect {
 ##  + executes sql with optional bind-paramaters \@params
 sub execsql {
   my ($fmt,$sql,$params) = @_;
-  $fmt->trace("execsql(): $sql\n");
+  $fmt->vlog($fmt->{trace_level}, "execsql(): $sql\n");
 
   my $sth = $fmt->dbh->prepare($sql)
     or $fmt->logconfess("execsql(): prepare() failed for {$sql}: ", $fmt->dbh->errstr);
@@ -132,32 +145,105 @@ sub execsql {
   return $sth;
 }
 
-## \%name2info = $cdb->column_info(                   $table)
-## \%name2info = $cdb->column_info(          $schema, $table)
-## \%name2info = $cdb->column_info($catalog, $schema, $table)
+## \%name2info = $fmt->column_info(                   $table)
+## \%name2info = $fmt->column_info(          $schema, $table)
+## \%name2info = $fmt->column_info($catalog, $schema, $table)
 ##  + get column information for table as hashref over COLUMN_NAME; see DBI::column_info()
 sub column_info {
-  my $cdb = shift;
+  my $fmt = shift;
   my ($sth);
-  if    (@_ >= 3) { $sth=$cdb->dbh->column_info(@_[0..2],undef); }
-  elsif (@_ >= 2) { $sth=$cdb->dbh->column_info(undef,@_[0,1],undef); }
+  if    (@_ >= 3) { $sth=$fmt->dbh->column_info(@_[0..2],undef); }
+  elsif (@_ >= 2) { $sth=$fmt->dbh->column_info(undef,@_[0,1],undef); }
   else {
     confess(__PACKAGE__, "::column_info(): no table specified!") if (!$_[0]);
-    $sth=$cdb->dbh->column_info(undef,undef,$_[0],undef);
+    $sth=$fmt->dbh->column_info(undef,undef,$_[0],undef);
   }
   die(__PACKAGE__, "::column_info(): DBI returned NULL statement handle") if (!$sth);
   return $sth->fetchall_hashref('COLUMN_NAME');
 }
 
 
-## @colnames = $cdb->columns(                   $table)
-## @colnames = $cdb->columns(          $schema, $table)
-## @colnames = $cdb->columns($catalog, $schema, $table)
+## @colnames = $fmt->columns(                   $table)
+## @colnames = $fmt->columns(          $schema, $table)
+## @colnames = $fmt->columns($catalog, $schema, $table)
 ##  + get column names for $catalog.$schema.$table in db-storage order
 sub columns {
-  my $cdb  = shift;
-  return map {$_->{COLUMN_NAME}} sort {$a->{ORDINAL_POSITION}<=>$b->{ORDINAL_POSITION}} values %{$cdb->column_info(@_)};
+  my $fmt  = shift;
+  return map {$_->{COLUMN_NAME}} sort {$a->{ORDINAL_POSITION}<=>$b->{ORDINAL_POSITION}} values %{$fmt->column_info(@_)};
 }
+
+##======================================================================
+## DB Stuff: Data Retrieval
+
+
+## $row_arrayref = $fmt->fetch1row_arrayref($sql)
+## $row_arrayref = $fmt->fetch1row_arrayref($sql,\@params)
+##  + get a single row from the database as an ARRAY-ref
+*fetch1row = \&fetch1row_arrayref;
+sub fetch1row_arrayref {
+  my $fmt = shift;
+  my $sth = $fmt->execsql(@_);
+  return $sth->fetchrow_arrayref();
+}
+
+## @row_array = $fmt->fetch1row_array($sql)
+## @row_array = $fmt->fetch1row_array($sql,\@params)
+##  + get a single row from the database as an array
+sub fetch1row_array {
+  my $fmt = shift;
+  my $row = $fmt->fetch1row_arrayref(@_);
+  return defined($row) ? @$row : qw();
+}
+
+## $row_hashref = $fmt->fetch1row_hashref($sql,\@params)
+##  + get a single row from the database as a hash-ref
+sub fetch1row_hashref {
+  my $fmt = shift;
+  my $sth = $fmt->execsql(@_);
+  return $sth->fetchrow_hashref();
+}
+
+## $rows_arrayref_of_arrayrefs = $fmt->fetchall_arrayref($sql)
+## $rows_arrayref_of_arrayrefs = $fmt->fetchall_arrayref($sql,\@params)
+##  + get all rows from the database as an ARRAY-ref
+*fetchall = \&fetchall_arrayref;
+sub fetchall_arrayref {
+  my $fmt = shift;
+  my $sth = $fmt->execsql(@_);
+  return $sth->fetchall_arrayref();
+}
+
+## $rows_arrayref_of_hashrefs = $fmt->fetchall_hashrows($sql,\@params)
+##  + get all rows from the database as an array-ref of hash-refs
+sub fetchall_hashrows {
+  my $fmt = shift;
+  my $sth = $fmt->execsql(@_);
+  my $acols = $sth->{NAME};
+  my $arows = $sth->fetchall_arrayref();
+  return $fmt->hashrows($acols,$arows);
+}
+
+## $hash_of_hashres = $fmt->fetchall_hh($sql,$keyfield,\@params)
+##  + get all rows from the database as a hash-ref of hash-refs
+sub fetchall_hh {
+  my ($fmt,$sql,$key) = splice(@_,0,3);
+  my $hrows = $fmt->fetchall_hashrows($sql,@_);
+  return { map {(($_->{$key}||'')=>$_)} @$hrows };
+}
+
+## \@hashrows = $fmt->hashrows(\@array_row_colnames,\@array_rows)
+##  + returns ARRAY-ref of HASH-refs for each row of @array_rows rows, keyed by \@array_row_colnames
+##  + respects $fmt->{keep_null}
+sub hashrows {
+  my ($fmt,$anames,$arows) = @_;
+  my $hrows = [];
+  my ($arow);
+  foreach $arow (@$arows) {
+    push(@$hrows,{map {($anames->[$_]=>$arow->[$_])} grep {$fmt->{keep_null} || defined($arow->[$_])} (0..$#$anames)});
+  }
+  return $hrows;
+}
+
 
 ##==============================================================================
 ## Methods: Persistence
@@ -210,12 +296,27 @@ sub fromString {
 ## $fmt = $fmt->fromFile($filename)
 ##  + input from an sqlite db file
 ##  + sets $fmt->{db_dsn} and calls $fmt->dbconnect();
-##  + attempts to parse "$filename" into as "FILE(WHERE)"
+##  + attempts to parse "$filename" into as "FILE:WHICH=WHERE"
+##    where "WHICH=WHERE" may be one of:
+##      doc=DOCID
+##      dtadir=DOC_DTADIR	##-- alias for 'dtadir
+##      dir=DOC_DTADIR		##-- alias for 'dtadir
+##      base=DOC_DTADIR		##-- alias for 'dtadir'
+##      s=SQL_SENT_QUERY
+##      w=SQL_TOKEN_QUERY
 sub fromFile {
   my ($fmt,$filespec) = @_;
+  $fmt->vlog($fmt->{trace_level}, "filespec=$filespec");
   $fmt->close();
-  @$fmt{qw(file where)} = ($filespec =~ /^([^\(])\(.*\)$/ ? ($1,$2) : ($filespec,undef));
+  if ($filespec =~ /^([^\:]*)\:([^\=]*)\=(.*)$/) {
+    @$fmt{qw(file f_which f_where)} = ($1,$2,$3);
+  } else {
+    @$fmt{qw(file f_which f_where)} = ($filespec,undef,undef);
+  }
   $fmt->{db_dsn} = "dbi:SQLite:dbname=$fmt->{file}";
+  $fmt->vlog($fmt->{trace_level}, "db_dsn=$fmt->{db_dsn}");
+  $fmt->vlog($fmt->{trace_level}, "f_which=".(defined($fmt->{f_which}) ? $fmt->{f_which} : '-undef-'));
+  $fmt->vlog($fmt->{trace_level}, "f_where=".(defined($fmt->{f_where}) ? $fmt->{f_where} : '-undef-'));
   return $fmt->dbconnect();
 }
 
@@ -226,54 +327,115 @@ sub fromFile {
 sub parseDocument {
   my $fmt = shift;
 
-  ##-- build & execute basic sql query
+  ##-- preparations
   my $dbh = $fmt->dbh() or $fmt->logconfess("no database handle!");
-  my $sth = $fmt->execsql("select * from vtoken t ".($fmt->{where} ? "where $fmt->{where}" : ''));
-  my @dcols = $fmt->columns('doc');
-  my @wcols = $fmt->columns('token');
-  my @scols = $fmt->columns('sent');
-  my ($row);
 
-  ##-- parse result rows
-  my ($doc,$s,$w);
-  my (%id2s,%id2w); ##-- track ($PRIMARY_KEY => \%object) for splicing in history
-  while (defined($row=$sth->fetchrow_hashref)) {
-    if (!defined($doc)) {
-      ##-- populate: doc
-      $doc = { body=>[], (map {($_=>$row->{$_})} @dcols) };
-      $doc->{base} = $doc->{dtadir};
+  ##-- get restrictions -- build @$drows,@$srows,@$wrows, @$whrows,@$shrows
+  my $f_which = $fmt->{f_which} || '';
+  my $tmp   = $fmt->{keep_temp} ? 'tmp' : "tmp$$";
+  my $tmpkw = $fmt->{keep_temp} ? ''    : 'temporary';
+  my ($drows,$srows,$wrows, $whrows,$shrows);
+  if ($f_which =~ m/^(?:doc|dtadir|dir|base)$/) {
+    ##-- restrict: doc
+    if ($f_which eq 'doc') {
+      ##-- restrict: doc: by sql id
+      $drows = $fmt->fetchall_hashrows("select * from doc where doc=?",[$fmt->{f_where}]);
+    } else {
+      ##-- restrict: doc: by dtadir
+      $drows = $fmt->fetchall_hashrows("select * from doc where dtadir=?",[$fmt->{f_where}]);
     }
+    $fmt->logconfess("no document found for $fmt->{f_which}=$fmt->{f_where}") if (!@$drows);
 
-    if (!defined($s) || $s->{sent} != $row->{sent}) {
-      ##-- populate: sent
-      push(@{$doc->{body}}, $s = $id2s{$row->{sent}} = { tokens=>[], (map {($_=>$row->{$_})} @scols) });
+    $srows = $fmt->fetchall_hashrows("select * from sent  where doc=?;",[$drows->[0]{doc}]);
+    $wrows = $fmt->fetchall_hashrows("select * from token where doc=?;",[$drows->[0]{doc}]);
+    if ($fmt->{history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from sent_history  where doc=?;",[$drows->[0]{doc}]);
+      $whrows = $fmt->fetchall_hashrows("select * from token_history where doc=?;",[$drows->[0]{doc}]);
     }
+  }
+  elsif ($f_which eq 's') {
+    ##-- restrict: sentence query
+    $fmt->execsql("drop table if exists s_$tmp;");
+    $fmt->execsql("create $tmpkw table s_$tmp (sent integer not null primary key);");
+    $fmt->execsql("insert or ignore into s_$tmp $fmt->{f_where};");
+    $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
+    $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
+    $wrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token;");
+    if ($fmt->{history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent_history;");
+      $whrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token_history;");
+    }
+    $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
+  }
+  elsif ($f_which eq 'w') {
+    ##-- restrict: token query
+    $fmt->execsql("drop table if exists w_$tmp;");
+    $fmt->execsql("create $tmpkw table w_$tmp (token integer not null primary key);"); ##-- matched tokens only
+    $fmt->execsql("insert or ignore into w_$tmp $fmt->{f_where};");
+    $fmt->execsql("drop table if exists s_$tmp;");
+    $fmt->execsql("create $tmpkw table s_$tmp (sent integer not null primary key);");
+    $fmt->execsql("insert or ignore into s_$tmp select sent from w_$tmp natural join token;");
+    $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
+    $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
+    $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join token;");    if ($fmt->{history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent_history;");
+      $whrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token_history;");
+    }
+    $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
+    $fmt->execsql("drop table w_$tmp;") if (!$fmt->{keep_temp});
+  }
+  else {
+    $fmt->logconfess("bad restriction \`".($fmt->{f_which}||'')."=".($fmt->{f_where}||'')."'");
+  }
 
-    ##-- populate: token
-    push(@{$s->{tokens}}, $w = $id2w{$row->{token}} = { text=>$row->{wold}, (map {($_=>$row->{$_})} @wcols) });
+  ##-- hash result arrays by id
+  my $id2doc  = { map {($_->{doc}=>$_)}  @$drows };
+  my $id2sent = { map {($_->{sent}=>$_)} @$srows };
+  my ($s,$w);
 
-    ##-- update: token
+  ##-- parse //s into //doc/body
+  foreach $s (@$srows) {
+    push(@{$id2doc->{$s->{doc}}{body}},$s);
+  }
+
+  ##-- parse //w into //s/tokens
+  foreach $w (@$wrows) {
+    $w->{text} = $w->{wold};
     $w->{toka} = [split('',$w->{toka})] if ($w->{toka});
+    push(@{$id2sent->{$w->{sent}}{tokens}},$w);
   }
-  $sth->finish();
 
-  ##-- build & execute history queries if requested
+  ##-- parse history
   if ($fmt->{history}) {
-    ##-- history: sent_history
-    my $sh_sth = $fmt->execsql("select sh.* from sent_history  sh inner join vtoken t using (sent) "
-			       .($fmt->{where} ? "where $fmt->{where}" : '')
-			       .' order by sh.rdate asc');
-    push(@{$id2s{$row->{sent}}{history}}, { %$row }) while (defined($row=$sh_sth->fetchrow_hashref));
-    $sh_sth->finish();
+    my ($r,$v);
 
-    ##-- history: token_history
-    my $th_sth = $fmt->execsql("select th.* from token_history th inner join vtoken t using (token) "
-			       .($fmt->{where} ? "where $fmt->{where}" : '')
-			       .' order by th.rdate asc');
-    push(@{$id2w{$row->{token}}{history}}, { %$row }) while (defined($row=$th_sth->fetchrow_hashref));
-    $th_sth->finish();
+    ##-- sentence history: //r into //s/history
+    foreach $r (@$shrows) {
+      push(@{$id2sent->{$r->{sent}}{history}},$r);
+    }
+
+    ##-- token_history: //v into //w/history
+    my $id2token = { map {($_->{token}=>$_)} @$wrows };
+    foreach $v (@$whrows) {
+      push(@{$id2token->{$v->{token}}{history}},$v);
+    }
   }
 
+  ##-- build final cab doc structure
+  my ($doc);
+  if (scalar(@$drows)==1) {
+    ##-- single source doc: we've already built it
+    $doc = $drows->[0];
+    $doc->{base} = $doc->{dtadir};
+  } else {
+    ##-- multiple source docs: splice doc attributes into sentences
+    foreach my $drow (@$drows) {
+      foreach $s (@{$drow->{body}}) {
+	$s->{$_}=$drow->{$_} foreach (grep {$_ ne 'body'} keys %$drow);
+      }
+    }
+    $doc = { body=>[map {@{$_->{body}}} @$drows], };
+  }
 
   $doc = {body=>[]} if (!defined($doc));
   return $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
