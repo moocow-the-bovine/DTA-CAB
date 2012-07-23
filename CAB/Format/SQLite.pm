@@ -377,7 +377,8 @@ sub parseDocument {
     $fmt->execsql("insert or ignore into s_$tmp select sent from w_$tmp natural join token;");
     $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
     $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
-    $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join token;");    if ($fmt->{history}) {
+    $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join token t;");
+    if ($fmt->{history}) {
       $shrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent_history;");
       $whrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token_history;");
     }
