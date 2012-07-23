@@ -37,7 +37,7 @@ BEGIN {
 ##     f_which => $f_which,            ##-- restriction (see fromFile())
 ##     f_where => $f_where,            ##-- target value for restriction (see fromFile())
 ##     limit => $limit,		       ##-- sql limit clause (default: undef: none)
-##     history => $bool,	       ##-- if true, parse history as well as raw data (default: 1)
+##     keep_history => $bool,	       ##-- if true, parse history as well as raw data (default: 1)
 ##     keep_null => $bool,	       ##-- if true, NULL values from db will be kept as undef (default: false)
 ##     keep_temp => $bool,	       ##-- if true, temporary tables will be kept (default: false)
 ##
@@ -67,7 +67,7 @@ sub new {
 			   f_which=>undef,
 			   f_where=>undef,
 			   limit=>undef,
-			   history=>1,
+			   keep_history=>1,
 			   keep_null=>0,
 			   keep_temp=>0,
 
@@ -82,6 +82,7 @@ sub new {
 
 			   ##-- logging
 			   trace_level => 'trace',
+			   #trace_level => undef,
 
 			   ##-- user args
 			   @_
@@ -298,9 +299,10 @@ sub fromString {
 ##  + sets $fmt->{db_dsn} and calls $fmt->dbconnect();
 ##  + attempts to parse "$filename" into as "FILE:WHICH=WHERE"
 ##    where "WHICH=WHERE" may be one of:
+##      all=ALL			##-- full corpus
 ##      doc=DOCID
-##      dtadir=DOC_DTADIR	##-- alias for 'dtadir
-##      dir=DOC_DTADIR		##-- alias for 'dtadir
+##      dtadir=DOC_DTADIR
+##      dir=DOC_DTADIR		##-- alias for 'dtadir'
 ##      base=DOC_DTADIR		##-- alias for 'dtadir'
 ##      s=SQL_SENT_QUERY
 ##      w=SQL_TOKEN_QUERY
@@ -311,7 +313,7 @@ sub fromFile {
   if ($filespec =~ /^([^\:]*)\:([^\=]*)\=(.*)$/) {
     @$fmt{qw(file f_which f_where)} = ($1,$2,$3);
   } else {
-    @$fmt{qw(file f_which f_where)} = ($filespec,undef,undef);
+    @$fmt{qw(file f_which f_where)} = ($filespec,'all','true');
   }
   $fmt->{db_dsn} = "dbi:SQLite:dbname=$fmt->{file}";
   $fmt->vlog($fmt->{trace_level}, "db_dsn=$fmt->{db_dsn}");
@@ -331,11 +333,16 @@ sub parseDocument {
   my $dbh = $fmt->dbh() or $fmt->logconfess("no database handle!");
 
   ##-- get restrictions -- build @$drows,@$srows,@$wrows, @$whrows,@$shrows
-  my $f_which = $fmt->{f_which} || '';
+  my $f_which = $fmt->{f_which} || 'all';
   my $tmp   = $fmt->{keep_temp} ? 'tmp' : "tmp$$";
   my $tmpkw = $fmt->{keep_temp} ? ''    : 'temporary';
-  my ($drows,$srows,$wrows, $whrows,$shrows);
-  if ($f_which =~ m/^(?:doc|dtadir|dir|base)$/) {
+  my ($drows,$srows,$wrows);
+  if (!$f_which || $f_which eq 'all') {
+    $drows = $fmt->fetchall_hashrows("select * from doc");
+    $srows = $fmt->fetchall_hashrows("select * from sent;");
+    $wrows = $fmt->fetchall_hashrows("select * from token;");
+  }
+  elsif ($f_which =~ m/^(?:all|doc|dtadir|dir|base)$/) {
     ##-- restrict: doc
     if ($f_which eq 'doc') {
       ##-- restrict: doc: by sql id
@@ -348,10 +355,6 @@ sub parseDocument {
 
     $srows = $fmt->fetchall_hashrows("select * from sent  where doc=?;",[$drows->[0]{doc}]);
     $wrows = $fmt->fetchall_hashrows("select * from token where doc=?;",[$drows->[0]{doc}]);
-    if ($fmt->{history}) {
-      $shrows = $fmt->fetchall_hashrows("select * from sent_history  where doc=?;",[$drows->[0]{doc}]);
-      $whrows = $fmt->fetchall_hashrows("select * from token_history where doc=?;",[$drows->[0]{doc}]);
-    }
   }
   elsif ($f_which eq 's') {
     ##-- restrict: sentence query
@@ -361,10 +364,6 @@ sub parseDocument {
     $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
     $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
     $wrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token;");
-    if ($fmt->{history}) {
-      $shrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent_history;");
-      $whrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token_history;");
-    }
     $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
   }
   elsif ($f_which eq 'w') {
@@ -378,10 +377,6 @@ sub parseDocument {
     $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
     $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
     $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join token t;");
-    if ($fmt->{history}) {
-      $shrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent_history;");
-      $whrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token_history;");
-    }
     $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
     $fmt->execsql("drop table w_$tmp;") if (!$fmt->{keep_temp});
   }
@@ -407,19 +402,17 @@ sub parseDocument {
   }
 
   ##-- parse history
-  if ($fmt->{history}) {
-    my ($r,$v);
-
-    ##-- sentence history: //r into //s/history
-    foreach $r (@$shrows) {
-      push(@{$id2sent->{$r->{sent}}{history}},$r);
+  if ($fmt->{keep_history}) {
+    my $jxs = JSON::XS->new()->utf8(0)->allow_nonref(1);
+    foreach $s (grep {defined($_->{shistory})} @$srows) {
+      $s->{shistory} = $jxs->decode($s->{shistory});
     }
-
-    ##-- token_history: //v into //w/history
-    my $id2token = { map {($_->{token}=>$_)} @$wrows };
-    foreach $v (@$whrows) {
-      push(@{$id2token->{$v->{token}}{history}},$v);
+    foreach $w (grep {defined($_->{history})} @$wrows) {
+      $w->{history} = $jxs->decode($w->{history});
     }
+  } else {
+    delete($_->{shistory}) foreach (@$srows);
+    delete($_->{history}) foreach (@$wrows);
   }
 
   ##-- build final cab doc structure
