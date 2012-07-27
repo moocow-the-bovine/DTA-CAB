@@ -61,7 +61,9 @@ sub dropClosures {
 sub prepare {
   my $anl = shift;
   $anl->SUPER::prepare() || return 0;
-  return $anl->ensureDynSubs();
+  $anl->ensureDynSubs() || return 0;
+  $anl->analyzeDyn('Prepare',$anl,@_);
+  return 1;
 }
 
 ##==============================================================================
@@ -72,7 +74,7 @@ sub prepare {
 sub ensureDynSubs {
   my $anl = shift;
   my ($which,$sub);
-  foreach $which (qw(Document Types Tokens Sentences Local Clean)) {
+  foreach $which (qw(Prepare Document Types Tokens Sentences Local Clean)) {
     $anl->{"analyze${which}"} = $anl->compileDynSub($which) if (!UNIVERSAL::isa($anl->{"analyze${which}"},'CODE'));
     if (!UNIVERSAL::isa($anl->{"analyze${which}"},'CODE')) {
       $anl->logcluck("ensureDynSubs(): no analysis sub for '$which'");
@@ -137,7 +139,7 @@ sub dumpPackage {
 ##  + wrapper for $anl->{"analyze${which}"}->(@args)
 sub analyzeDyn {
   return $_[0]->{"analyze$_[1]"}->(@_[2..$#_]) if (UNIVERSAL::isa($_[0]->{"analyze$_[1]"},'CODE'));
-  return $_[1];
+  return undef;
 }
 
 ##------------------------------------------------------------------------
@@ -146,27 +148,27 @@ sub analyzeDyn {
 ## $doc = $anl->analyzeDocument($doc,\%opts)
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
-sub analyzeDocument { return $_[0]->analyzeDyn('Document',@_[1..$#_]); }
+sub analyzeDocument { return $_[0]->analyzeDyn('Document',@_); }
 
 ## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
 ##  + perform type-wise analysis of all (text) types in $doc->{types}
-sub analyzeTypes { return $_[0]->analyzeDyn('Types',@_[1..$#_]); }
+sub analyzeTypes { return $_[0]->analyzeDyn('Types',@_); }
 
 ## $doc = $anl->analyzeTokens($doc,\%opts)
 ##  + perform token-wise analysis of all tokens $doc->{body}[$si]{tokens}[$wi]
-sub analyzeTokens { return $_[0]->analyzeDyn('Tokens',@_[1..$#_]); }
+sub analyzeTokens { return $_[0]->analyzeDyn('Tokens',@_); }
 
 ## $doc = $anl->analyzeSentences($doc,\%opts)
 ##  + perform sentence-wise analysis of all sentences $doc->{body}[$si]
-sub analyzeSentences { return $_[0]->analyzeDyn('Sentences',@_[1..$#_]); }
+sub analyzeSentences { return $_[0]->analyzeDyn('Sentences',@_); }
 
 ## $doc = $anl->analyzeLocal($doc,\%opts)
 ##  + perform analyzer-local document-level analysis of $doc
-sub analyzeLocal { return $_[0]->analyzeDyn('Local',@_[1..$#_]); }
+sub analyzeLocal { return $_[0]->analyzeDyn('Local',@_); }
 
 ## $doc = $anl->analyzeClean($doc,\%opts)
 ##  + cleanup any temporary data associated with $doc
-sub analyzeClean { return $_[0]->analyzeDyn('Clean',@_[1..$#_]); }
+sub analyzeClean { return $_[0]->analyzeDyn('Clean',@_); }
 
 
 1; ##-- be happy
