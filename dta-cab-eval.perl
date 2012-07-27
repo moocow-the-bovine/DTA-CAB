@@ -121,6 +121,7 @@ $ofmt->toFile($outfile);
 ##-- begin code
 if (@begin_code) {
   my $code = join("; ", @begin_code);
+  eval $code;
   die("$prog: error evaluating BEGIN_CODE=\`$code': $@") if ($@);
 }
 $eval_str = join("; ", @eval_code);
@@ -153,6 +154,7 @@ foreach $file (@ARGV) {
 ##-- end code
 if (@end_code) {
   my $code = join("; ", @end_code);
+  eval $code;
   die("$prog: error evaluating END_CODE=\`$code': $@") if ($@);
 }
 
