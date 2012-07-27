@@ -137,7 +137,7 @@ sub dumpPackage {
 ##  + wrapper for $anl->{"analyze${which}"}->(@args)
 sub analyzeDyn {
   return $_[0]->{"analyze$_[1]"}->(@_[2..$#_]) if (UNIVERSAL::isa($_[0]->{"analyze$_[1]"},'CODE'));
-  return undef;
+  return $_[1];
 }
 
 ##------------------------------------------------------------------------
