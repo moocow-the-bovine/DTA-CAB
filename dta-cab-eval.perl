@@ -113,8 +113,6 @@ $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOp
 our $ielapsed = 0;
 our $oelapsed = 0;
 
-our ($file,$doc);
-our ($ntoks,$nchrs) = (0,0);
 push(@ARGV,'-') if (!@ARGV);
 $ofmt->toFile($outfile);
 
@@ -126,6 +124,8 @@ if (@begin_code) {
 }
 $eval_str = join("; ", @eval_code);
 
+our ($file,$doc);
+our ($ntoks,$nchrs) = (0,0);
 foreach $file (@ARGV) {
 
   ##-- read
