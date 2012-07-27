@@ -33,7 +33,7 @@ BEGIN {
 ##
 ##     ##-- Output
 ##     #outbuf  => $stringBuffer,     ##-- buffered output
-##     level   => $formatLevel,      ##-- <0:no 'text' attribute; >=0: all attributes; >=1: canonical
+##     level   => $formatLevel,      ##-- <0:no 'text' attribute; >=0: all attributes; abs($_)>=2: canonical
 ##
 ##     ##-- Common
 ##     raw => $bool,                   ##-- attempt to load/save raw data
@@ -79,7 +79,7 @@ sub noSaveKeys {
 sub jsonxs {
   require JSON::XS;
   return $_[0]{jxs} if (defined($_[0]{jxs}));
-  return $_[0]{jxs} = JSON::XS->new->utf8(0)->relaxed(1)->canonical($_[0]{level}>=1 ? 1 : 0)->allow_blessed(1)->convert_blessed(1);
+  return $_[0]{jxs} = JSON::XS->new->utf8(0)->relaxed(1)->canonical(abs($_[0]{level})>=2 ? 1 : 0)->allow_blessed(1)->convert_blessed(1);
 }
 
 ##==============================================================================
