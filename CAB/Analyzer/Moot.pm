@@ -37,12 +37,14 @@ my $hmm =$moot->{hmm};
 my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
+my $lctext=$moot->{lctext};
 my ($msent,$w,$mw,$t,$at);
 sub {
  $msent = [map {
    $w  = $_;
    $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
+   $mw->{text} = lc($mw->{text}) if ($lctext);
    $mw->{analyses} = ['._am_tagh_list2moota('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
 			    ($w->{dmoot} ? $w->{dmoot}{morph}
@@ -89,6 +91,7 @@ sub {
 ##     analyzeCode => $code,     ##-- pseudo-closure: analyze current sentence $_
 ##     label       => $lab,      ##-- destination key (default='moot')
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
+##     lctext      => $bool,     ##-- if true, input text will be bashed to lower-case (default: false)
 ##
 ##     ##-- Analysis Objects
 ##     hmm         => $hmm,   ##-- a moot::HMM object
@@ -115,6 +118,7 @@ sub new {
 			       #analysisClass => 'DTA::CAB::Analyzer::Moot::Analysis',
 			       label => 'moot',
 			       analyzeCode => $DEFAULT_ANALYZE_CODE,
+			       lctext => 0,
 
 			       #analyzeCostFuncs => {},
 			       #requireAnalyses => 0,

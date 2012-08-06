@@ -85,6 +85,9 @@ sub new {
 						     rw=>'$cost/length($text)',
 						    },
 
+				##-- letter-case options
+				lctags => 0, ##-- if true, analysis tags are forced to lower-case
+
 				##-- analysis I/O
 				label => 'dmoot',
 				analyzeCode => undef, ##-- see analysisCode() method, below
@@ -142,6 +145,7 @@ my $dmoot=$anl;
 my $lab  =$dmoot->{label};
 my $hmm  =$dmoot->{hmm};
 my $utf8 =$dmoot->{hmmUtf8};
+my $lctags =$dmoot->{lctags};
 my ($msent,$w,$mw,$text,$tmp, $analysesOk);
 sub {
  $msent = [map {
@@ -184,6 +188,7 @@ sub {
      }
      $_->{details} = $_->{tag} foreach (@{$mw->{analyses}});
    }
+   if ($lctags) { $_->{tag}=lc($_->{tag}) foreach (@{$mw->{analyses}}); }
    $mw
  } @{$_->{tokens}}];
 
