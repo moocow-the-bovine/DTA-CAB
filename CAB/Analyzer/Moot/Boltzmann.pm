@@ -95,6 +95,9 @@ sub new {
 				##-- analysis objects
 				#hmm => undef,
 
+				##-- debugging
+				analyzeDebug=>1,
+
 				##-- user args
 				@_
 			       );
@@ -131,7 +134,7 @@ sub hmmClass { return 'Moot::HMM::Boltzmann'; }
 ##  + analysis closure for passing to Analyzer::accessClosure()
 sub analysisCode {
   my $dmoot = shift;
-  return $dmoot->analyzeDebug() if (0 || $dmoot->{analyzeDebug}); ##-- DEBUG
+  return $dmoot->analyzeDebug() if ($dmoot->{analyzeDebug}); ##-- DEBUG
 
   my %acfunc = %{$dmoot->{analyzeCostFuncs}};
   foreach (keys %acfunc) {
@@ -194,15 +197,15 @@ sub {
      $_->{details} = $_->{tag} foreach (@{$mw->{analyses}});
    }
    if ($lctags) { $_->{tag}=lc($_->{tag}) foreach (@{$mw->{analyses}}); }
+
+   if (!$analysesOk) {
+     $dmoot->logwarn("no candidate analyses found for token text \\"$text\\": skipping sentence!");
+     return;
+   }
+
    $mw
  } @{$_->{tokens}}];
 
- return if (!@$msent); ##-- ignore empty sentences
-
- if (!$analysesOk) {
-   $dmoot->logwarn("no candidate analyses found for token text \\"$text\\": skipping sentence!");
-   return;
- }
  $hmm->tag_sentence($msent, $utf8);
 
  foreach (@$msent) {
@@ -221,25 +224,39 @@ my $dmoot=$anl;
 my $lab  =$dmoot->{label};
 my $hmm  =$dmoot->{hmm};
 my $utf8 =$dmoot->{hmmUtf8};
-my ($msent,$w,$mw,$text,$tmp);
+my $lctags =$dmoot->{lctags};
+my $dynbase =log($hmm->dynlex_base());
+my $logbase =log($hmm->dynlex_base());
+my $dynbeta =$hmm->dynlex_beta();
+my ($msent,$w,$mw,$text,$tmp, $analysesOk);
 
  $msent = [map {
    $w  = $_;
-   $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
+   $analysesOk=1;
+   $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
      if ($w->{exlex}) {
-       $mw->{analyses} = [{tag=>$w->{exlex}, prob=>0}];
+       ##-- special case for exception lexicon: clobber all other alternatives
+       $mw->{analyses} = (ref($w->{exlex})
+                          ? [map {{tag=>$_->{text}, prob=>-log($_->{freq}||$dynbase)/($logbase*$dynbeta)}} @{$w->{exlex}}] ##-- non-deterministic: ARRAY
+                          : [{tag=>$w->{exlex}, prob=>0}]);								   ##-- deterministic: string
+     } elsif ($w->{xr} && $w->{xr} =~ /\baq\b/) {
+       ##-- special case for antiqua typesetting in fraktur text: use unicruft for latinExt=1 to scrub out long s
+       $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
+       $mw->{analyses} = [{tag=>$text, prob=>0}];
      } elsif ($w->{msafe}) {
+       ##-- safe contemporary form: leave as-is
        $mw->{analyses} = [{tag=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
 , prob=>0}];
      } else {
+       $tmp=undef;
        $mw->{analyses} = [
         (map {{tag=>$_->{hi}, prob=>($_->{w}||0)} ##-- _am_dmoot_fst2moota
-} (map {$tmp && $tmp->{hi} eq $_->{hi} ? qw() : ($tmp=$_)} sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)} ({hi=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
-, w=>(2/length($text))} ##== _am_id_fst
+} (sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} (map {$tmp && $tmp->{hi} eq $_->{hi} ? qw() : ($tmp=$_)} sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)} ({hi=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
+, w=>(16/length($text))} ##== _am_id_fst
 ,
-	($w->{eqphox} ? (map {{ %{$_}, w=>((1+0.1*$_->{w})/length($text)) } ##-- _am_fst_wcp
+	($w->{eqphox} ? (map {{ %{$_}, w=>(0.5*(2+$_->{w})/length($text)) } ##-- _am_fst_wcp
 } @{$w->{eqphox}}) ##-- _am_fst_wcp_list
  : qw()) ##-- _am_fst_wcp_listref
 ,
@@ -247,6 +264,7 @@ my ($msent,$w,$mw,$text,$tmp);
 } @{$w->{rw}}) ##-- _am_fst_wcp_list
  : qw()) ##-- _am_fst_wcp_listref
 )) ##== _am_fst_uniq
+) ##== _am_fst_sort
 ) ##-- _am_dmoot_list2moota
 
         ];
@@ -254,9 +272,17 @@ my ($msent,$w,$mw,$text,$tmp);
           $_->{tag} =~ s/\[(.[^\]]*)\]/$1/g;  ##-- un-escape: brackets
           $_->{tag} =~ s/\\(.)/$1/g;        ##-- un-escape: backslashes
         }
+        $analysesOk=0 if (!@{$mw->{analyses}});
      }
      $_->{details} = $_->{tag} foreach (@{$mw->{analyses}});
    }
+   if ($lctags) { $_->{tag}=lc($_->{tag}) foreach (@{$mw->{analyses}}); }
+
+   if (!$analysesOk) {
+     $dmoot->logwarn("no candidate analyses found for token text \"$text\": skipping sentence!");
+     return;
+   }
+
    $mw
  } @{$_->{tokens}}];
 
@@ -265,7 +291,8 @@ my ($msent,$w,$mw,$text,$tmp);
  foreach (@$msent) {
    delete($_->{text});
  }
-}}
+};
+}
 
 
 ##==============================================================================

@@ -42,7 +42,7 @@ my ($msent,$w,$mw,$t,$at);
 sub {
  $msent = [map {
    $w  = $_;
-   $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
+   $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
    $mw->{analyses} = ['._am_tagh_list2moota('map {$_ ? @$_ : qw()}
