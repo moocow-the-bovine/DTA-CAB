@@ -53,6 +53,7 @@ sub {
      ] if (!defined($mw->{analyses}));
    $mw
  } @{$_->{tokens}}];
+ return if (!@$msent); ##-- ignore empty sentences
 
  $hmm->tag_sentence($msent, $utf8);
 

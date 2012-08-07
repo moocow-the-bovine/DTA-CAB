@@ -146,17 +146,22 @@ my $lab  =$dmoot->{label};
 my $hmm  =$dmoot->{hmm};
 my $utf8 =$dmoot->{hmmUtf8};
 my $lctags =$dmoot->{lctags};
+my $dynbase =log($hmm->dynlex_base());
+my $logbase =log($hmm->dynlex_base());
+my $dynbeta =$hmm->dynlex_beta();
 my ($msent,$w,$mw,$text,$tmp, $analysesOk);
 sub {
  $msent = [map {
    $w  = $_;
    $analysesOk=1;
-   $mw = $w->{$lab} ? $w->{$lab} : ($w->{$lab}={});
+   $mw = $w->{$lab} ? { %{$w->{$lab}} } : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
      if ($w->{exlex}) {
        ##-- special case for exception lexicon: clobber all other alternatives
-       $mw->{analyses} = [{tag=>$w->{exlex}, prob=>0}];
+       $mw->{analyses} = (ref($w->{exlex})
+                          ? [map {{tag=>$_->{text}, prob=>-log($_->{freq}||$dynbase)/($logbase*$dynbeta)}} @{$w->{exlex}}] ##-- non-deterministic: ARRAY
+                          : [{tag=>$w->{exlex}, prob=>0}]);								   ##-- deterministic: string
      } elsif ($w->{xr} && $w->{xr} =~ /\baq\b/) {
        ##-- special case for antiqua typesetting in fraktur text: use unicruft for latinExt=1 to scrub out long s
        $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
@@ -191,6 +196,8 @@ sub {
    if ($lctags) { $_->{tag}=lc($_->{tag}) foreach (@{$mw->{analyses}}); }
    $mw
  } @{$_->{tokens}}];
+
+ return if (!@$msent); ##-- ignore empty sentences
 
  if (!$analysesOk) {
    $dmoot->logwarn("no candidate analyses found for token text \\"$text\\": skipping sentence!");
