@@ -96,7 +96,7 @@ sub new {
 				#hmm => undef,
 
 				##-- debugging
-				analyzeDebug=>1,
+				#analyzeDebug=>1,
 
 				##-- user args
 				@_
@@ -134,7 +134,7 @@ sub hmmClass { return 'Moot::HMM::Boltzmann'; }
 ##  + analysis closure for passing to Analyzer::accessClosure()
 sub analysisCode {
   my $dmoot = shift;
-  return $dmoot->analyzeDebug() if ($dmoot->{analyzeDebug}); ##-- DEBUG
+  return $dmoot->analyzeDebug() if (0 && $dmoot->{analyzeDebug}); ##-- DEBUG
 
   my %acfunc = %{$dmoot->{analyzeCostFuncs}};
   foreach (keys %acfunc) {
@@ -157,7 +157,7 @@ sub {
  $msent = [map {
    $w  = $_;
    $analysesOk=1;
-   $mw = $w->{$lab} ? { %{$w->{$lab}} } : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
+   $mw = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
      if ($w->{exlex}) {
