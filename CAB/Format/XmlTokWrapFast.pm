@@ -98,8 +98,8 @@ sub xmlparser {
 		      }
 		      push(@$stoks, $w={%attrs});
 		    } elsif ($_[1] eq 'a') {
-		      ##-- w/a
-		      ;		##-- do nothing
+		      ##-- w/a : do nothing
+		      ;
 		    } elsif ($_[1] eq 's') {
 		      ##-- s
 		      push(@$body, $s={%attrs,tokens=>($stoks=[])});
@@ -359,7 +359,7 @@ sub putDocument {
 			   [
 			    ##-- word attributes: literals
 			    (t=>$w->{text}),
-			    (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen msafe)),
+			    (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen msafe mapclass)),
 			   ],
 			   ##
 			   ##-- content: tokenizer analyses
