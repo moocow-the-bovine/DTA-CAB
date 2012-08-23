@@ -235,8 +235,8 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen)\] (.*)$/) {
-		  ##-- token: field: other literal field (exlex, pnd, mapclass, errid, ...)
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc))\] (.*)$/) {
+		  ##-- token: field: other scalar field (exlex, pnd, mapclass, errid, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
@@ -364,6 +364,10 @@ sub token2buf {
 
   ##-- Location ('loc'), moot compatibile
   $$bufr .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
+
+  ##-- SynCoPe location
+  $$bufr .= "\t[syncope_type] $tok->{syncope_type}" if (defined($tok->{syncope_type}));
+  $$bufr .= "\t[syncope_loc] $tok->{syncope_loc}" if (defined($tok->{syncope_loc}));
 
   ##-- character list
   #$$bufr .= "\t[chars] $tok->{chars}" if (defined($tok->{chars}));

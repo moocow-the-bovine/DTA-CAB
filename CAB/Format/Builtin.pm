@@ -27,6 +27,7 @@ use DTA::CAB::Format::XmlTokWrapFast; ##-- quick & dirty tokwrap-style xml outpu
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
 use DTA::CAB::Format::SQLite;
+use DTA::CAB::Format::SynCoPe::CSV;
 #use DTA::CAB::Format::XmlVz;
 
 use DTA::CAB::Format::TEI; ##-- debug

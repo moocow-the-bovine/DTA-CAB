@@ -7,6 +7,7 @@
 
 package DTA::CAB::Analyzer::SynCoPe;
 use DTA::CAB::Analyzer ':child';
+use DTA::CAB::Format::SynCoPe::CSV;
 use RPC::XML::Client;
 use Encode qw(encode_utf8 decode_utf8);
 use XML::Parser;
@@ -79,34 +80,9 @@ sub analyzeSentences {
 ##  + see http://odo.dwds.de/twiki/bin/view/DWDS/EigennamenErkennung for details
 sub doc2qstr {
   my ($anl,$doc,$docname) = @_;
-  $docname = $doc->{base}||ref($doc) if (!defined($docname));
-  my $qstr = "$docname\n";
-  my ($si,$s,$wi,$w,$txt,$typ);
-  foreach $si (0..$#{$doc->{body}}) {
-    $s = $doc->{body}[$si];
-    $qstr .= "normal\n";
-    foreach $wi (0..$#{$s->{tokens}}) {
-      $w   = $s->{tokens}[$wi];
-      $txt = $w->{moot} ? $w->{moot}{word} : ($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text});
-
-      if ($txt =~ /^[[:upper:]]+$/)	{ $typ = 'UPPERCASE '.(length($txt)==1 ? 'LETTER' : 'WORD'); }
-      elsif ($txt =~ /^[[:lower:]]+$/)	{ $typ = 'LOWERCASE WORD'; }
-      elsif ($txt =~ /^[[:upper:]]/)	{ $typ = 'CAPITALIZED WORD'; }
-      elsif ($txt =~ /^[[:digit:]]+$/)	{ $typ = 'DIGIT'; }
-      elsif ($txt eq '-')		{ $typ = 'HYPHEN_MINUS'; }
-      elsif ($txt eq '.')		{ $typ = 'FULL STOP'; }
-      elsif ($txt eq ',')		{ $typ = 'COMMA'; }
-      elsif ($txt eq ':')		{ $typ = 'COLON'; }
-      elsif ($txt =~ /^[\"\']$/)	{ $typ = 'QUOTATION MARK'; }
-      elsif ($txt eq '!')		{ $typ = 'EXCLAMATION MARK'; }
-      elsif ($txt eq '&')		{ $typ = 'AMPERSAND'; }
-      elsif ($txt eq '?')		{ $typ = 'QUESTION MARK'; }
-      elsif ($txt eq '/')		{ $typ = 'SOLIDUS'; }
-      else 				{ $typ = 'SYMBOL'; }
-
-      $qstr .= join("\t", $txt, $typ, $si, $wi, 0,0)."\n";
-    }
-  }
+  my $fmt  = DTA::CAB::Format::SynCoPe::CSV->new();
+  my $qstr = '';
+  $fmt->toString(\$qstr)->putDocument($doc)->flush();
   return \$qstr;
 }
 
