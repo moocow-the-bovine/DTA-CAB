@@ -60,7 +60,7 @@ sub parseCsvString {
   no warnings 'uninitialized';
   $$src =~ s{^(\S+).*\n}{%% base=$1\n};
   $$src =~ s{^normal$}{}mg;
-  $$src =~ s{^([^\t]+)\t([^\t]*)(?:\t([^\t]*))?(?:\t([^\t]*))?(?:\t([^\t]*))?(?:\t([^\t]*))?$}{$1\t[syncope_type] $2\t[syncope_loc] $3 $4 $5 $6}mg;
+  $$src =~ s{^([^\t]+)\t([^\t]*)(?:\t([^\t]*))?(?:\t([^\t]*))?$}{$1\t[syncope_type] $2\t[syncope_loc] $3}mg;
   return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
@@ -87,14 +87,14 @@ sub putDocument {
   my $fh = $fmt->{fh};
   my $docname = $doc->{base}||ref($doc)||$doc;
   $fh->print("$docname\n");
-  my ($si,$s,$wi,$sii,$wii,$w,$txt,$typ);
+  my ($si,$s,$wi,$sid,$wid,$w,$txt,$typ);
   foreach $si (0..$#{$doc->{body}}) {
     $s   = $doc->{body}[$si];
-    $sii = (($s->{id}||'')=~/^s([0-9]+)$/ ? $1 : 0);
+    $sid = $s->{id}||'';
     $fh->print("normal\n");
     foreach $wi (0..$#{$s->{tokens}}) {
       $w   = $s->{tokens}[$wi];
-      $wii = (($w->{id}||'')=~/^w([0-9]+)$/ ? $1 : 0);
+      $wid = ($w->{id}||'');
       $txt = $w->{moot} ? $w->{moot}{word} : ($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text});
 
       if (defined($typ=$w->{syncope_typ}) && $typ ne '') { ; } ##-- re-use stored type
@@ -113,7 +113,7 @@ sub putDocument {
       elsif ($txt eq '/')		{ $typ = 'SOLIDUS'; }
       else 				{ $typ = 'SYMBOL'; }
 
-      $fh->print(join("\t", $txt, $typ, $si,$wi, $sii,$wii), "\n");
+      $fh->print(join("\t", $txt, $typ, join(' ',$si,$wi,$sid,$wid)), "\n");
     }
   }
   return $fmt;
