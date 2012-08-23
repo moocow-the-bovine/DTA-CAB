@@ -90,11 +90,11 @@ sub putDocument {
   my ($si,$s,$wi,$sii,$wii,$w,$txt,$typ);
   foreach $si (0..$#{$doc->{body}}) {
     $s   = $doc->{body}[$si];
-    $sii = (($s->{id}||'')=~/^s[0-9]+$/ ? $1 : 0);
+    $sii = (($s->{id}||'')=~/^s([0-9]+)$/ ? $1 : 0);
     $fh->print("normal\n");
     foreach $wi (0..$#{$s->{tokens}}) {
       $w   = $s->{tokens}[$wi];
-      $wii = (($w->{id}||'')=~/^w[0-9]+$/ ? $1 : 0);
+      $wii = (($w->{id}||'')=~/^w([0-9]+)$/ ? $1 : 0);
       $txt = $w->{moot} ? $w->{moot}{word} : ($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text});
 
       if (defined($typ=$w->{syncope_typ}) && $typ ne '') { ; } ##-- re-use stored type
@@ -102,7 +102,7 @@ sub putDocument {
       elsif ($txt =~ /^[[:lower:]]+$/)	{ $typ = 'LOWERCASE WORD'; }
       elsif ($txt =~ /^[[:upper:]]/)	{ $typ = 'CAPITALIZED WORD'; }
       elsif ($txt =~ /^[[:digit:]]+$/)	{ $typ = 'DIGIT'; }
-      elsif ($txt eq '-')		{ $typ = 'HYPHEN_MINUS'; }
+      elsif ($txt eq '-')		{ $typ = 'HYPHEN-MINUS'; }
       elsif ($txt eq '.')		{ $typ = 'FULL STOP'; }
       elsif ($txt eq ',')		{ $typ = 'COMMA'; }
       elsif ($txt eq ':')		{ $typ = 'COLON'; }
