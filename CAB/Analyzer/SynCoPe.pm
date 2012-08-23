@@ -124,12 +124,17 @@ sub spliceback {
   my (%id2t,%id2n,@stack);
 
   ## undef = cb_start($expat,$elt,%attrs)
-  my ($w,$a,$starti,$endi);
+  my ($w,$a,$starti,$endi, $si,$wi,$sid,$wid);
   my $cb_start = sub {
     ($_xp,$_elt,%_attrs) = @_;
 
     if ($_elt eq 'terminal') {
-      $w = $doc->{body}[$_attrs{line}]{tokens}[$_attrs{pos}];
+      if (defined($_attrs{line}) && defined($_attrs{pos})) {
+	$w = $doc->{body}[$_attrs{line}]{tokens}[$_attrs{pos}];
+      } elsif (defined($_attrs{offset}) && defined($_attrs{'token-pos'})) {
+	($si,$wi,$sid,$wid) = split(/ /,$_attrs{offset},4);
+	$w = $doc->{body}[$si]{tokens}[$wi];
+      }
       $w->{$alabel} = $id2t{$_attrs{id}} = [ $a = { id=>$_attrs{id} } ];
       push(@stack,$a);
     }

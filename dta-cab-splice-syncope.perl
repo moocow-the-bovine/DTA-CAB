@@ -40,6 +40,7 @@ our %outputOpts  = (level=>0);
 our $doProfile   = 1;
 
 our $outfile = '-';
+our $splice_label = 'syncope';
 
 ##==============================================================================
 ## Command-line
@@ -57,6 +58,9 @@ GetOptions(##-- General
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'        => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
+
+	   ##-- splice options
+	   'splice-label|sl|label|l=s' => \$splice_label,
 
 	   ##-- Log4perl
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
@@ -124,7 +128,7 @@ $doc = $ifmt->parseFile($file)
 $ifmt->close();
 
 ##-- splice
-my $anl = DTA::CAB::Analyzer::SynCoPe->new();
+my $anl = DTA::CAB::Analyzer::SynCoPe->new(label=>$splice_label);
 $doc = $anl->spliceback($doc, \$sxmlbuf)
   or die("$prog: ERROR splicing parse-data from $sxmlfile to CAB-doc from $file");
 
