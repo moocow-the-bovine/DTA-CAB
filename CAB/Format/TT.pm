@@ -267,7 +267,7 @@ sub parseTTString {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 		  }
 		}
-		elsif ($field =~ m{^\[(ner|syncope)\]\ 		##-- $1: syncope analyzer label
+		elsif ($field =~ m{^\[(ner|syncope)\]\ 		##-- $1: syncope analyzer
 				   (?:(\w+))?			##-- $2: syncope node id (terminal/@id | nonterminal/@id)
 				   (?:\ (\#\S*))?		##-- $3: syncope label name (terminal/label/@name)
 				   (?:\ ([0-9]*))?		##-- $4: syncope label id (terminal/label/@id)
@@ -277,7 +277,7 @@ sub parseTTString {
 				  }x)
 		  {
 		    ##-- token fields: ne-recognizer analysis: syncope
-		    push(@{$tok->{$1}}, { id=>$2,
+		    push(@{$tok->{$1}}, { nid=>$2,
 					  (defined($3) ? (label=>$3) : qw()),
 					  (defined($4) ? (labid=>$4) : qw()),
 					  (defined($5) ? (cat=>$5) : qw()),
@@ -380,7 +380,7 @@ sub token2buf {
   ##-- Location ('loc'), moot compatibile
   $$bufr .= "\t$tok->{loc}{off} $tok->{loc}{len}" if (defined($tok->{loc}));
 
-  ##-- SynCoPe location
+  ##-- SynCoPe location (for syncope-tab format)
   $$bufr .= "\t[syncope_type] $tok->{syncope_type}" if (defined($tok->{syncope_type}));
   $$bufr .= "\t[syncope_loc] $tok->{syncope_loc}" if (defined($tok->{syncope_loc}));
 
@@ -529,7 +529,7 @@ sub token2buf {
   if ($tok->{ner}) {
     $$bufr .= join('',
 		 map {("\t[ner] "
-		       .(defined($_->{id}) ? $_->{id} : '')
+		       .(defined($_->{nid}) ? $_->{nid} : '')
 		       .(defined($_->{label}) ? " $_->{label}" : '')
 		       .(defined($_->{labid}) ? " $_->{labid}" : '')
 		       .(defined($_->{cat}) ? " : $_->{cat}" : '')

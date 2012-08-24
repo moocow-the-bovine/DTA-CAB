@@ -139,7 +139,7 @@ sub spliceback {
 	$anl->logconfess("spliceback(): could not parse terminal attributes for ", $_xp->original_string())
       }
       $w = $doc->{body}[$si]{tokens}[$wi];
-      $w->{$alabel} = $id2t{$_attrs{id}} = [ $a = { id=>$_attrs{id} } ];
+      $w->{$alabel} = $id2t{$_attrs{id}} = [ $a = { nid=>$_attrs{id} } ];
       push(@stack,$a);
     }
     elsif ($_elt eq 'nonterminal') {
