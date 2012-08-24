@@ -143,7 +143,7 @@ sub spliceback {
       push(@stack,$a);
     }
     elsif ($_elt eq 'nonterminal') {
-      $a = $id2n{$_attrs{id}} = { id=>$_attrs{id}, start=>$_attrs{start}, end=>$_attrs{end}, depth=>$_attrs{depth} };
+      $a = $id2n{$_attrs{id}} = { nid=>$_attrs{id}, start=>$_attrs{start}, end=>$_attrs{end}, depth=>$_attrs{depth} };
       $starti = ($a->{start}=~/^T([0-9]+)$/ ? $1 : undef);
       $endi   = ($a->{end}  =~/^T([0-9]+)$/ ? $1 : undef);
       foreach (grep {defined($_)} @id2t{defined($starti) && defined($endi) ? (map {"T$_"} ($starti..$endi)) : qw()}) {
