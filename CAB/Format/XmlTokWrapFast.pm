@@ -351,7 +351,7 @@ sub putDocument {
     return $xmlelt->($_[0],$nil,
 		     map {
 		       $_nera = $_;
-		       $xmlempty->($_[1],map {defined($_nera->{$_}) ? ($_=>$_nera->{$_}) : qw()} qw(id label labid cat func depth))
+		       $xmlempty->($_[1],map {defined($_nera->{$_}) ? ($_=>$_nera->{$_}) : qw()} qw(nid label labid cat func depth))
 		     } @{$_[2]}
 		    );
   };
