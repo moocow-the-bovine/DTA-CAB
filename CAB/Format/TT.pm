@@ -266,9 +266,24 @@ sub parseTTString {
 		  } else {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
 		  }
-		} elsif ($field =~ m/^\[ner\] (?:(\w+) )?\: (\S*)(?: \/ (\S*?))?(?: \<([0-9]+)\>)?$/) {
-		  ##-- token fields: ne-recognizer analysis: $ner
-		  push(@{$tok->{ner}}, { id=>$1, cat=>$2, (defined($3) ? (func=>$3) : qw()), (defined($4) ? (depth=>$4) : qw()) });
+		}
+		elsif ($field =~ m{^\[(ner|syncope)\]\ 		##-- $1: syncope analyzer label
+				   (?:(\w+))?			##-- $2: syncope node id (terminal/@id | nonterminal/@id)
+				   (?:\ (\#\S*))?		##-- $3: syncope label name (terminal/label/@name)
+				   (?:\ ([0-9]*))?		##-- $4: syncope label id (terminal/label/@id)
+				   (?:\ \:\ (\S*))?		##-- $5: syncope category (terminal/category/@name | nonterminal/category-close/@name)
+				   (?:\ \/ (\S*?))?		##-- $6: syncope function (terminal/function/@name)
+				   (?:\ \<([0-9]+)\>)?$		##-- $7: syncope depth (nonterminal/@depth)
+				  }x)
+		  {
+		    ##-- token fields: ne-recognizer analysis: syncope
+		    push(@{$tok->{$1}}, { id=>$2,
+					  (defined($3) ? (label=>$3) : qw()),
+					  (defined($4) ? (labid=>$4) : qw()),
+					  (defined($5) ? (cat=>$5) : qw()),
+					  (defined($6) ? (func=>$6) : qw()),
+					  (defined($7) ? (depth=>$7) : qw()),
+					});
 		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] (\d)$/) {
 		  ##-- token: field: morph-safety check (msafe|morph/safe)
 		  $tok->{msafe} = $1;
@@ -515,6 +530,8 @@ sub token2buf {
     $$bufr .= join('',
 		 map {("\t[ner] "
 		       .(defined($_->{id}) ? $_->{id} : '')
+		       .(defined($_->{label}) ? " $_->{label}" : '')
+		       .(defined($_->{labid}) ? " $_->{labid}" : '')
 		       .(defined($_->{cat}) ? " : $_->{cat}" : '')
 		       .(defined($_->{func}) ? " / $_->{func}" : '')
 		       .(defined($_->{depth}) ? " <$_->{depth}>" : '')

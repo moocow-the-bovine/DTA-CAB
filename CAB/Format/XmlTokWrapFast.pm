@@ -45,6 +45,8 @@ BEGIN {
 ##     ##-- output: inherited from DTA::CAB::Format
 ##     utf8  => $bool,                         ##-- always true
 ##     level => $level,                        ##-- output formatting level (default=0)
+##     output_moot => $bool,		       ##-- include <moot> output element? (default=1)
+##     output_ner  => $bool,		       ##-- include <ner> output element? (default=0)
 ##    }
 sub new {
   my $that = shift;
@@ -52,6 +54,8 @@ sub new {
     (
      xprs => undef,
      doc => undef,
+     output_moot => 1,
+     output_ner  => 0,
      @_
     );
   return $fmt;
@@ -340,6 +344,17 @@ sub putDocument {
 		    );
   };
 
+  ##-- $str = nerelt($name,$aname,\@analyses)
+  my ($_nera);
+  my $nerelt = sub {
+    return '' if (!$_[2]);
+    return $xmlelt->($_[0],$nil,
+		     map {
+		       $_nera = $_;
+		       $xmlempty->($_[1],map {defined($_nera->{$_}) ? ($_=>$_nera->{$_}) : qw()} qw(id label labid cat func depth))
+		     } @{$_[2]}
+		    );
+  };
 
   ##--------------------
   ## output handle
@@ -349,6 +364,7 @@ sub putDocument {
 
   ##--------------------
   ## guts
+  my ($output_moot,$output_ner) = @$fmt{qw(output_moot output_ner)};
   my ($s,$w);
   $fh->print("\n", $xmlstart->('doc', base=>$doc->{base}));
   foreach $s (@{$doc->{body}}) {
@@ -374,7 +390,10 @@ sub putDocument {
 			   ##
 			   ##-- content: moot
 			   #$mootelt->('dmoot','a',$w->{dmoot}),
-			   $mootelt->('moot','a',$w->{moot}),
+			   ($output_moot ? $mootelt->('moot','a',$w->{moot}) : qw()),
+			   ##
+			   ##-- content: ner
+			   ($output_ner ? $nerelt->('ner','a',$w->{ner}) : qw()),
 			  ));
     }
     $fh->print("\n </s>");

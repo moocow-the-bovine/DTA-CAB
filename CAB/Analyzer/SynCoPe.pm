@@ -129,12 +129,16 @@ sub spliceback {
     ($_xp,$_elt,%_attrs) = @_;
 
     if ($_elt eq 'terminal') {
-      if (defined($_attrs{line}) && defined($_attrs{pos})) {
-	$w = $doc->{body}[$_attrs{line}]{tokens}[$_attrs{pos}];
-      } elsif (defined($_attrs{offset}) && defined($_attrs{'token-pos'})) {
+      if (defined($_attrs{offset}) && defined($_attrs{'token-pos'})) {
+	##-- new (>=2012-08-22)
 	($si,$wi,$sid,$wid) = split(/ /,$_attrs{offset},4);
-	$w = $doc->{body}[$si]{tokens}[$wi];
+      } elsif (defined($_attrs{line}) && defined($_attrs{pos})) {
+	##-- old (<2012-08-22)
+	($si,$wi) = @_attrs{qw(line pos)};
+      } else {
+	$anl->logconfess("spliceback(): could not parse terminal attributes for ", $_xp->original_string())
       }
+      $w = $doc->{body}[$si]{tokens}[$wi];
       $w->{$alabel} = $id2t{$_attrs{id}} = [ $a = { id=>$_attrs{id} } ];
       push(@stack,$a);
     }
@@ -152,6 +156,10 @@ sub spliceback {
     }
     elsif ($_elt eq 'function') {
       $a->{func} = $_attrs{name};
+    }
+    elsif ($_elt eq 'label') {
+      @$a{qw(labid label)} = @_attrs{qw(id name)};
+      $a->{label} = "#$a->{label}" if ($a->{label} !~ /^\#/);
     }
   };
 

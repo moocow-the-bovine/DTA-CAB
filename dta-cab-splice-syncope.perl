@@ -36,7 +36,7 @@ our $doprofile = 0; ##-- compatibility only; has no other effect
 our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
 our %inputOpts   = ();
-our %outputOpts  = (level=>0);
+our %outputOpts  = (level=>0, output_ner=>1);
 our $doProfile   = 1;
 
 our $outfile = '-';
@@ -184,6 +184,8 @@ dta-cab-splice-syncope.perl - splice syncope xml analyses back into CAB document
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
+
+  -label LABEL                    ##-- analyzer label for splice (default: 'syncope')
 
 =cut
 
