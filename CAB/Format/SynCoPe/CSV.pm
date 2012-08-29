@@ -20,7 +20,9 @@ our @ISA = qw(DTA::CAB::Format::TT);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'syncope-csv', filenameRegex=>qr/\.(?i:syn(?:cope)?[-\.](?:csv|tab)|)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'syncope-tab');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'syn-csv');
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'syn-tab');
 }
 
 ##==============================================================================
