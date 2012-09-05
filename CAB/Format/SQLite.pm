@@ -39,6 +39,7 @@ BEGIN {
 ##     limit => $limit,		       ##-- sql limit clause (default: undef: none)
 ##     keep_history => $bool,	       ##-- if true, parse history as well as raw data (default: 1)
 ##     keep_null => $bool,	       ##-- if true, NULL values from db will be kept as undef (default: false)
+##     keep_eps => $bool,	       ##-- if true, empty-string values from db will be kept as undef (default: false)
 ##     keep_temp => $bool,	       ##-- if true, temporary tables will be kept (default: false)
 ##
 ##     ##---- Output
@@ -69,6 +70,7 @@ sub new {
 			   limit=>undef,
 			   keep_history=>1,
 			   keep_null=>0,
+			   keep_eps=>0,
 			   keep_temp=>0,
 
 			   ##-- Output
@@ -239,8 +241,14 @@ sub hashrows {
   my ($fmt,$anames,$arows) = @_;
   my $hrows = [];
   my ($arow);
+  no warnings 'uninitialized';
   foreach $arow (@$arows) {
-    push(@$hrows,{map {($anames->[$_]=>$arow->[$_])} grep {$fmt->{keep_null} || defined($arow->[$_])} (0..$#$anames)});
+    push(@$hrows,{map {($anames->[$_]=>$arow->[$_])}
+		  grep {
+		    (($fmt->{keep_null} || defined($arow->[$_]))
+		     &&
+		     ($fmt->{keep_eps}  || ($arow->[$_] ne '')))
+		  } (0..$#$anames)});
   }
   return $hrows;
 }
@@ -310,10 +318,10 @@ sub fromFile {
   my ($fmt,$filespec) = @_;
   $fmt->vlog($fmt->{trace_level}, "filespec=$filespec");
   $fmt->close();
-  if ($filespec =~ /^([^\:]*)\:([^\=]*)\=(.*)$/) {
+  if ($filespec =~ /^([^\:]*)\:([^\=]*)(?:\=(.*))?$/) {
     @$fmt{qw(file f_which f_where)} = ($1,$2,$3);
   } else {
-    @$fmt{qw(file f_which f_where)} = ($filespec,'all','true');
+    @$fmt{qw(file f_which f_where)} = ($filespec,'all','1');
   }
   $fmt->{db_dsn} = "dbi:SQLite:dbname=$fmt->{file}";
   $fmt->vlog($fmt->{trace_level}, "db_dsn=$fmt->{db_dsn}");
@@ -332,15 +340,21 @@ sub parseDocument {
   ##-- preparations
   my $dbh = $fmt->dbh() or $fmt->logconfess("no database handle!");
 
-  ##-- get restrictions -- build @$drows,@$srows,@$wrows, @$whrows,@$shrows
+  ##-- get restrictions -- build @$drows,@$srows,@$wrows, @$shrows,@$whrows
   my $f_which = $fmt->{f_which} || 'all';
   my $tmp   = $fmt->{keep_temp} ? 'tmp' : "tmp$$";
   my $tmpkw = $fmt->{keep_temp} ? ''    : 'temporary';
-  my ($drows,$srows,$wrows);
+  my $whorder = 'order by  rdate desc';
+  my $shorder = 'order by srdate desc';
+  my ($drows,$srows,$wrows, $shrows,$whrows);
   if (!$f_which || $f_which eq 'all') {
-    $drows = $fmt->fetchall_hashrows("select * from doc");
-    $srows = $fmt->fetchall_hashrows("select * from sent;");
-    $wrows = $fmt->fetchall_hashrows("select * from token;");
+    $drows = $fmt->fetchall_hashrows("select * from    doc;");
+    $srows = $fmt->fetchall_hashrows("select * from   sent;");
+    $wrows = $fmt->fetchall_hashrows("select * from ptoken;");
+    if ($fmt->{keep_history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from   sent_history $shorder;");
+      $whrows = $fmt->fetchall_hashrows("select * from ptoken_history $whorder;");
+    }
   }
   elsif ($f_which =~ m/^(?:all|doc|dtadir|dir|base)$/) {
     ##-- restrict: doc
@@ -353,8 +367,13 @@ sub parseDocument {
     }
     $fmt->logconfess("no document found for $fmt->{f_which}=$fmt->{f_where}") if (!@$drows);
 
-    $srows = $fmt->fetchall_hashrows("select * from sent  where doc=?;",[$drows->[0]{doc}]);
-    $wrows = $fmt->fetchall_hashrows("select * from token where doc=?;",[$drows->[0]{doc}]);
+    $srows = $fmt->fetchall_hashrows("select * from   sent where doc=?;",[$drows->[0]{doc}]);
+    $wrows = $fmt->fetchall_hashrows("select * from ptoken where doc=?;",[$drows->[0]{doc}]);
+
+    if ($fmt->{keep_history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from   sent_history where  sent in (select  sent from  sent where doc=?) $shorder;", [$drows->[0]{doc}]);
+      $whrows = $fmt->fetchall_hashrows("select * from ptoken_history where token in (select token from token where doc=?) $whorder;", [$drows->[0]{doc}]);
+    }
   }
   elsif ($f_which eq 's') {
     ##-- restrict: sentence query
@@ -362,9 +381,13 @@ sub parseDocument {
     $fmt->execsql("create $tmpkw table s_$tmp (sent integer not null primary key);");
     $fmt->execsql("insert or ignore into s_$tmp $fmt->{f_where};");
     $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
-    $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
-    $wrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join token;");
-    $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
+    $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join   sent;");
+    $wrows = $fmt->fetchall_hashrows("select * from s_$tmp natural join ptoken;");
+
+    if ($fmt->{keep_history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from   sent_history where  sent in (select  sent from  s_$tmp) $shorder;");
+      $whrows = $fmt->fetchall_hashrows("select * from ptoken_history where token in (select token from  s_$tmp natural join token) $whorder;");
+    }
   }
   elsif ($f_which eq 'w') {
     ##-- restrict: token query
@@ -376,9 +399,12 @@ sub parseDocument {
     $fmt->execsql("insert or ignore into s_$tmp select sent from w_$tmp natural join token;");
     $drows = $fmt->fetchall_hashrows("select * from doc where doc in (select doc from s_$tmp natural join sent);");
     $srows = $fmt->fetchall_hashrows("select * from s_$tmp natural join sent;");
-    $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join token t;");
-    $fmt->execsql("drop table s_$tmp;") if (!$fmt->{keep_temp});
-    $fmt->execsql("drop table w_$tmp;") if (!$fmt->{keep_temp});
+    $wrows = $fmt->fetchall_hashrows("select *,(select 1 from w_$tmp wt where wt.token=t.token limit 1) as match from s_$tmp natural join ptoken t;");
+
+    if ($fmt->{keep_history}) {
+      $shrows = $fmt->fetchall_hashrows("select * from   sent_history where  sent in (select  sent from  s_$tmp) $shorder;");
+      $whrows = $fmt->fetchall_hashrows("select * from ptoken_history where token in (select token from  s_$tmp natural join token) $whorder;");
+    }
   }
   else {
     $fmt->logconfess("bad restriction \`".($fmt->{f_which}||'')."=".($fmt->{f_where}||'')."'");
@@ -387,9 +413,9 @@ sub parseDocument {
   ##-- hash result arrays by id
   my $id2doc  = { map {($_->{doc}=>$_)}  @$drows };
   my $id2sent = { map {($_->{sent}=>$_)} @$srows };
-  my ($s,$w);
 
   ##-- parse //s into //doc/body
+  my ($s,$w);
   foreach $s (@$srows) {
     push(@{$id2doc->{$s->{doc}}{body}},$s);
   }
@@ -403,16 +429,17 @@ sub parseDocument {
 
   ##-- parse history
   if ($fmt->{keep_history}) {
-    my $jxs = JSON::XS->new()->utf8(0)->allow_nonref(1);
-    foreach $s (grep {defined($_->{shistory})} @$srows) {
-      $s->{shistory} = $jxs->decode($s->{shistory});
+    my ($id2wh,$id2sh) = ({},{});
+    push(@{$id2wh->{$_->{token}}},$_) foreach (@$whrows);
+    push(@{$id2sh->{$_->{sent}}},$_)  foreach (@$shrows);
+
+    my ($h);
+    foreach $w (@$wrows) {
+      $w->{history} = $h if (defined($h=$id2wh->{$w->{token}}));
     }
-    foreach $w (grep {defined($_->{history})} @$wrows) {
-      $w->{history} = $jxs->decode($w->{history});
+    foreach $s (@$srows) {
+      $s->{shistory} = $h if (defined($h=$id2sh->{$s->{sent}}));
     }
-  } else {
-    delete($_->{shistory}) foreach (@$srows);
-    delete($_->{history}) foreach (@$wrows);
   }
 
   ##-- build final cab doc structure
@@ -429,6 +456,12 @@ sub parseDocument {
       }
     }
     $doc = { body=>[map {@{$_->{body}}} @$drows], };
+  }
+
+  ##-- cleanup & return
+  if (!$fmt->{keep_temp}) {
+    $fmt->execsql("drop table if exists s_$tmp;");
+    $fmt->execsql("drop table if exists w_$tmp;");
   }
 
   $doc = {body=>[]} if (!defined($doc));
