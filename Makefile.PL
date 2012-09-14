@@ -50,6 +50,7 @@ WriteMakefile
 		    #'moot' => 0.02, ##-- moot/swig
 		    'Moot' => 0.01,  ##-- moot/xs
 		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File, CDB_File
+		    #DTA::TokWrap => 0.35, ##-- for DTA::CAB::Format::TEI
 		    ##--
 		    'Unicode::Normalize' =>0, # 1.02
 		    'Encode'=>0,

@@ -197,6 +197,7 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
   -log-syslog , -no-syslog        ##-- do/don't log to syslog (default: don't)
   -log-config L4PFILE             ##-- override log4perl config file
   -log-watch , -nowatch           ##-- override: do/don't watch L4PFILE
+  -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option twlevel=trace)
 
 =cut
 

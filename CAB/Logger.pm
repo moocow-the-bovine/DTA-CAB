@@ -26,6 +26,7 @@ BEGIN {
        l4pfile   => undef, ##-- formerly $logConfigFile
        watch     => undef, ##-- watch l4pfile (undef or secs)?
        rootLevel => ($^W ? 'WARN' : 'FATAL'),
+       twLevel   => 'INFO', ##-- log level for DTA::TokWrap (used by DTA::CAB::Format::TEI)
        level     => ($^W ? $MIN_LEVEL : 'INFO'),
        stderr    => 1,
        file      => undef,
@@ -71,13 +72,23 @@ log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the s
     $cfg .= "log4perl.rootLogger = $opts{rootLevel}, AppStderr\n";
   }
 
-  if ($opts{level} && ($opts{stderr} || $opts{file} || $opts{syslog})) {
-    ##-- package logger
-    $cfg .= "log4perl.logger.DTA = $opts{level}, ".join(", ",
-								($opts{stderr} ? 'AppStderr' : qw()),
-								($opts{file}   ? 'AppFile'   : qw()),
-								($opts{syslog} ? 'AppSyslog' : qw()),
-							       )."\n";
+  if ($opts{stderr} || $opts{file} || $opts{syslog}) {
+    ##-- tokwrap logger
+    $cfg .= "log4perl.logger.DTA.TokWrap = $opts{twLevel}, ".join(", ",
+								  ($opts{stderr} ? 'AppStderr' : qw()),
+								  ($opts{file}   ? 'AppFile'   : qw()),
+								  ($opts{syslog} ? 'AppSyslog' : qw()),
+								 )."\n"
+								   if ($opts{twLevel});
+    ##-- local package logger
+    $cfg .= "log4perl.logger.DTA.CAB = $opts{level}, ".join(", ",
+							    ($opts{stderr} ? 'AppStderr' : qw()),
+							    ($opts{file}   ? 'AppFile'   : qw()),
+							    ($opts{syslog} ? 'AppSyslog' : qw()),
+							   )."\n"
+							     if ($opts{level});
+
+    ##-- avoid duplicate messages
     $cfg .= "log4perl.additivity.DTA = 0\n";
   }
 
@@ -268,6 +279,7 @@ sub logconfess { $_[0]->logger->logconfess(@_[1..$#_]); } # die w/ full stack tr
 ##    'nolog-file|nolf' => sub { $defaultLogOpts{file}=undef; },
 ##    'log-rotate|rotate|lr!' => \$defaultLogOpts{rotate},
 ##    'log-syslog|syslog|ls!' => \$defaultLogOpts{syslog},
+##    'log-option|logopt|lo=s' => \%defaultLogOpts,
 sub cabLogOptions {
   my ($that,%opts) = @_;
   return
@@ -282,6 +294,7 @@ sub cabLogOptions {
      'nolog-file|nolf' => sub { $defaultLogOpts{file}=undef; },
      'log-rotate|rotate|lr!' => \$defaultLogOpts{rotate},
      'log-syslog|syslog|ls!' => \$defaultLogOpts{syslog},
+     'log-option|logopt|lo=s%' => \%defaultLogOpts,
     );
 }
 

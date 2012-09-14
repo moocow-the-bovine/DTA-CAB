@@ -599,6 +599,7 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -log-rotate , -nolog-rotate     ##-- do/don't auto-rotate log files (default=true)
   -log-config L4PFILE             ##-- log4perl config file (overrides -log-stderr, etc.)
   -log-watch  , -nowatch          ##-- do/don't watch log4perl config file (default=false)
+  -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option twlevel=trace)
 
 =cut
 

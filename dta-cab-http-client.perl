@@ -443,6 +443,16 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
   -output-format-level LEVEL      ##-- override output format level (default: 0)
   -output-file FILE               ##-- set output file (default: STDOUT)
 
+ Logging Options                  ##-- see Log::Log4perl(3pm)
+  -log-level LEVEL                ##-- set minimum log level (default=TRACE)
+  -log-stderr , -nolog-stderr     ##-- do/don't log to stderr (default=true)
+  -log-syslog , -nolog-syslog     ##-- do/don't log to syslog (default=false)
+  -log-file LOGFILE               ##-- log directly to FILE (default=none)
+  -log-rotate , -nolog-rotate     ##-- do/don't auto-rotate log files (default=true)
+  -log-config L4PFILE             ##-- log4perl config file (overrides -log-stderr, etc.)
+  -log-watch  , -nowatch          ##-- do/don't watch log4perl config file (default=false)
+  -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option twlevel=trace)
+
 =cut
 
 ##==============================================================================
