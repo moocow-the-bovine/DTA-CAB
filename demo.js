@@ -247,7 +247,7 @@ function parseQuery(qs) {
     var ql = qs.split("&");
     for (var i=0; i<ql.length; i++) {
 	var kv = ql[i].split("="); 
-	qm[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+	qm[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1].replace(/\+/g,' '));
     }
     return qm;
 }

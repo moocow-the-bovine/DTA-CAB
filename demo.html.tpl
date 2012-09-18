@@ -3,8 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
   <head>
     <title>DTA::CAB Demo</title>
-    <link rel="stylesheet" type="text/css"  href="/taxi.css" />
-    <link rel="icon"       type="image/png" href="/favicon.png"/>
+    <link rel="stylesheet" type="text/css"  href="taxi.css" />
+    <link rel="icon"       type="image/png" href="favicon.png"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <style type="text/css">
 table, th, td, label, input { vertical-align: middle; }
@@ -46,7 +46,6 @@ b { font-weight: bold; color: #000099; }
       <!--</div>
       <div class="content">-->
 	<div class="subsection">
-          <!--<form method="post" action="/query" enctype="multipart/form-data" id="queryForm">-->
 	  <form method="get" action="/query" id="queryForm" onsubmit="return cabQuery();">
 	    <table><tbody>
 	      <tr>
