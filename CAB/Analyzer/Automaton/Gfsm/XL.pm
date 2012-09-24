@@ -19,6 +19,8 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 
+our $DEFAULT_ANALYZE_PRE = q($anl->setLookupOptions({src=>$_[0],map {($_=>$anl->{$_})} qw(max_paths max_weight max_ops)}););
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -30,7 +32,7 @@ our @ISA = qw(DTA::CAB::Analyzer::Automaton);
 ##     ##-- Analysis objects
 ##     fst  => $cl,       ##-- a Gfsm::XL::Cascade::Lookup object (default=new)
 ##
-##     ##-- Lookup options (new)
+##     ##-- Lookup options (obsolete: only used if you leave the default analyzePre method)
 ##     max_paths  => $max_paths,           ##-- sets $cl->max_paths()
 ##     max_ops    => $max_ops_or_array,    ##-- sets $cl->max_ops()     ; default=16384
 ##     max_weight => $max_weight_or_array, ##-- sets $cl->max_weight()
@@ -49,6 +51,8 @@ sub new {
 			      #max_weight => 3e38,
 			      #max_paths  => 1,
 			      max_ops    => 16384,
+
+			      analyzePre => $DEFAULT_ANALYZE_PRE,
 
 			      ##-- user args
 			      @_
@@ -75,6 +79,7 @@ sub clear {
 ## Methods: Lookup Options
 
 ## $aut = $aut->setLookupOptions(\%opts)
+## + obsolete; remains for compatibility with pre-v1.31 code
 ## + \%opts keys:
 ##   max_paths  => $n_paths,
 ##   max_ops    => $n_ops_or_array,

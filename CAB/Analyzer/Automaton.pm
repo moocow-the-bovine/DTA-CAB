@@ -54,6 +54,8 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     ##-- Analysis Output
 ##     analyzeGet     => $code,  ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
 ##     analyzeSet     => $code,  ##-- accessor: coderef or string: set analyses (default=$DEFAULT_ANALYZE_SET)
+##     analyzePre     => $code,  ##-- coderef or string: pre-analysis code to call (called as $code->($word))
+##     analyzePost    => $code,  ##-- coderef or string: post-analysis code to call (called as $code->($word))
 ##     wantAnalysisLo => $bool,     ##-- set to true to include 'lo'    keys in analyses (default: true)
 ##     wantAnalysisLemma => $bool,  ##-- set to true to include 'lemma' keys in analyses (default: false)
 ##
@@ -250,7 +252,6 @@ sub parseLabels {
   return $aut;
 }
 
-
 ##==============================================================================
 ## Methods: Persistence
 ##==============================================================================
@@ -313,18 +314,6 @@ sub analyzeTypes {
   my @eowlab = (defined($aut->{eow}) && $aut->{eow} ne '' ? ($aut->{labh}{$aut->{eow}}) : qw());
   my $allowTextRegex = defined($aut->{allowTextRegex}) ? qr($aut->{allowTextRegex}) : undef;
 
-  ##-- closures
-  my (@wa);
-  my $aget_code = defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
-  my $aset_code = defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET;
-  my $ax_pre    = join('',
-		       map {"my $_;\n"}
-		       '$lab=$anl->{label}',
-		       '$wa=$opts{wa}',
-		      );
-  my $aget   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
-  my $aset   = $aut->accessClosure($aset_code, pre=>$ax_pre, wa=>\@wa);
-
   ##-- object analysis options
   my $check_symbols = $aut->{check_symbols};
   my $auto_connect = $aut->{auto_connect};
@@ -337,23 +326,22 @@ sub analyzeTypes {
   my $wantAnalysisLo = $aut->{wantAnalysisLo};
   my $wantAnalysisLemma = $aut->{wantAnalysisLemma};
 
-  ##-- ananalysis options
-  ##    + we use a local options hash \%wopts to safely clobber 'src' key, needed by setLookupOptions()
-  my @userOptions = (
-		     ##-- "safe" runtime options
-		     #(none)
-		    );
-  my @objectOptions = (
-		       #qw(check_symbols auto_connect),
-		       #qw(tolower tolowerNI toupperI bashWS attInput attOutput),
-		       #qw(wantAnalysisLo wantAnalysisLemma),
-		       qw(max_paths max_weight max_ops),
+  ##-- closures
+  my (@wa);
+  my $aget_code = defined($aut->{analyzeGet}) ? $aut->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
+  my $aset_code = defined($aut->{analyzeSet}) ? $aut->{analyzeSet} :  $DEFAULT_ANALYZE_SET;
+  my $ax_pre    = join('',
+		       map {"my $_;\n"}
+		       '$lab=$anl->{label}',
+		       '$wa=$opts{wa}',
 		      );
+  my $aget   = $aut->accessClosure($aget_code, pre=>$ax_pre, wa=>\@wa);
+  my $aset   = $aut->accessClosure($aset_code, pre=>$ax_pre, wa=>\@wa);
+  ##
+  my $apre   = $aut->{analyzePre}  ? $aut->accessClosure($aut->{analyzePre}) : undef;
+  my $apost  = $aut->{analyzePost} ? $aut->accessClosure($aut->{analyzePost}) : undef;
 
-  ##-- local options hash (we clobber 'src' key for use in setLookupOptions())
-  my $wopts    = { %{$opts||{}} };
-  $wopts->{$_} = $aut->{$_} foreach (@objectOptions, grep {!defined($opts->{$_})} @userOptions);
-
+  ##-- ye olde loope
   my (@w,$w,$uword,$ulword,@wlabs,$ua,$lemma);
   foreach (values(%$types)) {
     next if (defined($allowTextRegex) && $_->{text} !~ $allowTextRegex); ##-- text-sensitive regex
@@ -364,8 +352,8 @@ sub analyzeTypes {
     @wa = qw();
     foreach $w (@w) {
       ##-------- BEGIN analyzeWord
-      $wopts->{src} = $w;            ##-- set $wopts->{src} (hack for setLookupOptions())
-      $aut->setLookupOptions($wopts) if ($aut->can('setLookupOptions'));
+      #$aut->setLookupOptions($wopts) if ($aut->can('setLookupOptions')); ##-- OBSOLETE: use code-string in 'analyzePre' key instead!
+      $apre->($w) if ($apre);
 
       ##---- analyze
       ##-- normalize
@@ -447,6 +435,7 @@ sub analyzeTypes {
     ##-------- END analyzeWord
 
     ##-- set analyses
+    $apost->($w) if ($apost);
     $aset->();
   }
 

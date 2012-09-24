@@ -28,7 +28,7 @@ sub new {
 			      tolowerNI=>0,
 			      toupperI=>0,
 
-			      ##-- analysis parameters
+			      ##-- analysis parameters (obsolete: prefer use of 'analyzePre' key)
 			      max_weight => [1.2,10],
 			      max_paths  => 8,
 			      max_ops    => -1,
