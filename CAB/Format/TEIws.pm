@@ -230,11 +230,11 @@ sub defaultExtension { return '.tei+ws.xml'; }
 
 ## $fmt = $fmt->flush()
 ##  + flush any buffered output to selected output source
-##  + override calls $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh})
 sub flush {
   my $fmt = shift;
-  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
+  #$fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
   #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
+  $fmt->{fh}->flush() if (defined($fmt->{fh}));
   delete @$fmt{qw(outbuf xdoc teidoc)};
   return $fmt;
 }
@@ -272,7 +272,7 @@ sub putDocument {
   ##-- call superclass (XmlTokWrap) method
   my $rc = $fmt->DTA::CAB::Format::XmlTokWrap::putDocument($doc);
   if (!$fmt->{spliceback}) {
-    $fmt->{outbuf} = $fmt->{xdoc}->toString($fmt->{level}||0);
+    $fmt->{xdoc}->toFH($fmt->{fh},($fmt->{level}||0));
     return $rc;
   }
 
@@ -280,17 +280,15 @@ sub putDocument {
   my $teibufr = $doc->{teibufr} || $fmt->{teibufr};
   if (!defined($teibufr) || !$$teibufr) {
     $fmt->logwarn("spliceback mode requested but no 'teibufr' document property - using XmlTokWrap format");
-    $fmt->{outbuf} = $fmt->{xdoc}->toString($fmt->{level}||0);
+    $fmt->{xdoc}->toFH($fmt->{fh},($fmt->{level}||0));
     return $rc;
   }
+  $$teibufr =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g; ##-- decode default namespaces (hack)
 
   ##-- splice in analysis data
   my $splicer = DTA::TokWrap::Processor::idsplice->new(%{$fmt->{spliceopts}||{}});
   my $sobuf   = $fmt->{xdoc}->toString(0);
-  $splicer->splice_so(base=>$teibufr,so=>\$sobuf,out=>\$fmt->{outbuf});
-
-  ##-- decode default namespaces (hack)
-  $fmt->{outbuf} =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g;
+  $splicer->splice_so(base=>$teibufr,so=>\$sobuf,out=>$fmt->{fh});
 
   return $fmt;
 }

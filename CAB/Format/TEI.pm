@@ -345,10 +345,10 @@ sub putDocument {
   $twdoc->{xtokdata} = $fmt->{xdoc}->toString(0);
   $twdoc->{cwsfile}  = "$tmpdir/tmp.tei.cws.xml";
   $twdoc->{cwstfile} = undef;
-  $twdoc->{cwstbufr} = \$fmt->{outbuf};
+  $twdoc->{cwstbufr} = \$fmt->{outbuf}; ##-- output to string
   $twdoc->saveXtokFile()
     or $fmt->logconfess("could not save intermediate cab.t.xml file: $!");
-  $twdoc->genKey(['addws'])
+  $twdoc->genKey('addws')
     or $fmt->logconfess("could not generate intermediate cws xml data: $!");
 
   ##-- optionally remove //c elements
@@ -361,7 +361,7 @@ sub putDocument {
   }
 
   ##-- splice in cab analysis data
-  $twdoc->idsplice();
+  $twdoc->genKey('idsplice');
 
   ##-- cleanup
   $twdoc->close();
