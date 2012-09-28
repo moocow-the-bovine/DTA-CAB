@@ -39,19 +39,21 @@ BEGIN {
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
+##     ##-- input: new
+##     parseXmlData => $bool,		       ##-- if unspecified or true, _xmldata key will be populated by parseNode() (default=undef->true)
+##
+##     ##-- input+output: new
+##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
+##     ignoreKeys => \%key2undef,              ##-- keys to ignore for i/o
+##
 ##     ##-- output: new
 ##     arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
 ##     arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
-##     ignoreKeys => \%key2undef,              ##-- keys to ignore for i/o
 ##     key2xml => \%key2xml,                   ##-- maps keys to XML-safe names
-##     xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
-##     ##
+##
 ##     ##-- output: inherited
 ##     #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
 ##     level => $level,                        ##-- output formatting level (default=0)
-##
-##     ##-- common: safety
-##     safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
 ##    }
 sub new {
   my $that = shift;
@@ -64,22 +66,21 @@ sub new {
 			      #},
 
 			      key2xml => {
-					  #'id' => 'id',
 					  'xml:id' => 'id',
-					  #'base' => 'base',
 					  'xml:base' => 'base',
 					  #'text' => 't', ##-- for TokWrap .t.xml
 					 },
 			      xml2key => {
 					  'xml:id' => 'id',
 					  'xml:base' => 'base',
-					  't' => 'text', ##-- for TokWrap .t.xml
+					  't' => 'text',	##-- for TokWrap .t.xml
+					  'cab:t' => 'text',	##-- for ddc-build/splice-cleaner.xsl output
+					  'cab:text' => 'text', ##-- for ddc-build/splice-cleaner.xsl output
 					 },
 
 			      arrayEltKeys => {
 					       'body' => 's',
 					       'tokens' => 'w',
-					       #'analyses' => 'an',
 					       'DEFAULT' => 'a',
 					      },
 
@@ -91,6 +92,7 @@ sub new {
 			      ignoreKeys => {
 					     'teibufr'=>undef,
 					    },
+			      #parseXmlData => 1,
 
 			      ##-- user args
 			      @_
@@ -248,6 +250,7 @@ sub parseNode {
   return undef if (!defined($top));
 
   my $xml2key = $fmt->{xml2key};
+  my $parseXmlData = !exists($fmt->{parseXmlData}) || $fmt->{parseXmlData};
   my ($cd,$cs,$cw);
   my ($nod,$cur,$name,$nxt);
   my ($topval);
@@ -295,7 +298,7 @@ sub parseNode {
       }
       else {
 	##-- Element: default: -attributes, -dtrs: append to _xmldata
-	$cur->{_xmldata} .= $nod->toString if (isa($cur,'HASH'));
+	$cur->{_xmldata} .= $nod->toString if ($parseXmlData && isa($cur,'HASH'));
       }
       ##-- Element: common: enqueue child nodes
       push(@stack, map {[$_,$nxt]} reverse($nod->childNodes), $nod->attributes);
@@ -311,7 +314,7 @@ sub parseNode {
       ##-- Text
       if (isa($cur,'HASH')) {
 	##-- Text: to hash: append to _xmldata
-	$cur->{'_xmldata'} .= $nod->toString;
+	$cur->{'_xmldata'} .= $nod->toString if ($parseXmlData);
       }
       elsif (isa($cur,'ARRAY')) {
 	##-- Text: to array: append to array
@@ -319,7 +322,7 @@ sub parseNode {
       }
     }
     else {
-      warn("$0: cannot handle XML node of class ", ref($nod), " - skipping\n");
+      $fmt->logwarn("parseNode() can't handle XML node of class ", ref($nod), " - skipping\n");
     }
   }##--/while (@queue)
 
@@ -538,6 +541,13 @@ It inherits from L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>.
  xdoc => $xdoc,                          ##-- XML::LibXML::Document
  xprs => $xprs,                          ##-- XML::LibXML parser
  ##
+ ##-- input: new
+ parseXmlData => $bool,                  ##-- if specified and true, _xmldata key will be populated by parseNode() (default=unspecified:true)
+ ##
+ ##-- input+output: new
+ xml2key => \%xml2key,                   ##-- maps xml keys to internal keys
+ ignoreKeys => \%key2undef,              ##-- keys to ignore for i/o
+ ##
  ##-- output: new
  arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
  arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
@@ -547,9 +557,6 @@ It inherits from L<DTA::CAB::Format::XmlCommon|DTA::CAB::Format::XmlCommon>.
  ##-- output: inherited
  encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
  level => $level,                        ##-- output formatting level (default=0)
- ##
- ##-- common: safety
- safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
 
 =item parseDocument
 

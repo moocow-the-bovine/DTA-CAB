@@ -57,12 +57,12 @@ sub new {
   return $fmt;
 }
 
-## $xmlparser = $fmt->xmlparser()
+## $xmlparser = $fmt->xmlparser(%xmlparser_opts)
 ##  + returns cached $fmt->{xprs} if available
 ##  + otherwise caches & returns DTA::CAB::Utils::libxml_parser()
 sub xmlparser {
   return $_[0]{xprs} if (ref($_[0]) && defined($_[0]{xprs}));
-  return $_[0]{xprs} = DTA::CAB::Utils::libxml_parser();
+  return $_[0]{xprs} = DTA::CAB::Utils::libxml_parser(@_[1..$#_]);
 }
 
 ##==============================================================================

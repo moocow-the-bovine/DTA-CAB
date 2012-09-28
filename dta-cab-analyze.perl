@@ -15,7 +15,6 @@ use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
-use DTA::CAB::Analyzer::Rewrite; ##-- DEBUG
 use DTA::CAB::Chain::DTA; ##-- DEBUG
 
 use strict;

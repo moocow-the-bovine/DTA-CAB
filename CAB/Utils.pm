@@ -21,7 +21,7 @@ our @EXPORT= qw();
 our %EXPORT_TAGS =
     (
      xml  => [qw(xml_safe_string xml_escape)],
-     libxml => [qw(libxml_parser libxml_doc libxml_xpnodes libxml_xpnode libxml_xpvalue)],
+     libxml => [qw(libxml_parser libxml_doc libxml_xpnodes libxml_xpnode libxml_xpvalue libxml_xpcontext)],
      libxslt => [qw(xsl_stylesheet)],
      data => [qw(path_value)],
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
@@ -397,6 +397,18 @@ sub libxml_xpnode {
 sub libxml_xpvalue {
   my $nod = libxml_xpnode(@_);
   return defined($nod) ? $nod->textContent : undef;
+}
+
+## $xpc = libxml_xpcontext($doc_or_nod)
+##  + returns an XML::LibXML::XPathContext suitable for matching $doc_or_nod
+##    - if $doc_or_nod is an XML::LibXML::Document, its root node is used as context, otherwise $nod
+##  + registers all namespaces returned by $doc_or_nod->namespaces()
+sub libxml_xpcontext {
+  my $nod = shift;
+  $nod = $nod->documentElement if (UNIVERSAL::isa($nod,'XML::LibXML::Document'));
+  my $xc = XML::LibXML::XPathContext->new($nod);
+  $xc->registerNs(($_->declaredPrefix||'DEFAULT'),$_->declaredURI) foreach ($nod ? $nod->namespaces : qw());
+  return $xc;
 }
 
 ##==============================================================================

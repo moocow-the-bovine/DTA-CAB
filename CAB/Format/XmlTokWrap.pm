@@ -63,6 +63,8 @@ sub new {
   $fmt->{key2xml}{doc}       = 'sentences';
   $fmt->{xml2key}{sentences} = 'doc';
 
+  $fmt->{parseXmlData} = 0 if (!exists($fmt->{parseXmlData})); ##-- ignore XML content
+
   return $fmt;
 }
 

@@ -84,6 +84,7 @@ sub new {
 
 			      ##-- tokwrap
 			      tw => undef,
+			      twopts => {procOpts=>{soIgnoreAttrs=>[qw(c xb)], spliceInfo=>'off',addwsInfo=>'off'}},
 			      twopen => {},
 
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
@@ -99,6 +100,7 @@ sub new {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
     $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
     $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
+    $fmt->{twopts}{$_} = 'DEBUG' foreach (qw(addwsInfo spliceInfo));
     $fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
   }
@@ -111,7 +113,7 @@ sub new {
   ##-- TokWrap object
   my $tw = $fmt->{tw};
   if (!defined($tw)) {
-    $tw = $fmt->{tw} = DTA::TokWrap->new();
+    $tw = $fmt->{tw} = DTA::TokWrap->new(%{$fmt->{twopts}||{}});
   }
   $tw->{keeptmp} = $fmt->{keeptmp};
   $tw->{tmpdir}  = $tw->{outdir} = $fmt->{tmpdir};
@@ -335,32 +337,34 @@ sub putDocument {
   DTA::TokWrap::Utils::ref2file($teibufr,"$tmpdir/tmp.tei.xml")
       or $fmt->logconfess("couldn't create temporary file $tmpdir/tmp.tei.xml: $!");
 
-  ##-- dump standoff data
-  $fmt->{xdoc}->toFile("$tmpdir/tmp.cab.t.xml")
-    or $fmt->logconfess("XML::Document::toFile() failed to $tmpdir/tmp.cab.t.xml: $!");
-
-  ##-- splice in //w and //s elements
-  DTA::TokWrap::Utils::runcmd("dtatw-add-ws.perl -q $tmpdir/tmp.tei.xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.tws.xml")==0
-      or $fmt->logdie("dtatw-add-ws.perl failed: $!");
+  ##-- get tokwrap object
+  my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
+    or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
+  $twdoc->{xmldata}  = $$teibufr;
+  $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";
+  $twdoc->{xtokdata} = $fmt->{xdoc}->toString(0);
+  $twdoc->{cwsfile}  = "$tmpdir/tmp.tei.cws.xml";
+  $twdoc->{cwstfile} = undef;
+  $twdoc->{cwstbufr} = \$fmt->{outbuf};
+  $twdoc->saveXtokFile()
+    or $fmt->logconfess("could not save intermediate cab.t.xml file: $!");
+  $twdoc->genKey(['addws'])
+    or $fmt->logconfess("could not generate intermediate cws xml data: $!");
 
   ##-- optionally remove //c elements
-  my $tws_xml = "$tmpdir/tmp.tei.tws.xml";
+  my $cws_xml = "$tmpdir/tmp.tei.cws.xml";
   if (!$fmt->{keepc}) {
-    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $tws_xml > $tmpdir/tmp.tei.tws.noc.xml")==0
+    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $cws_xml > $tmpdir/tmp.tei.cws.noc.xml")==0
 	or $fmt->logdie("dtatw-rm-c.perl failed: $!");
-    $tws_xml = "$tmpdir/tmp.tei.tws.noc.xml";
+    $doc->{cwstbasefile} = $cws_xml = "$tmpdir/tmp.tei.cws.noc.xml";
+    $doc->{cwstbasebufr} = undef;
   }
 
   ##-- splice in cab analysis data
-  DTA::TokWrap::Utils::runcmd("dtatw-splice.perl -q $tws_xml $tmpdir/tmp.cab.t.xml > $tmpdir/tmp.tei.spliced.xml")==0
-      or $fmt->logdie("dtatw-splice.perl failed: $!");
-
-  ##-- slurp in spliced-back output to $fmt->{outbuf}
-  $fmt->{outbuf} = '';
-  DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.tei.spliced.xml",\$fmt->{outbuf})
-      or $fmt->logdie("could not slurp back spliced temp file '$tmpdir/tmp.tei.spliced.xml': $!");
+  $twdoc->idsplice();
 
   ##-- cleanup
+  $twdoc->close();
   $fmt->rmtmpdir();
 
   return $fmt;
