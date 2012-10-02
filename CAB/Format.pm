@@ -1133,6 +1133,7 @@ Returns default filename extension for $fmt (default='.cab').
 
 =back
 
+=cut
 
 ##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Format: Methods: Input
