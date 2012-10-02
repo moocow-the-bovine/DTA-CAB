@@ -663,7 +663,7 @@ Returns a HTTP::Response object representing the server response.
 =item Client-Side Options
 
  contentType => $mimeType,      ##-- Content-Type header to apply for mode='xpost'
- encoding    => $charset,       ##-- Character set for mode='xpost'; also used by server
+ qraw        => $bool,          ##-- if true, query is a raw untokenized string (default=false)
  headers     => $headers,       ##-- additional HTTP headers (ARRAY or HASH or HTTP::Headers object)
  cacheGet    => $bool,          ##-- locally override $cli->{cacheGet} (sets header 'Cache-Control: no-cache')
  cacheSet    => $bool,          ##-- locally override $cli->{cacheSet} (sets header 'Cache-Control: no-store')
@@ -677,7 +677,6 @@ Returns a HTTP::Response object representing the server response.
  ##-- misc
  a => $analyzer,                ##-- analyzer name; set from $analyzer
  format => $format,             ##-- I/O format
- encoding => $enc,              ##-- I/O encoding (default=$cli->{encoding})
  pretty => $level,              ##-- pretty-printing level
  raw => $bool,                  ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 
