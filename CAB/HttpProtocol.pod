@@ -142,13 +142,6 @@ the formatted document to be queried.
 
 Alias: format
 
-Requests the server to return the list of analyzers in format $fmt,
-which should be a format alias supported by the
-L<DTA::CAB::Format::Registry|DTA::CAB::Format::Registry> object
-associated with the query handler ($qh-E<gt>{formats}),
-which by default is simply the global format registry
-as used by L<DTA::CAB::Format::newFormat|DTA::CAB::Format/newFormat>.
-
 Specifies the format of the document passed in via the "qd" parameter or
 POST request content (see below), and requests that the analyzed document
 be returned in the same format.  $fmt should be a
