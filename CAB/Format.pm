@@ -1493,9 +1493,9 @@ and aliased as:
 
  name=>__PACKAGE__, short=>'xml'
 
-=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlTokWrap>
+=item L<DTA::CAB::Format::XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
 
-=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlTokWrapFast>
+=item L<DTA::CAB::Format::XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
 
 Datum parser|formatter(s): XML (TokWrap).
 
