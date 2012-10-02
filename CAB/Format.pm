@@ -1294,7 +1294,7 @@ Default implementation deletes $fmt-E<gt>{outbuf} and calls $fmt-E<gt>{fh}->flus
 Select output to byte-string $str.
 Default implementation just wraps $fmt-E<gt>toFh($fmt-E<gt>{tmpfh}=$new_fh, $level).
 
-=item toString_bug
+=item toString_buf
 
  $fmt_or_undef = $fmt->toString_buf(\$str)
 
