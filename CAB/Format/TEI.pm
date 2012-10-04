@@ -14,6 +14,7 @@ use DTA::TokWrap::Utils qw();
 use File::Path;
 use XML::LibXML;
 use IO::File;
+#use File::Copy qw();
 use Carp;
 use strict;
 
@@ -58,6 +59,9 @@ $DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
+##     ##-- output: new
+##     #outfile => $filename,			##-- final output file (flushed with File::Copy::copy)
+##
 ##     ##-- output: inherited from XmlTokWrap
 ##     arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
 ##     arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
@@ -96,7 +100,7 @@ sub new {
 			      @_
 			     );
 
-  if (0) {
+  if (1) {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
     $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
     $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
@@ -202,7 +206,7 @@ sub fromString {
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.raw.xml: $!");
 
     ##-- ensure //c elements
-    my $addc_args = $fmt->{addc} eq 'guess' ? '-guess' : '-noguess';
+    my $addc_args = '-rmns '.($fmt->{addc} eq 'guess' ? '-guess' : '-noguess');
     DTA::TokWrap::Utils::runcmd("dtatw-add-c.perl $addc_args $tmpdir/tmp.raw.xml > $tmpdir/tmp.chr.xml")==0
 	or $fmt->logdie("dtatw-add-c.perl failed: $!");
 
@@ -283,9 +287,10 @@ sub defaultExtension { return '.tei.xml'; }
 ##  + override calls $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh})
 sub flush {
   my $fmt = shift;
+  #File::Copy::copy($fmt->{outfile},$fmt->{fh}) if (defined($fmt->{outfile}) && defined($fmt->{fh}));
   $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
   #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
-  delete @$fmt{qw(outbuf xdoc)};
+  delete @$fmt{qw(outfile outbuf xdoc)};
   return $fmt;
 }
 
@@ -344,24 +349,28 @@ sub putDocument {
   $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";
   $twdoc->{xtokdata} = $fmt->{xdoc}->toString(0);
   $twdoc->{cwsfile}  = "$tmpdir/tmp.tei.cws.xml";
-  $twdoc->{cwstfile} = undef;
-  $twdoc->{cwstbufr} = \$fmt->{outbuf}; ##-- output to string
+  #$twdoc->{cwstfile} = "$tmpdir/tmp.tei.cwst.xml";
+  #$twdoc->{cwstbufr} = \$fmt->{outbuf}; ##-- output to string
   $twdoc->saveXtokFile()
     or $fmt->logconfess("could not save intermediate cab.t.xml file: $!");
   $twdoc->genKey('addws')
     or $fmt->logconfess("could not generate intermediate cws xml data: $!");
 
   ##-- optionally remove //c elements
-  my $cws_xml = "$tmpdir/tmp.tei.cws.xml";
+  my $cwsfile = "$tmpdir/tmp.tei.cws.xml";
   if (!$fmt->{keepc}) {
-    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $cws_xml > $tmpdir/tmp.tei.cws.noc.xml")==0
+    DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $cwsfile > $tmpdir/tmp.tei.cws.noc.xml")==0
 	or $fmt->logdie("dtatw-rm-c.perl failed: $!");
-    $doc->{cwstbasefile} = $cws_xml = "$tmpdir/tmp.tei.cws.noc.xml";
-    $doc->{cwstbasebufr} = undef;
+    $cwsfile = "$tmpdir/tmp.tei.cws.noc.xml";
   }
 
-  ##-- splice in cab analysis data
-  $twdoc->genKey('idsplice');
+  ##-- splice in cab analysis data (should already be there in tokwrap v0.37)
+  #$twdoc->genKey('idsplice');
+
+  ##-- slurp the buffer back in
+  DTA::TokWrap::Utils::slurp_file("$cwsfile",\$fmt->{outbuf})
+      or $fmt->logdie("slurp_file() failed for '$cwsfile': $!");
+  $fmt->{outbuf} =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g; ##-- decode default namespaces (hack)
 
   ##-- cleanup
   $twdoc->close();

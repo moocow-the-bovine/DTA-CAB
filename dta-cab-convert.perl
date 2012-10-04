@@ -1,6 +1,8 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
+use DTA::CAB::Format::TEI; ##-- DEBUG
+
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
 use DTA::CAB::Format;
@@ -11,7 +13,6 @@ use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
-#use DTA::CAB::Format::SynCoPe::CSV; ##-- DEBUG
 
 ##==============================================================================
 ## Constants & Globals
