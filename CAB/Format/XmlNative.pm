@@ -292,7 +292,7 @@ sub parseNode {
 	##-- Element: default: +attributes: HASH
 	$nxt = _pushValue($cur,$name,{});
       }
-      elsif ($nod->hasChildNodes) {
+      elsif ($nod->hasChildNodes && $nod->parentNode->nodeName ne 'toka') {
 	##-- Element: default: -attributes, +dtrs: ARRAY
 	$nxt = _pushValue($cur,$name,[]);
       }
