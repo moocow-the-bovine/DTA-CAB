@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.32';
+my $VERSION = '1.33';
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
@@ -50,7 +50,7 @@ WriteMakefile
 		    #'moot' => 0.02, ##-- moot/swig
 		    'Moot' => 0.01,  ##-- moot/xs
 		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File, CDB_File
-		    #DTA::TokWrap => 0.36, ##-- for DTA::CAB::Format::TEI, DTA::CAB::Format::TEIws
+		    #DTA::TokWrap => 0.37, ##-- for DTA::CAB::Format::TEI, DTA::CAB::Format::TEIws
 		    ##--
 		    'Unicode::Normalize' =>0, # 1.02
 		    'Encode'=>0,
