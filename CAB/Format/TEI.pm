@@ -48,7 +48,7 @@ $DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
 ##     ##-- new in TEI
 ##     tmpdir => $dir,                         ##-- temporary directory for this object (default: new)
 ##     keeptmp => $bool,                       ##-- keep temporary directory open
-##     addc => $bool_or_guess,                 ##-- (input) whether to add //c elements (slow no-op if already present; default='guess')
+##     addc => $bool_or_guess,                 ##-- (input) whether to add //c elements (slow no-op if already present; default=0)
 ##     spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
 ##     keepc => $bool,                         ##-- (output) whether to include //c elements in spliceback-mode output (default=0)
 ##     tw => $tw,                              ##-- underlying DTA::TokWrap object
@@ -82,7 +82,7 @@ sub new {
 			      tmpdir => undef,
 			      keeptmp=>0,
 			      ##
-			      addc => 'guess',
+			      addc => 0,
 			      keepc => 0,
 			      spliceback => 1,
 
@@ -195,7 +195,7 @@ sub fromString {
   utf8::encode($$str) if (utf8::is_utf8($$str));
 
   if (!$fmt->{addc}) {
-    ##-- dump document with predefined //c elements
+    ##-- dump document with predefined //c elements, or rely on dta-tokwrap >= v0.38 to handle both //c and text()
     DTA::TokWrap::Utils::ref2file($str,"$tmpdir/tmp.chr.xml")
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.chr.xml: $!");
     $fmt->{teibufr} = $str if ($fmt->{spliceback});
@@ -218,14 +218,7 @@ sub fromString {
   ##-- run tokwrap
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.chr.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
-  $twdoc->genKey([qw(mkindex),
-		  qw(mkbx0 saveBx0File),
-		  qw(mkbx saveBxFile saveTxtFile),
-		  qw(tokenize0 saveTokFile0),
-		  qw(tokenize1 saveTokFile1),
-		  qw(tok2xml saveXtokFile),
-		  #qw(standoff),
-		 ])
+  $twdoc->genKey('tei2txml')
     or $fmt->logdie("could generate $tmpdir/tmp.chr.t.xml with DTA::TokWrap: $!");
   $twdoc->close();
 
@@ -364,7 +357,7 @@ sub putDocument {
     $cwsfile = "$tmpdir/tmp.tei.cws.noc.xml";
   }
 
-  ##-- splice in cab analysis data (should already be there in tokwrap v0.37)
+  ##-- splice in cab analysis data (should already be there in tokwrap >= v0.37)
   #$twdoc->genKey('idsplice');
 
   ##-- slurp the buffer back in
