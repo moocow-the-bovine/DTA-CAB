@@ -375,7 +375,7 @@ sub putDocument {
 			   [
 			    ##-- word attributes: literals
 			    (t=>$w->{text}),
-			    (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen msafe ws)),
+			    (map {$_=>$w->{$_}} qw(u id exlex pnd mapclass errid xc xr xp pb lb bb b xb msafe ws)), #c coff clen b boff blen
 			   ],
 			   ##
 			   ##-- content: tokenizer analyses
