@@ -158,6 +158,91 @@ sub clearTypes {
   return $_[0];
 }
 
+##==============================================================================
+## I/O wrappers
+
+##--------------------------------------------------------------
+## I/O wrappers: input
+
+## $doc = CLASS_OR_OBJECT->fromDocument($doc)
+sub fromDocument {
+  if (ref($_[0]) && UNIVERSAL::isa($_[0],__PACKAGE__)) {
+    %{$_[0]} = %{$_[1]};
+    return $_[0];
+  }
+  return $_[1];
+}
+
+## $doc = CLASS_OR_OBJECT->fromFile($filename_or_fh,%fmt_options)
+sub fromFile {
+  my $fmt = DTA::CAB::Format->newReader(file=>$_[1],@_[2..$#_])
+    or $_[0]->logconfess("fromFile(): could not create format for '$_[1]': $!");
+  my $doc = $fmt->parseFile($_[1])
+    or $_[0]->logconfess("fromFile(): could not pase file '$_[1]': $!");
+  return $_[0]->fromDocument($doc);
+}
+
+## $doc = CLASS_OR_OBJECT->fromFh($fh,%fmt_options)
+sub fromFh {
+  my $fmt = DTA::CAB::Format->newReader(@_[2..$#_])
+    or $_[0]->logconfess("fromFh(): could not create format for filehandle $_[1]: $!");
+  my $doc = $fmt->parseFh($_[1])
+    or $_[0]->logconfess("fromFile(): could not pase filehandle $_[1]: $!");
+  return $_[0]->fromDocument($doc);
+}
+
+## $doc = CLASS_OR_OBJECT->fromString( $str,%fmt_options)
+## $doc = CLASS_OR_OBJECT->fromString(\$str,%fmt_options)
+sub fromString {
+  my $fmt = DTA::CAB::Format->newReader(@_[2..$#_])
+    or $_[0]->logconfess("fromFh(): could not create format: $!");
+  my $doc = $fmt->parseString($_[1])
+    or $_[0]->logconfess("fromFile(): could not pase string: $!");
+  return $_[0]->fromDocument($doc);
+}
+
+##--------------------------------------------------------------
+## I/O wrappers: output
+
+## $doc = CLASS_OR_OBJECT->toFormat($fmt)
+sub toFormat {
+  my $fmt = $_[1];
+  $fmt->putDocumentRaw($_[0])
+    or $_[0]->logconfess("toFormat(): ", ref($fmt), "->putDocumentRaw() failed: $!");
+  $fmt->flush()
+    or $_[0]->logconfess("toFormat(): ", ref($fmt), "->flush() failed: $!");
+  return $_[0];
+}
+
+## $doc = CLASS_OR_OBJECT->toFile($filename_or_fh,%fmt_options)
+sub toFile {
+  my $fmt = DTA::CAB::Format->newWriter(file=>$_[1],@_[2..$#_])
+    or $_[0]->logconfess("toFile(): could not create format for '$_[1]': $!");
+  $fmt->toFile($_[1])
+    or $_[0]->logconfess("toFile(): ", ref($fmt), "->toFile() failed for '$_[1]': $!");
+  return $_[0]->toFormat($fmt);
+}
+
+## $doc = CLASS_OR_OBJECT->toFh($fh,%fmt_options)
+sub toFh {
+  my $fmt = DTA::CAB::Format->newWriter(@_[2..$#_])
+    or $_[0]->logconfess("toFh(): could not create format for '$_[1]': $!");
+  $fmt->toFh($_[1])
+    or $_[0]->logconfess("toFh(): ", ref($fmt), "->toFh() failed for '$_[1]': $!");
+  return $_[0]->toFormat($fmt);
+}
+
+## \$str = CLASS_OR_OBJECT->toString(\$str,%fmt_options)
+##  $str = CLASS_OR_OBJECT->toString( $str,%fmt_options)
+sub toString {
+  my $fmt = DTA::CAB::Format->newWriter(@_[2..$#_])
+    or $_[0]->logconfess("toString(): could not create format for '$_[1]': $!");
+  $fmt->toString($_[1])
+    or $_[0]->logconfess("toString(): ", ref($fmt), "->toString() failed for '$_[1]': $!");
+  $_[0]->toFormat($fmt) or return undef;
+  return $_[1];
+}
+
 
 1; ##-- be happy
 
