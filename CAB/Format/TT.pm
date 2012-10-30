@@ -215,9 +215,18 @@ sub parseTTString {
 	    } elsif ($_ =~ /^\%\% Sentence (.*)$/) {
 	      ##-- special comment: sentence attribute: xml:id
 	      $sa{'id'} = $1;
+	      if ($sa{'id'} =~ /(\S+)\t=(.*)$/) {
+		##-- dtigerdb 'stxt'
+		$sa{'id'}   = $1;
+		$sa{'stxt'} = $2;
+	      }
+	      qw()
+	    } elsif ($_ =~ /^\%\% \$txt=(.*)$/) {
+	      ##-- special comment: sentence attribute: stxt (raw sentence text)
+	      $sa{'stxt'} = $1;
 	      qw()
 	    } elsif ($_ =~ /^\%\%(.*)$/) {
-	      ##-- generic line: add to _cmts
+	      ##-- generic line: add to '_cmts' attribute of current sentence (or doc)
 	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
 	      qw()
 	    } elsif ($_ =~ /^$/) {
@@ -573,6 +582,7 @@ sub putSentence {
   $bufr = \(my $buf='') if (!defined($bufr));
   $fmt->{fh}->print(join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}})) if ($sent->{_cmts});
   $fmt->{fh}->print("%% Sentence $sent->{id}\n") if (defined($sent->{id}));
+  $fmt->{fh}->print("%% \$stxt=$sent->{stxt}\n") if (defined($sent->{stxt}));
   $fmt->putToken($_,$bufr) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{fh}->print("\n");
   return $fmt;
