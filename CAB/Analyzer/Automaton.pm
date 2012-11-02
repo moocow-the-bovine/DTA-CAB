@@ -436,7 +436,7 @@ sub analyzeTypes {
 
     ##-- set analyses
     $aset->();
-    $apost->($w) if ($apost);
+    $apost->() if ($apost);
   }
 
   return $doc;
