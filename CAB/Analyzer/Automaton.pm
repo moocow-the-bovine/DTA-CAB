@@ -435,8 +435,8 @@ sub analyzeTypes {
     ##-------- END analyzeWord
 
     ##-- set analyses
-    $apost->($w) if ($apost);
     $aset->();
+    $apost->($w) if ($apost);
   }
 
   return $doc;

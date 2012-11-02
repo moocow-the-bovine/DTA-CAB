@@ -426,8 +426,9 @@ sub getAnalyzeClosure {
 ## Methods: Analysis: (Token-)Accessor Closures
 
 ## $closure = $anl->accessClosure( $methodName, %opts);
-## $closure = $anl->accessClosure(\&codeRef, %opts);
+## $closure = $anl->accessClosure(\&codeRef,    %opts);
 ## $closure = $anl->accessClosure( $codeString, %opts);
+## $closure = $anl->accessClosure(\%opts );
 ##  + returns accessor-closure $closure for $anl
 ##  + passed argument can be one of the following:
 ##    - a CODE ref resolves to itself
@@ -438,10 +439,16 @@ sub getAnalyzeClosure {
 ##      + $codeString may reference the closure variable $anl
 ##        (and maybe others; see 'pre' and 'vars' options)
 ##  + %opts
+##     code => $codeRefOrMethodNameOrCodeString, ##-- clobbers first argument
 ##     pre => $code_str,   ##-- for $codeString accessors, prefix for eval (e.g. 'my ($lexVar);')
 ##     vars => \@vars,     ##-- adds lexical vars 'my ('.join(',',@varNames).');'
 sub accessClosure {
   my ($anl,$code,%opts) = @_;
+  if (UNIVERSAL::isa($code,'HASH')) {
+    %opts = (%$code,%opts);
+    $code = undef;
+  }
+  $code = $opts{code} if (defined($opts{code}));
   $code = ';' if (!defined($code));
   return $code if (UNIVERSAL::isa($code,'CODE'));
   return $anl->can($code) if ($anl->can($code));
