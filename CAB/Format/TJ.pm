@@ -104,81 +104,83 @@ sub blockScanHead {
 ## Methods: Input: Input selection
 
 ## $fmt = $fmt->fromFh($filename_or_handle)
-##  + override calls fromFh_str()
+##  + new override calls Format::fromFh
 sub fromFh {
-  return $_[0]->fromFh_str(@_[1..$#_]);
+  #return $_[0]->fromFh_str(@_[1..$#_]);
+  my $fmt = shift;
+  $fmt->DTA::CAB::Format::fromFh(@_)
+    or $fmt->logconfess("fromFh(): inherited Format::fromFh() failed: $!");
+  return $fmt->parseTJFh($_[0]);
 }
 
 ## $fmt = $fmt->fromString(\$string)
 ##  + select input from string $string
+##  + new override calls Format::fromString() [-> fromFh]
 sub fromString {
   my $fmt = shift;
   $fmt->close();
-  return $fmt->parseTJString(ref($_[0]) ? $_[0] : \$_[0]);
+  #return $fmt->parseTJString(ref($_[0]) ? $_[0] : \$_[0]);
+  return $fmt->DTA::CAB::Format::fromString(@_);
 }
 
 ##--------------------------------------------------------------
 ## Methods: Input: Local
 
-## $fmt = $fmt->parseTJString(\$str)
-##  + guts for fromString(): parse string $str into local document buffer.
-sub parseTJString {
-  my ($fmt,$src) = @_;
-  utf8::decode($$src) if ($fmt->{utf8} && !utf8::is_utf8($$src));
-
+## $fmt = $fmt->parseTJFh($fh)
+##  + guts for fromFh(): parse handle $fh into local document buffer.
+sub parseTJFh {
+  my ($fmt,$fh) = @_;
+  $fmt->setLayers($fh);
   my $jxs = $fmt->jsonxs();
 
-  ##-- split by sentence
-  my ($toks,$tok,$text,$json, $fkey,$fval,$fobj);
+  ##-- ye olde loope
   my (%sa,%doca);
-  my $sents =
-    [
-     map {
-       %sa=qw();
-       $toks=
-	 [
-	  map {
-	    if ($_ =~ /^\%\%\$TJ\:DOC=(.+)$/) {
-	      ##-- tj comment: document
-	      $json = defined($1) && $1 ? $jxs->decode($1) : {};
-	      @doca{keys %$json} = values %$json;
-	      qw()
-	    } elsif ($_ =~ /^\%\%\$TJ\:SENT=(.+)$/) {
-	      $json = defined($1) && $1 ? $jxs->decode($1) : {};
-	      @sa{keys %$json} = values %$json;
-	      qw()
-	    } elsif ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
-	      ##-- (tt-compat) special comment: document attribute: xml:base
-	      $doca{'base'} = $1;
-	      qw()
-	    } elsif ($_ =~ /^\%\% Sentence (.*)$/) {
-	      ##-- (tt-compat) special comment: sentence attribute: xml:id
-	      $sa{'id'} = $1;
-	      qw()
-	    } elsif ($_ =~ /^\%\%(.*)$/) {
-	      ##-- (tt-compat) generic line: add to _cmts
-	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
-	      qw()
-	    } elsif ($_ =~ /^$/) {
-	      ##-- empty line (e.g. as first line in file): ignore
-	      qw()
-	    } else {
-	      ##-- vanilla token
-	      ($text,$json) = split(/\t/,$_,2);
-	      $tok = (defined($json) && $json ne '' ? $jxs->decode($json) : {});
-	      $tok->{text}=$text if (!defined($tok->{text}));
-	      $tok
-	    }
-	  }
-	  split(/\n/, $_)
-	 ];
-       (%sa || @$toks ? {%sa,tokens=>$toks} : qw())
-     } split(/\n\n+/, $$src)
-    ];
+  my $toks = [];
+  my @body = qw();
+  my ($tok,$text,$json);
+  while (defined($_=<$fh>)) {
+    if ($_ =~ /^\%\%\$TJ\:DOC=(.+)$/) {
+      ##-- tj directive: document attributes
+      $json = defined($1) && $1 ? $jxs->decode($1) : {};
+      @doca{keys %$json} = values %$json;
+    }
+    elsif ($_ =~ /^\%\%\$TJ\:SENT=(.+)$/) {
+      ##-- tj directive: sentence attributes
+      $json = defined($1) && $1 ? $jxs->decode($1) : {};
+      @sa{keys %$json} = values %$json;
+    }
+    elsif ($_ =~ /^\%\% (?:xml\:)?base=(.*)$/) {
+      ##-- (tt-compat) special comment: document attribute: xml:base
+      $doca{'base'} = $1;
+    }
+    elsif ($_ =~ /^\%\% Sentence (.*)$/) {
+      ##-- (tt-compat) special comment: sentence attribute: xml:id
+      $sa{'id'} = $1;
+    }
+    elsif ($_ =~ /^\%\%(.*)$/) {
+      ##-- (tt-compat) generic line: add to _cmts
+      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
+    }
+    elsif ($_ =~ /^$/) {
+      ##-- empty line: EOS
+      if (%sa || @$toks) {
+	push(@body,{%sa,tokens=>$toks});
+	$toks = [];
+	%sa   = qw();
+      }
+    }
+    else {
+      ##-- vanilla token
+      ($text,$json) = split(/\t/,$_,2);
+      push(@$toks, $tok = (defined($json) && $json ne '' ? $jxs->decode($json) : {}));
+      $tok->{text}=$text if (!defined($tok->{text}));
+    }
+  }
+  push(@body, {%sa,tokens=>$toks}) if (%sa || @$toks); ##-- handle missing EOS at EOF
 
-  ##-- construct & buffer document
+  ##-- construct & buffer output document
   #$_ = bless($_,'DTA::CAB::Sentence') foreach (@$sents);
-  $fmt->{doc} = bless({%doca,body=>$sents}, 'DTA::CAB::Document');
+  $fmt->{doc} = bless({%doca,body=>\@body}, 'DTA::CAB::Document');
   return $fmt;
 }
 
