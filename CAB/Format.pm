@@ -536,8 +536,34 @@ sub fromFh_str {
   my ($fmt,$fh) = @_;
   $fmt->DTA::CAB::Format::fromFh($fh);
   $fmt->setLayers();
-  local $/ = undef;
-  my $str = <$fh>;
+  my @layers = PerlIO::get_layers($fh);
+  my ($nbytes,$str);
+  if ( ($nbytes=(-s $fh)) ) {
+    ##-- we have a file-like handle (known size): pre-allocate the string and load it with read()
+    $str = "\x{0}" x $nbytes;
+    binmode($fh,':raw');
+    read($fh, $str, $nbytes) == $nbytes
+      or $fmt->logconfess("fromFh_str(): could not buffer $nbytes bytes of data: $!");
+  } else {
+    ##-- looks like a pipe: read buffer-wise
+    my $bufsize = 2**20; ##-- 1M
+    my $str     = '';
+    my $len     = 0;
+    my $nread   = 0;
+    binmode($fh,':raw');
+    while (1) {
+      $nread = read($fh,$str,$nbytes,$len);
+      last if (eof($fh));
+      $fmt->logconfess("fromFh_str(): failed to get buffer chunk of size $bufsize: $!") if ($nread!=$bufsize);
+      $len += $nread;
+    }
+  }
+  if (grep {$_ eq 'utf8'} @layers) {
+    ##-- post-processing hack: decode utf8
+    utf8::decode($str) if (!utf8::is_utf8($str));
+    $str = Encode::decode_utf8($str) if (!utf8::is_utf8($str));
+  }
+  ##-- delegate to string method
   return $fmt->fromString(\$str);
 }
 
