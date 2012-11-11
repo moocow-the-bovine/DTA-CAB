@@ -357,7 +357,7 @@ sub analyzeTypes {
 
       ##---- analyze
       ##-- normalize
-      $uword = $w;
+      $uword = $w // '';
       if    ($tolower)   { $uword = lc($uword); }
       elsif ($tolowerNI) { $uword =~ s/^(.)(.*)$/$1\L$2\E/; }
       if    ($toupperI)  { $uword = ucfirst($uword); }

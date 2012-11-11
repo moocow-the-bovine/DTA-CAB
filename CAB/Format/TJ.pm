@@ -171,6 +171,7 @@ sub parseTJFh {
     }
     else {
       ##-- vanilla token
+      chomp;
       ($text,$json) = split(/\t/,$_,2);
       push(@$toks, $tok = (defined($json) && $json ne '' ? $jxs->decode($json) : {}));
       $tok->{text}=$text if (!defined($tok->{text}));
