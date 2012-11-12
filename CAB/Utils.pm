@@ -20,6 +20,7 @@ our @ISA = qw(Exporter);
 our @EXPORT= qw();
 our %EXPORT_TAGS =
     (
+     minmax => [qw(min2 max2)],
      xml  => [qw(xml_safe_string xml_escape)],
      libxml => [qw(libxml_parser libxml_doc libxml_xpnodes libxml_xpnode libxml_xpvalue libxml_xpcontext)],
      libxslt => [qw(xsl_stylesheet)],
@@ -51,6 +52,13 @@ sub GetArrayOptions {
 sub GetStringOptions {
   return Getopt::Long::GetOptionsFromString(@_);
 }
+
+##==============================================================================
+## Functions: minmax
+##==============================================================================
+
+sub min2 { return $_[0]<$_[1] ? $_[0] : $_[1]; }
+sub max2 { return $_[0]>$_[1] ? $_[0] : $_[1]; }
 
 ##==============================================================================
 ## Functions: temporaries

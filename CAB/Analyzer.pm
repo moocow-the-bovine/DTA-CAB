@@ -8,6 +8,7 @@ package DTA::CAB::Analyzer;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
+use DTA::CAB::Utils ':minmax';
 use Exporter;
 use Carp;
 use strict;
