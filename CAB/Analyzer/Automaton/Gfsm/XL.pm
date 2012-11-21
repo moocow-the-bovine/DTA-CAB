@@ -66,7 +66,7 @@ sub new {
 sub clear {
   my $aut = shift;
 
-  $aut->{fst}->_cascade_set(undef);
+  $aut->{fst}->_cascade_set(undef) if ($aut->{fst});
 
   ##-- inherited
   $aut->SUPER::clear();

@@ -57,6 +57,7 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     analyzePre     => $code,  ##-- coderef or string: pre-analysis code to call (called as $code->($word))
 ##     analyzePost    => $code,  ##-- coderef or string: post-analysis code to call (called as $code->($word))
 ##     wantAnalysisLo => $bool,     ##-- set to true to include 'lo'    keys in analyses (default: true)
+##     #wantAnalysisFst => $bool,    ##-- set to true to include 'fst'   key in analyses (default: false)
 ##     wantAnalysisLemma => $bool,  ##-- set to true to include 'lemma' keys in analyses (default: false)
 ##
 ##     ##-- Analysis Options
@@ -324,6 +325,7 @@ sub analyzeTypes {
   my $attInput = $aut->{attInput};
   my $attOutput = $aut->{attOutput};
   my $wantAnalysisLo = $aut->{wantAnalysisLo};
+  #my $wantAnalysisFst = $aut->{wantAnalysisFst};
   my $wantAnalysisLemma = $aut->{wantAnalysisLemma};
 
   ##-- closures
@@ -395,6 +397,7 @@ sub analyzeTypes {
 	push(@wa,
 	     map {
 	       {(
+		 #($wantAnalysisFst ? (fst=>$result->clone) : qw()),
 		 ($wantAnalysisLo ? (lo=>$uword) : qw()),
 		 'hi'=> (defined($labenc)
 			 ? decode($labenc,$lab->labels_to_string($_->{hi},0,1))
