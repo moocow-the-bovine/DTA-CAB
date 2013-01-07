@@ -89,7 +89,6 @@ CAB/Format/XmlPerl.pm
 CAB/Format/XmlRpc.pm
 CAB/Format/XmlTokWrap.pm
 CAB/Format/XmlVz.pm
-CAB/Format/XmlXsl.pm
 CAB/Format/YAML.pm
 CAB/Logger.pm
 CAB/Persistent.pm
