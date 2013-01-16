@@ -38,6 +38,7 @@ BEGIN {
 ##     ##---- Output
 ##     #level    => $formatLevel,      ##-- output formatting level: n/a
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
+##     outbase => $outputBasename,     ##-- for use by syncope (default: $inputDoc->{base})
 ##
 ##     ##---- Common
 ##     utf8  => $bool,                 ##-- default: 1
@@ -87,7 +88,7 @@ sub defaultExtension { return '.syncope-csv'; }
 sub putDocument {
   my ($fmt,$doc) = @_;
   my $fh = $fmt->{fh};
-  my $docname = $doc->{base}||ref($doc)||$doc;
+  my $docname = $fmt->{outbase}||$doc->{base}||ref($doc)||$doc;
   $fh->print("$docname\n");
   my ($si,$s,$wi,$sid,$wid,$w,$txt,$typ);
   foreach $si (0..$#{$doc->{body}}) {

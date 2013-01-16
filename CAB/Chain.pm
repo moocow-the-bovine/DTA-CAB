@@ -200,7 +200,7 @@ sub initInfo {
 sub analyzeTypes {
   my ($ach,$doc,$types,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    next if (!$_->doAnalyze($opts,'Types'));
+    next if (!$_->doAnalyze($opts,'Types') || !$_->enabled($opts));
     $ach->vlog($ach->{logTrace},"analyzeTypes: $_->{label}");
     $_->analyzeTypes($doc,$types,$opts);
   }
@@ -218,7 +218,7 @@ sub analyzeTypes {
 sub analyzeSentences {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    next if (!$_->doAnalyze($opts,'Sentences'));
+    next if (!$_->doAnalyze($opts,'Sentences') || !$_->enabled($opts));
     $ach->vlog($ach->{logTrace},"analyzeSentences: $_->{label}");
     $_->analyzeSentences($doc,$opts);
   }
@@ -231,7 +231,7 @@ sub analyzeSentences {
 sub analyzeLocal {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    next if (!$_->doAnalyze($opts,'Local'));
+    next if (!$_->doAnalyze($opts,'Local') || !$_->enabled($opts));
     $ach->vlog($ach->{logTrace},"analyzeLocal: $_->{label}");
     $_->analyzeLocal($doc,$opts);
   }
@@ -245,7 +245,7 @@ sub analyzeLocal {
 sub analyzeClean {
   my ($ach,$doc,$opts) = @_;
   foreach (@{$ach->chain($opts)}) {
-    next if (!$_->doAnalyze($opts,'Clean'));
+    next if (!$_->doAnalyze($opts,'Clean') || !$_->enabled($opts));
     $ach->vlog($ach->{logTrace},"analyzeClean: $_->{label}");
     $_->analyzeClean($doc,$opts);
   }
