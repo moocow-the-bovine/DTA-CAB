@@ -111,7 +111,7 @@ sub new {
 
   ##-- temp dir
   my $tmpdir = $fmt->{tmpdir};
-  $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_XXXX", CLEAN=>(!$fmt->{keeptmp}))
+  $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_$$_XXXX", CLEAN=>(!$fmt->{keeptmp}))
     if (!defined($tmpdir));
 
   ##-- TokWrap object
@@ -337,7 +337,7 @@ sub putDocument {
 
   ##-- get tokwrap object
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
-    or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
+    or $fmt->logdie("could not open $tmpdir/tmp.tei.xml as TokWrap document: $!");
   $twdoc->{xmldata}  = $$teibufr;
   $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";
   $twdoc->{xtokdata} = $fmt->{xdoc}->toString(0);
