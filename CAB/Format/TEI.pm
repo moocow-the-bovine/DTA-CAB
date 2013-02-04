@@ -111,7 +111,7 @@ sub new {
 
   ##-- temp dir
   my $tmpdir = $fmt->{tmpdir};
-  $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_$$_XXXX", CLEAN=>(!$fmt->{keeptmp}))
+  $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_${$}_XXXX", CLEAN=>(!$fmt->{keeptmp}))
     if (!defined($tmpdir));
 
   ##-- TokWrap object
@@ -148,6 +148,7 @@ sub tmpdir {
 sub mktmpdir {
   my $fmt = shift;
   my $tmpdir = $fmt->{tmpdir};
+  $fmt->vlog('trace', "mktmpdir $tmpdir");
   mkdir($tmpdir,0700) if (!-d $tmpdir);
   (-d $tmpdir) or $fmt->logconfess("could not create directory '$tmpdir': $!");
   return $tmpdir;

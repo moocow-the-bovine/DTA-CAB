@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
-#use DTA::CAB::Format::TEI; ##-- DEBUG
+use DTA::CAB::Format::TEI; ##-- DEBUG
 
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
