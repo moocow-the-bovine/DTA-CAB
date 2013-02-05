@@ -104,7 +104,7 @@ sub putDocument {
       elsif ($txt =~ /^[[:upper:]]+$/)	{ $typ = 'UPPERCASE '.(length($txt)==1 ? 'LETTER' : 'WORD'); }
       elsif ($txt =~ /^[[:lower:]]+$/)	{ $typ = 'LOWERCASE WORD'; }
       elsif ($txt =~ /^[[:upper:]]/)	{ $typ = 'CAPITALIZED WORD'; }
-      elsif ($txt =~ /^[[:digit:]]+$/)	{ $typ = 'DIGIT'; }
+      elsif ($txt =~ /^[[:digit:]]+\.?$/) { $typ = 'DIGIT'; }
       elsif ($txt eq '-')		{ $typ = 'HYPHEN-MINUS'; }
       elsif ($txt eq '.')		{ $typ = 'FULL STOP'; }
       elsif ($txt eq ',')		{ $typ = 'COMMA'; }
