@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::MootSub.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <jurish@bbaw.de>
 ## Description: post-processing for moot PoS tagger in DTA chain
 ##  + tweaks $tok->{moot}{word}, instantiates $tok->{moot}{lemma}
 
@@ -110,7 +110,8 @@ sub analyzeSentences {
 	  ##-- get lemma distance
 	  $l   = $_->{lemma};
 	  $ld  = $l2d{$l} = Text::LevenshteinXS::distance($w, $l) if (!defined($ld=$l2d{$l}));
-	  $ld += 1000*($_->{cost}||$_->{prob}||0); ##-- hack: morph cost clobbers edit-distance
+	  $ld += 1000*($_->{cost}||$_->{prob}||0);				##-- hack: morph cost clobbers edit-distance
+	  $ld += 1000*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
 	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
 	  $l0  = $l;

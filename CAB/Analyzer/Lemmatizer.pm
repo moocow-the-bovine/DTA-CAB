@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Lemmatizer.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <jurish@bbaw.de>
 ## Description: lemma extractor for TAGH analyses or bare text
 
 package DTA::CAB::Analyzer::Lemmatizer;
