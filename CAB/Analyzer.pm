@@ -682,18 +682,20 @@ sub _am_tagh_fst2moota {
   my $taghvar = shift||'$_';
   return ("{details=>$taghvar\->{hi},"
 	  ." prob=>($taghvar\->{w}||0),"
-	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?([A-Z0-9]+)\\]/ ? \$1 : $taghvar\->{hi})"
+	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?((?:[A-Z0-9]+|\\\$[^\\]]+))\\]/ ? \$1 : $taghvar\->{hi})" ##-- allow e.g. [$(] tags from tokenizer!
 	  ."} ##-- _am_tagh_fst2moota\n");
 }
 
 ## PACKAGE::_am_tagh_list2moota($listvar='@{$_->{morph}}')
 ##  + access-closure macro (EXPR): moot token analysis-list from TAGH-style fst analysis-list
-##  + evaluates to:
+##  + evaluates to (something like):
 ##    (map { $${_am_tagh_fst2moota('$_')} } $$listvar)
 sub _am_tagh_list2moota {
   my $listvar = shift||'@{$_->{morph}}';
-  return "(map {ref(\$_) ? "._am_tagh_fst2moota('$_')." : {details=>\$_,tag=>\$_,prob=>0}} $listvar) ##-- _am_tagh_list2moota\n";
+  #return "(map {ref(\$_) ? "._am_tagh_fst2moota('$_')." : {details=>\$_,tag=>\$_,prob=>0}} $listvar) ##-- _am_tagh_list2moota\n";
+  return "(map {"._am_tagh_fst2moota('$_')."} map {ref(\$_) ? \$_ : {hi=>\$_}} $listvar) ##-- _am_tagh_list2moota\n";
 }
+
 
 ## PACKAGE::_am_dmoot_fst2moota($fstvar='$_')
 ##  + access-closure macro (EXPR): single dmoot token analysis from fst analysis

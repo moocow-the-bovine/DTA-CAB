@@ -373,7 +373,7 @@ sub cb_work {
     my $infile = $qjob->{input};
     $fp->info("processing file $infile");
 
-    ##-- prase
+    ##-- parse
     $ifmt->trace("parseFile($infile)");
     my $doc = $ifmt->parseFile($infile)
       or die("$prog: parse failed for input file '$infile': $!");

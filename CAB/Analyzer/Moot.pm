@@ -324,9 +324,10 @@ sub analyzeSentences {
 ##  + default just returns $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE
 sub analysisCode {
   my $moot = shift;
-  return $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE;
+  return
+    #analysisCodeDEBUG($moot) ||
+    $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE;
 }
-
 
 1; ##-- be happy
 
