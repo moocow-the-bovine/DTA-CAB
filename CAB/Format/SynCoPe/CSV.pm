@@ -103,6 +103,7 @@ sub putDocument {
       if (defined($typ=$w->{syncope_typ}) && $typ ne '') { ; } ##-- re-use stored type
       elsif ($txt =~ /^[[:upper:]]+$/)	{ $typ = 'UPPERCASE '.(length($txt)==1 ? 'LETTER' : 'WORD'); }
       elsif ($txt =~ /^[[:lower:]]+$/)	{ $typ = 'LOWERCASE WORD'; }
+      elsif ($txt =~ /^[[:punct:]][[:lower:]]+$/) { $typ = 'LOWERCASE WORD'; } ##-- 2013-02-22: "'s" should be LOWERCASE_WORD since python islower("'")=>1
       elsif ($txt =~ /^[[:upper:]]/)	{ $typ = 'CAPITALIZED WORD'; }
       elsif ($txt =~ /^[[:digit:]]+\.?$/) { $typ = 'DIGIT'; }
       elsif ($txt eq '-')		{ $typ = 'HYPHEN-MINUS'; }
