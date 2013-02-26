@@ -47,10 +47,10 @@ sub {
    $mw->{text} = lc($mw->{text}) if ($lctext);
    $mw->{analyses} = ['._am_tagh_list2moota('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
-                            ($w->{xlit} && !$w->{xlit}{isLatinExt} ? qw(FM XY) : qw()),
+                            ($w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
 			    ($w->{dmoot} ? $w->{dmoot}{morph}
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
-'			   ).'
+			   ).'
      ] if (!defined($mw->{analyses}));
    $mw
  } @{$_->{tokens}}];
