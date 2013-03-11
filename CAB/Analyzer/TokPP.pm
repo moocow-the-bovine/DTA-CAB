@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::TokPP.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: heuristic text-based analyzer (for punctutation, numbers, etc)
 
 package DTA::CAB::Analyzer::TokPP;
@@ -76,7 +76,7 @@ sub analyzeTypes {
     if ($w =~ m(^[\.\!\?]+$)) {
       push(@wa, '$.');
     }
-    elsif ($w =~ m(^[\,\;\-\¬]+$)) {
+    elsif ($w =~ m(^[\,\;\-\Â¬]+$)) {
       push(@wa, '$,');
     }
     elsif ($w =~ m(^[[:punct:]]+$)) {
@@ -90,10 +90,10 @@ sub analyzeTypes {
 	push(@wa, 'XY');
       }
     }
-    elsif ($w =~ m(^[[:digit:]]*$)) {
+    elsif ($w =~ m(^[[:digit:]]+$)) {
       push(@wa, 'CARD');
     }
-    elsif ($w =~ m(^[[:digit:][:punct:]]*$)) {
+    elsif ($w =~ m(^[[:digit:][:punct:]]+$)) {
       push(@wa, 'XY');
     }
     elsif ($w =~ m([^\x{00}-\x{ff}])) {
