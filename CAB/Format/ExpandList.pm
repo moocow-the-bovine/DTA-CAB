@@ -36,7 +36,8 @@ BEGIN {
 ##     doc => $doc,                    ##-- buffered input document (TT-style)
 ##
 ##     ##---- Output
-##     #level    => $formatLevel,      ##-- output formatting level: n/a
+##     level    => $formatLevel,      ##-- output formatting level:
+##				      ##   0:TAB-separated (default); 1:NEWLINE-separated; 2:NEWLINE+TAB separated
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh)])
 ##
@@ -116,7 +117,11 @@ sub defaultExtension { return '.xl'; }
 ##  + appends $tok to $fmt->{fh}
 sub putToken {
   my ($fmt,$tok) = @_;
-  $fmt->{fh}->print(join("\t",
+  my $level = $fmt->{level}||0;
+  my $sep = ($level>=2 ? "\n\t"
+	     : ($level>=1 ? "\n"
+		: "\t"));
+  $fmt->{fh}->print(join($sep,
 			 grep {defined($_) && $_ ne ''}
 			 map {
 			   (UNIVERSAL::isa($_,'HASH')
