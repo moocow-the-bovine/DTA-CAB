@@ -88,6 +88,7 @@ b { font-weight: bold; color: #000099; }
 		    <option selected="selected" value="text">Text</option>
 		    <option value="tt">TT ('vertical')</option>
 		    <option value="tj">TJ ('vertical' + json)</option>
+                      <option value="xlist">XList (DDC term expander)</option>
 		    <option value="xml">XML (Native)</option>
 		    <option value="xmlperl">XML (Perl)</option>
 		    <option value="xmlrpc">XML-RPC</option>
