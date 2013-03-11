@@ -27,7 +27,8 @@ sub new {
 			      ##
 			      analyzeCode => join("\n",
 						  'return if (defined($_->{$lab})); ##-- avoid re-analysis',
-						  '@vals='._am_tt_fst_list('($dhash->{lc($_->{text})}||"")').';',
+						  #'@vals='._am_tt_fst_list('( $dhash->{lc($_->{text})} || "" )').';',
+						  '@vals='._am_tt_fst_list('($dhash->{lc('._am_xlit.')}||"")').';',
 						  '$_->{$lab}=[@vals] if (@vals);',
 						 ),
 			      ##-- user args
