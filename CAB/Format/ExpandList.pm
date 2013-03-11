@@ -37,7 +37,7 @@ BEGIN {
 ##
 ##     ##---- Output
 ##     level    => $formatLevel,      ##-- output formatting level:
-##				      ##   0:TAB-separated (default); 1:NEWLINE-separated; 2:NEWLINE+TAB separated
+##				      ##   0:TAB-separated (default); 1:sorted,NEWLINE-separated; 2:sorted,NEWLINE+TAB separated
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh)])
 ##
@@ -121,19 +121,20 @@ sub putToken {
   my $sep = ($level>=2 ? "\n\t"
 	     : ($level>=1 ? "\n"
 		: "\t"));
-  $fmt->{fh}->print(join($sep,
-			 grep {defined($_) && $_ ne ''}
-			 map {
-			   (UNIVERSAL::isa($_,'HASH')
-			    ? (exists($_->{hi})
-			       ? $_->{hi}
-			       : (exists($_->{latin1Text}) ? $_->{latin1Text} : $_))
-			    : $_)
-			 }
-			 map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
-			 @$tok{@{$fmt->{keys}}}
-			),
-		    "\n");
+  my @words = (
+	       grep {defined($_) && $_ ne ''}
+	       map {
+		 (UNIVERSAL::isa($_,'HASH')
+		  ? (exists($_->{hi})
+		     ? $_->{hi}
+		     : (exists($_->{latin1Text}) ? $_->{latin1Text} : $_))
+		  : $_)
+	       }
+	       map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
+	       @$tok{@{$fmt->{keys}}}
+	      );
+
+  $fmt->{fh}->print(join($sep, ($level > 0 ? sort(@words) : @words)), "\n");
   return $fmt;
 }
 
