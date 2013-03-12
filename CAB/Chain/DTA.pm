@@ -26,6 +26,7 @@ use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
 use DTA::CAB::Analyzer::DTAMapClass;
 use DTA::CAB::Analyzer::SynCoPe::NER;
+use DTA::CAB::Analyzer::GermaNet::Hyponyms;
 use DTA::CAB::Analyzer::DTAClean;
 use DTA::CAB::Analyzer::Null;
 
@@ -79,6 +80,7 @@ sub new {
      ner => DTA::CAB::Analyzer::SynCoPe::NER->new(), ##-- ne-recognizer (post-moot)
      ##
      eqlemma  => DTA::CAB::Analyzer::EqLemma->new(), ##-- eqlemma (best only)
+     'gn-hypo' => DTA::CAB::Analyzer::GermaNet::Hyponyms->new(), ##-- GermaNet hyponyms
      ##
      clean => DTA::CAB::Analyzer::DTAClean->new(),
      ##
@@ -148,6 +150,7 @@ sub setupChains {
      'expand.eqpho'  =>[@$ach{qw(static exlex       xlit lts                             eqpho)}],
      'expand.eqrw'   =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw             eqrw)}],
      'expand.eqlemma'=>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub eqlemma)}],
+     'expand.gn-hypo'=>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub gn-hypo)}],
      'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
      'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
      'ner'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
