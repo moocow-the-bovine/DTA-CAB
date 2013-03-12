@@ -90,6 +90,7 @@ sub gnOk {
 ##  + ensures analyzer data is loaded from default file(s)
 sub ensureLoaded {
   my $gna = shift;
+  return 1 if ($gna->gnOk);
   my $gnFile = $gna->{gnFile};
   if (!$gnFile) {
     return 0;
