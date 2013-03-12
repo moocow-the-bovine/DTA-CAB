@@ -47,6 +47,8 @@ use DTA::CAB::Analyzer::Dict::CDB;        ##-- generic CDB-dictionary-based anal
 use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-based analysis)
 use DTA::CAB::Analyzer::EqLemma;         ##-- lemma-equivalence class expander
 
+use DTA::CAB::Analyzer::GermaNet;         ##-- GermaNet shared routines
+
 use DTA::CAB::Chain;                     ##-- analyzer chains
 use DTA::CAB::Chain::Multi;              ##-- analyzer multi-chains
 
