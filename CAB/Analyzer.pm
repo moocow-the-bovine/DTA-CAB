@@ -29,7 +29,7 @@ our %EXPORT_TAGS =
 		qw(_am_tt_fst_list _am_tt_fst_eqlist),
 		qw(_am_fst_sort _am_fst_rsort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
-		qw(_am_tag _am_word),
+		qw(_am_tag _am_word _am_lemma),
 		qw(_am_tagh_fst2moota _am_tagh_list2moota),
 		qw(_am_dmoot_fst2moota _am_dmoot_list2moota),
 		qw(parseFstString),
@@ -671,8 +671,18 @@ sub _am_tag {
 sub _am_word {
   my $mootvar = shift||'$_->{moot}';
   my $default = shift||'undef';
-  return "($mootvar ? $mootvar\->{word} : $default) ##== _am_tag\n";
+  return "($mootvar ? $mootvar\->{word} : $default) ##== _am_word\n";
 }
+
+## PACKAGE::_am_lemma($mootvar='$_->{moot}', $defaultvar='undef')
+##  + access-closure macro (EXPR) for a moot lemma; evaluates to
+##    ($$mootvar ? $$mootvar->{word} : $defaultvar)
+sub _am_lemma {
+  my $mootvar = shift||'$_->{moot}';
+  my $default = shift||'undef';
+  return "($mootvar ? $mootvar\->{lemma} : $default) ##== _am_lemma\n";
+}
+
 
 ## PACKAGE::_am_tagh_fst2moota($taghvar='$_')
 ##  + access-closure macro (EXPR): single moot token analysis from TAGH-style fst analysis

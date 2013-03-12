@@ -48,6 +48,8 @@ use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-ba
 use DTA::CAB::Analyzer::EqLemma;         ##-- lemma-equivalence class expander
 
 use DTA::CAB::Analyzer::GermaNet;         ##-- GermaNet shared routines
+use DTA::CAB::Analyzer::GermaNet::Hyperonyms; ##-- GermaNet hyperonyms (superclasses)
+use DTA::CAB::Analyzer::GermaNet::Hyponyms;   ##-- GermaNet hyponyms (subclasses)
 
 use DTA::CAB::Chain;                     ##-- analyzer chains
 use DTA::CAB::Chain::Multi;              ##-- analyzer multi-chains

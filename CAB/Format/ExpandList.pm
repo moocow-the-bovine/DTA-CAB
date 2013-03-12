@@ -48,7 +48,7 @@ BEGIN {
 ## + inherited from DTA::CAB::Format::TT
 sub new {
   my $that = shift;
-  return $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh)],@_);
+  return $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-hypo gn-hyper)],@_);
 }
 
 ##==============================================================================

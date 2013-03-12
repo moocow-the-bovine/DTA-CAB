@@ -22,7 +22,7 @@ our @ISA = qw(DTA::CAB::Analyzer::GermaNet);
 
 ## $DEFAULT_ANALYZE_GET
 ##  + default coderef or eval-able string for {analyzeGet}
-our $DEFAULT_ANALYZE_GET = _am_lemma(_am_word(_am_xlit));
+our $DEFAULT_ANALYZE_GET = _am_lemma('$_->{moot}').' || '._am_word('$_->{moot}',_am_xlit);
 
 ##==============================================================================
 ## Constructors etc.
@@ -81,26 +81,26 @@ sub analyzeTypes {
   my $gn	= $gna->{gn};
   my $relations = $gna->{relations} || [];
   my $max_depth = $gna->{max_depth};
-  my $allow_re  = defined($gna->{allowRegex}) ? qr($dic->{allowRegex}) : undef;
+  my $allow_re  = defined($gna->{allowRegex}) ? qr($gna->{allowRegex}) : undef;
   my $aget_code = defined($gna->{analyzeGet}) ? $gna->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
   my $aget      = $gna->accessClosure($aget_code);
 
   my ($w,$lemma, $synsets, $syn, @syns);
-  foreach $w (values %$types) {
+  foreach (values %$types) {
     next if (defined($allow_re) && $_->{text} !~ $allow_re);
     delete $_->{$lab};
     $w       = $_;
     $lemma   = $aget->();
     $synsets = $gn->get_synsets($lemma);
 
-    @closure = map {
+    @syns = map {
       $syn = $_;
       map {
 	$gna->relation_closure($syn, $_, $max_depth)
       } @$relations
     } @$synsets;
 
-    $gna->{$lab} = [$gna->synsets_terms(@closure)] if (@closure);
+    $w->{$lab} = [grep {$_ ne 'GNROOT'} $gna->synsets_terms(@syns)] if (@syns);
   }
 
   return $doc;

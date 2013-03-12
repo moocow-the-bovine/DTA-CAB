@@ -25,6 +25,7 @@ our @ISA = qw(DTA::CAB::Analyzer::GermaNet::RelationClosure);
 ##    (
 ##     ##-- OVERRIDES in Hyperonyms
 ##     relations => ['hyponymy'],	##-- override
+##     label => 'gn-hypo',		##-- override
 ##
 ##     ##-- INHERITED from GermaNet::RelationClosure
 ##     relations => \@relns,		##-- relations whose closure to compute
@@ -42,6 +43,7 @@ sub new {
   my $gna = $that->SUPER::new(
 			      ##-- overrides
 			      relations => [qw(hyponymy)],
+			      label => 'gn-hypo',
 
 			      ##-- user args
 			      @_
