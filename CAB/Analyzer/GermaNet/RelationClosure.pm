@@ -35,6 +35,7 @@ our $DEFAULT_ANALYZE_GET = _am_lemma('$_->{moot}').' || '._am_word('$_->{moot}',
 ##     relations => \@relns,		##-- relations whose closure to compute (default: qw(hyperonymy hyponymy))
 ##     analyzeGet => $code,		##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
 ##     allowRegex => $regex,		##-- only analyze types matching $regex
+##     ${lab}_max_depth => $max_depth,	##-- maximum expansion depth
 ##
 ##     ##-- INHERITED from Analyzer::GermaNet
 ##     gnFile=> $dirname_or_binfile,	##-- default: none
@@ -69,30 +70,46 @@ sub new {
 ##==============================================================================
 
 ##------------------------------------------------------------------------
-## Methods: Analysis: v1.x: API
+## Methods: Analysis: utils
 
-## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
-##  + perform type-wise analysis of all (text) types in $doc->{types}
-sub analyzeTypes {
-  my ($gna,$doc,$types,$opts) = @_;
+## $bool = $anl->doAnalyze(\%opts, $name)
+##  + override: only allow analyzeSentences()
+sub doAnalyze {
+  my $anl = shift;
+  return 0 if (defined($_[1]) && $_[1] ne 'Sentences');
+  return $anl->SUPER::doAnalyze(@_);
+}
+
+## $doc = $anl->analyzeSentences($doc,\%opts)
+##  + perform sentence-wise analysis of $doc
+sub analyzeSentences {
+  my ($gna,$doc,$opts) = @_;
 
   ##-- setup common variables
   my $lab       = $gna->{label};
   my $gn	= $gna->{gn};
   my $relations = $gna->{relations} || [];
-  my $max_depth = $gna->{max_depth};
+  my $max_depth = $opts->{"${lab}_max_depth"} // $gna->{"${lab}_max_depth"} // $opts->{max_depth} // $gna->{max_depth};
   my $allow_re  = defined($gna->{allowRegex}) ? qr($gna->{allowRegex}) : undef;
   my $aget_code = defined($gna->{analyzeGet}) ? $gna->{analyzeGet} :  $DEFAULT_ANALYZE_GET;
   my $aget      = $gna->accessClosure($aget_code);
+  my %cache     = qw();
 
-  my ($w,$lemma, $synsets, $syn, @syns);
-  foreach (values %$types) {
+  my ($w,$lemma, $synsets, $syn,@syns,$cached);
+  foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (defined($allow_re) && $_->{text} !~ $allow_re);
-    delete $_->{$lab};
     $w       = $_;
     $lemma   = $aget->();
-    $synsets = $gn->get_synsets($lemma);
 
+    if (defined($cached=$cache{$lemma})) {
+      ##-- used cached data
+      delete $w->{$lab};
+      $w->{$lab} = $cached if (@$cached);
+      next;
+    }
+
+    ##-- lookup
+    $synsets = $gn->get_synsets($lemma);
     @syns = map {
       $syn = $_;
       map {
@@ -100,11 +117,13 @@ sub analyzeTypes {
       } @$relations
     } @$synsets;
 
-    $w->{$lab} = [grep {$_ ne 'GNROOT'} $gna->synsets_terms(@syns)] if (@syns);
+    $w->{$lab} = $cache{$lemma} = [grep {$_ ne 'GNROOT'} $gna->synsets_terms(@syns)];
+    delete($w->{$lab}) if (!@{$w->{$lab}});
   }
 
   return $doc;
 }
+
 
 1; ##-- be happy
 

@@ -7,7 +7,6 @@
 package DTA::CAB::Analyzer::GermaNet::Hyponyms;
 use DTA::CAB::Analyzer::GermaNet::RelationClosure;
 use Carp;
-
 use strict;
 
 ##==============================================================================
@@ -25,7 +24,7 @@ our @ISA = qw(DTA::CAB::Analyzer::GermaNet::RelationClosure);
 ##    (
 ##     ##-- OVERRIDES in Hyperonyms
 ##     relations => ['hyponymy'],	##-- override
-##     label => 'gn-hypo',		##-- override
+##     label => 'gn-asi',		##-- override
 ##
 ##     ##-- INHERITED from GermaNet::RelationClosure
 ##     relations => \@relns,		##-- relations whose closure to compute
@@ -43,13 +42,20 @@ sub new {
   my $gna = $that->SUPER::new(
 			      ##-- overrides
 			      relations => [qw(hyponymy)],
-			      label => 'gn-hypo',
+			      label => 'gn-asi',
 
 			      ##-- user args
 			      @_
 			     );
   return $gna;
 }
+
+##==============================================================================
+## Alias DTA::CAB::Analyzer::GermaNet::asi
+
+package DTA::CAB::Analyzer::GermaNet::asi;
+use strict;
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hyponyms);
 
 
 1; ##-- be happy

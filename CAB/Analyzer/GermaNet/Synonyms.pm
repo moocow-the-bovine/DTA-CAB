@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::GermaNet::Hyperonyms.pm
+## File: DTA::CAB::Analyzer::GermaNet::Synonyms.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: GermaNet relation expander: hyperonymy (superclasses)
+## Description: GermaNet relation expander: synonyms
 
-package DTA::CAB::Analyzer::GermaNet::Hyperonyms;
+package DTA::CAB::Analyzer::GermaNet::Synonyms;
 use DTA::CAB::Analyzer::GermaNet::RelationClosure;
 use Carp;
 use strict;
@@ -23,8 +23,9 @@ our @ISA = qw(DTA::CAB::Analyzer::GermaNet::RelationClosure);
 ##  + object structure:
 ##    (
 ##     ##-- OVERRIDES in Hyperonyms
-##     relations => ['hyperonymy'],	##-- override
-##     label => 'gn-isa',		##-- override
+##     relations => ['hyperonymy','hyponymy'],	##-- override
+##     label => 'gn-syn',			##-- override
+##     max_depth => 0,				##-- override
 ##
 ##     ##-- INHERITED from GermaNet::RelationClosure
 ##     relations => \@relns,		##-- relations whose closure to compute
@@ -41,8 +42,9 @@ sub new {
   my $that = shift;
   my $gna = $that->SUPER::new(
 			      ##-- overrides
-			      relations => [qw(hyperonymy)],
-			      label => 'gn-isa',
+			      relations => [qw(hyperonymy hyponymy)],
+			      label => 'gn-syn',
+			      max_depth => 0,
 
 			      ##-- user args
 			      @_
@@ -51,11 +53,11 @@ sub new {
 }
 
 ##==============================================================================
-## Alias DTA::CAB::Analyzer::GermaNet::isa
+## Alias DTA::CAB::Analyzer::GermaNet::syn
 
-package DTA::CAB::Analyzer::GermaNet::isa;
+package DTA::CAB::Analyzer::GermaNet::syn;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hyperonyms);
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Synonyms);
 
 
 1; ##-- be happy

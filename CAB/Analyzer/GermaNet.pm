@@ -15,13 +15,15 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer);
+our @ISA     = qw(DTA::CAB::Analyzer);
 
 our ($HAVE_GERMANET_API);
 BEGIN{
   eval 'use GermaNet::GermaNet; use GermaNet::Loader::XMLFileset;' if (!UNIVERSAL::can('GermaNet::GermaNet','new'));
   $HAVE_GERMANET_API = UNIVERSAL::can('GermaNet::GermaNet','new') ? 1 : 0;
 }
+
+our %FILE2GN = qw(); ##-- maps source files to GermaNet::GermaNet objects (for data sharing)
 
 ##--------------------------------------------------------------
 ## Globals: Accessors
@@ -51,6 +53,7 @@ sub new {
 
 			      ##-- runtime
 			      max_depth => 128,
+			      gn => undef,
 
 			      ##-- analysis output
 			      label => 'gnet',
@@ -86,31 +89,47 @@ sub gnOk {
 ##--------------------------------------------------------------
 ## Methods: I/O: Input: all
 
-## $bool = $gna->ensureLoaded()
-##  + ensures analyzer data is loaded from default file(s)
-sub ensureLoaded {
-  my $gna = shift;
-  return 1 if ($gna->gnOk);
-  my $gnFile = $gna->{gnFile};
+## $rc = $gna->load()
+## $rc = $gna->load($gnFile)
+##  + force re-load
+sub load {
+  my ($gna,$gnFile) = @_;
+  $gna->{gnFile} = ($gnFile ||= $gna->{gnFile});
   if (!$gnFile) {
     return 0;
   }
   elsif (!$HAVE_GERMANET_API) {
-    $gna->warn("GermaNet API unvailable -- cannot load $gnFile");
+    $gna->warn("GermaNet::GermaNet module unvailable -- cannot load $gnFile");
     return 0;
+  }
+  elsif (exists $FILE2GN{$gnFile}) {
+    $gna->{gn} = $FILE2GN{$gnFile};
   }
   elsif (-d $gnFile) {
     $gna->info("loading GermaNet data from XML directory $gnFile ...");
     my $loader = GermaNet::Loader::XMLFileset->new($gnFile);
-    $gna->{gn} = $loader->load();
-    return defined($gna->{gn});
+    $gna->{gn} = $FILE2GN{$gnFile} = $loader->load();
   }
   else {
     $gna->info("loading GermaNet data from binary file $gnFile");
-    $gna->{gn} = Storable::retrieve($gnFile);
-    return defined($gna->{gn});
+    $gna->{gn} = $FILE2GN{$gnFile} = Storable::retrieve($gnFile);
   }
-  return 0;
+  return $gna->gnOk();
+}
+
+## $bool = $gna->ensureLoaded()
+##  + ensures analyzer data is loaded from default file(s)
+sub ensureLoaded {
+  my $gna = shift;
+  my $rc = 1;
+  if (!$HAVE_GERMANET_API) {
+    $gna->warn("GermaNet::GermaNet module unvailable disabling analyzer '$gna->{label}'") if ($gna->{enabled});
+    $gna->{enabled} = 0;
+  }
+  elsif (defined($gna->{gnFile}) && !$gna->gnOk) {
+    $rc &&= $gna->load();
+  }
+  return $rc;
 }
 
 ##==============================================================================
@@ -213,7 +232,7 @@ sub path_str {
 sub relation_closure {
   my ($gna,$synset,$rel,$maxdepth,$syn2depth) = @_;
   $maxdepth //= $gna->{max_depth};
-  $maxdepth   = 65536 if (($maxdepth//0) <= 0);
+  $maxdepth   = 65536 if (!defined($maxdepth) || $maxdepth < 0);
 
   $syn2depth = {$synset=>0} if (!$syn2depth); ##-- $synset => $depth, ...
   my @queue = ($synset);
@@ -233,11 +252,12 @@ sub relation_closure {
   return wantarray ? @syns : \@syns;
 }
 
-## @paths = synset_paths($synset,$maxdepth)
+## @paths = $gna->synset_paths($synset,$maxdepth)
 ##  + returns all paths to $synset from root
 sub synset_paths {
-  my ($synset,$depth) = @_;
-  $depth = 65536 if (($depth//0) <= 0);
+  my ($gna,$synset,$depth) = @_;
+  $depth //= $gna->{max_depth};
+  $depth   = 65536 if (!defined($depth) || $depth < 0);
 
   my (@paths,$i,$path,$hyps);
   my @queue = ([0,$synset]); ##-- queue items: [$depth,@path...]
@@ -248,7 +268,7 @@ sub synset_paths {
       push(@paths,$path);
       next;
     }
-    $hyps = $path->[0]->get_relations('hyperonymy'); ## continue: want_hyper, want_hypo
+    $hyps = $path->[0]->get_relations('hyperonymy');
     if ($hyps && @$hyps) {
       if (@$hyps==1) {
 	unshift(@$path, $i+1, $hyps->[0]);	##-- re-use path for 1st hyponym

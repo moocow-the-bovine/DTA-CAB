@@ -302,7 +302,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/analysis|dmoot/analysis
 		  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
-		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo))\]\s(\S+)$/) {
+		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
 		  ##-- token: field: list field (GermaNet hyperonyms / hyponyms)
 		  push(@{$tok->{$1}}, $2);
 		} elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
@@ -538,8 +538,9 @@ sub token2buf {
     if ($tok->{eqtagh});
 
   ##-- relation closure / GermaNet
-  $$bufr .= join('', map {"\t[gn-hypo] $_"} grep {defined($_)} @{$tok->{'gn-hypo'}}) if ($tok->{'gn-hypo'});
-  $$bufr .= join('', map {"\t[gn-hyper] $_"} grep {defined($_)} @{$tok->{'gn-hyper'}}) if ($tok->{'gn-hyper'});
+  $$bufr .= join('', map {"\t[gn-syn] $_"} grep {defined($_)} @{$tok->{'gn-syn'}}) if ($tok->{'gn-syn'});
+  $$bufr .= join('', map {"\t[gn-isa] $_"} grep {defined($_)} @{$tok->{'gn-isa'}}) if ($tok->{'gn-isa'});
+  $$bufr .= join('', map {"\t[gn-asi] $_"} grep {defined($_)} @{$tok->{'gn-asi'}}) if ($tok->{'gn-asi'});
 
   ##-- NE-recognizer ('ner')
   if ($tok->{ner}) {
