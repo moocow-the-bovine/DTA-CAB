@@ -113,8 +113,8 @@ sub _analyzeGuts {
   foreach (values %$key2a) {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
-      $lemma =~ s/\~e?t/\~en/g;	     ##-- rename verb inflection morphs
-      $lemma =~ s/\[.*$//;	     ##-- trim everything after first non-character symbol
+      #$lemma =~ s/\~e?t(?=\W)/\~en/g;	##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
+      $lemma =~ s/\[.*$//;	        ##-- trim everything after first non-character symbol
       $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\bge\\\|)|(?:[\\\~\|\=\+\#\x{ac}])//g;  ##-- hack: remove "ge\|" prefixes too (but not e.g. "ver\|", "be\|", etc.)
     } else {
       $lemma = $_->{$lab_txt};
