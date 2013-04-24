@@ -29,6 +29,7 @@ sub new {
 			       lz => DTA::CAB::Analyzer::Lemmatizer->new(analyzeGet    =>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_ANALYSES,
 									 analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
 									 analyzeWhich  =>'Sentences',
+									 segmentLabel  =>'segs',
 									),
 			       xyTags => {map {($_=>undef)} qw(XY FM)}, #CARD NE ##-- use literal text (not dmoot) for these tags
 
@@ -71,14 +72,14 @@ sub analyzeSentences {
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
   my %cache = qw(); ##-- $cache{"$word\t$tag"} = $lemma
-  my ($w,$t,$l,$key,$ma,$maa,%l2d, $ld,$ld0, $l0);
+  my ($w,$t,$l,$key,$ma,$maa,%l2d, $ld,$ld0, $l0,$a0,$xl);
   foreach $tok (@$toks) {
     $m      = $tok->{$mlabel};
     ($w,$t) = @$m{qw(word tag)};
     $key    = "$w/$t";
     if (defined($l=$cache{$key})) {
       ##-- cached value
-      $m->{lemma}=$l;
+      @$m{qw(lemma xlemma)}=@$l;
       next;
     }
 
@@ -99,13 +100,14 @@ sub analyzeSentences {
 	$l =~ s/[\x{ac}]//g;
 	$l = lc($l);
 	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
-	$m->{lemma} = $cache{$key} = $l;
+	@$m{qw(lemma xlemma)} = @{$cache{$key}} = ($l,$l);
       }
     else
       {
 	##-- extract lemma from "best" analysis
 	%l2d = qw();
-	$l0 = $ld0 = undef;
+
+	$l0 = $ld0 = $a0 = undef;
 	foreach (@$ma) {
 	  ##-- get lemma distance
 	  $l   = $_->{lemma};
@@ -115,8 +117,10 @@ sub analyzeSentences {
 	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
 	  $l0  = $l;
+	  $a0  = $_;
 	}
-	$m->{lemma} = $cache{$key} = $l0;
+	($xl = $a0->{details}) =~ s/\[.*$//; ##-- trim everything after first non-character symbol
+	@$m{qw(lemma xlemma)} = @{$cache{$key}} = ($l0,$xl);
       }
   }
 
