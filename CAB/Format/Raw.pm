@@ -114,16 +114,16 @@ sub parseRawString {
   ##-- step 1: basic tokenization
   my (@toks);
   while ($$src =~ m/(
-		      (?:([[:alpha:]\-\#]+)[\-\¬](?:\n\s*)([[:alpha:]\-\#]+))   ##-- line-broken alphabetics
-		    | (?i:[IVXLCDM\#]+\.)                           ##-- dotted roman numerals (hack)
-		    | (?:[[:alpha:]\#]\.)                           ##-- dotted single-letter abbreviations
-		    | (?:[[:digit:]\#]+[[:alpha:]\#]+)              ##-- numbers with optional alphabetic suffixes
-		    | (?:[\-\+]?[[:digit:]\#]*[[:digit:]\,\.\#]+)   ##-- comma- and\/or dot-separated numbers
-		    | (?:\,\,|\`\`|\'\'|\-+|\_+|\.\.+)              ##-- special punctuation sequences
-		    | (?:[[:alpha:]\-\¬\#]+)                        ##-- "normal" alphabetics (with "#" ~= unknown)
-		    | (?:[[:punct:]]+)                              ##-- "normal" punctuation characters
-		    | (?:[^[:punct:][:digit:][:space:]]+)           ##-- "normal" alphabetic tokens
-		    | (?:\S+)                                       ##-- HACK: anything else
+		      (?:([[:alpha:]_\-\#\@]+)[\-\¬](?:\n\s*)([[:alpha:]_\-\#\@]+))   ##-- line-broken alphabetics
+		    | (?i:[IVXLCDM\#\@]+\.)                             ##-- dotted roman numerals (hack)
+		    | (?:[[:alpha:]\#\@]\.)                             ##-- dotted single-letter abbreviations
+		    | (?:[[:digit:]\#\@]+[[:alpha:]_\#\@]+)             ##-- numbers with optional alphabetic suffixes
+		    | (?:[\-\+]?[[:digit:]_\#\@]*[[:digit:]_\,\.\#\@]+) ##-- comma- and\/or dot-separated numbers
+		    | (?:\,\,|\`\`|\'\'|\-+|\.\.+)                      ##-- special punctuation sequences
+		    | (?:[[:alpha:]_\-\¬\#\@]+)                         ##-- "normal" alphabetics (with "#", "@" ~= unknown)
+		    | (?:[[:punct:]]+)                                  ##-- "normal" punctuation characters
+		    | (?:[^[:punct:][:digit:][:space:]]+)               ##-- "normal" alphabetic tokens
+		    | (?:\S+)                                           ##-- HACK: anything else
 		    )
 		   /xsg)
     {
