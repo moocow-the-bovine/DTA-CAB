@@ -47,8 +47,8 @@ use DTA::CAB::Analyzer::Dict::CDB;        ##-- generic CDB-dictionary-based anal
 use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-based analysis)
 use DTA::CAB::Analyzer::EqLemma;         ##-- lemma-equivalence class expander
 
-use DTA::CAB::Analyzer::GermaNet;         ##-- GermaNet shared routines
-use DTA::CAB::Analyzer::GermaNet::Hyperonyms; ##-- GermaNet hyperonyms (superclasses)
+use DTA::CAB::Analyzer::GermaNet;             ##-- GermaNet shared routines
+use DTA::CAB::Analyzer::GermaNet::Hypernyms;  ##-- GermaNet hypernyms (superclasses)
 use DTA::CAB::Analyzer::GermaNet::Hyponyms;   ##-- GermaNet hyponyms (subclasses)
 use DTA::CAB::Analyzer::GermaNet::Synonyms;   ##-- GermaNet synonyms (super- and sub-classes)
 

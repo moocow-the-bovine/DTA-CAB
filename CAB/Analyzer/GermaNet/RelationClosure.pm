@@ -32,7 +32,7 @@ our $DEFAULT_ANALYZE_GET = _am_lemma('$_->{moot}').' || '._am_word('$_->{moot}',
 ##  + object structure:
 ##    (
 ##     ##-- NEW in GermaNet::RelationClosure
-##     relations => \@relns,		##-- relations whose closure to compute (default: qw(hyperonymy hyponymy))
+##     relations => \@relns,		##-- relations whose closure to compute (default: qw(has_hyperonym has_hyponym))
 ##     analyzeGet => $code,		##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET; return undef for no analysis)
 ##     allowRegex => $regex,		##-- only analyze types matching $regex
 ##     ${lab}_max_depth => $max_depth,	##-- maximum expansion depth
@@ -50,7 +50,7 @@ sub new {
 			      gnFile => undef,
 
 			      ##-- runtime
-			      relations => [qw(hyperonymy hyponymy)],
+			      relations => [qw(has_hypernym has_hyponym)],
 			      max_depth => 128,
 			      analyzeGet => $DEFAULT_ANALYZE_GET,
 			      allowRegex => undef,
@@ -100,7 +100,6 @@ sub analyzeSentences {
     next if (defined($allow_re) && $_->{text} !~ $allow_re);
     $w       = $_;
     $lemma   = $aget->();
-
     if (defined($cached=$cache{$lemma})) {
       ##-- used cached data
       delete $w->{$lab};
@@ -117,7 +116,7 @@ sub analyzeSentences {
       } @$relations
     } @$synsets;
 
-    $w->{$lab} = $cache{$lemma} = [grep {$_ ne 'GNROOT'} $gna->synsets_terms(@syns)];
+    $w->{$lab} = $cache{$lemma} = [grep {$_ ne 'GNROOT'} @{$gna->synsets_terms(\@syns)}];
     delete($w->{$lab}) if (!@{$w->{$lab}});
   }
 

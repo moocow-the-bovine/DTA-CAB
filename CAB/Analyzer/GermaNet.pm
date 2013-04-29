@@ -17,10 +17,10 @@ use strict;
 
 our @ISA     = qw(DTA::CAB::Analyzer);
 
-our ($HAVE_GERMANET_API);
+our ($HAVE_GERMANET_FLAT);
 BEGIN{
-  eval 'use GermaNet::GermaNet; use GermaNet::Loader::XMLFileset;' if (!UNIVERSAL::can('GermaNet::GermaNet','new'));
-  $HAVE_GERMANET_API = UNIVERSAL::can('GermaNet::GermaNet','new') ? 1 : 0;
+  eval 'use GermaNet::Flat;' if (!UNIVERSAL::can('GermaNet::Flat','new'));
+  $HAVE_GERMANET_FLAT = UNIVERSAL::can('GermaNet::Flat','new') ? 1 : 0;
 }
 
 our %FILE2GN = qw(); ##-- maps source files to GermaNet::GermaNet objects (for data sharing)
@@ -39,7 +39,7 @@ our %FILE2GN = qw(); ##-- maps source files to GermaNet::GermaNet objects (for d
 ##     gnFile=> $dirname_or_binfile,	##-- default: none
 ##
 ##     ##-- Runtime
-##     gn => $gn_obj,			##-- underlying GermaNet object
+##     gn => $gn_obj,			##-- underlying GermaNet::Flat object
 ##     max_depth => $depth,		##-- default maximum closure depth for relation_closure() [default=128]
 ##
 ##     ##-- Analysis Output
@@ -98,22 +98,27 @@ sub load {
   if (!$gnFile) {
     return 0;
   }
-  elsif (!$HAVE_GERMANET_API) {
-    $gna->warn("GermaNet::GermaNet module unvailable -- cannot load $gnFile");
+  elsif (!$HAVE_GERMANET_FLAT) {
+    $gna->warn("GermaNet::Flat module unvailable -- cannot load $gnFile");
     return 0;
   }
   elsif (exists $FILE2GN{$gnFile}) {
+    ##-- binary data sharing
     $gna->{gn} = $FILE2GN{$gnFile};
   }
   elsif (-d $gnFile) {
     $gna->info("loading GermaNet data from XML directory $gnFile ...");
-    my $loader = GermaNet::Loader::XMLFileset->new($gnFile);
-    $gna->{gn} = $FILE2GN{$gnFile} = $loader->load();
+  }
+  elsif ($gnFile =~ /\.[cb]?db$/i) {
+    $gna->info("attaching GermaNet data to file $gnFile ...");
+  }
+  elsif ($gnFile =~ /\.(?:sto|bin)$/i) {
+    $gna->info("loading GermaNet data from binary file $gnFile ...");
   }
   else {
-    $gna->info("loading GermaNet data from binary file $gnFile");
-    $gna->{gn} = $FILE2GN{$gnFile} = Storable::retrieve($gnFile);
+    $gna->info("loading GermaNet data from text file $gnFile");
   }
+  $gna->{gn} = $FILE2GN{$gnFile} = GermaNet::Flat->load($gnFile);
   return $gna->gnOk();
 }
 
@@ -122,7 +127,7 @@ sub load {
 sub ensureLoaded {
   my $gna = shift;
   my $rc = 1;
-  if (!$HAVE_GERMANET_API) {
+  if (!$HAVE_GERMANET_FLAT) {
     $gna->warn("GermaNet::GermaNet module unvailable disabling analyzer '$gna->{label}'") if ($gna->{enabled});
     $gna->{enabled} = 0;
   }
@@ -183,20 +188,17 @@ sub canAnalyze {
 
 ## @terms = $gna->synset_terms($synset)
 sub synset_terms {
-  return map {s/\s/_/g; $_} map {@{$_->get_orth_forms}} @{$_[1]->get_lex_units};
+#  return map {s/\s/_/g; $_} map {@{$_->get_orth_forms}} @{$_[1]->get_lex_units};
+  return @{$_[0]{gn}->synset_terms($_[1])};
 }
 
-## @terms = $gna->synsets_terms(@synsets)
+## \@terms = $gna->synsets_terms(\@synsets)
+## + unique elements only
 sub synsets_terms {
-  my $gna = shift;
-  my $prev='';
-  return (
-	  grep {$prev eq $_ ? qw() : ($prev=$_)}
-	  sort
-	  map {$gna->synset_terms($_)}
-	  map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
-	  @_
-	 );
+  #my $gna = shift;
+  #my $prev='';
+  my $gn = $_[0]{gn};
+  return $gn->auniq( $gn->relation('lex2orth',$gn->relation('syn2lex',$_[1])) );
 }
 
 ## $str = $gna->synset_str($synset,%opts)
@@ -209,14 +211,13 @@ sub synset_str {
   return 'undef' if (!defined($syn));
   %opts = (show_ids=>1,show_lex=>1,canonical=>1) if (!%opts);
   my $str = (($opts{show_ids}
-	      ? ($syn->get_id.($opts{show_lex} || $opts{canonical} ? ':' : ''))
+	      ? ($syn.($opts{show_lex} || $opts{canonical} ? ':' : ''))
 	      : '')
 	     .($opts{show_lex}
 	       ? ($opts{canonical}
-		  ? $syn->get_lex_units->[0]->get_orth_forms->[0]
-		  : join(',',map {@{$_->get_orth_forms}} @{$syn->get_lex_units}))
+		  ? $gna->{gn}->relation('lex2orth',$gna->{gn}->relation('syn2lex',$syn)->[0])->[0]
+		  : $gna->{gn}->relation('lex2orth',$gna->{gn}->relation('syn2lex',$syn)))
 	       : ''));
-  $str =~ s/\s/_/g;
   return $str;
 }
 
@@ -225,6 +226,16 @@ sub synset_str {
 sub path_str {
   return join('/',map {$_[0]->synset_str($_)} (UNIVERSAL::isa($_[1],'ARRAY') ? @{$_[1]} : @_));
 }
+
+## %relation_alias : global relation aliases
+my %relation_alias = (
+		      'hyperonymy'=>'has_hypernym',
+		      'hypernyms' =>'has_hypernym',
+		      'hypernym'  =>'has_hypernym',
+		      'hyponymy'  =>'has_hyponym',
+		      'hyponyms'  =>'has_hyponym',
+		      'hyponym'   =>'has_hyponym',
+		     );
 
 ## @synsets = $gna->relation_closure($synset,$relation,$max_depth,\%syn2depth);	##-- list context
 ## $synsets = $gna->relation_closure($synset,$relation,$max_depth,\%syn2depth);	##-- scalar context
@@ -235,13 +246,14 @@ sub relation_closure {
   $maxdepth   = 65536 if (!defined($maxdepth) || $maxdepth < 0);
 
   $syn2depth = {$synset=>0} if (!$syn2depth); ##-- $synset => $depth, ...
+  my $gn = $gna->{gn};
   my @queue = ($synset);
   my @syns  = qw();
   my ($syn,$depth,$next);
   while (defined($syn=shift(@queue))) {
     push(@syns,$syn);
     $depth = $syn2depth->{$syn};
-    if ((!defined($maxdepth) || $depth < $maxdepth) && defined($next=$syn->get_relations($rel))) {
+    if ((!defined($maxdepth) || $depth < $maxdepth) && defined($next=$gn->relation($relation_alias{$rel}//$rel,$syn))) {
       foreach (@$next) {
 	next if (exists $syn2depth->{$_});
 	$syn2depth->{$_} = $depth+1;
@@ -268,7 +280,7 @@ sub synset_paths {
       push(@paths,$path);
       next;
     }
-    $hyps = $path->[0]->get_relations('hyperonymy');
+    $hyps = $path->[0]->relation('has_hyponym');
     if ($hyps && @$hyps) {
       if (@$hyps==1) {
 	unshift(@$path, $i+1, $hyps->[0]);	##-- re-use path for 1st hyponym

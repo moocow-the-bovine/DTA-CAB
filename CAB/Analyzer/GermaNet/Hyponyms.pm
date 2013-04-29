@@ -41,7 +41,7 @@ sub new {
   my $that = shift;
   my $gna = $that->SUPER::new(
 			      ##-- overrides
-			      relations => [qw(hyponymy)],
+			      relations => [qw(has_hyponym)],
 			      label => 'gn-asi',
 
 			      ##-- user args
@@ -51,8 +51,13 @@ sub new {
 }
 
 ##==============================================================================
-## Alias DTA::CAB::Analyzer::GermaNet::asi
+## Alias DTA::CAB::Analyzer::GermaNet::Hyponymy
+package DTA::CAB::Analyzer::GermaNet::Hyponymy;
+use strict;
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hyponyms);
 
+##==============================================================================
+## Alias DTA::CAB::Analyzer::GermaNet::asi
 package DTA::CAB::Analyzer::GermaNet::asi;
 use strict;
 our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hyponyms);

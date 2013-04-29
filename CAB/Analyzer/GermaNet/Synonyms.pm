@@ -42,7 +42,7 @@ sub new {
   my $that = shift;
   my $gna = $that->SUPER::new(
 			      ##-- overrides
-			      relations => [qw(hyperonymy hyponymy)],
+			      relations => [qw(has_hypernym has_hyponym)],
 			      label => 'gn-syn',
 			      max_depth => 0,
 

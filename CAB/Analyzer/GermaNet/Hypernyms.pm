@@ -4,7 +4,7 @@
 ## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: GermaNet relation expander: hyperonymy (superclasses)
 
-package DTA::CAB::Analyzer::GermaNet::Hyperonyms;
+package DTA::CAB::Analyzer::GermaNet::Hypernyms;
 use DTA::CAB::Analyzer::GermaNet::RelationClosure;
 use Carp;
 use strict;
@@ -41,7 +41,7 @@ sub new {
   my $that = shift;
   my $gna = $that->SUPER::new(
 			      ##-- overrides
-			      relations => [qw(hyperonymy)],
+			      relations => [qw(has_hypernym)],
 			      label => 'gn-isa',
 
 			      ##-- user args
@@ -51,11 +51,22 @@ sub new {
 }
 
 ##==============================================================================
-## Alias DTA::CAB::Analyzer::GermaNet::isa
+## Alias DTA::CAB::Analyzer::GermaNet::Hyperonyms
+package DTA::CAB::Analyzer::GermaNet::Hyperonyms;
+use strict;
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hypernyms);
 
+##==============================================================================
+## Alias DTA::CAB::Analyzer::GermaNet::Hyperonymy
+package DTA::CAB::Analyzer::GermaNet::Hyperonymy;
+use strict;
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hypernyms);
+
+##==============================================================================
+## Alias DTA::CAB::Analyzer::GermaNet::isa
 package DTA::CAB::Analyzer::GermaNet::isa;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hyperonyms);
+our @ISA = qw(DTA::CAB::Analyzer::GermaNet::Hypernyms);
 
 
 1; ##-- be happy

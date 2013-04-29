@@ -26,7 +26,7 @@ use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
 use DTA::CAB::Analyzer::DTAMapClass;
 use DTA::CAB::Analyzer::SynCoPe::NER;
-use DTA::CAB::Analyzer::GermaNet::Hyperonyms;
+use DTA::CAB::Analyzer::GermaNet::Hypernyms;
 use DTA::CAB::Analyzer::GermaNet::Hyponyms;
 use DTA::CAB::Analyzer::GermaNet::Synonyms;
 use DTA::CAB::Analyzer::DTAClean;
@@ -84,7 +84,7 @@ sub new {
      eqlemma  => DTA::CAB::Analyzer::EqLemma->new(), ##-- eqlemma (best only)
      ##
      'gn-syn' => DTA::CAB::Analyzer::GermaNet::Synonyms->new(),   ##-- GermaNet synonyms
-     'gn-isa' => DTA::CAB::Analyzer::GermaNet::Hyperonyms->new(), ##-- GermaNet hyponyms
+     'gn-isa' => DTA::CAB::Analyzer::GermaNet::Hypernyms->new(),  ##-- GermaNet hyperyms
      'gn-asi' => DTA::CAB::Analyzer::GermaNet::Hyponyms->new(),   ##-- GermaNet hyponyms
      ##
      clean => DTA::CAB::Analyzer::DTAClean->new(),
