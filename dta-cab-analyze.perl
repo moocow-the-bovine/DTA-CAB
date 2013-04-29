@@ -32,8 +32,12 @@ our $VERSION = $DTA::CAB::VERSION;
 ## Options: Main Process
 
 ##-- Options: Main: General
-our ($help,$man,$version,$verbose);
+our ($help,$version,$verbose);
 #$verbose = 'default';
+
+##-- Options: eval
+our @eval_begin = qw();
+our @eval_end   = qw();
 
 ##-- Options: Main: forking options
 our $njobs   = 0; ##-- default: 0 jobs (process everything in the main thread)
@@ -87,8 +91,10 @@ sub globalOptionSpecs {
     (
      ##-- General
      'help|h'    => \$help,
-     'man|M'     => \$man,
      'version|V' => \$version,
+     'module|M=s'  => sub {push(@eval_begin,"use $_[1];")},
+     'eval-begin|begin|eb=s'  => \@eval_begin,
+     'eval-end|end|ee=s'      => \@eval_end,
 
      ##-- Parallelization
      'jobs|jn|j=i'                         => \$njobs,
@@ -147,7 +153,7 @@ if ($version) {
   exit(0);
 }
 
-pod2usage({-exitval=>0, -verbose=>1}) if ($man);
+#pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 
 ##==============================================================================
@@ -177,6 +183,13 @@ sub cleandie {
   exit(1);
 }
 $SIG{$_}=\&cleandie foreach (qw(TERM KILL HUP INT QUIT ABRT));
+
+##------------------------------------------------------
+## main: init: user code
+foreach (@eval_begin) {
+  eval "$_;";
+  die("$prog: error evaluating user BEGIN code ($_): $@") if ($@);
+}
 
 ##------------------------------------------------------
 ## main: init: analyzer
@@ -512,6 +525,13 @@ if ($job{doProfile}) {
 ##======================================================================
 ## MAIN: cleanup
 
+##------------------------------------------------------
+## main: cleanup: user code
+foreach (@eval_end) {
+  eval "$_;";
+  die("$prog: error evaluating user END code ($_): $@") if ($@);
+}
+
 ##-- be nice & say goodbyte
 DTA::CAB::Logger->info("program exiting normally.");
 
@@ -556,9 +576,11 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
 
  General Options
   -help                           ##-- show short usage summary
-  -man                            ##-- show longer help message
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- alias for -log-level=LEVEL
+  -begin CODE                     ##-- evaluade CODE early in script
+  -module MODULE                  ##-- alias for -begin="use MODULE;"
+  -end CODE                       ##-- evaluade CODE late in script
 
  Parallelization Options
   -jobs NJOBS                     ##-- fork() off up to NJOBS parallel jobs (default=0: don't fork() at all)
