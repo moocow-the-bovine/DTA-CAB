@@ -51,6 +51,7 @@ WriteMakefile
 		    'Moot' => 0.01,  ##-- moot/xs
 		    'Lingua::TT' => 0.07, ##-- for Lingua::TT::Dict, DB_File, CDB_File
 		    #DTA::TokWrap => 0.37, ##-- for DTA::CAB::Format::TEI, DTA::CAB::Format::TEIws
+		    #GermaNet::Flat => 0.01, ##-- for GermaNet::* analyzers
 		    ##--
 		    'Unicode::Normalize' =>0, # 1.02
 		    'Encode'=>0,
