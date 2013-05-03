@@ -175,6 +175,9 @@ sub {
      } elsif ($w->{xlit} && !$w->{xlit}{isLatinExt}) {
        ##-- word with non-latin characters: leave as-is
        $mw->{analyses} = [{tag=>$text, prob=>0}];
+     } elsif ($_->{lang} && $_->{lang} ne "de") {
+       ##-- foreign material: leave as-is
+       $mw->{analyses} = [{tag=>'._am_xlit('$w').', prob=>0}];
      } else {
        $tmp=undef;
        $mw->{analyses} = [

@@ -38,8 +38,9 @@ my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
-my ($msent,$w,$mw,$t,$at);
+my ($s,$msent,$w,$mw,$t,$at);
 sub {
+ $s     = $_;
  $msent = [map {
    $w  = $_;
    $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
@@ -53,10 +54,15 @@ sub {
 			   ).'
      ] if (!defined($mw->{analyses}));
    $mw
- } @{$_->{tokens}}];
+ } @{$s->{tokens}}];
  return if (!@$msent); ##-- ignore empty sentences
 
  $hmm->tag_sentence($msent, $utf8);
+
+ ##-- language-guesser hack
+ if ($s->{lang} && $s->{lang} ne "de") {
+   $_->{tag} = "FM" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+ }
 
  foreach (@$msent) {
    $_->{word}=$_->{text};
