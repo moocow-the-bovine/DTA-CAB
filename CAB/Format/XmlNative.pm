@@ -307,8 +307,14 @@ sub parseNode {
       $topval = $nxt if (!defined($topval));
     }
     elsif (isa($nod,'XML::LibXML::Attr')) {
-      ##-- Attribute (hash only)
-      $cur->{$name} = $nod->value if (isa($cur,'HASH'));
+      if ($name eq 'lang' && $nod->parentNode->nodeName eq 'w') {
+	##-- attribute: special: lang
+	$cur->{$name} = [split(/ /, $nod->value)];
+      }
+      else {
+	##-- Attribute (hash only)
+	$cur->{$name} = $nod->value if (isa($cur,'HASH'));
+      }
     }
     elsif (isa($nod,'XML::LibXML::Text')) {
       ##-- Text
@@ -426,6 +432,10 @@ sub xmlNode {
       if (exists($fmt->{arrayImplicitKeys}{$key})) {
 	##-- array: implicit
 	$nod = $mom;
+      } elsif ($key eq 'lang') {
+	##-- special: 'lang'
+	$mom->setAttribute('lang', join(' ', @$val));
+	next;
       } else {
 	##-- array: default: map to element
 	$nod = $mom->addNewChild(undef,$key);
