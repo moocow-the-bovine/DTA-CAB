@@ -225,6 +225,10 @@ sub parseTTString {
 	      ##-- special comment: sentence attribute: stxt (raw sentence text)
 	      $sa{'stxt'} = $1;
 	      qw()
+	    } elsif ($_ =~ /^\%\% \$s:(.*)=(.*)$/) {
+	      ##-- special comment: sentence attribute
+	      $sa{$1} = $2;
+	      qw()
 	    } elsif ($_ =~ /^\%\%(.*)$/) {
 	      ##-- generic line: add to '_cmts' attribute of current sentence (or doc)
 	      push(@{$sa{_cmts}},$1); ##-- generic doc- or sentence-level comment
@@ -305,7 +309,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
 		  ##-- token: field: list field (GermaNet hyperonyms / hyponyms)
 		  push(@{$tok->{$1}}, $2);
-		} elsif ($field =~ m/^\[(toka|tokpp)\]\s?(.*)$/) {
+		} elsif ($field =~ m/^\[(toka|tokpp|lang)\]\s?(.*)$/) {
 		  ##-- token: field: other known list field: (toka|tokpp)
 		  push(@{$tok->{$1}}, $2);
 		} elsif ($field =~ m/^\[([^\]]*)\]\s?(.*)$/) {
@@ -403,6 +407,9 @@ sub token2buf {
   foreach (grep {defined($tok->{$_})} qw(id exlex pnd mapclass errid xc xr xp pb lb bb c coff clen b boff blen)) {
     $$bufr .= "\t[$_] $tok->{$_}"
   }
+
+  ##-- detected language
+  $$bufr .= join('', map {"\t[lang] $_"} grep {defined($_)} @{$tok->{lang}}) if ($tok->{lang});
 
   ##-- cab token-preprocessor analyses
   $$bufr .= join('', map {"\t[tokpp] $_"} grep {defined($_)} @{$tok->{tokpp}}) if ($tok->{tokpp});
@@ -560,7 +567,7 @@ sub token2buf {
     my ($name);
     $$bufr .= ("\t"
 	     .join("\t",
-		   (map { $name=$_; map { "[$name] $_" } @{$tok->{other}{$name}} }
+		   (map { $name=$_; map { "[$name] $_" } (ref($tok->{other}{$name}) ? @{$tok->{other}{$name}} : $tok->{other}{$name}) }
 		    sort grep {$_ ne $fmt->{defaultFieldName}} keys %{$tok->{other}}
 		   ),
 		   ($tok->{other}{$fmt->{defaultFieldName}}
@@ -591,6 +598,7 @@ sub putSentence {
   $fmt->{fh}->print(join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}})) if ($sent->{_cmts});
   $fmt->{fh}->print("%% Sentence $sent->{id}\n") if (defined($sent->{id}));
   $fmt->{fh}->print("%% \$stxt=$sent->{stxt}\n") if (defined($sent->{stxt}));
+  $fmt->{fh}->print("%% \$s:$_=$sent->{$_}\n") foreach (grep {$_ ne 'id' && $_ ne 'stxt' && $_ ne 'tokens'} keys %$sent);
   $fmt->putToken($_,$bufr) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{fh}->print("\n");
   return $fmt;

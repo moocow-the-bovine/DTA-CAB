@@ -52,6 +52,8 @@ use DTA::CAB::Analyzer::GermaNet::Hypernyms;  ##-- GermaNet hypernyms (superclas
 use DTA::CAB::Analyzer::GermaNet::Hyponyms;   ##-- GermaNet hyponyms (subclasses)
 use DTA::CAB::Analyzer::GermaNet::Synonyms;   ##-- GermaNet synonyms (super- and sub-classes)
 
+use DTA::CAB::Analyzer::LangId::Simple;      ##-- simple stopword-based language guesser
+
 use DTA::CAB::Chain;                     ##-- analyzer chains
 use DTA::CAB::Chain::Multi;              ##-- analyzer multi-chains
 

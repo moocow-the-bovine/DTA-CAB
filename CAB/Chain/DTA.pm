@@ -22,6 +22,7 @@ use DTA::CAB::Analyzer::EqPhoX;
 use DTA::CAB::Analyzer::EqRW;
 use DTA::CAB::Analyzer::RewriteSub;
 use DTA::CAB::Analyzer::DmootSub;
+use DTA::CAB::Analyzer::LangId::Simple;
 use DTA::CAB::Analyzer::MootSub;
 use DTA::CAB::Analyzer::EqLemma;
 use DTA::CAB::Analyzer::DTAMapClass;
@@ -53,7 +54,7 @@ sub new {
   return $that->SUPER::new
     (
      ##-- analyzers
-     static => DTA::CAB::Analyzer::Cache::Static->new(typeKeys=>[qw(eqphox errid exlex f lts mlatin morph msafe pnd rw xlit)]),
+     static => DTA::CAB::Analyzer::Cache::Static->new(typeKeys=>[qw(eqphox errid exlex f lts mlatin morph msafe pnd rw xlit lang)]),
      exlex => DTA::CAB::Analyzer::ExLex->new(),
      tokpp => DTA::CAB::Analyzer::TokPP->new(),
      xlit  => DTA::CAB::Analyzer::Unicruft->new(),
@@ -78,6 +79,8 @@ sub new {
      moot1 => DTA::CAB::Analyzer::Moot->new(), ##-- moot tagger (on dmoot output; 1-grams only)
      mootsub => DTA::CAB::Analyzer::MootSub->new(), ##-- moot tagger, post-processing hacks
      mapclass => DTA::CAB::Analyzer::DTAMapClass->new(), ##-- mapping class (post-moot)
+     ##
+     langid => DTA::CAB::Analyzer::LangId::Simple->new(), ##-- language-guesser (stopword-based; between msafe and rw)
      ##
      ner => DTA::CAB::Analyzer::SynCoPe::NER->new(), ##-- ne-recognizer (post-moot)
      ##
@@ -140,15 +143,16 @@ sub setupChains {
      'default.morph'  =>[@$ach{qw(tokpp xlit morph)}],
      'default.mlatin' =>[@$ach{qw(tokpp xlit       mlatin)}],
      'default.msafe'  =>[@$ach{qw(tokpp xlit morph mlatin msafe)}],
+     'default.langid' =>[@$ach{qw(tokpp xlit morph mlatin msafe langid)}],
      'default.rw'     =>[@$ach{qw(tokpp xlit rw)}],
-     'default.rw.safe'  =>[@$ach{qw(tokpp xlit                         morph mlatin msafe rw)}],
-     'default.dmoot'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot)}],
-     'default.dmoot1'   =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot1)}],
-     'default.moot'     =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot)}],
-     'default.moot1'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot1 dmootsub moot1)}],
-     'default.ner'      =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe rw        dmoot  dmootsub moot mootsub ner)}],
-     'default.base'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe)}],
-     'default.type'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe rw rwsub)}],
+     'default.rw.safe'  =>[@$ach{qw(tokpp xlit                         morph mlatin msafe langid rw)}],
+     'default.dmoot'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot)}],
+     'default.dmoot1'   =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1)}],
+     'default.moot'     =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot  dmootsub moot)}],
+     'default.moot1'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot1)}],
+     'default.ner'      =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot  dmootsub moot mootsub ner)}],
+     'default.base'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe langid)}],
+     'default.type'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe langid rw rwsub)}],
      ##
      'expand.old'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw)}],
      'expand.ext'    =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw       eqpho eqrw eqphox)}],
@@ -160,12 +164,12 @@ sub setupChains {
      'expand.gn-isa' =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub gn-isa)}],
      'expand.gn-asi' =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub gn-asi)}],
      'expand.gn'     =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub gn-syn gn-isa gn-asi)}],
-     'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub)}],
-     'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
-     'ner'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
-     'caberr'        =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
-     'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
-     'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
+     'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot  dmootsub moot  mootsub)}],
+     'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
+     'ner'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
+     'caberr'        =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot  dmootsub moot  mootsub mapclass)}],
+     'caberr1'       =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot1 dmootsub moot1 mootsub mapclass)}],
+     'all'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw rwsub eqpho eqrw eqphox dmoot  dmootsub moot  mootsub eqlemma)}], ##-- old dta clients use 'all'!
      'clean'         =>[@$ach{qw(clean)}],
      'null'	     =>[$ach->{null}],
     };
@@ -185,7 +189,8 @@ sub setupChains {
 
   ##-- force default labels
   foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach)) {
-    ($ach->{$_}{label} = $_) =~ s/1$//; ##-- truncate '1' suffix for label (e.g. dmoot1, moot1)
+    next if ($_ =~ /^(?:langid)$/);       ##-- keep these labels
+    ($ach->{$_}{label} = $_) =~ s/1$//;   ##-- truncate '1' suffix for label (e.g. dmoot1, moot1)
   }
   return $ach;
 }

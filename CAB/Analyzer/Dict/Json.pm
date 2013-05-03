@@ -102,6 +102,21 @@ sub ensureLoaded {
   return $rc;
 }
 
+## $dic = $dic->decodeDictValues()
+##  + runs $jxs->decode() on all dict values (for in-memory dicts)
+sub decodeDictValues {
+  my $dic = shift;
+  return $dic if (!$dic->{ttd} || !$dic->{ttd}{dict});
+
+  my $dict = $dic->{ttd}{dict};
+  my $jxs  = $dic->jsonxs;
+  foreach (keys %$dict) {
+    $dict->{$_} = $jxs->decode($dict->{$_}) if (!ref($dict->{$_}));
+  }
+  return $dic;
+}
+
+
 ##==============================================================================
 ## Methods: Persistence
 ##==============================================================================
