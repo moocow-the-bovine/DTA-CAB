@@ -29,7 +29,7 @@ sub new {
 						  'return if (defined($_->{$lab})); ##-- avoid re-analysis',
 						  #'@vals='._am_tt_fst_list('( $dhash->{lc($_->{text})} || "" )').';',
 						  '@vals='._am_tt_fst_list('($dhash->{lc('._am_xlit.')}||"")').';',
-						  '$_->{$lab}=[@vals] if (@vals);',
+						  '$_->{$lab}=[@vals] if (@vals && (!$_->{xlit} || $_->{xlit}{isLatinExt}));',
 						 ),
 			      ##-- user args
 			      @_

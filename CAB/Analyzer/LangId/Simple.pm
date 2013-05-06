@@ -67,7 +67,7 @@ sub analyzeTypes {
 
     ##-- local analysis check(s)
     push(@l, 'la') if ($_->{mlatin});
-    push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_FM\]/} @{$_->{morph}});
+    push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
     #push(@l, 'de','exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
 
     ##-- make unique
