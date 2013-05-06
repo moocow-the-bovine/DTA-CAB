@@ -38,7 +38,7 @@ my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
-my ($s,$msent,$w,$mw,$t,$at);
+my ($s,$msent,$w,$mw,$t,$at,$lang);
 sub {
  $s     = $_;
  $msent = [map {
@@ -60,8 +60,8 @@ sub {
  $hmm->tag_sentence($msent, $utf8);
 
  ##-- language-guesser hack
- if ($s->{lang} && $s->{lang} ne "de") {
-   $_->{tag} = "FM" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+ if (($lang=$s->{lang}) && $lang ne "de") {
+   $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
  }
 
  foreach (@$msent) {
