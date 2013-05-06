@@ -70,7 +70,7 @@ sub analyzeTypes {
       if    ($_->{text} =~ /^\p{Greek}+$/)  { push(@l, 'el'); }
       elsif ($_->{text} =~ /^\p{Hebrew}+$/) { push(@l, 'he'); }
       elsif ($_->{text} =~ /^\p{Arabic}+$/) { push(@l, 'ar'); }
-      elsif ($_->{text} =~ /[[:alpha:]]/ && !~ $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); }
+      elsif ($_->{text} =~ /[[:alpha:]]/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); }
     }
     push(@l, 'la') if ($_->{mlatin});
     push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
