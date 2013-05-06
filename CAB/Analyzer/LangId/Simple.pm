@@ -108,8 +108,8 @@ sub analyzeSentences {
 
     ##-- get top-ranked language for this sentence
     ($l,$n) = ($l0,0);
-    foreach (keys %ln) {
-      ($l,$n)=($_,$ln{$_}) if ($n < $ln{$_});
+    foreach ($l0, sort keys %ln) {
+      ($l,$n)=($_,$ln{$_}) if ($n < ($ln{$_}//0));
     }
     $s->{$slabel} = $l;
     #$s->{"${slabel}_counts"} = {%ln}; ##-- DEBUG
