@@ -96,20 +96,21 @@ sub analyzeSentences {
   ##-- common vars
   my $label  = $lid->{label} || $lid->defaultLabel;
   my $slabel = $lid->{slabel} || $label;
-  my $l0     = $lid->{defaultLang};
+  my $l0     = $lid->{defaultLang} // '';
+  my $n0     = $l0 ? .1 : 0;
   my $nil    = [];
 
   ##-- ye olde loope
   my (%ln,$s,$l,$n);
   foreach $s (@{$doc->{body}}) {
     ##-- count number of stopwords per language
-    %ln = qw();
+    %ln = ($l0=>0);
     ++$ln{$_} foreach (map {@{$_->{$label}//$nil}} @{$s->{tokens}});
 
     ##-- get top-ranked language for this sentence
-    ($l,$n) = ($l0,0);
-    foreach ($l0, sort keys %ln) {
-      ($l,$n)=($_,$ln{$_}) if ($n < ($ln{$_}//0));
+    ($l,$n) = ($l0,$n0);
+    foreach (sort keys %ln) {
+      ($l,$n)=($_,$ln{$_}) if ($n < $ln{$_});
     }
     $s->{$slabel} = $l;
     #$s->{"${slabel}_counts"} = {%ln}; ##-- DEBUG
