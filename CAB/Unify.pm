@@ -10,8 +10,13 @@ package DTA::CAB::Unify;
 use Storable;
 use Exporter;
 use Carp;
-use UNIVERSAL qw(isa can);
+use UNIVERSAL;
 use strict;
+
+BEGIN {
+  *isa = \&UNIVERSAL::isa;
+  *can = \&UNIVERSAL::can;
+};
 
 ##======================================================================
 ## Globals
