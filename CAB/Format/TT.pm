@@ -248,7 +248,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc))\] (.*)$/) {
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc)|has(?:morph|lts|rw|eqphox|dmoota|moota))\] (.*)$/) {
 		  ##-- token: field: other scalar field (exlex, pnd, mapclass, errid, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
@@ -447,6 +447,9 @@ sub token2buf {
 		       ."$_->{hi} <$_->{w}>")
 		    } @{$tok->{morph}});
   }
+
+  ##-- hasmorph
+  $$bufr .= "\t[hasmorph] ".($tok->{hasmorph} ? '1' : '0') if (exists $tok->{hasmorph});
 
   ##-- Morph::Latin ('morph/lat')
   $$bufr .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
