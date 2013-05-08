@@ -95,6 +95,9 @@ sub analyzeClean {
     ##-- black-list
     my @prune_keys = qw(tokpp toka lts morph rw eqphox dmoot);
     foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
+      ##-- map 'morph' to 'hasmorph'
+      $_->{hasmorph} = 1 if ($_->{morph} && @{$_->{morph}});
+
       ##-- delete all unsafe keys
       delete @$_{@prune_keys};
       delete $_->{moot}{analyses} if ($_->{moot}); ##-- moot/analyses: also unsafe
