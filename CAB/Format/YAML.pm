@@ -7,6 +7,7 @@
 package DTA::CAB::Format::YAML;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
+# use YAML::XS;
 use IO::File;
 use Carp;
 use strict;
