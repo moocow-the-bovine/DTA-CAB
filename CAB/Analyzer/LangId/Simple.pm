@@ -74,7 +74,7 @@ sub analyzeTypes {
       elsif ($_->{text} =~ /^\p{Arabic}{2,}$/) { push(@l, 'ar'); }
       elsif ($_->{text} =~ /[[:alpha:]]{2,}/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); }
     }
-    elsif ($_->{text} =~ /[\p{InMathematicalOperators}\+\-±\=\<\>]/ || $_->{text} eq '[Formel]') {
+    elsif ($_->{text} =~ /[\p{InMathematicalOperators}\+±\=\<\>]/ || $_->{text} eq '[Formel]') {
       push(@l,'xy');
     }
     push(@l, 'la') if ($_->{mlatin});
