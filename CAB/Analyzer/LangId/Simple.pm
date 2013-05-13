@@ -20,6 +20,8 @@ sub new {
 			      label      => 'lang',
 			      #slabel     => 'lang', ##-- sentence-level label
 			      defaultLang => 'de',
+			      defaultCount => 0.1,  ##-- bonus count for default lang
+			      minSentLen   => 2,    ##-- minimum sentence length for guess (tokens)
 
 			      ##-- user args
 			      @_
@@ -72,6 +74,9 @@ sub analyzeTypes {
       elsif ($_->{text} =~ /^\p{Arabic}{2,}$/) { push(@l, 'ar'); }
       elsif ($_->{text} =~ /[[:alpha:]]{2,}/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); }
     }
+    elsif ($_->{text} =~ /[\p{InMathematicalOperators}\+\-±\=\<\>]/ || $_->{text} eq '[Formel]') {
+      push(@l,'xy');
+    }
     push(@l, 'la') if ($_->{mlatin});
     push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
     #push(@l, 'de','exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
@@ -97,12 +102,16 @@ sub analyzeSentences {
   my $label  = $lid->{label} || $lid->defaultLabel;
   my $slabel = $lid->{slabel} || $label;
   my $l0     = $lid->{defaultLang} // '';
-  my $n0     = $l0 ? .1 : 0;
+  my $n0     = $l0 ? ($lid->{defaultCount}//0) : 0;
+  my $minlen = $lid->{minSentLen} // 0;
   my $nil    = [];
 
   ##-- ye olde loope
   my (%ln,$s,$l,$n);
   foreach $s (@{$doc->{body}}) {
+    ##-- check minimum sentence length
+    next if (@{$s->{tokens}} < $minlen);
+
     ##-- count number of stopwords per language
     %ln = ($l0=>0);
     ++$ln{$_} foreach (map {@{$_->{$label}//$nil}} @{$s->{tokens}});
