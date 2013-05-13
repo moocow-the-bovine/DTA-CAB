@@ -70,7 +70,7 @@ WriteMakefile
 		    'DB_File' =>0,
 		    'CDB_File' =>0,
 		    'JSON::XS' =>0,
-		    'YAML::XS' =>0,
+		    #'YAML::XS' =>0,  ##-- debian package libyaml-libyaml-perl; optional
 		    'Template' =>0,
 		    'LWP::UserAgent' =>0,
 		    'HTTP::Daemon' =>0,

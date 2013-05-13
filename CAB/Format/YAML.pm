@@ -1,4 +1,4 @@
-## -*- Mode: CPerl -*-
+# -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::YAML.pm
 ## Author: Bryan Jurish <jurish@uni-potsdam.de>
@@ -7,7 +7,6 @@
 package DTA::CAB::Format::YAML;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
-use YAML::XS qw();
 use IO::File;
 use Carp;
 use strict;
@@ -17,10 +16,23 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(DTA::CAB::Format);
+our $lib = '';
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:ya?ml(?:[\.\-\_]xs)?)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(yamlxs yaml-xs yml ymlxs yml-xs));
+
+  ##-- load underlying lib
+  eval 'use YAML::XS qw();' if (!$lib);
+  $lib = 'YAML::XS' if (!$@);
+
+  eval 'use YAML::Syck qw();' if (!$lib);
+  $lib = 'YAML::Syck' if (!$@);
+
+  eval 'use YAML qw();' if (!$lib);
+  $lib = 'YAML' if (!$@);
+
+  undef $@;
 }
 
 ##==============================================================================
@@ -112,8 +124,23 @@ sub parseYamlString {
   my $fmt  = shift;
   my $bufr = ref($_[0]) ? $_[0] : \$_[0];
   utf8::encode($$bufr) if (utf8::is_utf8($$bufr));
-  my $doc = YAML::XS::Load($$bufr)
-    or $fmt->logcluck("ParseYamlString(): YAML::XS::Load() failed: $!");
+
+  my ($doc);
+  if (!$lib) {
+    $fmt->logconfess("ParseYamlString(): no underlying YAML library found!");
+  }
+  elsif ($lib eq 'YAML::XS') {
+    $doc = YAML::XS::Load($$bufr)
+      or $fmt->logcluck("ParseYamlString(): YAML::XS::Load() failed: $!");
+  }
+  elsif ($lib eq 'YAML::Syck') {
+    $doc = YAML::XS::Load($$bufr)
+      or $fmt->logcluck("ParseYamlString(): YAML::Syck::Load() failed: $!");
+  }
+  elsif ($lib eq 'YAML') {
+    $doc = YAML::Load($$bufr)
+      or $fmt->logcluck("ParseYamlString(): YAML::Load() failed: $!");
+  }
   $fmt->{doc} = $fmt->{raw} ? $doc : $fmt->forceDocument($doc);
   return $fmt;
 }
@@ -185,7 +212,19 @@ sub putSentence {
 
 ## $fmt = $fmt->putDocument($doc)
 sub putDocument {
-  my $tmp = YAML::XS::Dump($_[1]);
+  my ($tmp);
+  if (!$lib) {
+    $_[0]->logconfess("ParseYamlString(): no underlying YAML library found!");
+  }
+  elsif ($lib eq 'YAML::XS') {
+    $tmp = YAML::XS::Dump($_[1]);
+  }
+  elsif ($lib eq 'YAML::Syck') {
+    $tmp = YAML::Syck::Dump($_[1]);
+  }
+  elsif ($lib eq 'YAML') {
+    $tmp = YAML::Dump($_[1]);
+  }
   $_[0]{fh}->print(${$_[0]->formatBuf(\$tmp)});
   return $_[0];
 }
