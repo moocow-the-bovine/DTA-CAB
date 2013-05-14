@@ -203,7 +203,7 @@ function cabTrafficReady (w,spanid,req) {
     var tok = rsp.body[0].tokens[0];
     var nod = getid(spanid);
     var xlit_id    = (tok.text == tok.xlit.latin1Text);
-    var has_morph  = (tok.morph!=null && tok.morph.length>0);
+    var has_morph  = (tok.hasmorph || (tok.morph!=null && tok.morph.length>0));
     var has_mlatin = (tok.mlatin!=null && tok.mlatin.length>0);
     if (w.search(/\s/) != -1) {
 	; //-- do nothing
@@ -246,6 +246,7 @@ function parseQuery(qs) {
     if (qs.substr(0,1)=='?') { qs=qs.substr(1); } //-- strip leading "?"
     var ql = qs.split("&");
     for (var i=0; i<ql.length; i++) {
+	if (ql[i] == "") { continue; }
 	var kv = ql[i].split("="); 
 	qm[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1].replace(/\+/g,' '));
     }
