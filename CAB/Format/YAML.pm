@@ -17,21 +17,25 @@ use strict;
 ##==============================================================================
 
 our @ISA = qw(DTA::CAB::Format);
-our $lib = '';
+our ($lib);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'yaml', filenameRegex=>qr/\.(?i:ya?ml(?:[\.\-\_]xs)?)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach (qw(yamlxs yaml-xs yml ymlxs yml-xs));
 
   ##-- load underlying lib
-  eval 'use YAML::XS qw();' if (!$lib);
-  $lib = 'YAML::XS' if (!$@);
-
-  eval 'use YAML::Syck qw();' if (!$lib);
-  $lib = 'YAML::Syck' if (!$@);
-
-  eval 'use YAML qw();' if (!$lib);
-  $lib = 'YAML' if (!$@);
+  if (!$lib) {
+    eval 'use YAML::XS qw();';
+    $lib = 'YAML::XS' if (!$@);
+  }
+  if (!$lib) {
+    eval 'use YAML::Syck qw();';
+    $lib = 'YAML::Syck' if (!$@);
+  }
+  if (!$lib) {
+    eval 'use YAML qw();';
+    $lib = 'YAML' if (!$@);
+  }
 
   undef $@;
 }
