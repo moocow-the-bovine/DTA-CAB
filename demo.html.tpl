@@ -46,6 +46,7 @@ b { font-weight: bold; color: #000099; }
       <!--</div>
       <div class="content">-->
 	<div class="subsection">
+	  <form method="post" enctype="multipart/form-data" action="/query" id="uploadForm" style="display:none"></form>
 	  <form method="get" action="/query" id="queryForm" onsubmit="return cabQuery();">
 	    <table><tbody>
 	      <tr>
@@ -53,6 +54,10 @@ b { font-weight: bold; color: #000099; }
 		<td colspan="4"><input type="text" name="q" size="64" class="cabQuery" title="Query word, phrase, sentence, or document." /></td>
 		<td style="text-align:right;"><input type="submit" name="_s" value="submit" /></td>
 	      </tr><!--/tr:query+submit-->
+	      <tr>
+		<td class="searchLabel">File:</td>
+		<td colspan="5"><input type="file" name="qd" id="i_qd" size="64" title="argh"/></td>
+	      </tr>
 	      <tr>
 		<td class="searchLabel">Analyzer:</td>
 		<td colspan="4">
@@ -78,8 +83,12 @@ b { font-weight: bold; color: #000099; }
 		    my $h   = $stash->get('h');
 		    my $reg = $h->{qh}{formats}{reg};
 		    my $f0  = $h->{qh}{defaultFormat};
-		    foreach my $f (sort {$a->{short} cmp $b->{short}} @$reg) {
-		      print "<option ".($f->{short} eq $f0 || $f->{base} eq $f0 ? 'selected="1" ' : '')."value=\"$f->{short}\">$f->{short}</option>\n";
+		    ($_->{base} = $_->{name}) =~ s/^DTA::?CAB::?Format::?// foreach (@$reg);
+		    my $prev = '';
+		    foreach my $f (sort {$a->{base} cmp $b->{base}} @$reg) {
+		      next if ($f->{base} eq $prev);
+		      print "<option ".($f->{short} eq $f0 || $f->{name} eq $f0 ? 'selected="1" ' : '')."value=\"$f->{short} : $f->{name}\">$f->{base}</option>\n";
+		      $prev = $f->{base};
 		    }
 		    [% END %]
 		    <option value="csv">CSV</option>
@@ -88,9 +97,11 @@ b { font-weight: bold; color: #000099; }
 		    <option selected="selected" value="text">Text</option>
 		    <option value="tt">TT ('vertical')</option>
 		    <option value="tj">TJ ('vertical' + json)</option>
-                      <option value="xlist">XList (DDC term expander)</option>
+		    <option value="tei">TEI XML</option>
+		    <option value="xlist">XList (DDC term expander)</option>
 		    <option value="xml">XML (Native)</option>
-		    <option value="xmlperl">XML (Perl)</option>
+		    <option value="twxml">XML (TokWrap)</option>
+		    <!--<option value="xmlperl">XML (Perl)</option>-->
 		    <option value="xmlrpc">XML-RPC</option>
 		    <option value="yaml">YAML</option>
 		  </select>

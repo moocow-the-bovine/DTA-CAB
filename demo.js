@@ -130,13 +130,11 @@ function cabQuery() {
 
     //-- query
     var q = valGet('q');
-    var qp = 'q';
     if (valGet('tokenize')) {
-	qp = 'q';
+	params['q'] = q;
     } else {
-	qp = 'qd';
+	params['qd'] = q;
     }
-    params[qp] = q;
 
     //-- options
     try {
@@ -153,7 +151,7 @@ function cabQuery() {
 	}
     }
     catch (err) {
-	clog("cabQuery(): error parsing user options: " + err.descroption);
+	clog("cabQuery(): error parsing user options: " + err.description);
     }
 
     //-- guts
@@ -161,15 +159,35 @@ function cabQuery() {
     var cablink = getid('cabLink');
     cablink.href      = caburi;
     cablink.innerHTML = caburi;
-    valSet('cabData', 'Querying ' + caburi);
-    httpGet(caburi,
-	    function(req){ if (req.readyState==4) { valSet('cabData',req.responseText); } });
 
-    //-- traffic-light query
-    cabTrafficQuery(q, 'btn_trf_cabq');
+    if (Boolean(valGet('qd'))) {
+	//-- file upload
+	cabUpload(params);
+    }
+    else {
+	//-- live query
+	valSet('cabData', 'Querying ' + caburi);
+	httpGet(caburi,
+		function(req){ if (req.readyState==4) { valSet('cabData',req.responseText); } });
+    
+	//-- traffic-light query
+	cabTrafficQuery(q, 'btn_trf_cabq');
+    }
 
-    //-- return false to disable form submission
-    return false;
+    return false;     //-- return false to disable "real" form submission
+}
+
+function cabUpload(params) {
+    delete params['q'];
+    delete params['qd'];
+    var caburi = getURI(cab_url_base,params);
+    var uform  = document.getElementById('uploadForm');
+    var qdelt  = document.getElementById('i_qd');
+    uform.action = caburi;
+    qdelt.parentNode.removeChild(qdelt);
+    uform.appendChild(qdelt);
+    uform.submit();
+    return false;     //-- return false to disable "real" form submission
 }
 
 //======================================================================
