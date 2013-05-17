@@ -1,5 +1,7 @@
 //-*- Mode: Javascript; coding: utf-8; c-basic-offset: 2; -*-
 
+var uploadMode;
+
 //======================================================================
 // form data read/write
 
@@ -107,7 +109,7 @@ function httpGet(uri,onReadyCallback) {
 }
 
 //======================================================================
-// cab request
+// cab request (live query or upload)
 
 var cab_url_base = '/query';
 
@@ -128,14 +130,6 @@ function cabQuery() {
 	params['static_enabled'] = "0";
     }
 
-    //-- query
-    var q = valGet('q');
-    if (valGet('tokenize')) {
-	params['q'] = q;
-    } else {
-	params['qd'] = q;
-    }
-
     //-- options
     try {
 	var opts_s = valGet('qo');
@@ -154,40 +148,97 @@ function cabQuery() {
 	clog("cabQuery(): error parsing user options: " + err.description);
     }
 
+    //-- query or upload
+    if (Boolean(uploadMode)) {
+	return cabUpload(params);
+    } 
+
+    //-- query mode
+    var q = valGet('q')
+    if (valGet('tokenize')) {
+	params['q'] = q;
+    } else {
+	params['qd'] = q;
+    }
+
     //-- guts
-    var caburi = getURI(cab_url_base,params);
+    var caburi  = getURI(cab_url_base,params);
     var cablink = getid('cabLink');
     cablink.href      = caburi;
     cablink.innerHTML = caburi;
 
-    if (Boolean(valGet('qd'))) {
-	//-- file upload
-	cabUpload(params);
-    }
-    else {
-	//-- live query
-	valSet('cabData', 'Querying ' + caburi);
-	httpGet(caburi,
-		function(req){ if (req.readyState==4) { valSet('cabData',req.responseText); } });
+    valSet('cabData', 'Querying ' + caburi);
+    httpGet(caburi,
+	    function(req){ if (req.readyState==4) { valSet('cabData',req.responseText); } });
     
-	//-- traffic-light query
-	cabTrafficQuery(q, 'btn_trf_cabq');
-    }
+    //-- traffic-light query
+    cabTrafficQuery(q, 'btn_trf_cabq');
 
-    return false;     //-- return false to disable "real" form submission
+    return false; //-- return false to disable "real" form submission
 }
 
+//======================================================================
+// cab file upload (called by cabQuery)
+
 function cabUpload(params) {
+    //-- common vars
+    var qfnod = getid('i_qf');
+
+    //-- sanity check(s) 
+    if (!Boolean(qfnod.value)) {
+	alert("No file selected for upload!");
+	return false; //-- return false to disable "real" form submission
+    }
+
+    //-- tweaks: auto-format (use file extension)
+    var fmt     = params['fmt'];
+    var autofmt = (fmt == 'auto');
+    if (autofmt) {
+	fmt = qfnod.value.match(/[^\.]*$/)[0].toLowerCase();
+    }
+
+    //-- tweaks: tokenization
+    var istei = (fmt.search(/tei/) != -1);
+    var dotok = valGet('tokenize');
+
+    qfnod.name = 'qd';
+    if (!dotok && istei) {
+	fmt = 'teiws';
+    }
+    else if (dotok && !istei && (!autofmt || (fmt=='txt'))) {
+	qfnod.name = 'q';
+    }
+
+    //-- construct base URI
     delete params['q'];
     delete params['qd'];
-    var caburi = getURI(cab_url_base,params);
-    var uform  = document.getElementById('uploadForm');
-    var qdelt  = document.getElementById('i_qd');
-    uform.action = caburi;
-    qdelt.parentNode.removeChild(qdelt);
-    uform.appendChild(qdelt);
-    uform.submit();
-    return false;     //-- return false to disable "real" form submission
+    params['fmt'] = fmt;
+    params['qname'] = qfnod.name;
+    params['qfile'] = qfnod.value;
+    var caburi = getURI(cab_url_base,params).replace(/&/g, ';');
+
+    //-- tweak query form
+    var qform = getid('queryForm');
+    qform.action = caburi;
+    qform.method = 'POST';
+    qform.enctype = 'multipart/form-data';
+
+    // Strangeness Fri, 17 May 2013 14:13:19 +0200:
+    //  - returning true here causes weird 'Client closed' errors from CAB server on post-submit 'Back' clicks from chromium
+    //  - iceweasel/firefox seem unaffected
+    return true;     //-- true: enable "real" form submission
+}
+
+function qformEnable(enabled) {
+    var disabled = !Boolean(enabled);
+    getname('a').disabled = disabled;
+    getname('fmt').disabled = disabled;
+    getname('pretty').disabled = disabled;
+    getname('clean').disabled = disabled;
+    getname('exlex_enabled').disabled = disabled;
+    getname('tokenize').disabled = disabled;
+    getname('qo').disabled = disabled;
+    getname('_s').disabled = disabled;
 }
 
 //======================================================================
@@ -288,4 +339,6 @@ function cabDemoInit() {
 	if (qm[qmkeys[i]] != null) { valSet(qmkeys[i], qm[qmkeys[i]]); }
     }
     if (String(valGet('q')) != "") { cabQuery(); }
+
+    return;
 }
