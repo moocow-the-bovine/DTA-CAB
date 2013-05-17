@@ -27,7 +27,7 @@ our @ISA = qw(DTA::CAB::Format::XmlTokWrap);
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:spliced|tei[\.\-\+]?ws?|wst?)[\.\-]xml)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
-      foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml));
+      foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml teiws-xml));
 }
 
 BEGIN {

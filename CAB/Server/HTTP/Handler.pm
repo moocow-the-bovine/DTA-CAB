@@ -9,8 +9,13 @@
 package DTA::CAB::Server::HTTP::Handler;
 use HTTP::Status;
 use DTA::CAB::Logger;
-use UNIVERSAL qw(isa);
+use UNIVERSAL;
 use strict;
+
+BEGIN {
+  *isa = \&UNIVERSAL::isa;
+  *can = \&UNIVERSAL::can;
+}
 
 our @ISA = qw(DTA::CAB::Logger);
 

@@ -63,7 +63,7 @@ sub prepare {
 sub run {
   my ($h,$srv,$path,$csock,$hreq) = @_;
 
-  my $vars = { h=>$h, srv=>$srv, path=>$path, csock=>$csock, hreq=>$hreq, %{$h->{vars}||{}} };
+  my $vars = { h=>$h, srv=>$srv, path=>$path, csock=>$csock, hreq=>$hreq, src=>$h->{src}, %{$h->{vars}||{}} };
   my $tmpl = $h->{tmpl};
   my $data = '';
 

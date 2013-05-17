@@ -95,6 +95,7 @@ sub prepare {
 ##    qd   => $queryData,            ##-- query data (formatted document)
 ##    a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
 ##    fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
+##    file => $qfilename,            ##-- query filename (for output)
 ##    #enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
 ##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
 ##    pretty => $level,              ##-- response format level
@@ -182,8 +183,13 @@ sub run {
   return $h->cerror($c, undef, "could format output document using format '$fc': $@") if (!defined($rstr));
 
   ##-- dump to client
-  my $filename = defined($vars->{q}) ? $vars->{q} : 'data';
-  $filename =~ s/\W.*$/_/;
+  my ($filename);
+  if (defined($filename=$vars->{file})) {
+    $filename =~ s/^.*[:\\\/]//;
+  } else {
+    $filename = $vars->{q} // 'data';
+    $filename =~ s/\W.*$/_/;
+  }
   $filename .= $fmt->defaultExtension;
   return $h->dumpResponse(\$rstr,
 			  raw=>$vars->{raw},

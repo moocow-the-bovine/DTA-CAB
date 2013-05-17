@@ -175,6 +175,11 @@ method of the selected analyzer.  Note that the query handler $qh can
 block propagation of some or all analyzer options by means of its
 'allowUserOptions' attribute.
 
+=item file =E<gt> $filename
+
+File basename to use for response in attachment-mode.
+Defaults to $rawQueryString or 'data'.
+
 =back
 
 =head3 Query Responses

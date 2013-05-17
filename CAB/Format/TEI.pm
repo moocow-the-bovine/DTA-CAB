@@ -105,7 +105,7 @@ sub new {
     $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
     $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
     $fmt->{twopts}{$_} = 'DEBUG' foreach (qw(addwsInfo spliceInfo));
-    $fmt->{tmpdir} = "cab_tei_tmp";
+    #$fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
   }
 

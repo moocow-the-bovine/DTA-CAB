@@ -177,6 +177,21 @@ sub run {
     }
 
     ##-- serve client: parse HTTP request
+    ##
+    ## Strangeness Fri, 17 May 2013 14:14:56 +0200
+    ## + returning true from demo.js cabUpload() causes weird 'Client closed' errors on post-upload 'Back' clicks from chromium
+    ## + problem maybe related to bizarre closed-client crashes for HTTP::Daemon::ClientConn observed elsewhere: persists even within eval BLOCK
+    ## + symptom(s):
+    ##   - get_request() fails after ca. 10sec
+    ##   - HTTP::Daemon::DEBUG output shows "Need more data for complete header\nsysread()\n"
+    ##   - no data is actually read into $csock buffer (checked with debugger)
+    ##   - $csock invalidates with $csock->reason='Client closed', but $csock->opened()==1
+    ##   - attempting to write to $csock in this state (e.g. by clientError()) causes immediate termination of the running server!
+    ##
+    ##DEBUG
+    #$srv->vlog($srv->{logAttempt}, "get_request() for client $chost");
+    #$HTTP::Daemon::DEBUG=1;
+    ##/DEBUG
     ${*$csock}{'httpd_client_proto'} = HTTP::Daemon::ClientConn::_http_version("HTTP/1.0"); ##-- HACK: force status line on send_error() from $csock->get_request()
     $hreq = $csock->get_request();
     if (!$hreq) {
@@ -253,7 +268,10 @@ sub run {
   continue {
     ##-- cleanup after client
     $srv->vlog($srv->{logClose}, "closing connection to client $chost");
-    $csock->shutdown(2) if ($csock->opened);
+    if ($csock->opened) {
+      $csock->force_last_request();
+      $csock->shutdown(2);
+    }
     $handler->finish($srv,$csock) if (defined($handler));
     $hreq=$handler=$localPath=$rsp=undef;
   }
@@ -348,12 +366,14 @@ sub clientError {
     my $msg   = join('',@msg);
     $status   = RC_INTERNAL_SERVER_ERROR if (!defined($status));
     $srv->vlog($srv->{logClientError}, "clientError($chost): $msg");
-    {
+    if ($msg !~ /: client closed$/i) {
+      ##-- don't try to write to sockets reporting 'client closed': this crashes the running server inexplicably!
       my $_warn=$^W;
       $^W=0;
       $csock->send_error($status, $msg);
       $^W=$_warn;
     }
+    $csock->force_last_request();
     $csock->shutdown(2);
   }
   $csock->close() if (UNIVERSAL::can($csock,'close'));

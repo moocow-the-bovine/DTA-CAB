@@ -19,6 +19,14 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Server);
 
+BEGIN {
+  ##-- RPC::XML::Server v1.48 (kaskade / debian squeeze) DOES have     add_proc() but does NOT have add_procedure()
+  ##-- RPC::XML::Server v1.68 (kaskade2 / debian wheezy) does NOT have add_proc() but DOES     have add_procedure()
+  if (!RPC::XML::Server->can('add_procedure') && RPC::XML::Server->can('add_proc')) {
+    *RPC::XML::Server::add_procedure = \&RPC::XML::Server::add_proc;
+  }
+}
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -164,7 +172,7 @@ sub prepareLocal {
 
   ##-- register 'listAnalyzers' method
   my $listproc = $srv->listAnalyzersProc;
-  $xsrv->add_proc( DTA::CAB::Server::XmlRpc::Procedure->new($listproc) );
+  $xsrv->add_procedure( DTA::CAB::Server::XmlRpc::Procedure->new($listproc) );
   $srv->vlog($srv->{logRegisterProc},"registered XML-RPC listing procedure $listproc->{name}()\n");
 
   ##-- propagate security and logging options to underlying server

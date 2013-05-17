@@ -7,7 +7,6 @@
 ##======================================================================
 
 package DTA::CAB::Unify;
-use Storable;
 use Exporter;
 use Carp;
 use UNIVERSAL;
@@ -46,11 +45,16 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ## API: Unification
 
 ## $xnew = unifyClone($x)
-##  + default implementation uses Storable::dclone()
+##  + re-implemented to avoid Storable::dclone()
 sub unifyClone {
-  return "$_[0]" if (!ref($_[0]));
-  return  $_[0]->clone if (can($_[0],'clone'));
-  return Storable::dclone($_[0]);
+  if    (!defined($_[0]))	{ return undef; }
+  elsif (!ref($_[0]))		{ return "$_[0]" }
+  elsif (isa($_[0],'REGEXP'))	{ return qr($_[0]); }
+#  elsif (can($_[0],'clone'))	{ return  $_[0]->clone; }
+  elsif (isa($_[0],'HASH'))	{ my $tmp={ map {unifyClone($_)} %{$_[0]} }; return ref($_[0]) eq 'HASH' ? $tmp : bless($tmp,ref($_[0])); }
+  elsif (isa($_[0],'ARRAY'))	{ my $tmp=[ map {unifyClone($_)} @{$_[0]} ]; return ref($_[0]) eq 'ARRAY' ? $tmp : bless($tmp,ref($_[0])); }
+  else				{ return $_[0]; } ##-- cowardly refuse to clone GLOBs, CODE-refs, etc
+#  return Storable::dclone($_[0]);
 }
 
 ## $xy = unify($x,$y, $OUTPUT_TOP)
