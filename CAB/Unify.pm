@@ -45,17 +45,26 @@ our @EXPORT_OK = @{$EXPORT_TAGS{all}};
 ## API: Unification
 
 ## $xnew = unifyClone($x)
-##  + re-implemented to avoid Storable::dclone()
+##  + wrapper for Storable::dclone()
 sub unifyClone {
   if    (!defined($_[0]))	{ return undef; }
   elsif (!ref($_[0]))		{ return "$_[0]" }
+  elsif (can($_[0],'clone'))	{ return  $_[0]->clone; }
+  else				{ Storable::dclone($_[0]); }
+}
+
+## $xnew = unifyClone_($x)
+##  + re-implemented to avoid Storable::dclone()
+##  + seems to cause infinite load-loop and memory-gobble in cab server: why?
+sub unifyClone_ {
+  if    (!defined($_[0]))	{ return undef; }
+  elsif (!ref($_[0]))		{ return "$_[0]" }
   elsif (isa($_[0],'REGEXP'))	{ return qr($_[0]); }
-#  elsif (can($_[0],'clone'))	{ return  $_[0]->clone; }
   elsif (isa($_[0],'HASH'))	{ my $tmp={ map {unifyClone($_)} %{$_[0]} }; return ref($_[0]) eq 'HASH' ? $tmp : bless($tmp,ref($_[0])); }
   elsif (isa($_[0],'ARRAY'))	{ my $tmp=[ map {unifyClone($_)} @{$_[0]} ]; return ref($_[0]) eq 'ARRAY' ? $tmp : bless($tmp,ref($_[0])); }
   else				{ return $_[0]; } ##-- cowardly refuse to clone GLOBs, CODE-refs, etc
-#  return Storable::dclone($_[0]);
 }
+
 
 ## $xy = unify($x,$y, $OUTPUT_TOP)
 sub unify { return _unify_guts(unifyClone($_[0]),unifyClone($_[1]),\&_unify1_top, @_[2..$#_]); }

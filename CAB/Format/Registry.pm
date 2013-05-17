@@ -68,7 +68,7 @@ sub refresh {
   my $reg = shift;
   my @creg = @{$reg->{reg}};
   $reg->clear();
-  $reg->registerFormat(%$_) foreach (reverse @creg);
+  $reg->register(%$_) foreach (reverse @creg);
   return $reg;
 }
 
@@ -228,6 +228,24 @@ sub short2reg {
 ##  + gets registry entry for class basename $basename
 sub base2reg {
   return $_[0]{base2reg}{$_[1]};
+}
+
+##========================================================================
+## Storable stuff
+
+## ($serialized, $ref1, ...) = $obj->STORABLE_freeze($cloning)
+sub STORABLE_freeze {
+  my ($obj,$cloning) = @_;
+  return ('',[map { {%$_,(defined($_->{filenameRegex}) ? (filenameRegex=>"$_->{filenameRegex}") : qw())} } @{$obj->{reg}}]);
+}
+
+## $fsm = STORABLE_thaw($fsm, $cloning, $serialized, $ref1,...)
+sub STORABLE_thaw {
+  my ($obj,$cloning,$ser,$classes) = @_;
+  $obj->clear();
+  @{$obj->{reg}} = @$classes;
+  $obj->refresh();
+  return $obj;
 }
 
 
