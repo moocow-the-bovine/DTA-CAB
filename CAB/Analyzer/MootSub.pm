@@ -90,6 +90,7 @@ sub analyzeSentences {
 
     if (!@$ma
 	|| exists($xytags->{$t})
+	|| $t =~ /^FM\./
         #|| ($t eq 'NE' && !$tok->{msafe})
         )
       {
