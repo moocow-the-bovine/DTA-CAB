@@ -19,8 +19,8 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml)|xml)$/);
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xml');
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml\-native|xml\-dta\-cab|(?:dta[\-\._]cab[\-\._]xml))$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'cab-xml');
 }
 
 BEGIN {
