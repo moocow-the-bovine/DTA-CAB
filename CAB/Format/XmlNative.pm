@@ -12,7 +12,8 @@ use IO::File;
 use Carp;
 use strict;
 
-require 5.10.0; ##-- for ${^POSTMATCH}
+#require 5.10.0;   ##-- for ${^POSTMATCH} ; but this syntax makes services (perl v5.10.0) complain
+require 5.010_000; ##-- same thing which doesn't make v5.10.0 complain
 
 ##==============================================================================
 ## Globals
