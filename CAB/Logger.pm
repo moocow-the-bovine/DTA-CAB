@@ -243,7 +243,7 @@ sub llog { $_[0]->logger->log(@_[1..$#_]); }
 ##  + e.g. $class_or_obj->vlog('trace', @msg)
 sub vlog {
   return if (!defined($_[1]));
-  my $sub = UNIVERSAL::isa($_[1],'CODE') ? $_[1] : UNIVERSAL::can($_[0],$_[1]);
+  my $sub = UNIVERSAL::isa($_[1],'CODE') ? $_[1] : (UNIVERSAL::can($_[0],$_[1]) || UNIVERSAL::can($_[0],lc($_[1])));
   return if (!defined($sub));
   return $sub->($_[0],@_[2..$#_]);
 }

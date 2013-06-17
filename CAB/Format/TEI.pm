@@ -81,6 +81,7 @@ sub new {
 			      ##-- local
 			      tmpdir => undef,
 			      keeptmp=>0,
+			      teilog => 'off', ##-- tei format debug log level
 			      ##
 			      addc => 0,
 			      keepc => 0,
@@ -148,7 +149,7 @@ sub tmpdir {
 sub mktmpdir {
   my $fmt = shift;
   my $tmpdir = $fmt->{tmpdir};
-  $fmt->vlog('trace', "mktmpdir $tmpdir");
+  $fmt->vlog($fmt->{teilog}, "mktmpdir $tmpdir");
   mkdir($tmpdir,0700) if (!-d $tmpdir);
   (-d $tmpdir) or $fmt->logconfess("could not create directory '$tmpdir': $!");
   return $tmpdir;
@@ -159,6 +160,7 @@ sub mktmpdir {
 sub rmtmpdir {
   my $fmt = shift;
   if (-d $fmt->{tmpdir} && !$fmt->{keeptmp}) {
+    $fmt->vlog($fmt->{teilog}, "rmtree $fmt->{tmpdir}");
     File::Path::rmtree($fmt->{tmpdir})
 	or $fmt->logconfess("could not rmtree() temp directory '$fmt->{tmpdir}': $!");
   }
@@ -190,6 +192,7 @@ sub fromString {
   $fmt->close();
 
   ##-- ensure tmpdir exists
+  $fmt->vlog($fmt->{teilog}, "fromString()");
   my $tmpdir = $fmt->mktmpdir;
 
   ##-- prepare tei buffer with //c elements
@@ -197,26 +200,31 @@ sub fromString {
 
   if (!$fmt->{addc}) {
     ##-- dump document with predefined //c elements, or rely on dta-tokwrap >= v0.38 to handle both //c and text()
+    $fmt->vlog($fmt->{teilog}, "write $tmpdir/tmp.chr.xml");
     DTA::TokWrap::Utils::ref2file($str,"$tmpdir/tmp.chr.xml")
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.chr.xml: $!");
     $fmt->{teibufr} = $str if ($fmt->{spliceback});
   }
   else {
     ##-- dump raw document
+    $fmt->vlog($fmt->{teilog}, "add-c: write $tmpdir/tmp.raw.xml");
     DTA::TokWrap::Utils::ref2file($str,"$tmpdir/tmp.raw.xml")
 	or $fmt->logdie("couldn't create temporary file $tmpdir/tmp.raw.xml: $!");
 
     ##-- ensure //c elements
+    $fmt->vlog($fmt->{teilog}, "add-c: dtatw-add-c.perl");
     my $addc_args = '-rmns '.($fmt->{addc} eq 'guess' ? '-guess' : '-noguess');
     DTA::TokWrap::Utils::runcmd("dtatw-add-c.perl $addc_args $tmpdir/tmp.raw.xml > $tmpdir/tmp.chr.xml")==0
 	or $fmt->logdie("dtatw-add-c.perl failed: $!");
 
     ##-- grab tei buffer
+    $fmt->vlog($fmt->{teilog}, "add-c: slurp tmp.chr.xml");
     $fmt->{teibufr} = DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.chr.xml")
       if ($fmt->{spliceback});
   }
 
   ##-- run tokwrap
+  $fmt->vlog($fmt->{teilog}, "tokwrap: tmp.chr.xml -> tmp.chr.t.xml");
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.chr.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
   $twdoc->genKey('tei2txml')
@@ -224,6 +232,7 @@ sub fromString {
   $twdoc->close();
 
   ##-- now process the tokwrap document
+  $fmt->vlog($fmt->{teilog}, "inherited fromFile(tmp.chr.t.xml)");
   my $rc = $fmt->SUPER::fromFile("$tmpdir/tmp.chr.t.xml");
 
   ##-- ... and remove the temp dir

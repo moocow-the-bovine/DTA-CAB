@@ -161,6 +161,7 @@ if ($doProfile) {
   $ifmt->info("Profile: input:");
   $ifmt->logProfile('info', $ielapsed, $ntoks, $nchrs);
 
+
   $ofmt->info("Profile: output:");
   $ofmt->logProfile('info', $oelapsed, $ntoks, $nchrs);
 }
