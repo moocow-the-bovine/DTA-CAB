@@ -160,7 +160,7 @@ sub mktmpdir {
 sub rmtmpdir {
   my $fmt = shift;
   if (-d $fmt->{tmpdir} && !$fmt->{keeptmp}) {
-    $fmt->vlog($fmt->{teilog}, "rmtree $fmt->{tmpdir}");
+    $fmt->vlog($fmt->{teilog}, "rmtree $fmt->{tmpdir}") if (Log::Log4perl->initialized);;
     File::Path::rmtree($fmt->{tmpdir})
 	or $fmt->logconfess("could not rmtree() temp directory '$fmt->{tmpdir}': $!");
   }
@@ -238,6 +238,7 @@ sub fromString {
   ##-- ... and remove the temp dir
   $fmt->rmtmpdir();
 
+  $fmt->vlog($fmt->{teilog}, "fromString(): returning");
   return $rc;
 }
 
@@ -259,6 +260,7 @@ sub fromFh {
 ##  + override inserts $doc->{teibufr} attribute for spliceback mode
 sub parseDocument {
   my $fmt = shift;
+  $fmt->vlog($fmt->{teilog}, "parseDocument()");
   my $doc = $fmt->SUPER::parseDocument(@_) or return undef;
   $doc->{teibufr} = $fmt->{teibufr} if ($fmt->{spliceback});
   return $doc;
@@ -290,6 +292,7 @@ sub defaultExtension { return '.tei.xml'; }
 ##  + override calls $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh})
 sub flush {
   my $fmt = shift;
+  $fmt->vlog($fmt->{teilog}, "flush()") if (Log::Log4perl->initialized);
   #File::Copy::copy($fmt->{outfile},$fmt->{fh}) if (defined($fmt->{outfile}) && defined($fmt->{fh}));
   $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
   #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
@@ -328,6 +331,7 @@ sub putDocument {
   my ($fmt,$doc) = @_;
 
   ##-- call superclass method
+  $fmt->vlog($fmt->{teilog}, "putDocument(): inherited");
   my $rc = $fmt->SUPER::putDocument($doc);
   return $rc if (!$fmt->{spliceback});
 
@@ -342,10 +346,12 @@ sub putDocument {
   my $tmpdir = $fmt->mktmpdir();
 
   ##-- dump base data
+  $fmt->vlog($fmt->{teilog}, "putDocument(): write $tmpdir/tmp.tei.xml");
   DTA::TokWrap::Utils::ref2file($teibufr,"$tmpdir/tmp.tei.xml")
       or $fmt->logconfess("couldn't create temporary file $tmpdir/tmp.tei.xml: $!");
 
   ##-- get tokwrap object
+  $fmt->vlog($fmt->{teilog}, "putDocument(): splice to $tmpdir/tmp.tei.cws.xml");
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.tei.xml as TokWrap document: $!");
   $twdoc->{xmldata}  = $$teibufr;
@@ -360,6 +366,7 @@ sub putDocument {
     or $fmt->logconfess("could not generate intermediate cws xml data: $!");
 
   ##-- optionally remove //c elements
+  $fmt->vlog($fmt->{teilog}, "putDocument(): remove //c -> $tmpdir/tmp.tei.cws.noc.xml");
   my $cwsfile = "$tmpdir/tmp.tei.cws.xml";
   if (!$fmt->{keepc}) {
     DTA::TokWrap::Utils::runcmd("dtatw-rm-c.perl $cwsfile > $tmpdir/tmp.tei.cws.noc.xml")==0
@@ -371,6 +378,7 @@ sub putDocument {
   #$twdoc->genKey('idsplice');
 
   ##-- slurp the buffer back in
+  $fmt->vlog($fmt->{teilog}, "putDocument(): re-slurp from $cwsfile");
   DTA::TokWrap::Utils::slurp_file("$cwsfile",\$fmt->{outbuf})
       or $fmt->logdie("slurp_file() failed for '$cwsfile': $!");
   $fmt->{outbuf} =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g; ##-- decode default namespaces (hack)
@@ -379,6 +387,7 @@ sub putDocument {
   $twdoc->close();
   $fmt->rmtmpdir();
 
+  $fmt->vlog($fmt->{teilog}, "putDocument(): returning");
   return $fmt;
 }
 

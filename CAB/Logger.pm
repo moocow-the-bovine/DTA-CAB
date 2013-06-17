@@ -29,6 +29,8 @@ BEGIN {
        twLevel   => 'INFO', ##-- log level for DTA::TokWrap (used by DTA::CAB::Format::TEI)
        level     => ($^W ? $MIN_LEVEL : 'INFO'),
        stderr    => 1,
+       logdate   => 0,
+       logtime   => 0,
        file      => undef,
        rotate    => undef, ##-- default: haveFileRotate()
        syslog    => 0,
@@ -46,6 +48,8 @@ BEGIN {
 ##     rootLevel => $LEVEL_OR_UNDEF,  ##-- min root log level (default='WARN' or 'FATAL', depending on $^W)
 ##     level     => $LEVEL_OR_UNDEF,  ##-- min log level (default=$MIN_LEVEL or 'INFO', depending on $^W)
 ##     stderr    => $bool,            ##-- whether to log to stderr (default=1)
+##     logtime   => $bool,            ##-- whether to log time-stamps on stderr (default=0)
+##     logdate   => $bool,            ##-- whether to log date+time-stamps on stderr (default=0)
 ##     file      => $filename,        ##-- log to $filename if true
 ##     rotate    => $bool,            ##-- use Log::Dispatch::FileRotate if available and $filename is true
 ##     syslog    => $bool,            ##-- use Log::Dispatch::Syslog if available and true (default=false)
@@ -99,13 +103,15 @@ log4perl.PatternLayout.cspec.G = sub { return File::Basename::basename(\"$::0\")
 ";
 
   ##-- appender: stderr
+  my $stderr_date = ($opts{logdate} ? '%d{yyyy-MM-dd HH:mm:ss} '
+		     : ($opts{logtime} ? '%d{HH:mm:ss} ' : ''));
   $cfg .= "
 ##-- Appender: AppStderr
 log4perl.appender.AppStderr = Log::Log4perl::Appender::Screen
 log4perl.appender.AppStderr.stderr = 1
 log4perl.appender.AppStderr.binmode = :utf8
 log4perl.appender.AppStderr.layout = Log::Log4perl::Layout::PatternLayout
-log4perl.appender.AppStderr.layout.ConversionPattern = %G[%P] %p: %c: %m%n
+log4perl.appender.AppStderr.layout.ConversionPattern = ${stderr_date}%G[%P] %p: %c: %m%n
 ";
 
   ##-- appender: syslog
