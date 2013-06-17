@@ -38,6 +38,9 @@ BEGIN {
 ##-- HACK for broken tokenizer on services.dwds.de (2011-07-27)
 $DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
 
+##-- default parser/formatter for *.t.xml files
+our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -54,6 +57,8 @@ $DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
 ##     tw => $tw,                              ##-- underlying DTA::TokWrap object
 ##     twopen => \%opts,                       ##-- options for $tw->open()
 ##     teibufr => \$buf,                       ##-- raw tei+c buffer, for spliceback mode
+##
+##     txmlfmt   => $fmt,                      ##-- classname or object for parsing tokwrap *.t.xml files (default: DTA::CAB::Format::TokWrap)
 ##
 ##     ##-- input: inherited from XmlNative
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
@@ -86,6 +91,8 @@ sub new {
 			      addc => 0,
 			      keepc => 0,
 			      spliceback => 1,
+			      ##
+			      txmlfmt => $TXML_CLASS_DEFAULT,
 
 			      ##-- tokwrap
 			      tw => undef,
@@ -167,6 +174,22 @@ sub rmtmpdir {
   return $fmt;
 }
 
+## $txmlfmt = $fmt->txmlfmt()
+##  + gets cached $fmt->{txmlfmt} or creates it
+sub txmlfmt {
+  return $_[0]{txmlfmt} if (ref $_[0]{txmlfmt});
+  my %txmlopts = %{$_[0]};
+  delete @txmlopts{qw(xdoc xprs txmlfmt)};
+  return $_[0]{txmlfmt} = $_[0]->txmlclass->new(%txmlopts);
+}
+
+## $class = $fmt->txmlclass()
+sub txmlclass {
+  return ref($_[0]{txmlfmt}) if (ref($_[0]{txmlfmt}));
+  return "DTA::CAB::Format::$_[0]{txmlfmt}" if (UNIVERSAL::isa("DTA::CAB::Format::$_[0]{txmlfmt}",'DTA::CAB::Format'));
+  return $_[0]{txmlfmt} || $TXML_CLASS_DEFAULT;
+}
+
 ##=============================================================================
 ## Methods: Input
 ##==============================================================================
@@ -179,6 +202,7 @@ sub rmtmpdir {
 sub close {
   my $fmt = shift;
   $fmt->{twdoc}->close() if ($fmt->{twdoc});
+  $fmt->{txmlfmt}->close(@_) if (ref($fmt->{txmlfmt}));
   delete $fmt->{teibufr};
   $fmt->rmtmpdir();
   return $fmt->SUPER::close(@_);
@@ -232,14 +256,15 @@ sub fromString {
   $twdoc->close();
 
   ##-- now process the tokwrap document
-  $fmt->vlog($fmt->{teilog}, "inherited fromFile(tmp.chr.t.xml)");
-  my $rc = $fmt->SUPER::fromFile("$tmpdir/tmp.chr.t.xml");
+  $fmt->vlog($fmt->{teilog}, $fmt->txmlclass()."->fromFile(tmp.chr.t.xml)");
+  $fmt->{txmlfmt}->close(@_) if (ref $fmt->{txmlfmt});
+  my $rc = $fmt->txmlfmt->fromFile("$tmpdir/tmp.chr.t.xml");
 
-  ##-- ... and remove the temp dir
+  ##-- ... and cleanup
   $fmt->rmtmpdir();
 
   $fmt->vlog($fmt->{teilog}, "fromString(): returning");
-  return $rc;
+  return $rc ? $fmt : undef;
 }
 
 
@@ -261,7 +286,7 @@ sub fromFh {
 sub parseDocument {
   my $fmt = shift;
   $fmt->vlog($fmt->{teilog}, "parseDocument()");
-  my $doc = $fmt->SUPER::parseDocument(@_) or return undef;
+  my $doc = $fmt->txmlfmt->parseDocument(@_) or return undef;
   $doc->{teibufr} = $fmt->{teibufr} if ($fmt->{spliceback});
   return $doc;
 }
@@ -294,7 +319,7 @@ sub flush {
   my $fmt = shift;
   $fmt->vlog($fmt->{teilog}, "flush()") if (Log::Log4perl->initialized);
   #File::Copy::copy($fmt->{outfile},$fmt->{fh}) if (defined($fmt->{outfile}) && defined($fmt->{fh}));
-  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}));
+  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}) && $fmt->{fh}->opened);
   #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
   delete @$fmt{qw(outfile outbuf xdoc)};
   return $fmt;
@@ -331,8 +356,8 @@ sub putDocument {
   my ($fmt,$doc) = @_;
 
   ##-- call superclass method
-  $fmt->vlog($fmt->{teilog}, "putDocument(): inherited");
-  my $rc = $fmt->SUPER::putDocument($doc);
+  $fmt->vlog($fmt->{teilog}, $fmt->txmlclass."->putDocument()");
+  my $rc = $fmt->txmlfmt->putDocument($doc);
   return $rc if (!$fmt->{spliceback});
 
   ##-- get original TEI-XML buffer
@@ -356,7 +381,11 @@ sub putDocument {
     or $fmt->logdie("could not open $tmpdir/tmp.tei.xml as TokWrap document: $!");
   $twdoc->{xmldata}  = $$teibufr;
   $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";
-  $twdoc->{xtokdata} = $fmt->{xdoc}->toString(0);
+  if (UNIVERSAL::isa($fmt->txmlfmt->{xdoc},'XML::LibXML::Document')) {
+    $twdoc->{xtokdata} = $fmt->txmlfmt->{xdoc}->toString(0);
+  } else {
+    $fmt->txmlfmt->toString(\$twdoc->{xtokdata}, 0)->putDocument($doc)->flush;
+  }
   $twdoc->{cwsfile}  = "$tmpdir/tmp.tei.cws.xml";
   #$twdoc->{cwstfile} = "$tmpdir/tmp.tei.cwst.xml";
   #$twdoc->{cwstbufr} = \$fmt->{outbuf}; ##-- output to string
