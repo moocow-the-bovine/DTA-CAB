@@ -12,6 +12,8 @@ use IO::File;
 use Carp;
 use strict;
 
+require 5.10.0; ##-- for ${^POSTMATCH}
+
 ##==============================================================================
 ## Globals
 ##==============================================================================
@@ -119,7 +121,7 @@ sub blockDefaults {
 ## Methods: I/O: Block-wise: Input
 
 ## \%head = blockScanHead(\$buf,$io,\%opts)
-##  + gets header (${io}head) offset, length from (mmaped) \$buf
+##  + gets header (${io}head) offset, length from (mmapped) \$buf
 ##  + %opts are as for blockScan()
 sub blockScanHead {
   my ($fmt,$bufr,$io,$opts) = @_;
@@ -153,16 +155,16 @@ sub blockScanFoot {
     ##   #4  0x00002b26f7831392 in Perl_runops_standard () from /usr/lib/libperl.so.5.10
     ##   #5  0x00002b26f782c5df in perl_run () from /usr/lib/libperl.so.5.10
     ##   #6  0x0000000000400d0c in main ()
-    if ($$bufr  =~ m((?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)))sg) {
+    if ($$bufr =~ m((?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)(?!.*(?s:</\Q$elt\E>|<\Q$elt\E\b[^>]*/>)))sg) {
       my $end = $+[0];
       $blk->{"${io}len"} = $end - ($blk->{"${io}off"} || 0);
       return [$end, ($opts->{"${io}fsize"}||length($$bufr))-$end];
     }
   }
   elsif (0) {
-    ##-- v1: !$useNegativeLookaheadRegex: use $' (POSTMATCH) safer but __much__ slower
+    ##-- v1: !$useNegativeLookaheadRegex: use ${^POSTMATCH} safer but __much__ slower
     my ($end);
-    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
+    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msgp && defined($end=$+[0]) && ${^POSTMATCH} =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
       pos($$bufr) = $end = $end+$+[0];
     }
     if (defined($end)) {
@@ -181,7 +183,7 @@ sub blockScanFoot {
 
     ##-- now use slow regex scan
     pos($$bufr) = $pos0+$end if ($end>=0);
-    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msg && defined($end=$+[0]) && $' =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
+    while ($$bufr =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}msgp && defined($end=$+[0]) && ${^POSTMATCH} =~ m{</\Q$elt\E>|<\Q$elt\E\b[^>]*/>}ms) {
       pos($$bufr) = $end = $end+$+[0];
     }
     if (defined($end) && $end>=0) {
