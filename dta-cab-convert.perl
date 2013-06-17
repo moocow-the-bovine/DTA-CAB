@@ -54,16 +54,20 @@ GetOptions(##-- General
 	   'list|l!' => \$listOnly,
 
 	   ##-- I/O: input
-	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
+	   'input-class|ic|input-format-class|ifc=s'        => \$inputClass,
 	   #'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
-	   'input-option|io|parser-option|po=s'      => \%inputOpts,
+	   'input-option|io|input-format-option|ifo=s'      => \%inputOpts,
 
 	   ##-- I/O: output
-	   'output-class|oc|format-class|fc=s'        => \$outputClass,
+	   'output-class|oc|output-format-class|ofc=s'        => \$outputClass,
 	   #'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
-	   'output-option|oo=s'                       => \%outputOpts,
-	   'output-level|ol|format-level|fl=s'        => \$outputOpts{level},
-	   'output-file|output|o=s' => \$outfile,
+	   'output-option|oo|output-format-option|ofo=s'                       => \%outputOpts,
+	   'output-level|ol|format-level|fl|output-format-level|ofl=s'        => \$outputOpts{level},
+	   'output-file|of|output|o=s' => \$outfile,
+
+	   ##-- I/O: generic
+	   'format-class|fc=s'   => sub { $inputClass=$outputClass=$_[1]; },
+	   'format-option|fo=s%' => sub { $inputOpts{$_[1]}=$outputOpts{$_[1]}=$_[2]; },
 
 	   ##-- Log4perl
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
@@ -193,6 +197,9 @@ dta-cab-convert.perl - Format conversion for DTA::CAB documents
   -output-option OPT=VALUE        ##-- set output formatter option
   -output-level LEVEL             ##-- override output formatter level (default: 1)
   -output-file FILE               ##-- set output file (default: STDOUT)
+
+  -format-class CLASS	          ##-- alias for -input-class=CLASS -output-class=CLASS
+  -format-option OPT=VALUE        ##-- alias for -input-option=OPT=VALUE -output-option=OPT=VALUE
 
  Logging Options                  ##-- see Log::Log4perl(3pm)
   -log-level LEVEL                ##-- set minimum log level (default=TRACE)
