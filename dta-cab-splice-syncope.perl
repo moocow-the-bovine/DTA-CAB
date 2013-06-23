@@ -48,13 +48,17 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
-
+	   
+           ##-- I/O: common
+           'format-class|fc=s' => sub { $inputClass=$outputClass=$_[1]; },
+           'format-option|fo=s%' => sub { $inputOpts{$_[1]} = $outputOpts{$_[1]} = $_[2]; },
+           
 	   ##-- I/O: input
-	   'input-class|ic|parser-class|pc=s'        => \$inputClass,
-	   'input-option|io|parser-option|po=s'      => \%inputOpts,
+	   'input-class|ifc|ic=s'       => \$inputClass,
+	   'input-option|ifo|io=s'      => \%inputOpts,
 
 	   ##-- I/O: output
-	   'output-class|oc|format-class|fc=s'        => \$outputClass,
+	   'output-class|ofc|oc=s'        => \$outputClass,
 	   'output-option|oo=s'                       => \%outputOpts,
 	   'output-level|ol|format-level|fl=s'        => \$outputOpts{level},
 	   'output-file|output|o=s' => \$outfile,
