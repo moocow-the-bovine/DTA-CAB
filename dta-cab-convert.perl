@@ -55,13 +55,11 @@ GetOptions(##-- General
 
 	   ##-- I/O: input
 	   'input-class|ic|input-format-class|ifc=s'        => \$inputClass,
-	   #'input-encoding|ie|parser-encoding|pe=s'  => \$inputOpts{encoding},
 	   'input-option|io|input-format-option|ifo=s'      => \%inputOpts,
 
 	   ##-- I/O: output
-	   'output-class|oc|output-format-class|ofc=s'        => \$outputClass,
-	   #'output-encoding|oe|format-encoding|fe=s'  => \$outputOpts{encoding},
-	   'output-option|oo|output-format-option|ofo=s'                       => \%outputOpts,
+	   'output-class|oc|output-format-class|ofc=s'        		      => \$outputClass,
+	   'output-option|oo|output-format-option|ofo=s'                      => \%outputOpts,
 	   'output-level|ol|format-level|fl|output-format-level|ofl=s'        => \$outputOpts{level},
 	   'output-file|of|output|o=s' => \$outfile,
 

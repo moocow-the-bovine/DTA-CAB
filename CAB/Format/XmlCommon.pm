@@ -96,7 +96,7 @@ sub iolayers {
 
 ## $fmt = $fmt->flush()
 ##  + flush any buffered output to selected output channel
-##  + override dumps buffered $fmt->{xdoc} to output sink in @$fmt{qw(outputTo outputArg)} and deletes $fmt->{xdoc}
+##  + override dumps buffered $fmt->{xdoc} to output sink in ($outputHow,$outputArg)=@{$fmt->{out}} and deletes $fmt->{xdoc}
 sub flush {
   my $fmt = shift;
   if (defined(my $xdoc=$fmt->{xdoc}) && defined(my $out=$fmt->{output})) {
@@ -185,7 +185,7 @@ sub defaultExtension { return '.xml'; }
 ## $fmt = $fmt->toString(\$str)
 ## $fmt = $fmt->toString(\$str, $formatLevel)
 ##  + select output to string
-##  + override sets $fmt->{output}=['str',\$str]
+##  + override sets $fmt->{output}=['string',\$str]
 sub toString {
   my $fmt = shift;
   $fmt->close;
