@@ -21,7 +21,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf)[\.\-_]?xml)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf[\.\-_]?xml)|(?:tcf))$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
       foreach (qw(tcf-xml tcfxml tcf));
 }
@@ -42,7 +42,7 @@ BEGIN {
 ##     tcfbufr => \$buf,                       ##-- raw TCF buffer, for spliceback mode
 ##     tcflog  => $level,		       ##-- debugging log-level (default: 'off')
 ##     spliceback => $bool,                    ##-- (output) if true (default), splice data back into 'tcfbufr' if available; otherwise create new TCF doc
-##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='postags lemmas orthography'
+##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='tokens sentences postags lemmas orthography'
 ##     tcftagset => $tagset,                   ##-- tagset name for POStags element (default='stts')
 ##
 ##     ##-- input: inherited from XmlCommon
@@ -59,8 +59,9 @@ sub new {
 			      ##-- local
 			      #tcfbufr => undef,
 			      tcflog   => 'off', ##-- debugging log-level
-			      tcflayers => 'orthography postags lemmas',
+			      tcflayers => 'tokens sentences orthography postags lemmas',
 			      tcftagset => 'stts',
+			      spliceback => 1,
 
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
 			      ignoreKeys => {
@@ -93,11 +94,80 @@ sub new {
 ##  + INHERITED from XmlCommon : populates $fmt->{xdoc}
 
 ## $doc = $fmt->parseDocument()
-##  + parse buffered XML::LibXML::Document
-##  + TODO!
+##  + parse buffered XML::LibXML::Document from $fmt->{xdoc}
 sub parseDocument {
   my $fmt = shift;
-  $fmt->logconfess("parseDocument(): TODO!");
+  $fmt->vlog($fmt->{tcflog}, "parseDocument()");
+
+  ##-- parse: basic
+  my $doc   = DTA::CAB::Document->new();
+  my $xdoc  = $fmt->{xdoc};
+  my $xroot = $xdoc->documentElement;
+  $doc->{tcfdoc} = $xdoc if ($fmt->{spliceback});
+
+  ##-- parse: metadata
+  if (defined(my $xmeta = $xroot->findnodes('*[local-name()="MetaData"]')->[0])) {
+    my $tmp = $xmeta->findnodes('*[local-name()="source"][1]')->[0];
+    $doc->{source} = $tmp->textContent if (defined($tmp));
+  }
+
+  ##-- parse: corpus
+  my $xcorpus = $xroot->findnodes('*[local-name()="TextCorpus"]')->[0]
+    or $fmt->logconfess("parseDocument(): no TextCorpus node found in XML document");
+
+  ##-- parse: tokens
+  my (@w,%id2w,$w);
+  my $xtokens = $xcorpus->findnodes('*[local-name()="tokens"]')->[0]
+    or $fmt->logconfess("parseDocument(): no TextCorpus/tokens node found in XML document");
+  foreach (@{$xtokens->findnodes('*[local-name()="token"]')}) {
+    push(@w, $w={text=>$_->textContent});
+    if (!defined($w->{id}=$_->getAttribute('ID'))) {
+      $w->{id} = sprintf("w%x", $#w);
+      $_->setAttribute('ID'=>$w->{id});
+    }
+    $id2w{$w->{id}} = $w;
+  }
+
+  ##-- parse: sentences
+  my ($s);
+  if (defined(my $xsents = $xcorpus->findnodes('*[local-name()="sentences"]')->[0])) {
+    my $body = $doc->{body};
+    foreach (@{$xsents->findnodes('*[local-name()="sentence"]')}) {
+      push(@$body, $s={});
+      $s->{id}     = $_->getAttribute('ID') if ($_->hasAttribute('ID'));
+      $s->{tokens} = [ @id2w{split(' ',$_->getAttribute('tokenIDs'))} ];
+    }
+  } else {
+    $doc->{body} = \@w; ##-- single-sentence
+  }
+
+  ##-- parse: POStags -> moot/tag
+  my ($id);
+  if (defined(my $xpostags = $xcorpus->findnodes('*[local-name()="POStags"]')->[0])) {
+    foreach (@{$xpostags->findnodes('*[local-name()="tag"]')}) {
+      $id = $_->getAttribute('tokenIDs');
+      $id2w{$id}{moot}{tag} = $_->textContent;
+    }
+  }
+
+  ##-- parse: lemmas -> moot/lemma
+  if (defined(my $xlemmas = $xcorpus->findnodes('*[local-name()="lemmas"]')->[0])) {
+    foreach (@{$xlemmas->findnodes('*[local-name()="lemma"]')}) {
+      $id = $_->getAttribute('tokenIDs');
+      $id2w{$id}{moot}{lemma} = $_->textContent;
+    }
+  }
+
+  ##-- parse: orthography -> moot/word
+  if (defined(my $xorths = $xcorpus->findnodes('*[local-name()="orthography"]')->[0])) {
+    foreach (@{$xorths->findnodes('*[local-name()="correction"][@operation="replace"]')}) {
+      $id = $_->getAttribute('tokenIDs');
+      $id2w{$id}{moot}{word} = $_->textContent;
+    }
+  }
+
+  $fmt->vlog($fmt->{tcflog}, "parseDocument(): returning");
+  return $doc;
 }
 
 ##=============================================================================
@@ -138,7 +208,7 @@ sub flush {
 ## Methods: Output: Generic API
 
 ## $fmt = $fmt->putDocument($doc)
-##  + override respects local 'keepc' and 'spliceback' flags
+##  + override respects local 'spliceback' and 'tcflayers' flags
 sub putDocument {
   my ($fmt,$doc) = @_;
   $fmt->vlog($fmt->{tcflog}, "putDocument()");
@@ -175,7 +245,7 @@ sub putDocument {
   if (!defined($xmeta = $xroot->findnodes('*[local-name()="MetaData"]')->[0])) {
     $xmeta = $xroot->addNewChild(undef,'MetaData');
     $xmeta->setNamespace('http://www.dspin.de/data/metadata');
-    $xmeta->appendTextChild('source', $doc->{xmlbase}//'');
+    $xmeta->appendTextChild('source', $doc->{source}) if (defined($doc->{source}));
   }
 
   ##-- document structure: corpus
@@ -188,36 +258,34 @@ sub putDocument {
 
   ##-- document structure: corpus structure
   my ($tokens,$sents,$lemmas,$postags,$orths);
-  if (!defined($xcorpus->findnodes('*[local-name()="tokens"]')->[0])) {
+  if ($layers =~ /\btokens\b/ && !defined($xcorpus->findnodes('*[local-name()="tokens"]')->[0])) {
     $tokens = $xcorpus->addNewChild(undef,'tokens');
   }
-  if (!defined($xcorpus->findnodes('*[local-name()="sentences"]')->[0])) {
+  if ($layers =~ /\bsentences\b/ && !defined($xcorpus->findnodes('*[local-name()="sentences"]')->[0])) {
     $sents = $xcorpus->addNewChild(undef,'sentences');
   }
-  if (!defined($xcorpus->findnodes('*[local-name()="lemmas"]')->[0]) && $layers =~ /\blemmas\b/) {
+  if ($layers =~ /\blemmas\b/ && !defined($xcorpus->findnodes('*[local-name()="lemmas"]')->[0])) {
     $lemmas = $xcorpus->addNewChild(undef,'lemmas');
     #$lemmas->setAttribute('type'=>'CAB');
   }
-  if (!defined($xcorpus->findnodes('*[local-name()="POStags"]')->[0]) && $layers =~ /\bpostags\b/) {
+  if ($layers =~ /\bpostags\b/ && !defined($xcorpus->findnodes('*[local-name()="POStags"]')->[0])) {
     $postags = $xcorpus->addNewChild(undef,'POStags');
     $postags->setAttribute('tagset'=>$fmt->{tcftagset}) if ($fmt->{tcftagset});
     #$postags->setAttribute('type'=>'CAB');
   }
-  if (!defined($xcorpus->findnodes('*[local-name()="orthography"]')->[0]) && $layers =~ /\borthography\b/) {
+  if ($layers =~ /\borthography\b/ && !defined($xcorpus->findnodes('*[local-name()="orthography"]')->[0])) {
     $orths = $xcorpus->addNewChild(undef,'orthography');
     #$orths->setAttribute('type'=>'CAB');
   }
 
   ##-- ensure ids
-  my ($si,$wi) = (0,0);
-  my ($s,$w,$sid,$wid,@wids,$snod,$wnod);
+  my $wi = 0;
+  my ($s,$w,$wid,@wids,$snod,$wnod);
   my ($pos,$lemma,$orth);
   foreach $s (@{$doc->{body}}) {
-    $sid = $s->{id} // sprintf("s%x",$si);
-    $wi  = 0;
     @wids = qw();
     foreach $w (@{$s->{tokens}}) {
-      $wid = $w->{id} // $sid.sprintf("_w%x",$wi);
+      $wid = $w->{id} // sprintf("w%x",$wi);
       push(@wids,$wid);
       ++$wi;
 
@@ -263,10 +331,9 @@ sub putDocument {
     if ($sents) {
       ##-- generate sentence node: <sentence ID="s_0" tokenIDs="t_0 t_1 t_2 t_3 t_4 t_5"></sentence>
       $snod = $sents->addNewChild(undef,'sentence');
-      $snod->setAttribute(ID=>$sid);
+      $snod->setAttribute(ID=>$s->{id}) if (defined($s->{id}));
       $snod->setAttribute(tokenIDs=>join(' ',@wids));
     }
-    ++$si;
   }
 
   $fmt->vlog($fmt->{tcflog}, "putDocument(): returning");
