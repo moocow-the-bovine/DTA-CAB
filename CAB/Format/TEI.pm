@@ -36,7 +36,8 @@ BEGIN {
 }
 
 ##-- HACK for broken tokenizer on services.dwds.de (2011-07-27)
-$DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
+#$DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
+$DTA::TokWrap::Document::TOKENIZE_CLASS = 'auto';  ##-- fixed (?) 2013-06-21
 
 ##-- default parser/formatter for *.t.xml files
 our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
