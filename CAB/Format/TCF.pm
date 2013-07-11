@@ -184,6 +184,10 @@ sub shortName {
   return 'tcf';
 }
 
+## $type = $fmt->mimeType()
+##  + override returns text/xml
+sub mimeType { return 'text/tcf+xml'; }
+
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format (default='.cab')
 sub defaultExtension { return '.tcf.xml'; }
@@ -297,6 +301,7 @@ sub putDocument {
       }
 
       ##-- generate token data: tag, lemma, orthography
+      $pos = $lemma = $orth = undef;
       if ($w->{moot}) {
 	$pos   = $w->{moot}{tag};
 	$lemma = $w->{moot}{lemma};
