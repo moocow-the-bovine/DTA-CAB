@@ -24,7 +24,7 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf[\.\-_]?xml)|(?:tcf))$/);
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'})
-      foreach (qw(orth-tcf web-tcf weblicht-tcf));
+      foreach (qw(tcf-orth tcf-web)); ##-- for weblicht
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'})
       foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf));
