@@ -224,7 +224,7 @@ DTA::CAB->debug("using output format class ", ref($ofmt), "(level=", ($ofmt->{le
 ##-- format-dependent analysis options
 %analyzeOpts = (
 		%analyzeOpts,
-		fmt         => $qfmt->shortName,
+		fmt         => ($qfo{class}||$qfmt->shortName),
 		contentType => $qfmt->mimeType,
 		#encoding   => $qfmt->{encoding},
 		pretty      => $qfmt->{level},
