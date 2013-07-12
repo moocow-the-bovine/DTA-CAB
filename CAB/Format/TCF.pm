@@ -22,8 +22,12 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf[\.\-_]?xml)|(?:tcf))$/);
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
-      foreach (qw(tcf-xml tcfxml tcf));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'})
+      foreach (qw(orth-tcf web-tcf weblicht-tcf));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'})
+      foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf));
 }
 
 BEGIN {
@@ -59,7 +63,8 @@ sub new {
 			      ##-- local
 			      #tcfbufr => undef,
 			      tcflog   => 'off', ##-- debugging log-level
-			      tcflayers => 'tokens sentences orthography postags lemmas',
+			      #tcflayers => 'tokens sentences orthography postags lemmas',
+			      tcflayers => 'tokens sentences orthography',
 			      tcftagset => 'stts',
 			      spliceback => 1,
 

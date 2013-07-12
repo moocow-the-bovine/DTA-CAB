@@ -97,16 +97,14 @@ sub newFormat {
 ##  + wraper for DTA::CAB::Format::Registry::newReader; accepts %opts qw(class file)
 sub newReader {
   my ($that,%opts) = @_;
-  my $class = $REG->readerClass(undef,%opts);
-  return ($class||$CLASS_DEFAULT)->new(%opts);
+  return $REG->newReader(%opts) // $CLASS_DEFAULT->new(%opts);
 }
 
 ## $fmt = CLASS->newWriter(%opts)
-##  + wraper for DTA::CAB::Format::Registry::newReader; accepts %opts qw(class file)
+##  + wraper for DTA::CAB::Format::Registry::newWriter; accepts %opts qw(class file)
 sub newWriter {
   my ($that,%opts) = @_;
-  my $class = $REG->writerClass(undef,%opts);
-  return ($class||$CLASS_DEFAULT)->new(%opts);
+  return $REG->newWriter(%opts) // $CLASS_DEFAULT->new(%opts);
 }
 
 ##==============================================================================

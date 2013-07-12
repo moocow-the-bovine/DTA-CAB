@@ -36,8 +36,11 @@ BEGIN {
 ##    {
 ##     name          => $basename,      ##-- basename for the class (package name)
 ##     short         => $shortname,     ##-- short name for the class (default = package name suffix, lower-cased)
-##     readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
-##     writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
+##     readerClass   => $readerClass,   ##-- default: $base
+##     writerClass   => $writerClass,   ##-- default: $base
+##     readerOpts    => \%readerOpts,   ##-- default: none
+##     writerOpts    => \%writerOpts,   ##-- default: none
+##     opts          => \%commonOpts,   ##-- default: none
 ##     filenameRegex => $regex,         ##-- filename regex for guessFilename()
 ##    }
 sub new {
@@ -75,14 +78,14 @@ sub refresh {
 ## $reg = $reg->compile(%opts)
 ##  + adds following keys to each registry item \%classReg:
 ##    (
-##     reader => $readerObj,  ##-- = $classReg{readerClass}->new(%opts)
-##     writer => $writerObj,  ##-- = $classReg{writerClass}->new(%opts)
+##     reader => $readerObj,  ##-- = $classReg{readerClass}->new($reg->readerOpts($classReg,%opts))
+##     writer => $writerObj,  ##-- = $classReg{writerClass}->new($reg->writerOpts($classReg,%opts))
 ##    )
 sub compile {
   my $reg = shift;
   foreach (@{$reg->{reg}}) {
-    $_->{reader} = $_->{readerClass}->new(@_) if (can($_->{readerClass},'new'));
-    $_->{writer} = $_->{writerClass}->new(@_) if (can($_->{writerClass},'new'));
+    $_->{reader} = $_->{readerClass}->new($reg->readerOpts($_),@_) if (can($_->{readerClass},'new'));
+    $_->{writer} = $_->{writerClass}->new($reg->writerOpts($_),@_) if (can($_->{writerClass},'new'));
   }
   return $reg;
 }
@@ -92,8 +95,11 @@ sub compile {
 ##    (
 ##     name          => $basename,      ##-- basename for the class (package name): REQUIRED
 ##     short         => $shortname,     ##-- short name for the class (default = package name suffix, lower-cased)
-##     readerClass   => $readerClass,   ##-- default: $base   ##-- NYI
-##     writerClass   => $writerClass,   ##-- default: $base   ##-- NYI
+##     readerClass   => $readerClass,   ##-- default: $base
+##     writerClass   => $writerClass,   ##-- default: $base
+##     readerOpts    => \%readerOpts,   ##-- default: none
+##     writerOpts    => \%writerOpts,   ##-- default: none
+##     opts          => \%commonOpts,   ##-- default: none
 ##     filenameRegex => $regex,         ##-- filename regex for guessFilenameFormat()
 ##    )
 sub register {
@@ -153,7 +159,25 @@ sub newFormat {
   my ($reg,$class,%opts) = @_;
   my $creg = $reg->lookup(class=>$class,%opts);
   return undef if (!defined($creg));
-  return $creg->{name}->new(%opts)
+  return $creg->{name}->new($reg->commonOpts($creg,%opts));
+}
+
+## %opts = $reg->commonOpts($creg)
+##  + common class options
+sub commonOpts {
+  #my ($reg,$creg) = @_;
+  return $_[1]{opts} ? %{$_[1]{opts}} : qw();
+}
+
+## %opts = $reg->readerOpts($creg)
+sub readerOpts {
+  return ($_[0]->commonOpts($_[1]), ($_[1]{readerOpts} ? %{$_[1]{readerOpts}} : qw()));
+}
+
+## %opts = $reg->writerOpts($creg)
+## %opts = $reg->readerOpts($creg)
+sub writerOpts {
+  return ($_[0]->commonOpts($_[1]), ($_[1]{writerOpts} ? %{$_[1]{writerOpts}} : qw()));
 }
 
 ## $class_or_undef = $reg->readerClass($class_or_short_or_suffix,%opts)
@@ -180,7 +204,7 @@ sub newReader {
   my $creg = $reg->lookup(%opts);
   return undef if (!defined($creg));
   delete @opts{qw(class file)};
-  return $creg->{readerClass}->new(%opts);
+  return $creg->{readerClass}->new($reg->readerOpts($creg),%opts);
 }
 
 ## $fmt = $reg->newWriter(%opts)
@@ -192,7 +216,7 @@ sub newWriter {
   my $creg = $reg->lookup(%opts);
   return undef if (!defined($creg));
   delete @opts{qw(class file)};
-  return $creg->{writerClass}->new(%opts);
+  return $creg->{writerClass}->new($reg->writerOpts($creg),%opts);
 }
 
 ## $readerClass_or_undef = $CLASS_OR_OBJ->fileReaderClass($filename)
