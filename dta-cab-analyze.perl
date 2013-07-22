@@ -432,7 +432,7 @@ my @jobs = qw();
 push(@ARGV,'-') if (!@ARGV);
 if ($inputList) {
   ##-- list-input mode: push each list item as an individual job
-  die("$0: cannot combine -list and -words options (use TT format to process flat word lists)") if ($job{inputWords});
+  die("$0: cannot combine -list and -words options (use TT, TJ, or TXT format to process flat word lists)") if ($job{inputWords});
   while (<>) {
     chomp;
     next if (m/^\s*$/ || m/^\s*\#/ || m/^\s*\%\%/);
