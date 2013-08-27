@@ -22,10 +22,10 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Analyzer);
 
-## %badTypes = ($text=>$isBad, ...)
+## %badTypes = ($text=>$isGood, ...)
 ##  + default hash of bad text types
 our %badTypes = (
-		 #Andre=>1,    ##-- bad: type: Andre[_NE][firstname][none][none][sg][nom_acc_dat]
+		 #Andre=>0,    ##-- bad: type: Andre[_NE][firstname][none][none][sg][nom_acc_dat]
 		);
 
 ## %badMorphs = ($taghMorph=>$isBad, ...)
@@ -71,8 +71,8 @@ sub new {
 			   morphHiKey => 'hi',
 
 			   ##-- dictionary stuff
-			   #badTypesFile  => undef,            ##-- filename of ($text "\t" $isBadBool) mapping for raw utf8 text types
-			   #badTypes      => {%badTypes},      ##-- hash of bad utf8 text types ($text=>$isBadBool)
+			   #badTypesFile  => undef,            ##-- filename of ($text "\t" $isGoodBool) mapping for raw utf8 text types
+			   #badTypes      => {%badTypes},      ##-- hash of bad utf8 text types ($text=>$isGoodBool)
 			   ##
 			   #badMorphsFile  => undef,           ##-- filename of ($taghMorph "\t" $isBadBool) mapping for TAGH morph components
 			   #badMorphs      => {%badMorphs},    ##-- hash of bad TAGH morphs ($taghMorph=>$isBadBool)
@@ -182,7 +182,7 @@ sub analyzeTypes {
 
     ##-- are we still unsafe?  then check for some "safe" morph analysis: if found, set $safe=1 & bug out
     if (!$safe
-        && !$badTypes->{$tok->{text}}                      ##-- ... only if it's not a known bad type
+        && !defined($safe=$badTypes->{$tok->{text}})  	   ##-- ... only if it's not a known type
 	&& $tok->{$tok_morph}	                           ##-- ... and it has morph analyses (empty $tok->{morph} will still be "unsafe")
        )
       {
@@ -309,12 +309,12 @@ L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>.
  allowExlexAnalyses => 1,
 
  ##-- dictionary options
- badTypesFile  => $filename,         ##-- filename of ($text "\t" $isBadBool) mapping for raw utf8 text types
+ badTypesFile  => $filename,         ##-- filename of ($text "\t" $isGoodBool) mapping for raw utf8 text types
  badMorphsFile  => $filename,        ##-- filename of ($taghMorph "\t" $isBadBool) mapping for TAGH morph components
  badTagsFile    => $filename,        ##-- filename of ($taghTag "\t" $isBadBool) mapping for TAGH tags (tags appear without '[_', ']')
 
  ##-- low-level data (after prepare())
- badTypes       => \%badTypes,       ##-- hash of bad utf8 text types ($text=>$isBadBool)
+ badTypes       => \%badTypes,       ##-- hash of bad utf8 text types ($text=>$isGoodBool)
  badMorphs      => \%badMorphs,      ##-- hash of bad TAGH morphs ($taghMorph=>$isBadBool)
  badTags        => \%badTags,        ##-- hash of bad TAGH tags ($taghTag=>$isBadBool)
 
