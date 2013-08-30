@@ -102,6 +102,11 @@ sub analyzeTypes {
 
     ##-- construct latin-1/de approximation
     $ld = decode('latin1',Unicruft::utf8_to_latin1_de($uc));
+
+    ##-- special handling for double-initial-caps, e.g. "AUf", "CHristus", "GOtt", etc.
+    $ld = ucfirst(lc($ld)) if ($ld =~ /^[[:upper:]]{2}[[:lower:]]+$/);
+
+    ##-- properties
     if (
 	#$uc !~ m([^\p{inBasicLatin}\p{inLatin1Supplement}]) #)
 	$uc  =~ m(^[\x{00}-\x{ff}]*$) #)
