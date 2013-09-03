@@ -33,7 +33,9 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##
 ##     ##-- Analysis Options
 ##     analyzeWhich     => $which, ##-- one of 'token', 'sentence', 'document'; default='document'
-##     label            => $label, ##-- destination key (default='langid')
+##     vlabel           => $label, ##-- verbose destination key (default='langid')
+##     label            => $label, ##-- simple destination key (default='lang')
+##
 ##
 ##     ##-- Analysis Objects
 ##     map            => $map,   ##-- a Lingua::LangId::Map object
@@ -46,7 +48,8 @@ sub new {
 
 			       ##-- options
 			       analyzeWhich => 'document',
-			       label        => 'langid',
+			       vlabel       => 'langid',
+			       label        => 'lang',
 
 			       ##-- analysis objects
 			       #map => undef,
@@ -79,6 +82,13 @@ sub clear {
 ##  + default version checks for non-empty 'map' and 'sigs'
 sub mapOk {
   return defined($_[0]{map}) && %{$_[0]{map}{sigs}};
+}
+
+## @keys = $anl->typeKeys(\%opts)
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + default returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label})
+sub typeKeys {
+  return ($_[0]{typeKeys} ? @{$_[0]{typeKeys}} : qw());
 }
 
 ##==============================================================================
@@ -161,7 +171,12 @@ sub canAnalyze {
 ## $thingy = $lid->analyzeThingy($thingy, \$str, \%opts)
 sub analyzeThingy {
   my ($lid,$thingy,$ref,$opts) = @_;
-  $thingy->{$lid->{label}} = $lid->{map}->applyString($ref);
+  my $details = $lid->{map}->applyString($ref);
+  $thingy->{$lid->{vlabel}} = $details if (defined($lid->{vlabel}));
+  if (defined($lid->{label})) {
+    my $best = (sort {$details->{$a}{kldp} <=> $details->{$b}{kldp}} grep {$details->{$_}{match}} keys %$details)[0];
+    $thingy->{$lid->{label}} = $best if (defined($best));
+  }
   return $thingy;
 }
 
@@ -171,30 +186,27 @@ sub analyzeThingy {
 ## $doc = $anl->analyzeDocument($doc,\%opts)
 ##  + analyze a DTA::CAB::Document $doc
 ##  + top-level API routine
-sub analyzeDocument {
+sub analyzeLocal {
   my ($anl,$doc,$opts) = @_;
   return undef if (!$anl->ensureLoaded()); ##-- uh-oh...
   return $doc if (!$anl->canAnalyze);      ##-- ok...
-  $doc = toDocument($doc);
-  my ($str);
+
+  my $xlit = sub { $_[0]{xlit} ? $_[0]{xlit}{latin1Text} : $_[0]{text} };
+  my ($str,$x);
   if ($anl->{analyzeWhich} eq 'document') {
-    $str = join(' ', map {toToken($_)->{text}} map {@{toSentence($_)->{tokens}}} @{$doc->{body}});
+    $str = join(' ', map {$xlit->($_)} map {@{$_->{tokens}}} @{$doc->{body}});
     $anl->analyzeThingy($doc,\$str,$opts);
   }
   elsif ($anl->{analyzeWhich} eq 'sentence') {
-    foreach (map {toSentence($_)} @{$doc->{body}}) {
-      $_ = toSentence($_);
-      $str = join(' ', map {toToken($_)->{text}} @{$_->{tokens}});
-      $anl->analyzeThingy($_,\$str,$opts);
+    foreach $x (@{$doc->{body}}) {
+      $str = join(' ', map {$xlit->($_)} @{$x->{tokens}});
+      $anl->analyzeThingy($x,\$str,$opts);
     }
   }
   elsif ($anl->{analyzeWhich} eq 'token' || $anl->{analyzeWhich} eq 'type') {
-    foreach (@{$doc->{body}}) {
-      $_ = toSentence($_);
-      foreach (@{$_->{tokens}}) {
-	$_ = toToken($_);
-	$anl->analyzeThingy($_,\$_->{text},$opts);
-      }
+    foreach $x (map {@{$_->{tokens}}} @{$doc->{body}}) {
+      $str = $xlit->($x);
+      $anl->analyzeThingy($x,\$str,$opts);
     }
   }
   else {
@@ -311,7 +323,8 @@ object structure:
      mapFile => $filename,     ##-- default: none (REQUIRED)
      ##-- Analysis Options
      analyzeWhich     => $which, ##-- one of 'token', 'sentence', 'document'; default='document'
-     label            => $label, ##-- destination key (default='langid')
+     vlabel           => $label, ##-- verbose destination key (default='langid')
+     label            => $label, ##-- simple destination key (default='lang')
      ##-- Analysis Objects
      map            => $map,   ##-- a Lingua::LangId::Map object
     )
