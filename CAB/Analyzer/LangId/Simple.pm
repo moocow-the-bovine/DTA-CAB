@@ -19,7 +19,7 @@ sub new {
 			      ##-- analysis selection
 			      label      => 'lang',
 			      #slabel     => 'lang', ##-- sentence-level label
-			      vlabel      => 'lang_counts', ##-- DEBUG: verbose sentence-level counts, empty or undef for none
+			      #vlabel     => 'lang_counts', ##-- DEBUG: verbose sentence-level counts, empty or undef for none
 			      defaultLang => 'de',
 			      defaultCount => 0.1,  ##-- bonus count for default lang (characters)
 			      minSentLen   => 2,    ##-- minimum number of tokens in sentence required before guessing
