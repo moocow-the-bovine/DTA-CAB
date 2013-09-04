@@ -119,7 +119,7 @@ sub parseRawString {
 		    | (?:[[:alpha:]\#\@]\.)                             ##-- dotted single-letter abbreviations
 		    | (?:[[:digit:]\#\@]+[[:alpha:]_\#\@]+)             ##-- numbers with optional alphabetic suffixes
 		    | (?:[\-\+]?[[:digit:]_\#\@]*[[:digit:]_\,\.\#\@]+) ##-- comma- and\/or dot-separated numbers
-		    | (?:\,\,|\`\`|\'\'|\-+|\.\.+)                      ##-- special punctuation sequences
+		    | (?:\,\,|\`\`|\'\'|\-+|\.\.+|\[Formel\])           ##-- special punctuation sequences
 		    | (?:[[:alpha:]_\-\¬\#\@]+)                         ##-- "normal" alphabetics (with "#", "@" ~= unknown)
 		    | (?:[[:punct:]]+)                                  ##-- "normal" punctuation characters
 		    | (?:[^[:punct:][:digit:][:space:]]+)               ##-- "normal" alphabetic tokens
