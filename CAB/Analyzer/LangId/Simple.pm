@@ -19,9 +19,11 @@ sub new {
 			      ##-- analysis selection
 			      label      => 'lang',
 			      #slabel     => 'lang', ##-- sentence-level label
+			      vlabel      => 'lang_counts', ##-- DEBUG: verbose sentence-level counts, empty or undef for none
 			      defaultLang => 'de',
-			      defaultCount => 0.1,  ##-- bonus count for default lang
-			      minSentLen   => 2,    ##-- minimum sentence length for guess (tokens)
+			      defaultCount => 0.1,  ##-- bonus count for default lang (characters)
+			      minSentLen   => 2,    ##-- minimum number of tokens in sentence required before guessing
+			      minSentChars => 8,    ##-- minimum number of text characters in sentence required begore guessing
 
 			      ##-- user args
 			      @_
@@ -72,11 +74,11 @@ sub analyzeTypes {
       if    ($_->{text} =~ /^\p{Greek}{2,}$/)  { push(@l, 'el'); }
       elsif ($_->{text} =~ /^\p{Hebrew}{2,}$/) { push(@l, 'he'); }
       elsif ($_->{text} =~ /^\p{Arabic}{2,}$/) { push(@l, 'ar'); }
-      elsif ($_->{text} =~ /[[:alpha:]]{2,}/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); }
+      elsif ($_->{text} =~ /[[:alpha:]]{2,}/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); } ##-- combination of latin and non-latin characters
     }
-    elsif ($_->{text} =~ /[\p{InMathematicalOperators}\+±\=\<\>]/ || $_->{text} eq '[Formel]') {
-      push(@l,'xy');
-    }
+    if    ($_->{text} =~ /[\p{InMathematicalOperators}]/) { push(@l,'xy'); }
+    elsif ($_->{text} =~ /[[:alpha:]](?:.?)[[:digit:]]/) { push(@l,'xy'); }
+
     push(@l, 'la') if ($_->{mlatin});
     push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
     #push(@l, 'de','exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
@@ -101,20 +103,27 @@ sub analyzeSentences {
   ##-- common vars
   my $label  = $lid->{label} || $lid->defaultLabel;
   my $slabel = $lid->{slabel} || $label;
+  my $vlabel = $lid->{vlabel};
   my $l0     = $lid->{defaultLang} // '';
   my $n0     = $l0 ? ($lid->{defaultCount}//0) : 0;
   my $minlen = $lid->{minSentLen} // 0;
+  my $minchrs= $lid->{minSentChars} // 0;
   my $nil    = [];
 
   ##-- ye olde loope
-  my (%ln,$s,$l,$n);
+  my (%ln,$s,$nchrs,$l,$n,$w);
   foreach $s (@{$doc->{body}}) {
-    ##-- check minimum sentence length
+    ##-- check minimum sentence length in tokens
     next if (@{$s->{tokens}} < $minlen);
 
-    ##-- count number of stopwords per language
-    %ln = ($l0=>0);
-    ++$ln{$_} foreach (map {@{$_->{$label}//$nil}} @{$s->{tokens}});
+    ##-- count number of stopword-CHARACTERS per language
+    %ln = ($l0=>$n0);
+    $nchrs = 0;
+    foreach $w (@{$s->{tokens}}) {
+      $nchrs  += length($w->{text});
+      $ln{$_} += length($w->{text}) foreach (@{$w->{$label}//$nil});
+    }
+    next if ($nchrs < $minchrs);
 
     ##-- get top-ranked language for this sentence
     ($l,$n) = ($l0,$n0);
@@ -122,7 +131,7 @@ sub analyzeSentences {
       ($l,$n)=($_,$ln{$_}) if ($n < $ln{$_});
     }
     $s->{$slabel} = $l;
-    #$s->{"${slabel}_counts"} = {%ln}; ##-- DEBUG
+    $s->{$vlabel} = {%ln} if ($vlabel); ##-- DEBUG
   }
 
   return $doc;
