@@ -114,15 +114,15 @@ sub parseRawString {
   ##-- step 1: basic tokenization
   my (@toks);
   while ($$src =~ m/(
-		      (?:([[:alpha:]_\-\#\@]+)[\-\м](?:\n\s*)([[:alpha:]_\-\#\@]+))   ##-- line-broken alphabetics
+		      (?:([[:alpha:]_\-н\#\@]+)[\-м](?:\n\s*)([[:alpha:]_\-н\#\@]+))   ##-- line-broken alphabetics
 		    | (?i:[IVXLCDM\#\@]+\.)                             ##-- dotted roman numerals (hack)
 		    | (?:[[:alpha:]\#\@]\.)                             ##-- dotted single-letter abbreviations
 		    | (?:[[:digit:]\#\@]+[[:alpha:]_\#\@]+)             ##-- numbers with optional alphabetic suffixes
 		    | (?:[\-\+]?[[:digit:]_\#\@]*[[:digit:]_\,\.\#\@]+) ##-- comma- and\/or dot-separated numbers
 		    | (?:\,\,|\`\`|\'\'|\-+|\.\.+|\[Formel\])           ##-- special punctuation sequences
-		    | (?:[[:alpha:]_\-\м\#\@]+)                         ##-- "normal" alphabetics (with "#", "@" ~= unknown)
+		    | (?:[[:alpha:]_\-мн\#\@]+)                         ##-- "normal" alphabetics (with "#", "@" ~= unknown)
 		    | (?:[[:punct:]]+)                                  ##-- "normal" punctuation characters
-		    | (?:[^[:punct:][:digit:][:space:]]+)               ##-- "normal" alphabetic tokens
+		    | (?:[^[:punct:][:digit:][:space:]]+)               ##-- "strange" alaphbetic tokens
 		    | (?:\S+)                                           ##-- HACK: anything else
 		    )
 		   /xsg)
