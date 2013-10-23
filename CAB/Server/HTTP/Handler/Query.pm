@@ -43,6 +43,7 @@ BEGIN {
 ##   pushMode => $mode,             ##-- push mode for addVars (default='keep')
 ##   ##
 ##   ##-- NEW in Handler::Query
+##   maxRequestSize => $bytes,      ##-- maximum allowable request size (content-length in bytes; default: undef//-1: no max)
 ##   prefix => $prefix,             ##-- analyzer name prefix (automatically trimmed; default='dta.cab.')
 ##   allowAnalyzers => \%analyzers, ##-- set of allowed analyzers ($allowedAnalyzerName=>$bool, ...) -- default=undef (all allowed)
 ##   defaultAnalyzer => $aname,     ##-- default analyzer name (default = 'default')
@@ -59,6 +60,7 @@ sub new {
 			     #encoding=>'UTF-8', ##-- default CGI parameter encoding (now always UTF-8)
 			     allowGet=>1,
 			     allowPost=>1,
+			     maxRequestSize=>undef,
 			     logVars => undef,
 			     pushMode => 'keep',
 			     allowAnalyzers=>undef,
@@ -113,6 +115,11 @@ sub run {
   ##-- check for LIST
   my @upath = $hreq->uri->path_segments;
   return $h->runList($srv,$path,$c,$hreq) if ($upath[$#upath] eq 'list');
+
+  ##-- check request size
+  if (($h->{maxRequestSize}//-1) >= 0 && ($hreq->content_length//0) > $h->{maxRequestSize}) {
+    return $h->cerror($c, RC_REQUEST_ENTITY_TOO_LARGE, "request content exceeds handler limit (max=$h->{maxRequestSize} bytes)");
+  }
 
   ##-- parse query parameters
   my $vars = $h->cgiParams($c,$hreq,defaultName=>'qd') or return undef;

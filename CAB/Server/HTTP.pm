@@ -47,6 +47,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     deny  => \@deny_ip_regexes,  ##-- deny queries from these clients (default=none)
 ##     _allow => $allow_ip_regex,   ##-- single allow regex (compiled by 'prepare()')
 ##     _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
+##     maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
 ##     ##
 ##     ##-- logging
 ##     logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
@@ -95,6 +96,7 @@ sub new {
 			   deny  => [],
 			   _allow => undef,
 			   _deny  => undef,
+			   maxRequestSize => undef,
 
 			   ##-- logging
 			   logRegisterPath => 'info',
@@ -203,6 +205,12 @@ sub run {
     $urikey = $hreq->uri->as_string;
     $srv->vlog($srv->{logConnect}, "client $chost: ", $hreq->method, ' ', $urikey);
     $srv->vlog($srv->{logRequestData}, "client $chost: HTTP::Request={\n", $hreq->as_string, "}");
+
+    ##-- check global content-length limit
+    if (($srv->{maxRequestSize}//-1) >= 0 && $hreq->content_length > $srv->{maxRequestSize}) {
+      $srv->clientError($csock, RC_REQUEST_ENTITY_TOO_LARGE, "request exceeds server limit (max=$srv->{maxRequestSize} bytes)");
+      next;
+    }
 
     ##-- map request to handler
     ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
