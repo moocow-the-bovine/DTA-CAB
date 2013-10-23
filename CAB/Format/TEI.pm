@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::TEI.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <jurish@bbaw.de>
 ## Description: Datum parser|formatter: XML: TEI (with or without //c elements), using DTA::TokWrap
 ##  + uses DTA::CAB::Format::XmlTokWrap for output
 
@@ -41,6 +41,7 @@ $DTA::TokWrap::Document::TOKENIZE_CLASS = 'auto';  ##-- fixed (?) 2013-06-21
 
 ##-- default parser/formatter for *.t.xml files
 our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
+#our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrapFast'; ##-- ca. 2x faster, but doesn't support all data-keys
 
 ##==============================================================================
 ## Constructors etc.
@@ -180,7 +181,7 @@ sub rmtmpdir {
 sub txmlfmt {
   return $_[0]{txmlfmt} if (ref $_[0]{txmlfmt});
   my %txmlopts = %{$_[0]};
-  delete @txmlopts{qw(xdoc xprs txmlfmt)};
+  delete @txmlopts{qw(xdoc xprs txmlfmt fh tmpfh)};
   return $_[0]{txmlfmt} = $_[0]->txmlclass->new(%txmlopts);
 }
 
@@ -320,7 +321,8 @@ sub flush {
   my $fmt = shift;
   $fmt->vlog($fmt->{teilog}, "flush()") if (Log::Log4perl->initialized);
   #File::Copy::copy($fmt->{outfile},$fmt->{fh}) if (defined($fmt->{outfile}) && defined($fmt->{fh}));
-  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh}) if (defined($fmt->{outbuf}) && defined($fmt->{fh}) && $fmt->{fh}->opened);
+  $fmt->buf2fh(\$fmt->{outbuf}, $fmt->{fh})
+    if (defined($fmt->{outbuf}) && defined($fmt->{fh}) && $fmt->{fh}->opened);
   #$fmt->SUPER::flush(@_); ##-- not here, since this writes literal {xdoc} to the output file!
   delete @$fmt{qw(outfile outbuf xdoc)};
   return $fmt;
@@ -356,16 +358,12 @@ sub toFh {
 sub putDocument {
   my ($fmt,$doc) = @_;
 
-  ##-- call superclass method
-  $fmt->vlog($fmt->{teilog}, $fmt->txmlclass."->putDocument()");
-  my $rc = $fmt->txmlfmt->putDocument($doc);
-  return $rc if (!$fmt->{spliceback});
-
   ##-- get original TEI-XML buffer
-  my $teibufr = $doc->{teibufr} || $fmt->{teibufr};
+  my $teibufr = $fmt->{spliceback} ? ($doc->{teibufr} || $fmt->{teibufr}) : undef;
   if (!defined($teibufr) || !$$teibufr) {
     $fmt->logwarn("spliceback mode requested but no 'teibufr' document property - using XmlTokWrap format");
-    return $rc;
+    $fmt->vlog($fmt->{teilog}, $fmt->txmlclass."->putDocument()");
+    return $fmt->txmlfmt->toString(\$fmt->{outbuf})->putDocument($doc)->flush();
   }
 
   ##-- get temp directory
@@ -377,16 +375,25 @@ sub putDocument {
       or $fmt->logconfess("couldn't create temporary file $tmpdir/tmp.tei.xml: $!");
 
   ##-- get tokwrap object
-  $fmt->vlog($fmt->{teilog}, "putDocument(): splice to $tmpdir/tmp.tei.cws.xml");
   my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.tei.xml as TokWrap document: $!");
   $twdoc->{xmldata}  = $$teibufr;
   $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";
-  if (UNIVERSAL::isa($fmt->txmlfmt->{xdoc},'XML::LibXML::Document')) {
+
+  ##-- dump underlying txml data
+  my ($rc);
+  $fmt->vlog($fmt->{teilog}, "putDocument(): underlying ".$fmt->txmlclass."->putDocument()");
+  if ($fmt->txmlfmt->can('putDocument') eq DTA::CAB::Format::XmlNative->can('putDocument')) {
+    ##-- XmlNative-style putDocument uses underlying libxml xdoc
+    $rc = $fmt->txmlfmt->putDocument($doc);
     $twdoc->{xtokdata} = $fmt->txmlfmt->{xdoc}->toString(0);
   } else {
-    $fmt->txmlfmt->toString(\$twdoc->{xtokdata}, 0)->putDocument($doc)->flush;
+    ##-- XmlTokWrapFast-style putDocument to buffer
+    $rc = $fmt->txmlfmt->toString(\$twdoc->{xtokdata}, 0)->putDocument($doc)->flush;
   }
+  return $rc if (!$rc);
+
+  $fmt->vlog($fmt->{teilog}, "putDocument(): splice to $tmpdir/tmp.tei.cws.xml");
   $twdoc->{cwsfile}  = "$tmpdir/tmp.tei.cws.xml";
   #$twdoc->{cwstfile} = "$tmpdir/tmp.tei.cwst.xml";
   #$twdoc->{cwstbufr} = \$fmt->{outbuf}; ##-- output to string

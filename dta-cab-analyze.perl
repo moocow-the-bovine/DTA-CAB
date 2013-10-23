@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
 
 use lib '.', 'MUDL';
-use DTA::CAB::Analyzer::LangId::Simple; ##-- DEBUG
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
 use DTA::CAB::Datum ':all';
