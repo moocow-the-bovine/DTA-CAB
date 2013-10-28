@@ -53,6 +53,10 @@ sub {
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
 			   ).'
      ] if (!defined($mw->{analyses}));
+   foreach (@{$mw->{analyses}}) {
+     ##-- tag-translation hack: apply BEFORE sending to moot!
+     $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}}));
+   }
    $mw
  } @{$s->{tokens}}];
  return if (!@$msent); ##-- ignore empty sentences
@@ -67,11 +71,7 @@ sub {
  foreach (@$msent) {
    $_->{word}=$_->{text};
    delete($_->{text});
-   foreach (@{$_->{analyses}}) {
-     #$_->{mtag} = $_->{tag};
-     $_->{tag}  = $t if (defined($t=$tagx->{$_->{tag}}));
-   }
-   $_->{tag} = $t if (defined($t=$tagx->{$_->{tag}}));
+   $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}}));
    if ($prune) {
      $t = $_->{tag};
      @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
