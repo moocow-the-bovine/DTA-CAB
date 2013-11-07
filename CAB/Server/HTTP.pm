@@ -207,7 +207,7 @@ sub run {
     $srv->vlog($srv->{logRequestData}, "client $chost: HTTP::Request={\n", $hreq->as_string, "}");
 
     ##-- check global content-length limit
-    if (($srv->{maxRequestSize}//-1) >= 0 && $hreq->content_length > $srv->{maxRequestSize}) {
+    if (($srv->{maxRequestSize}//-1) >= 0 && ($hreq->content_length//0) > $srv->{maxRequestSize}) {
       $srv->clientError($csock, RC_REQUEST_ENTITY_TOO_LARGE, "request exceeds server limit (max=$srv->{maxRequestSize} bytes)");
       next;
     }
