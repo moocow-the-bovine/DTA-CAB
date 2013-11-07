@@ -54,7 +54,7 @@ BEGIN {
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
 ##
 ##     ##-- output: inherited from XmlCommon
-##     level => $level,                        ##-- output formatting level (default=0)
+##     level => $level,                        ##-- output formatting level (OVERRIDE: default=1)
 ##     output => [$how,$arg]                   ##-- either ['fh',$fh], ['file',$filename], or ['str',\$buf]
 ##    }
 sub new {
@@ -73,6 +73,7 @@ sub new {
 					     tcfbufr=>undef,
 					     tcfdoc=>undef,
 					    },
+			      level => 1,
 
 			      ##-- user args
 			      @_
