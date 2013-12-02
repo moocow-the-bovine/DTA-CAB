@@ -368,7 +368,7 @@ sub putDocument {
   my ($s,$w);
   $fh->print("\n", $xmlstart->('doc', base=>$doc->{base}));
   foreach $s (@{$doc->{body}}) {
-    $fh->print("\n ", $xmlstart->('s',id=>$s->{id}));
+    $fh->print("\n ", $xmlstart->('s',id=>$s->{id}, (exists($s->{pn}) ? (pn=>$s->{pn}) : qw())));
     foreach $w (@{$s->{tokens}}) {
       $fh->print("\n\t",
 		 $xmlelt->('w',

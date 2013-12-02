@@ -81,6 +81,7 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     labh => \%sym2lab,  ##-- (?) label hash:  $sym2lab{$labSym} = $labId;
 ##     laba => \@lab2sym,  ##-- (?) label array:  $lab2sym[$labId]  = $labSym;
 ##     labc => \@chr2lab,  ##-- (?)chr-label array: $chr2lab[ord($chr)] = $labId;, by unicode char number (e.g. unpack('U0U*'))
+##     warned_symbols => \%sym2undef, ##-- tracks unknown symbols we've already warned about (for check_symbols != 0)
 ##
 ##     ##-- INHERITED from DTA::CAB::Analyzer
 ##     label => $label,    ##-- analyzer label (default: from analyzer class name)
@@ -100,6 +101,7 @@ sub new {
 			      labh=>{},
 			      laba=>[],
 			      labc=>[],
+			      warned_symbols=>{},
 
 			      ##-- options
 			      eow            =>'',
@@ -378,8 +380,9 @@ sub analyzeTypes {
 	elsif ($check_symbols) {
 	  ##-- fst: labels: by character: verbose
 	  @wlabs = (@$labc[unpack('U0U*',$uword)],@eowlab);
-	  foreach (grep { !defined($wlabs[$_]) } (0..$#wlabs)) {
+	  foreach (grep { !defined($wlabs[$_]) && !exists($aut->{warned_symbols}{substr($uword,$_,1)}) } (0..$#wlabs)) {
 	    $aut->warn("ignoring unknown character '", substr($uword,$_,1), "' in word '$w' (normalized to '$uword').\n");
+	    $aut->{warned_symbols}{substr($uword,$_,1)} = undef;
 	  }
 	  @wlabs = grep {defined($_)} @wlabs;
 	}
