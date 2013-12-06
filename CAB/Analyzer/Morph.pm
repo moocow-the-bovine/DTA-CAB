@@ -22,6 +22,7 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'morph',
+			      capsFallback => 1,
 			      wantAnalysisLo => 0,
 			      #wantAnalysisLemma => 1, ##-- default=0
 			      wantAnalysisLemma => 0, ##-- default=0
