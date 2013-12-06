@@ -27,6 +27,9 @@ sub new {
 			      label => 'lts',
 			      wantAnalysisLo => 0,
 
+			      ##-- verbosity
+			      check_symbols => 0,
+
 			      ##-- user args
 			      @_
 			     );

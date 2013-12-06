@@ -29,6 +29,9 @@ sub new {
 			      ##-- analysis selection
 			      #analyzeGet => '$_->{$lab} ? qw() : '._am_xlit; ##-- default
 
+			      ##-- verbosity
+			      check_symbols => 0,
+
 			      ##-- user args
 			      @_
 			     );

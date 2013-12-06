@@ -36,6 +36,9 @@ sub new {
 			      max_paths  => 1,
 			      max_ops    => -1,
 
+			      ##-- verbosity
+			      check_symbols => 0,
+
 			      ##-- user args
 			      @_
 			     );
