@@ -1,16 +1,18 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Format::Raw::Waste.pm
+## File: DTA::CAB::Format::Raw::HTTP.pm
 ## Author: Bryan Jurish <jurish@bbaw.de>
-## Description: Datum parser: raw untokenized text (using moot/waste)
+## Description: Datum parser: raw untokenized text (using HTTP tokenizer)
 
-package DTA::CAB::Format::Raw::Waste;
+package DTA::CAB::Format::Raw::HTTP;
 use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
 use IO::File;
 use Encode qw(encode decode);
-use Moot::Waste;
+
+use LWP::UserAgent;
+
 use Carp;
 use strict;
 
@@ -21,7 +23,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'raw-waste', filenameRegex=>qr/\.(?i:raw-waste|txt-waste)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'raw-http', filenameRegex=>qr/\.(?i:raw-http|txt-http)$/);
 }
 
 ##==============================================================================
@@ -32,42 +34,41 @@ BEGIN {
 ##  + object structure: assumed HASH
 ##    {
 ##     ##-- Input
-##     doc => $doc,                    ##-- buffered input document
-##     wasterc => $rcFile,             ##-- waste .rc file; default: "$HOME/.wasterc" || "/etc/wasterc" || "/etc/default/waste"
+##     doc => $doc,            ##-- buffered input document
+##     tokurl    => $url,      ##-- tokenizer (default='http://kaskade.dwds.de/waste/tokenize.fcgi?m=dta&O=mr,loc')
+##     txtparam  => $param,    ##-- text query parameter (default='t')
+##     timeout   => $secs,     ##-- user agent timeout (default=300)
 ##
 ##     ##-- Runtime
-##     wscanner => $scanner,           ##-- waste scanner
-##     wlexer   => $lexer,             ##-- waste lexer
-##     wtagger  => $tagger,            ##-- waste tagger
-##     wdecoder => $decoder,           ##-- waste decoder
-##     wannotator => $wannot,          ##-- waste annotator
-##
-##     ##-- Runtime HACKS
-##     wwriter => $wwriter,            ##-- native-format writer (hack)
+##     ua => $ua,              ##-- low-level underlying LWP::UserAgent
 ##
 ##     ##-- Common
-##     #utf8 => $bool,		       ##-- utf8 mode always on
+##     #utf8 => $bool,         ##-- utf8 mode always on
 sub new {
   my $that = shift;
   my $fmt = bless({
 		   ##-- common
 		   utf8 => 1,
 
-		   ##-- inputz
+		   ##-- input
 		   doc => undef,
-		   wasterc => undef,
+		   tokurl => 'http://kaskade.dwds.de/waste/tokenize.fcgi?m=dta&O=mr,loc',
+		   txtparam  => 't',
+		   timeout   => 300,
 
 		   ##-- runtime
-		   wscanner => undef,
-		   wlexer   => undef,
-		   wtagger  => undef,
-		   wdecoder => undef,
-		   wannotator => undef,
-		   wwriter  => undef,
+		   ua => undef,
 
 		   ##-- user args
 		   @_
 		  }, ref($that)||$that);
+
+  ##-- instantiate LWP::UserAgent
+  if (!defined($fmt->{ua})) {
+    $fmt->{ua} = LWP::UserAgent->new(timeout=>$fmt->{timeout})
+      or $fmt->logconfess("could not create LWP::UserAgent: $!");
+  }
+
   return $fmt;
 }
 
@@ -79,63 +80,7 @@ sub new {
 ##  + returns list of keys not to be saved
 ##  + default just returns empty list
 sub noSaveKeys {
-  return (shift->SUPER::noSaveKeys(), qw(doc wscanner wlexer wtagger wdecoder wannotator wwriter));
-}
-
-##==============================================================================
-## Methods: Model I/O
-
-## $fmt_or_undef = $fmt->ensureLoaded()
-sub ensureLoaded {
-  my $fmt = shift;
-  return $fmt if ($fmt->{wtagger});
-
-  ##-- get rc file
-  if (!$fmt->{wasterc}) {
-    $fmt->{wasterc} = (grep {-f $_} "$ENV{HOME}/.wasterc", "/etc/wasterc", "/etc/default/wasterc")[0];
-    $fmt->logconfess("cannot tokenize without a model -- specify wasterc!") if (!$fmt->{wasterc});
-  }
-
-  return $fmt->loadModel();
-}
-
-## $fmt_or_undef = $fmt->loadModel()
-## $fmt_or_undef = $fmt->loadModel($rcfile)
-sub loadModel {
-  my ($fmt,$rcfile) = @_;
-  $rcfile //= $fmt->{wasterc};
-  $fmt->{wasterc} = $rcfile;
-
-  ##-- create waste objects
-  $fmt->{wscanner} = Moot::Waste::Scanner->new( $Moot::ioFormat{text}|$Moot::ioFormat{location} );
-  $fmt->{wlexer}   = Moot::Waste::Lexer->new( $Moot::ioFormat{wd}|$Moot::ioFormat{location} );
-  $fmt->{wtagger}  = Moot::HMM->new();
-  $fmt->{wdecoder} = Moot::Waste::Decoder->new( $Moot::ioFormat{m}|$Moot::ioFormat{location} );
-  $fmt->{wannotator} = Moot::Waste::Annotator->new( $Moot::ioFormat{mr}|$Moot::ioFormat{location} );
-  $fmt->{wwriter}  = Moot::TokenWriter::Native->new( $Moot::ioFormat{mr}|$Moot::ioFormat{location} );
-
-  ##-- load waste model
-  open(my $rc,"<$rcfile")
-    or $fmt->logconfess("open failed for waste-rc $rcfile: $!");
-  while (defined($_=<$rc>)) {
-    next if (/^\#/ || /^\s*$/);
-    chomp;
-    my ($opt,$val) = split(/\s/,$_,2);
-    if    ($opt =~ /^abbr/) { $fmt->{wlexer}->abbrevs->load($val); }
-    elsif ($opt =~ /^conj/) { $fmt->{wlexer}->conjunctions->load($val); }
-    elsif ($opt =~ /^stop/) { $fmt->{wlexer}->stopwords->load($val); }
-    elsif ($opt =~ /^dehyph/) { $fmt->{wlexer}->dehyphenate(1); }
-    elsif ($opt =~ /^no-dehyph/) { $fmt->{wlexer}->dehyphenate(0); }
-    elsif ($opt =~ /^(?:hmm|model)/) {
-      $fmt->{wtagger}->load($val) or $fmt->logconfess("failed to load waste model '$val'");
-    }
-    else {
-      ; ##-- ignore other options
-    }
-  }
-  close($rc);
-
-  return $fmt;
+  return (shift->SUPER::noSaveKeys(), qw(doc ua));
 }
 
 ##==============================================================================
@@ -153,29 +98,37 @@ sub close {
 
 ## $fmt = $fmt->fromString( $string)
 ## $fmt = $fmt->fromString(\$string)
-##  + select input from string $string
-##  + default calls fromFh()
+sub fromString {
+  my $fmt = shift;
+  $fmt->close();
+  return $fmt->parseRawString(ref($_[0]) ? $_[0] : \$_[0]);
+}
 
-## $fmt = $fmt->fromFh($fh)
+## $fmt = $fmt->fromFh($filename_or_handle)
+##  + override calls fromFh_str()
 sub fromFh {
-  my ($fmt,$fh) = @_;
-  $fmt->ensureLoaded();
+  return $_[0]->fromFh_str(@_[1..$#_]);
+}
 
-  my ($ttstr);
-  $fmt->{wlexer}->close();
-  $fmt->{wscanner}->close();
-  $fmt->{wscanner}->from_fh($fh);
-  $fmt->{wlexer}->scanner($fmt->{wscanner});
-  $fmt->{wwriter}->to_string($ttstr);
-  $fmt->{wdecoder}->sink($fmt->{wannotator});
-  $fmt->{wannotator}->sink($fmt->{wwriter});
-  $fmt->{wtagger}->tag_stream($fmt->{wlexer},$fmt->{wdecoder});
-  $fmt->{wdecoder}->close();
-  $fmt->{wannotator}->close();
-  $fmt->{wwriter}->close();
+##--------------------------------------------------------------
+## Methods: Input: local
+
+## $fmt = $fmt->parseRawString(\$str)
+sub parseRawString {
+  my ($fmt,$str) = @_;
+  utf8::encode($$str) if (utf8::is_utf8($$str));
+
+  ## Use multipart/form-data to avoid implicit LF->CR+LF conversion by LWP::UserAgent (HTTP::Request::Common::POST() v6.03 / debian wheezy)
+  #$fmt->trace("querying $fmt->{tokurl} ...");
+  my $rsp = $fmt->{ua}->post($fmt->{tokurl}, { $fmt->{txtparam}=>$$str }, 'Content-Type'=>'multipart/form-data');
+  if (!$rsp || !$rsp->is_success) {
+    $fmt->trace("parseRawString(): error from server:\n", $rsp->as_string) if ($rsp);
+    $fmt->logdie("parseRawString(): error from server $fmt->{tokurl}: ", ($rsp ? $rsp->status_line : '(no response)'))
+      if (!$rsp || !$rsp->is_success);
+  }
 
   ##-- construct & buffer document
-  $fmt->{doc} = DTA::CAB::Format::TT->parseTokenizerString(\$ttstr);
+  $fmt->{doc} = DTA::CAB::Format::TT->parseTokenizerString( $rsp->content_ref );
   return $fmt;
 }
 
@@ -220,7 +173,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Format::Raw::Waste - Document parser: raw untokenized text using Moot::Waste
+DTA::CAB::Format::Raw::HTTP - Document parser: raw untokenized text via HTTP tokenizer API
 
 =cut
 
@@ -230,12 +183,12 @@ DTA::CAB::Format::Raw::Waste - Document parser: raw untokenized text using Moot:
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Format::Raw::Waste;
+ use DTA::CAB::Format::Raw::HTTP;
  
  ##========================================================================
  ## Methods
  
- $fmt = DTA::CAB::Format::Raw::Waste->new(%args);
+ $fmt = DTA::CAB::Format::Raw::HTTP->new(%args);
  @keys = $class_or_obj->noSaveKeys();
  $fmt = $fmt->close();
  $fmt = $fmt->parseRawString(\$str);
@@ -252,15 +205,16 @@ DTA::CAB::Format::Raw::Waste - Document parser: raw untokenized text using Moot:
 
 =head1 DESCRIPTION
 
-DTA::CAB::Format::Raw::Waste
+DTA::CAB::Format::Raw::HTTP
 is an input-only L<DTA::CAB::Format|DTA::CAB::Format> subclass
-for untokenized raw string intput using pure perl.
+for untokenized raw string intput using LWP::UserAgent to query
+a tokenization server via HTTP.
 
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format::Raw::Waste: Constructors etc.
+## DESCRIPTION: DTA::CAB::Format::Raw::HTTP: Constructors etc.
 =pod
 
 =head2 Methods
@@ -274,15 +228,19 @@ for untokenized raw string intput using pure perl.
 %$fmt, %args:
 
  ##-- Input
- doc => $doc,                    ##-- buffered input document
+ doc       => $doc,      ##-- buffered input document
+ tokurl    => $url,      ##-- tokenizer (default='http://kaskade.dwds.de/waste/tokenize.fcgi?m=dta&O=mr,loc')
+ txtparam  => $param,    ##-- text query parameter (default='t')
+ timeout   => $secs,     ##-- user agent timeout (default=300)
+ ua        => $agent,    ##-- underlying LWP::UserAgent
+
 
 =item noSaveKeys
 
  @keys = $class_or_obj->noSaveKeys();
 
-
 Returns list of keys not to be saved
-Override returns qw(doc outbuf).
+Override returns qw(doc ua).
 
 =item close
 

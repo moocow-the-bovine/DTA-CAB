@@ -338,6 +338,44 @@ sub parseTTString {
   return $fmt;
 }
 
+## $doc = $CLASS_OR_OBJECT->parseTokenizerString(\$string)
+##  + scaled-down version of parseTTString() suitable for use with dwds_tomastotath or moot/waste tokenizer output
+sub parseTokenizerString {
+  my ($that,$tstr) = @_;
+  utf8::decode($$tstr) if (!utf8::is_utf8($$tstr));
+
+  my ($toks,%sa);
+  my $sents =
+    [
+     map {
+       %sa=qw();
+       $toks=
+	 [
+	  map {
+	    if ($_ =~ /^\%\%(.*)$/) {
+	      ##-- generic line: add to '_cmts' attribute of current sentence
+	      push(@{$sa{_cmts}},$1) if ($1 !~ /^\$[WS]B\$$/); ##-- generic comment, treated as sentence attribute
+	      qw()
+	    } elsif ($_ =~ /^$/) {
+	      ##-- blank line: ignore
+	      qw()
+	    } elsif (/^([^\t]*)\t([0-9]+) ([0-9]+)(?:\t(.*))?$/) {
+	      ##-- token
+	      {text=>$1,
+		 #loc=>{off=>$2,len=>$3},
+		 ($4 ? (toka=>[map {/^\[(.*)\]$/ ? $1 : $_} split(/\t/,$4)]) : qw())
+	       }
+	    }
+	  }
+	  split(/\n/, $_)
+	 ];
+       (%sa || @$toks ? {%sa,tokens=>$toks} : qw())
+     } split(/\n\n+/, $$tstr)
+    ];
+
+  ##-- construct & buffer document
+  return bless({body=>$sents}, 'DTA::CAB::Document');
+}
 
 ##--------------------------------------------------------------
 ## Methods: Input: Generic API
@@ -604,7 +642,7 @@ sub putSentence {
   $fmt->{fh}->print(join('', map {"%%$_\n"} map {split(/\n/,$_)} @{$sent->{_cmts}})) if ($sent->{_cmts});
   $fmt->{fh}->print("%% Sentence $sent->{id}\n") if (defined($sent->{id}));
   $fmt->{fh}->print("%% \$stxt=$sent->{stxt}\n") if (defined($sent->{stxt}));
-  $fmt->{fh}->print("%% \$s:$_=$sent->{$_}\n") foreach (grep {$_ ne 'id' && $_ ne 'stxt' && $_ ne 'tokens'} keys %$sent);
+  $fmt->{fh}->print("%% \$s:$_=$sent->{$_}\n") foreach (grep {$_ !~ /^(?:id|stxt|tokens|_cmts)$/} keys %$sent);
   $fmt->putToken($_,$bufr) foreach (@{toSentence($sent)->{tokens}});
   $fmt->{fh}->print("\n");
   return $fmt;

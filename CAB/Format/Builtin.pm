@@ -15,6 +15,7 @@ use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Raw;      ##-- raw untokenized (input only)
 use DTA::CAB::Format::Raw::Perl;
 use DTA::CAB::Format::Raw::Waste;
+use DTA::CAB::Format::Raw::HTTP;
 use DTA::CAB::Format::Text;
 #use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;
