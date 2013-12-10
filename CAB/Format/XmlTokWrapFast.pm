@@ -101,6 +101,9 @@ sub xmlparser {
 			delete($attrs{t});
 		      }
 		      push(@$stoks, $w={%attrs});
+		    } elsif ($_[1] eq 'moot') {
+		      ##-- w/moot : parse
+		      $w->{moot} = {%attrs} if ($w);
 		    } elsif ($_[1] eq 'a') {
 		      ##-- w/a : do nothing
 		      ;
