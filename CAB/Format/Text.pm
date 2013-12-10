@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Text.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <jurish@bbaw.de>
 ## Description: Datum parser: verbose human-readable text
 
 package DTA::CAB::Format::Text;

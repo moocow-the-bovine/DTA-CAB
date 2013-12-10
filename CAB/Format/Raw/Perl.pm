@@ -1,10 +1,10 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Format::Raw.pm
+## File: DTA::CAB::Format::Raw::Perl.pm
 ## Author: Bryan Jurish <jurish@bbaw.de>
-## Description: Datum parser: raw untokenized text (hack)
+## Description: Datum parser: raw untokenized text (pure-perl hack)
 
-package DTA::CAB::Format::Raw;
+package DTA::CAB::Format::Raw::Perl;
 use DTA::CAB::Format;
 use DTA::CAB::Datum ':all';
 use IO::File;
@@ -19,7 +19,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Format);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:raw)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'raw-perl', filenameRegex=>qr/\.(?i:raw-perl|txt-perl)$/);
 }
 
 ## %ABBREVS
@@ -349,7 +349,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Format::Raw - Document parser: raw untokenized text
+DTA::CAB::Format::Raw::Perl - Document parser: raw untokenized text, pure-perl hack
 
 =cut
 
@@ -359,12 +359,12 @@ DTA::CAB::Format::Raw - Document parser: raw untokenized text
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Format::Raw;
+ use DTA::CAB::Format::Raw::Perl;
  
  ##========================================================================
  ## Methods
  
- $fmt = DTA::CAB::Format::Raw->new(%args);
+ $fmt = DTA::CAB::Format::Raw::Perl->new(%args);
  @keys = $class_or_obj->noSaveKeys();
  $fmt = $fmt->close();
  $fmt = $fmt->parseRawString(\$str);
@@ -381,22 +381,22 @@ DTA::CAB::Format::Raw - Document parser: raw untokenized text
 
 =head1 DESCRIPTION
 
-DTA::CAB::Format::Raw
+DTA::CAB::Format::Raw::Perl
 is an input-only L<DTA::CAB::Format|DTA::CAB::Format> subclass
-for untokenized raw string intput.
+for untokenized raw string intput using pure perl.
 
 
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format::Raw: Globals
+## DESCRIPTION: DTA::CAB::Format::Raw::Perl: Globals
 =pod
 
 =head2 Globals
 
 =over 4
 
-=item Variable: %DTA::CAB::Format::Raw::ABBREVS
+=item Variable: %DTA::CAB::Format::Raw::Perl::ABBREVS
 
 Pseudo-set of known abbreviations (hack).
 
@@ -405,7 +405,7 @@ Pseudo-set of known abbreviations (hack).
 =cut
 
 ##----------------------------------------------------------------
-## DESCRIPTION: DTA::CAB::Format::Raw: Constructors etc.
+## DESCRIPTION: DTA::CAB::Format::Raw::Perl: Constructors etc.
 =pod
 
 =head2 Methods

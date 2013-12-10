@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::Builtin
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <jurish@bbaw.de>
 ## Description: Load known DTA::CAB::Format subclasses
 
 package DTA::CAB::Format::Builtin;
@@ -13,6 +13,8 @@ use DTA::CAB::Format::Null;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;
 use DTA::CAB::Format::Raw;      ##-- raw untokenized (input only)
+use DTA::CAB::Format::Raw::Perl;
+use DTA::CAB::Format::Raw::Waste;
 use DTA::CAB::Format::Text;
 #use DTA::CAB::Format::Text1; ##-- test v1.x
 use DTA::CAB::Format::TT;

@@ -244,7 +244,7 @@ sub parseTTString {
 	      $tok={text=>$text};
 	      foreach $fieldi (0..$#fields) {
 		$field = $fields[$fieldi];
-		if (($fieldi == 0 && $field =~ m/^(\d+) (\d+)$/) || ($field =~ m/^\[loc\] (?:off=)?(\d+) (?:len=)?(\d+)$/)) {
+		if (($fieldi == 0 && $field =~ m/^([0-9]+) ([0-9]+)$/) || ($field =~ m/^\[loc\] (?:off=)?([0-9]+) (?:len=)?([0-9]+)$/)) {
 		  ##-- token: field: loc
 		  $tok->{loc} = { off=>$1,len=>$2 };
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
@@ -255,7 +255,7 @@ sub parseTTString {
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
-		  if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=(\d) (?:isLatinExt|lx)=(\d) (?:latin1Text|l1s)=(.*)$/) {
+		  if ($field =~ m/^\[xlit\] (?:isLatin1|l1)=([01]) (?:isLatinExt|lx)=([01]) (?:latin1Text|l1s)=(.*)$/) {
 		    $tok->{xlit} = { isLatin1=>($1||0), isLatinExt=>($2||0), latin1Text=>$3 };
 		  } else {
 		    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
@@ -276,7 +276,7 @@ sub parseTTString {
 		    $fobj = $tok;
 		  }
 		  $fkey = $f2key{$fkey} if (defined($f2key{$fkey}));
-		  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([\d\.\+\-eE]+)\>)?$/) {
+		  if ($fval =~ /^(?:(.*?) \: )?(?:(.*?) \@ )?(.*?)(?: \<([0-9\.\+\-eE]+)\>)?$/) {
 		    push(@{$fobj->{$fkey}}, {(defined($1) ? (lo=>$1) : qw()), (defined($2) ? (lemma=>$2) : qw()), hi=>$3, w=>($4||0)});
 		  } else {
 		    $fmt->warn("parseTTString(): could not parse FST analysis field '$fkey' for token '$text': $field");
@@ -299,13 +299,13 @@ sub parseTTString {
 					  (defined($6) ? (func=>$6) : qw()),
 					  (defined($7) ? (depth=>$7) : qw()),
 					});
-		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] (\d)$/) {
+		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] ([0-9])$/) {
 		  ##-- token: field: morph-safety check (msafe|morph/safe)
 		  $tok->{msafe} = $1;
 		} elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
 		  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
 		  $tok->{$1}{$2} = $3;
-		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([\d\.\+\-eE]+)>)?$/) {
+		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/analysis|dmoot/analysis
 		  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
 		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
