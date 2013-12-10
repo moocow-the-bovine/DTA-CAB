@@ -175,7 +175,7 @@ sub {
      } elsif ($w->{xlit} && !$w->{xlit}{isLatinExt}) {
        ##-- word with non-latin characters: leave as-is
        $mw->{analyses} = [{tag=>$text, prob=>0}];
-     } elsif ($_->{lang} && $_->{lang} ne "de") {
+     } elsif ($_->{lang} && (ref($_->{lang}) ? (!grep {$_ eq "de"} @{$_->{lang}}) : ($_->{lang} ne "de"))) {
        ##-- foreign material: leave as-is
        $mw->{analyses} = [{tag=>'._am_xlit('$w').', prob=>0}];
      } else {
@@ -224,7 +224,6 @@ sub {
 ##-- DEBUG
 sub analyzeDebug {
   my $anl = shift;
-return sub {
 
 my $dmoot=$anl;
 my $lab  =$dmoot->{label};
@@ -235,11 +234,11 @@ my $dynbase =log($hmm->dynlex_base());
 my $logbase =log($hmm->dynlex_base());
 my $dynbeta =$hmm->dynlex_beta();
 my ($msent,$w,$mw,$text,$tmp, $analysesOk);
-
+return sub {
  $msent = [map {
    $w  = $_;
    $analysesOk=1;
-   $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
+   $mw = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
      if ($w->{exlex}) {
@@ -255,18 +254,25 @@ my ($msent,$w,$mw,$text,$tmp, $analysesOk);
        ##-- safe contemporary form: leave as-is
        $mw->{analyses} = [{tag=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
 , prob=>0}];
+     } elsif ($w->{xlit} && !$w->{xlit}{isLatinExt}) {
+       ##-- word with non-latin characters: leave as-is
+       $mw->{analyses} = [{tag=>$text, prob=>0}];
+     } elsif ($_->{lang} && (ref($_->{lang}) ? (!grep {$_ eq "de"} @{$_->{lang}}) : ($_->{lang} ne "de"))) {
+       ##-- foreign material: leave as-is
+       $mw->{analyses} = [{tag=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
+, prob=>0}];
      } else {
        $tmp=undef;
        $mw->{analyses} = [
         (map {{tag=>$_->{hi}, prob=>($_->{w}||0)} ##-- _am_dmoot_fst2moota
 } (sort {($a->{w}||0) <=> ($b->{w}||0) || ($a->{hi}||"") cmp ($b->{hi}||"")} (map {$tmp && $tmp->{hi} eq $_->{hi} ? qw() : ($tmp=$_)} sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)} ({hi=>($w->{xlit} ? $w->{xlit}{latin1Text} : $w->{text}) ##== _am_xlit
-, w=>(16/length($text))} ##== _am_id_fst
+, w=>(8.06*(length($text)**-1))} ##== _am_id_fst
 ,
-	($w->{eqphox} ? (map {{ %{$_}, w=>(0.5*(2+$_->{w})/length($text)) } ##-- _am_fst_wcp
+	($w->{eqphox} ? (map {{ %{$_}, w=>((3.42+0.05*$_->{w})*(length($text)**-1)) } ##-- _am_fst_wcp
 } @{$w->{eqphox}}) ##-- _am_fst_wcp_list
  : qw()) ##-- _am_fst_wcp_listref
 ,
-	($w->{rw} ? (map {{ %{$_}, w=>($_->{w}/length($text)) } ##-- _am_fst_wcp
+	($w->{rw} ? (map {{ %{$_}, w=>((1.07+0.04*$_->{w})*(length($text)**-1)) } ##-- _am_fst_wcp
 } @{$w->{rw}}) ##-- _am_fst_wcp_list
  : qw()) ##-- _am_fst_wcp_listref
 )) ##== _am_fst_uniq
@@ -299,7 +305,6 @@ my ($msent,$w,$mw,$text,$tmp, $analysesOk);
  }
 };
 }
-
 
 ##==============================================================================
 ## Methods: I/O
