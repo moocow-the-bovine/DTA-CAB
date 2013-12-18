@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: generic analyzer API
 
 package DTA::CAB::Analyzer;

@@ -52,10 +52,26 @@ sub new {
 
 ## $bool = $anl->ensureLoaded()
 ##  + ensures analysis data is loaded
-##  + returns 1 iff $anl->{annot} is defined
+##  + override just returns 1  iff $anl->{annot} is defined
 sub ensureLoaded {
   my $anl = shift;
+  $anl->{annot} //= Moot::Waste::Annotator->new();
   return defined($anl->{annot}) && ($anl->{loaded}=1);
+}
+
+##======================================================================
+## Methods: Persistence: Perl
+
+## @keys = $class_or_obj->noSaveKeys()
+##  + returns list of keys not to be saved
+##  + override appends 'annot'
+sub noSaveKeys {
+  my $anl = shift;
+  return ($anl->SUPER::noSaveKeys(@_), qw(annot));
+}
+
+sub noSaveBinKeys {
+  return ($_[0]->SUPER::noSaveBinKeys(), $_[0]->noSaveKeys());
 }
 
 ##==============================================================================
