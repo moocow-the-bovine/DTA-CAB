@@ -38,7 +38,7 @@ my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
-my ($s,$msent,$w,$mw,$t,$at,$lang);
+my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
 sub {
  $s     = $_;
  $msent = [map {
@@ -46,7 +46,8 @@ sub {
    $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
-   $mw->{analyses} = ['._am_tagh_list2moota('map {$_ ? @$_ : qw()}
+   $val = undef; ##-- temporary for _am_tagh_moota_uniq()
+   $mw->{analyses} = ['._am_tagh_list2moota_uniq('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
                             ($w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
 			    ($w->{dmoot} ? $w->{dmoot}{morph}

@@ -64,7 +64,6 @@ sub ensureLoaded {
   @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
   return 1 if (!@{$ach->{chain}});
   my $rc = 0;
-  @{$ach->{chain}} = grep {$_} @{$ach->{chain}}; ##-- hack: chuck undef chain-links here
   foreach (@{$ach->{chain}}) {
     $rc = $_->ensureLoaded() || $rc;
   }
@@ -97,6 +96,7 @@ sub analyzeSentences {
   my $standalone = $asub->{standalone};
   my $dmtypes = {};   ##-- $dmtypes:  {$dmootTag => {text=>$dmootTag, morph=>\@dmootMorph}, ... } ##-- analyzed types
   my $udmtypes = {};  ##-- $udmtypes: {$dmootTag => {text=>$dmootTag, morph=>undef, ...}}         ##-- un-analyzed types
+  my $nil      = [];
   my ($tok,$txt,$dm,$dmtag,$dmtyp);
  TOK:
   foreach $tok (map {@{$_->{tokens}}} @{$doc->{body}}) {
@@ -107,10 +107,7 @@ sub analyzeSentences {
     $txt = $tok->{xlit} ? $tok->{xlit}{latin1Text} : $tok->{text};
     if (($tok->{toka} && @{$tok->{toka}}) || ($tok->{tokpp} && @{$tok->{tokpp}})) {
       ##-- existing analyses: toka|tokpp
-      $dm->{morph} = [map { {hi=>$_,w=>0} }
-		      ($tok->{toka} ? @{$tok->{toka}} : qw()),
-		      ($tok->{tokpp} ? @{$tok->{tokpp}} : qw()),
-		     ];
+      $dm->{morph} = [ map { {hi=>$_,w=>0} } @{$tok->{toka} // $tok->{tokpp} // $nil} ];
       $dm->{tag}   = $tok->{xlit} && $tok->{xlit}{isLatinExt} ? $tok->{xlit}{latin1Text} : $tok->{text}; ##-- force literal text for tokenizer-analyzed tokens
     }
     elsif (!$standalone) {

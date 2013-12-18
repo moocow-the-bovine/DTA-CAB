@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Utils.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: generic DTA::CAB utilities
 
 package DTA::CAB::Utils;

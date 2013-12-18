@@ -30,7 +30,7 @@ our %EXPORT_TAGS =
 		qw(_am_fst_sort _am_fst_rsort _am_fst_uniq _am_fst_usort),
 		qw(_am_clean),
 		qw(_am_tag _am_word _am_lemma),
-		qw(_am_tagh_fst2moota _am_tagh_list2moota),
+		qw(_am_tagh_fst2moota _am_tagh_list2moota _am_tagh_moota_uniq _am_tagh_list2moota_uniq),
 		qw(_am_dmoot_fst2moota _am_dmoot_list2moota),
 		qw(parseFstString),
 	       ],
@@ -636,7 +636,7 @@ sub _am_fst_uniq {
   my $listvar = shift || '@_';
   my $tmpvar  = shift || '$val';
   return ("(map {$tmpvar && $tmpvar\->{hi} eq \$_->{hi} ? qw() : ($tmpvar=\$_)}"
-	  .' sort {($a->{hi}||"") cmp ($b->{hi}||"") || ($a->{w}||0) <=> ($b->{w}||0)}'
+	  .' sort {($a->{hi}//"") cmp ($b->{hi}//"") || ($a->{w}//0) <=> ($b->{w}//0)}'
 	  ." $listvar)"
 	  ." ##== _am_fst_uniq\n"
 	 );
@@ -683,7 +683,6 @@ sub _am_lemma {
   return "($mootvar ? $mootvar\->{lemma} : $default) ##== _am_lemma\n";
 }
 
-
 ## PACKAGE::_am_tagh_fst2moota($taghvar='$_')
 ##  + access-closure macro (EXPR): single moot token analysis from TAGH-style fst analysis
 ##  + requires: $$taghvar->{hi}; evaluates to:
@@ -706,6 +705,27 @@ sub _am_tagh_list2moota {
   return "(map {"._am_tagh_fst2moota('$_')."} map {ref(\$_) ? \$_ : {hi=>\$_}} $listvar) ##-- _am_tagh_list2moota\n";
 }
 
+## PACKAGE::_am_tagh_moota_uniq($listvar='@_', $tmpvar='$val')
+##  + access-closure macro (EXPR) for a unique (by details) list of moot analyses $$listvar
+##  + only the prob-minimal analysis is kept for each 'details'
+##  + evaluates to a list of details-unique fst analysis hashes:
+##    (map {$$val && $$val->{details} eq $_->{details} ? qw() : ($$val=$_)} sort {$a->{details} cmp $b->{details} || ($a->{prob}//0) <=> ($b->{prob}//0)} $$listvar)
+##  + assumes $$tmpvar is initialized to undef at start of evaluation
+sub _am_tagh_moota_uniq {
+  my $listvar = shift || '@_';
+  my $tmpvar  = shift || '$val';
+  return ("(map {$tmpvar && $tmpvar\->{details} eq \$_->{details} ? qw() : ($tmpvar=\$_)}"
+	  .' sort {($a->{details}//"") cmp ($b->{details}//"") || ($a->{prob}//0) <=> ($b->{prob}//0)}'
+	  ." $listvar)"
+	  ." ##== _am_tagh_moota_uniq\n"
+	 );
+}
+
+## PACKAGE::_am_tagh_list2moota_uniq($listvar, $tmpvar)
+##  + wrapper for _am_tagh_moota_uniq( _am_tagh_list2moota($listvar), $tmpvar )
+sub _am_tagh_list2moota_uniq {
+  return _am_tagh_moota_uniq( _am_tagh_list2moota($_[0]), $_[1] );
+}
 
 ## PACKAGE::_am_dmoot_fst2moota($fstvar='$_')
 ##  + access-closure macro (EXPR): single dmoot token analysis from fst analysis

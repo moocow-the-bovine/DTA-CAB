@@ -15,7 +15,9 @@ use Getopt::Long qw(:config no_ignore_case);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Pod::Usage;
 
-#BEGIN { require "./CabOpt.pm"; } #use DTA::CAB::Chain::DTA; ##-- DEBUG
+#BEGIN { require "./CabOpt.pm"; }
+#use DTA::CAB::Chain::DTA; ##-- DEBUG
+use DTA::CAB::Analyzer::Moot; ##-- DEBUG
 
 use strict;
 
