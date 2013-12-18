@@ -39,7 +39,7 @@ sub new {
   return $that->SUPER::new(
 			   ##-- options
 			   label => 'tokpp',
-			   annot => Moot::Waste::Annotator->new(),
+			   annot => undef,   ##-- don't create here, else segfaults ensue on loadPerlString() -> loadPerlRef() calls
 
 			   ##-- user args
 			   @_
@@ -52,12 +52,19 @@ sub new {
 
 ## $bool = $anl->ensureLoaded()
 ##  + ensures analysis data is loaded
-##  + override just returns 1  iff $anl->{annot} is defined
+##  + override just returns 1 
 sub ensureLoaded {
   my $anl = shift;
-  $anl->{annot} //= Moot::Waste::Annotator->new();
-  return defined($anl->{annot}) && ($anl->{loaded}=1);
+  return ($anl->{loaded}=1);
 }
+
+## $annot = $anl->annotator()
+##  + returns cached Moot::Waste::Annotator $anl->{annot} or sets it
+sub annotator {
+  return $_[0]{annot} if (defined($_[0]{annot}));
+  return $_[0]{annot} = Moot::Waste::Annotator->new();
+}
+
 
 ##======================================================================
 ## Methods: Persistence: Perl
@@ -86,7 +93,7 @@ sub analyzeTypes {
   my ($tpp,$doc,$types,$opts) = @_;
   $types = $doc->types if (!$types);
   my $akey  = $tpp->{label};
-  my $annot = $tpp->{annot};
+  my $annot = $tpp->annotator();
 
   my ($tok,$a);
   foreach $tok (values(%$types)) {

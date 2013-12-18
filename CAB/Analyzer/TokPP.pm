@@ -15,8 +15,8 @@ use strict;
 ## Globals
 ##==============================================================================
 
-#our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
-our @ISA = qw(DTA::CAB::Analyzer::TokPP::Perl);
+our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
+#our @ISA = qw(DTA::CAB::Analyzer::TokPP::Perl);
 
 
 1; ##-- be happy
