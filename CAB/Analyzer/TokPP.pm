@@ -6,7 +6,7 @@
 
 package DTA::CAB::Analyzer::TokPP;
 
-#use DTA::CAB::Analyzer::TokPP::Perl;
+use DTA::CAB::Analyzer::TokPP::Perl;
 use DTA::CAB::Analyzer::TokPP::Waste;
 use Carp;
 use strict;
@@ -15,7 +15,8 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
+#our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
+our @ISA = qw(DTA::CAB::Analyzer::TokPP::Perl);
 
 
 1; ##-- be happy
