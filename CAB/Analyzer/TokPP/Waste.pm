@@ -1,21 +1,88 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::TokPP.pm
+## File: DTA::CAB::Analyzer::TokPP::Waste.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: heuristic text-based analyzer (for punctutation, numbers, etc): top-level
+## Description: heuristic text-based analyzer (for punctutation, numbers, etc): moot/waste version
 
-package DTA::CAB::Analyzer::TokPP;
+package DTA::CAB::Analyzer::TokPP::Waste;
 
-#use DTA::CAB::Analyzer::TokPP::Perl;
-use DTA::CAB::Analyzer::TokPP::Waste;
+use DTA::CAB::Analyzer;
+use DTA::CAB::Datum ':all';
+use DTA::CAB::Token;
+use Moot;
+use Moot::Waste::Annotator;
+
+use Encode qw(encode decode);
+use IO::File;
 use Carp;
+
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
+our @ISA = qw(DTA::CAB::Analyzer);
+
+##==============================================================================
+## Constructors etc.
+##==============================================================================
+
+## $obj = CLASS_OR_OBJ->new(%args)
+##  + %$obj, %args:
+##    (
+##     label => 'tokpp',       ##-- analyzer label
+##     annot => $annot,        ##-- underlying Moot::Waste::Annotator object
+##    )
+sub new {
+  my $that = shift;
+  return $that->SUPER::new(
+			   ##-- options
+			   label => 'tokpp',
+			   annot => Moot::Waste::Annotator->new(),
+
+			   ##-- user args
+			   @_
+			  );
+}
+
+##==============================================================================
+## Methods: I/O
+##==============================================================================
+
+## $bool = $anl->ensureLoaded()
+##  + ensures analysis data is loaded
+##  + returns 1 iff $anl->{annot} is defined
+sub ensureLoaded {
+  my $anl = shift;
+  return defined($anl->{annot}) && ($anl->{loaded}=1);
+}
+
+##==============================================================================
+## Methods: Analysis
+##==============================================================================
+
+## $doc = $tpp->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in values(%types)
+##  + sets:
+##      $tok->{$anl->{label}} = \@morphHiStrings
+sub analyzeTypes {
+  my ($tpp,$doc,$types,$opts) = @_;
+  $types = $doc->types if (!$types);
+  my $akey  = $tpp->{label};
+  my $annot = $tpp->{annot};
+
+  my ($tok,$a);
+  foreach $tok (values(%$types)) {
+    next if (defined($tok->{$akey})); ##-- avoid re-analysis
+    $a = $annot->annotate($tok)->{analyses};
+
+    delete($tok->{$akey});
+    $tok->{$akey} = [map {$_->{tag}} @$a] if ($a && @$a);
+  }
+
+  return $doc;
+}
 
 
 1; ##-- be happy
@@ -30,7 +97,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctuation etc): high-level wrapper
+DTA::CAB::Analyzer::TokPP::Waste - type-level heuristic token preprocessor (for punctuation etc) using Moot::Waste::Annotator
 
 =cut
 
@@ -43,7 +110,7 @@ DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctua
  ##========================================================================
  ## PRELIMINARIES
  
- use DTA::CAB::Analyzer::TokPP;
+ use DTA::CAB::Analyzer::TokPP::Perl;
  
  ##========================================================================
  ## Methods
@@ -61,13 +128,13 @@ DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctua
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::TokPP
+DTA::CAB::Analyzer::TokPP::Waste
 provides a
 L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
 interface to some simple text-based type-wise
 word analysis heuristics, e.g. for detection of punctutation,
 numeric strings, etc.
-It wraps DTA::CAB::Analyzer::TokPP::Waste.
+It is implemented as a thin wrapper around the Moot::Waste::Annotator class.
 
 =cut
 
@@ -133,7 +200,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010-2013 by Bryan Jurish
+Copyright (C) 2013 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.14.2 or,

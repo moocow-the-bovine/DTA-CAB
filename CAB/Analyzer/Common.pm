@@ -45,6 +45,9 @@ use DTA::CAB::Analyzer::Dict::CDB;        ##-- generic CDB-dictionary-based anal
 #use DTA::CAB::Analyzer::Dict::EqClass;   ##-- generic dictionary-based equivalence class expander (obsolete, removed)
 
 use DTA::CAB::Analyzer::TokPP;           ##-- token-based pre-processor (rule-based analysis)
+#use DTA::CAB::Analyzer::TokPP::Perl;    ##-- token-based pre-processor (rule-based analysis)
+#use DTA::CAB::Analyzer::TokPP::Waste;   ##-- token-based pre-processor (rule-based analysis)
+
 use DTA::CAB::Analyzer::EqLemma;         ##-- lemma-equivalence class expander
 
 use DTA::CAB::Analyzer::GermaNet;             ##-- GermaNet shared routines

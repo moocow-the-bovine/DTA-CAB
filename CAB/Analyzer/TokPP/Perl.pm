@@ -1,21 +1,112 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::TokPP.pm
+## File: DTA::CAB::Analyzer::TokPP::Perl.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: heuristic text-based analyzer (for punctutation, numbers, etc): top-level
+## Description: heuristic text-based analyzer (for punctutation, numbers, etc): pure-perl
 
-package DTA::CAB::Analyzer::TokPP;
+package DTA::CAB::Analyzer::TokPP::Perl;
 
-#use DTA::CAB::Analyzer::TokPP::Perl;
-use DTA::CAB::Analyzer::TokPP::Waste;
+use DTA::CAB::Analyzer;
+use DTA::CAB::Datum ':all';
+use DTA::CAB::Token;
+
+use Encode qw(encode decode);
+use IO::File;
 use Carp;
+
 use strict;
 
 ##==============================================================================
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Analyzer::TokPP::Waste);
+our @ISA = qw(DTA::CAB::Analyzer);
+
+##==============================================================================
+## Constructors etc.
+##==============================================================================
+
+## $obj = CLASS_OR_OBJ->new(%args)
+##  + %$obj, %args:
+##    (
+##     label => 'tokpp',       ##-- analyzer label
+##    )
+sub new {
+  my $that = shift;
+  return $that->SUPER::new(
+			   ##-- options
+			   label => 'tokpp',
+
+			   ##-- user args
+			   @_
+			  );
+}
+
+##==============================================================================
+## Methods: I/O
+##==============================================================================
+
+## $bool = $anl->ensureLoaded()
+##  + ensures analysis data is loaded
+##  + always returns 1
+sub ensureLoaded {
+  my $anl = shift;
+  return $anl->{loaded}=1;
+}
+
+##==============================================================================
+## Methods: Analysis
+##==============================================================================
+
+## $doc = $tpp->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in values(%types)
+##  + sets:
+##      $tok->{$anl->{label}} = \@morphHiStrings
+sub analyzeTypes {
+  my ($tpp,$doc,$types,$opts) = @_;
+  $types = $doc->types if (!$types);
+  my $akey = $tpp->{label};
+
+  my ($tok,$w,@wa);
+  foreach $tok (values(%$types)) {
+    next if (defined($tok->{$akey})); ##-- avoid re-analysis
+    $w = $tok->{text};
+    @wa = qw();
+
+    if ($w =~ m(^[\.\!\?]+$)) {
+      push(@wa, '$.');
+    }
+    elsif ($w =~ m(^[\,\;\-\¬]+$)) {
+      push(@wa, '$,');
+    }
+    elsif ($w =~ m(^[[:punct:]]+$)) {
+      push(@wa, '$(');
+    }
+    elsif ($w =~ m([[:alpha:]])) {
+      if ($w =~ m(^[^\x{00}-\x{ff}]*$)) {
+	push(@wa, 'FM');
+      }
+      if ($w =~ /\.$/ || length($w)<=1) {
+	push(@wa, 'XY');
+      }
+    }
+    elsif ($w =~ m(^[[:digit:]]+$)) {
+      push(@wa, 'CARD');
+    }
+    elsif ($w =~ m(^[[:digit:][:punct:]]+$)) {
+      push(@wa, 'XY');
+    }
+    elsif ($w =~ m([^\x{00}-\x{ff}])) {
+      push(@wa, 'XY');
+    }
+
+    ##-- update token
+    delete($tok->{$akey});
+    $tok->{$akey} = [@wa] if (@wa);
+  }
+
+  return $doc;
+}
 
 
 1; ##-- be happy
@@ -30,7 +121,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctuation etc): high-level wrapper
+DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctuation etc)
 
 =cut
 
@@ -43,7 +134,7 @@ DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctua
  ##========================================================================
  ## PRELIMINARIES
  
- use DTA::CAB::Analyzer::TokPP;
+ use DTA::CAB::Analyzer::TokPP::Perl;
  
  ##========================================================================
  ## Methods
@@ -61,13 +152,12 @@ DTA::CAB::Analyzer::TokPP - type-level heuristic token preprocessor (for punctua
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::TokPP
-provides a
+DTA::CAB::Analyzer::TokPP::Perl
+provides pure-perl a
 L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
 interface to some simple text-based type-wise
 word analysis heuristics, e.g. for detection of punctutation,
 numeric strings, etc.
-It wraps DTA::CAB::Analyzer::TokPP::Waste.
 
 =cut
 
@@ -133,10 +223,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010-2013 by Bryan Jurish
+Copyright (C) 2010-2011 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.14.2 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
