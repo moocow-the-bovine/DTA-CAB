@@ -119,6 +119,7 @@ sub analyzeSentences {
 	  $ld0 = $ld;
 	  $l0  = $l;
 	}
+	$l0 =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
 	$m->{lemma} = $cache{$key} = $l0;
       }
   }

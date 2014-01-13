@@ -305,9 +305,9 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(.*?moot)\/(tag|word|lemma)\]\s?(.*)$/) {
 		  ##-- token: field: (moot|dmoot)/(tag|word|lemma)
 		  $tok->{$1}{$2} = $3;
-		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
+		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/analysis|dmoot/analysis
-		  push(@{$tok->{$1}{analyses}}, {tag=>$2,details=>$3,cost=>$4});
+		  push(@{$tok->{$1}{analyses}}, {tag=>$2,lemma=>$3,details=>$4,prob=>$5});
 		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
 		  ##-- token: field: list field (GermaNet hyperonyms / hyponyms)
 		  push(@{$tok->{$1}}, $2);
