@@ -32,6 +32,7 @@ our %EXPORT_TAGS =
 		qw(_am_tag _am_word _am_lemma),
 		qw(_am_tagh_fst2moota _am_tagh_list2moota _am_tagh_moota_uniq _am_tagh_list2moota_uniq),
 		qw(_am_dmoot_fst2moota _am_dmoot_list2moota),
+		qw(_am_wordlike_regex),
 		qw(parseFstString),
 	       ],
   );
@@ -745,6 +746,11 @@ sub _am_dmoot_list2moota {
   return "(map {"._am_dmoot_fst2moota('$_')."} $listvar) ##-- _am_dmoot_list2moota\n";
 }
 
+## $regex_str = PACKAGE::_am_wordlike_regex()
+##  + for use e.g. by Analyzer::Automaton subclass {allowTextRegex} property defaults
+sub _am_wordlike_regex {
+  return '^(?:(?:[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+)|(?:[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+))(?:[\'\x{2018}\x{2019}]s)?$';
+}
 
 
 ##==============================================================================
@@ -1571,7 +1577,7 @@ additional keys recognized in procedure specs: see DTA::CAB::Server::XmlRpc::pre
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

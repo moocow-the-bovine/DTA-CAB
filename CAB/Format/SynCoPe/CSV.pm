@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::SynCoPe::CSV.pm
-## Author: Bryan Jurish <jurish@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser: SynCoPe CSV (for NE-recognizer)
 
 package DTA::CAB::Format::SynCoPe::CSV;

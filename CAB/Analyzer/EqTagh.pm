@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqTagh.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: lemma-equivalence class expansion: TAGH via FST
 
 ##==============================================================================

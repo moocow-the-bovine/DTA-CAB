@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Automaton.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: generic analysis automaton API
 
 package DTA::CAB::Analyzer::Automaton;
@@ -74,7 +74,8 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
 ##     attOutput      => $bool, ##-- if true, generate AT&T escapes in output (default=1)
 ##     allowTextRegex => $re,   ##-- if defined, only tokens with matching 'text' will be analyzed (default: none)
-##                              ##   : useful: /(?:^[[:alpha:]\-\@]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@]+$)/
+##                              ##   : useful: /^(?:(?:[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+)|(?:[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+))(?:[\'\x{2018}\x{2019}]s)?$/
+##                              ##   :     ==  DTA::CAB::Analyzer::_am_wordlike_regex()
 ##
 ##     ##-- Analysis objects
 ##     fst  => $gfst,      ##-- (child classes only) e.g. a Gfsm::Automaton object (default=new)
@@ -117,7 +118,8 @@ sub new {
 			      attInput       => 0,
 			      attOutput      => 1,
 			      allowTextRegex => undef, #'(?:^[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+$)',
-
+			                               #'^(?:(?:[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+)|(?:[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+))(?:[\'\x{2018}\x{2019}]s)?$'
+			                               # == DTA::CAB::Analyzer::_am_wordlike_regex()
 			      ##-- analysis I/O
 			      analyzeSrc => 'text',
 			      wantAnalysisLo => 1,
@@ -761,7 +763,7 @@ Perform type-wise analysis of all (text) types in %types (= %{$doc-E<gt>{types}}
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

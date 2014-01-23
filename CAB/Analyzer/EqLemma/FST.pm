@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqLemma::FST.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: lemma-equivalence class expansion via Gfsm::Automaton
 
 ##==============================================================================
@@ -29,7 +29,7 @@ sub new {
 			      analyzeSet     => ('$_->{$lab} = ['._am_id_fst().', ($wa ? @$wa : qw())];'),
 			      attInput       => 1,
 			      wantAnalysisLo => 0,
-			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			      allowTextRegex => DTA::CAB::Analyzer::_am_wordlike_regex(),
 			      #allowWordRegex => '.',
 
 			      ##-- type expansion

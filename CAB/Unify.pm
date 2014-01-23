@@ -1,7 +1,7 @@
 #-*- Mode: CPerl -*-
 
 ## File: DTA::CAB::Unify.pm
-## Author: Bryan Jurish <moocow@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + Unification utiltities (copied from Taxi::Mysql::Unify)
 ##======================================================================
@@ -294,7 +294,7 @@ which clobbers $x with $y (maps $TOP to undef).
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

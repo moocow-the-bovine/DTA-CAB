@@ -1,7 +1,7 @@
 # -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::YAML.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: YML code (generic)
 
 package DTA::CAB::Format::YAML;
@@ -654,7 +654,7 @@ with output formatting level=0:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

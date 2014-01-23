@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::XmlTokWrap.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: XML (tokwrap), fast quick & dirty I/O for (.ddc).t.xml
 
 package DTA::CAB::Format::XmlTokWrapFast;

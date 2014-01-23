@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::SQLite.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: SQLite database (for DTA EvalCorpus)
 
 package DTA::CAB::Format::SQLite;

@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB::Analyzer::Automaton::Gfsm::XL.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Gfsm::XL::Cascade -based transductions
 
 package DTA::CAB::Analyzer::Automaton::Gfsm::XL;
@@ -374,7 +374,7 @@ Alias / override.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

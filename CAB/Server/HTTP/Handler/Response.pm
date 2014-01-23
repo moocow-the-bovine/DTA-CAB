@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
 ## File: DTA::CAB::Server::HTTP::Handler::Response.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + DTA::CAB::Server::HTTP handler class: static response
 ##======================================================================
@@ -126,7 +126,7 @@ or sends a "404 not found" error to the client if not defined.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

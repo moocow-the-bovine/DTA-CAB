@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqPho::FST.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: phonetic equivalence class expansion via Gfsm::Automaton
 
 ##==============================================================================
@@ -27,7 +27,7 @@ sub new {
 			      analyzeGet     => '$_[0]{lts} ? (map {$_->{hi}} @{$_[0]{lts}}) : qw()',
 			      attInput       => 1,
 			      wantAnalysisLo => 1,
-			      allowTextRegex => '(?:^[[:alpha:]\-]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-]+$)',
+			      allowTextRegex => '^(?:(?:[[:alpha:]\-\@]*[[:alpha:]]+)|(?:[[:alpha:]]+[[:alpha:]\-\@]+))(?:\'s)?$',
 			      #allowWordRegex => '.',
 
 			      ##-- type expansion
@@ -113,7 +113,7 @@ which sets the following default options:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

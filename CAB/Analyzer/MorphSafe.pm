@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::MorphSafe.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: safety checker for analyses output by DTA::CAB::Analyzer::Morph (TAGH)
 
 package DTA::CAB::Analyzer::MorphSafe;
@@ -360,7 +360,7 @@ Override: implements L<DTA::CAB::Analyzer::analyzeTypes|DTA::CAB::Analyzer/analy
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

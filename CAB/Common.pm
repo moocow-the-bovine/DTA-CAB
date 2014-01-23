@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB::Common.pm
-## Author: Bryan Jurish <jurish@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: robust morphological analysis: common dependencies
 
 package DTA::CAB::Common;
@@ -98,7 +98,7 @@ Includes subclasses:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

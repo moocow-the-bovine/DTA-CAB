@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Eqlemma
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: lemma-equivalence class expansion: default
 
 ##==============================================================================
@@ -76,7 +76,7 @@ L<DTA::CAB::Analyzer::EqLemma::JsonCDB|DTA::CAB::Analyzer::EqLemma::JsonCDB>.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

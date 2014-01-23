@@ -317,7 +317,7 @@ sub html_footer {
      closeTag('div',{id=>'content'}),
      '<div id="footers">',
      "<tt>$wr->{sysid}</tt>", $q->br,
-     '<address><a href="mailto:jurish@bbaw.de">jurish@bbaw.de</a></address>',
+     '<address><a href="mailto:moocow@cpan.org">moocow@cpan.org</a></address>',
      '</div>',
      closeTag('div',{id=>'outer'}),
      $q->end_html,
@@ -548,7 +548,7 @@ Cleanup after ourselves.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

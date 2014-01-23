@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::SynCoPe
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: DTA chain: RPC-XML query of an existing SynCoPe server
 ##  + sets $tok->{mapclass}
 

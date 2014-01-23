@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::TCF.pm
-## Author: Bryan Jurish <jurish@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: XML: CLARIN-D TCF (selected features only)
 ##  + uses DTA::CAB::Format::XmlTokWrap for output
 

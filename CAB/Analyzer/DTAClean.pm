@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB::Analyzer::DTAClean.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Chain::DTA cleanup (prune sensitive and redundant data from document)
 
 package DTA::CAB::Analyzer::DTAClean;
@@ -250,7 +250,7 @@ if present.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
 ## Alias: DTA::CAB::Server::HTTP::Handler::Alias.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + DTA::CAB::Server::HTTP::Handler class: path alias
 ##======================================================================

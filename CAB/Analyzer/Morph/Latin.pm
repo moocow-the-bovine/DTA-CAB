@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::Morph::Latin.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: latin pseudo-morphology (top-level alias)
 
 ##==============================================================================
@@ -78,7 +78,7 @@ L<DTA::CAB::Analyzer::Morph::Latin::BDB|DTA::CAB::Analyzer::Morph::Latin::BDB>.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::LTS.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: letter-to-sound analysis via Gfsm automata
 
 ##==============================================================================
@@ -22,6 +22,7 @@ sub new {
 			      ##-- overrides
 			      tolower => 1,
 			      #allowTextRegex => '(?:^[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+$)',
+			      #allowTextRegex => DTA::CAB::Analyzer::_am_wordlike_regex(),
 
 			      ##-- analysis selection
 			      label => 'lts',
@@ -101,7 +102,7 @@ which sets the following default options:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

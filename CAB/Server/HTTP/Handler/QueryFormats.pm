@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
 ## File: DTA::CAB::Server::HTTP::Handler::QueryFormats.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + CAB HTTP Server: request handler: analyzer list (rsp. query handler)
 ##======================================================================
@@ -273,7 +273,7 @@ The following CGI form parameters are supported:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

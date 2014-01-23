@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
 ## File: DTA::CAB::Server::HTTP::Handler::Template.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + DTA::CAB::Server::HTTP::Handler class: static files
 ##======================================================================

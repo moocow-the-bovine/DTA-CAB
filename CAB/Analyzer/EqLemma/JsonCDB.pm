@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqLemma::JsonCDB.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: DB dictionary-based equivalence-class expander, rewrite variant
 
 package DTA::CAB::Analyzer::EqLemma::JsonCDB;

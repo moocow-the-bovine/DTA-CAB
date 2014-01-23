@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::MootSub.pm
-## Author: Bryan Jurish <jurish@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: post-processing for moot PoS tagger in DTA chain
 ##  + tweaks $tok->{moot}{word}, instantiates $tok->{moot}{lemma}
 
@@ -243,7 +243,7 @@ Override returns @$anl{qw(mootLabel)}.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

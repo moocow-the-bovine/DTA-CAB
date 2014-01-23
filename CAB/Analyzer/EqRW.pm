@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqRW
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: phonetic equivalence class expansion: default
 
 ##==============================================================================
@@ -73,7 +73,7 @@ Just a wrapper for L<DTA::CAB::Analyzer::EqRW::JsonCDB|DTA::CAB::Analyzer::EqRW:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

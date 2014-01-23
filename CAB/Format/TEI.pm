@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format::TEI.pm
-## Author: Bryan Jurish <jurish@bbaw.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: XML: TEI (with or without //c elements), using DTA::TokWrap
 ##  + uses DTA::CAB::Format::XmlTokWrap for output
 

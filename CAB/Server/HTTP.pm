@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Server::HTTP.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: DTA::CAB standalone HTTP server using HTTP::Daemon
 
 package DTA::CAB::Server::HTTP;
@@ -669,7 +669,7 @@ $status defaults to RC_INTERNAL_SERVER_ERROR (see HTTP::Status).
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

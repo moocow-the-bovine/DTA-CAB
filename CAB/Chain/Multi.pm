@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB::Chain::Multi.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: robust analysis: multi-chains
 
 package DTA::CAB::Chain::Multi;
@@ -451,7 +451,7 @@ Returns pseudo hash for use with L<DTA::CAB::Server::XmlRpc|DTA::CAB::Server::Xm
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

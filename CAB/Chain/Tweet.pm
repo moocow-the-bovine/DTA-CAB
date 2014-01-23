@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB::Chain::Tweet.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: robust analysis: tweet-munging chain
 
 package DTA::CAB::Chain::Tweet;
@@ -211,7 +211,7 @@ Returns only $tok-E<gt>{xlit} field if "$tok-E<gt>{toktyp}" is true.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

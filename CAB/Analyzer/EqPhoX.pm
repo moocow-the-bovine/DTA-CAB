@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Analyzer::EqPhoX
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: phonetic-equivalence class expansion: intensional via gfsmxl cascade
 
 ##==============================================================================
@@ -23,7 +23,8 @@ sub new {
 			      label => 'eqphox',
 			      analyzeGet => '$_->{msafe} || $_->{exlex} || !$_->{lts} ? qw() : (map {$_->{hi}} @{$_->{lts}})',
 			      attInput   => 1,
-			      allowTextRegex => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
+			      #allowTextRegex => '(?:^[[:alpha:]\-\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\x{ac}]+$)',
+			      allowTextRegex => DTA::CAB::Analyzer::_am_wordlike_regex(),
 			      tolower=>0,
 			      tolowerNI=>0,
 			      toupperI=>0,
@@ -109,7 +110,7 @@ which sets the following analyzer defaults:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

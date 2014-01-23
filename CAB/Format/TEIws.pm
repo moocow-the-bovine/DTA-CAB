@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl; coding: utf-8 -*-
 ##
 ## File: DTA::CAB::Format::TEIws.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser|formatter: XML: TEI: with //w and //s elements, as output by DTA::TokWrap
 ##  + uses DTA::CAB::Format::XmlTokWrap for output
 

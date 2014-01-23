@@ -1,7 +1,7 @@
 ##-*- Mode: CPerl -*-
 
 ## File: DTA::CAB::Server::HTTP::Handler.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description:
 ##  + abstract handler API class for DTA::CAB::Server::HTTP
 ##======================================================================
@@ -409,7 +409,7 @@ Returns a fully qualified class name for an alias or class suffix $alias_or_clas
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
