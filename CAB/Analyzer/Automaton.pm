@@ -70,6 +70,7 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)
 ##     toupperI       => $bool, ##-- if true, initial character will be upper-cased (default=0)
 ##     capsFallback   => $bool, ##-- if true, all-caps words will also be analyzed as ucfirst(lc($w)) (default=0)
+##     qsFallback     => $bool, ##-- if true, "-'s" suffixes will also be analyzed as "-s" (default=0)
 ##     bashWS         => $str,  ##-- if defined, input whitespace will be bashed to '$str' (default='_')
 ##     attInput       => $bool, ##-- if true, respect AT&T lextools-style escapes in input (default=0)
 ##     attOutput      => $bool, ##-- if true, generate AT&T escapes in output (default=1)
@@ -114,6 +115,7 @@ sub new {
 			      tolowerNI      => 0,
 			      toupperI       => 0,
 			      capsFallback   => 0,
+			      qsFallback     => 0,
 			      bashWS         => '_',
 			      attInput       => 0,
 			      attOutput      => 1,
@@ -328,6 +330,7 @@ sub analyzeTypes {
   my $tolowerNI = $aut->{tolowerNI};
   my $toupperI = $aut->{toupperI};
   my $capsFallback = $aut->{capsFallback};
+  my $qsFallback   = $aut->{qsFallback};
   my $bashWS = $aut->{bashWS};
   my $attInput = $aut->{attInput};
   my $attOutput = $aut->{attOutput};
@@ -356,6 +359,7 @@ sub analyzeTypes {
     next if (defined($allowTextRegex) && $_->{text} !~ $allowTextRegex); ##-- text-sensitive regex
     @w=$aget->();
     push(@w, map {ucfirst(lc($_))} grep {/^[[:upper:]]{2,}$/} @w) if ($capsFallback); ##-- handle "FRANKFURT" as "Frankfurt"
+    push(@w, map {m/^(.+)[\'\x{2018}\x{2019}]s$/ ? "${1}s" : qw()} @w) if ($qsFallback); ##-- handle "Goethe's" as "Goethes"
     #$aut->trace("analyzeTypes(): w=(", join(' ', @w), ")") if ($aut->{label} eq 'eqphox'); ##-- DEBUG
 
     next if (!@w); ##-- no lookup-inputs for token (e.g. if $_->{$label} was already populated, e.g. from exlex)

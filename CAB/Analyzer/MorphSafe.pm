@@ -52,6 +52,7 @@ our %badTags = (
 ##    ##-- analysis selection
 ##    allowTokenizerAnalyses => $bool, ##-- if true, tokenizer-analyzed tokens (as determined by $tok->{toka}, $tok->{tokpp}) are "safe"; (default=true)
 ##    allowExlexAnalyses => $bool,     ##-- if true, exlex-analyzed tokens (as determined by $tok->{exlex}) are "safe"; (default=false)
+##    allowApostropheS => $bool,       ##-- if true, "-'s" tokens with a morph analysis are "safe" (default=true)
 ##    tokMorphKey => $key,             ##-- key for token 'morph' property (default='morph')
 ##    morphHiKey => $key,              ##-- key for morph analysis 'hi' property (default='hi')
 ##
@@ -67,6 +68,7 @@ sub new {
 			   label => 'msafe',
 			   allowTokenizerAnalyses => 1,
 			   allowExlexAnalyses => 0,
+			   allowApostropheS => 1,
 			   tokMorphKey => 'morph',
 			   morphHiKey => 'hi',
 
@@ -151,6 +153,7 @@ sub analyzeTypes {
   my $label     = $ms->{label};
   my $want_toka = $ms->{allowTokenizerAnalyses};
   my $want_exlex= $ms->{allowExlexAnalyses};
+  my $want_apos_s = $ms->{allowApostropheS};
   my $tok_morph = $ms->{tokMorphKey};
   my $morph_hi  = $ms->{morphHiKey};
   my $badTypes  = $ms->{badTypes}||{};
@@ -178,6 +181,11 @@ sub analyzeTypes {
 	                                                   ##   [replaces /[[:digit:][:punct:]]/ heuristic; Tue, 28 Feb 2012 11:21:29 +0100]
 	  )
        || $tok->{mlatin}                                   ##-- latin words are "safe" [NEW Fri, 01 Apr 2011 11:38:45 +0200]
+       || (
+	   $want_apos_s  				   ##-- "-'s" words with a morph analysis may be safe
+	   && $tok->{$tok_morph}
+	   && $tok->{text} =~ m/^(.+)[\'\x{2018}\x{2019}]s$/
+	  )
       );
 
     ##-- are we still unsafe?  then check for some "safe" morph analysis: if found, set $safe=1 & bug out
