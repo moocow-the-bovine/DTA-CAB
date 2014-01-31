@@ -111,7 +111,7 @@ sub new {
 			      @_
 			     );
 
-  if (1) {
+  if (0) {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
     $fmt->{twopen}{"trace$_"}    = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
     $fmt->{twopts}{procOpts}{$_} = 'debug' foreach (qw(traceLevel));
