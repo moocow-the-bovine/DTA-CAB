@@ -113,10 +113,10 @@ sub new {
 
   if (1) {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
-    $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
+    $fmt->{twopen}{"trace$_"}    = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
+    $fmt->{twopts}{procOpts}{$_} = 'debug' foreach (qw(traceLevel));
     $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
     $fmt->{twopts}{$_} = 'DEBUG' foreach (qw(addwsInfo spliceInfo));
-    $fmt->{twopts}{procOpts}{$_} = 'DEBUG' foreach (qw(traceLevel));
     $fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
   }
