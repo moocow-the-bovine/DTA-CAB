@@ -86,7 +86,7 @@ sub new {
   my $that = shift;
   my $fmt = $that->SUPER::new(
 			      ##-- local
-			      tmpdir => undef,
+			      tmpdir => undef, ##-- see tmpdir() method
 			      keeptmp=>0,
 			      teilog => 'off', ##-- tei format debug log level
 			      ##
@@ -97,9 +97,10 @@ sub new {
 			      txmlfmt => $TXML_CLASS_DEFAULT,
 
 			      ##-- tokwrap
-			      tw => undef,
+			      tw => undef, ##-- see tw() method
 			      twopts => {procOpts=>{soIgnoreAttrs=>[qw(c xb)], spliceInfo=>'off',addwsInfo=>'off'}},
 			      twopen => {},
+			      twTokenizeClass => $DTA::TokWrap::Document::TOKENIZE_CLASS,
 
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
 			      ignoreKeys => {
@@ -110,28 +111,19 @@ sub new {
 			      @_
 			     );
 
-  if (0) {
+  if (1) {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
     $fmt->{twopen}{"trace$_"} = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
     $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
     $fmt->{twopts}{$_} = 'DEBUG' foreach (qw(addwsInfo spliceInfo));
+    $fmt->{twopts}{procOpts}{$_} = 'DEBUG' foreach (qw(traceLevel));
     $fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
   }
 
-  ##-- temp dir
-  my $tmpdir = $fmt->{tmpdir};
-  $tmpdir    = $fmt->{tmpdir} = mktmpfsdir("cab_tei_${$}_XXXX", CLEAN=>(!$fmt->{keeptmp}))
-    if (!defined($tmpdir));
+  ##-- tmpdir: see tmpdir() method
 
-  ##-- TokWrap object
-  my $tw = $fmt->{tw};
-  if (!defined($tw)) {
-    $tw = $fmt->{tw} = DTA::TokWrap->new(%{$fmt->{twopts}||{}});
-  }
-  $tw->{keeptmp} = $fmt->{keeptmp};
-  $tw->{tmpdir}  = $tw->{outdir} = $fmt->{tmpdir};
-  $tw->init();
+  ##-- tw: TokWrap object : depends on tmpdir(): see tw() method
 
   return $fmt;
 }
@@ -149,15 +141,17 @@ sub DESTROY {
 ## Methods: Generic
 
 ## $dir = $fmt->tmpdir()
+##  + get/generate name of temporary directory, ensures $fmt->{tmpdir} is set
 sub tmpdir {
-  return $_[0]{tmpdir};
+  return $_[0]{tmpdir} if (defined($_[0]{tmpdir}));
+  return $_[0]{tmpdir} = mktmpfsdir("cab_tei_${$}_XXXX", CLEAN=>(!$_[0]{keeptmp}))
 }
 
 ## $tmpdir = $fmt->mktmpdir()
-##  + ensures $fmt->{tmpdir} exists
+##  + ensures $fmt->tmpdir() exists
 sub mktmpdir {
   my $fmt = shift;
-  my $tmpdir = $fmt->{tmpdir};
+  my $tmpdir = $fmt->tmpdir();
   $fmt->vlog($fmt->{teilog}, "mktmpdir $tmpdir");
   mkdir($tmpdir,0700) if (!-d $tmpdir);
   (-d $tmpdir) or $fmt->logconfess("could not create directory '$tmpdir': $!");
@@ -168,7 +162,7 @@ sub mktmpdir {
 ##  + removes $fmt->{tmpdir} unless $fmt->{keeptmp} is true
 sub rmtmpdir {
   my $fmt = shift;
-  if (-d $fmt->{tmpdir} && !$fmt->{keeptmp}) {
+  if (defined($fmt->{tmpdir}) && -d $fmt->{tmpdir} && !$fmt->{keeptmp}) {
     $fmt->vlog($fmt->{teilog}, "rmtree $fmt->{tmpdir}") if (Log::Log4perl->initialized);;
     File::Path::rmtree($fmt->{tmpdir})
 	or $fmt->logconfess("could not rmtree() temp directory '$fmt->{tmpdir}': $!");
@@ -190,6 +184,19 @@ sub txmlclass {
   return ref($_[0]{txmlfmt}) if (ref($_[0]{txmlfmt}));
   return "DTA::CAB::Format::$_[0]{txmlfmt}" if (UNIVERSAL::isa("DTA::CAB::Format::$_[0]{txmlfmt}",'DTA::CAB::Format'));
   return $_[0]{txmlfmt} || $TXML_CLASS_DEFAULT;
+}
+
+## $tw = $fmt->tw()
+##  + returns DTA::TokWrap object for $fmt
+##  + calls $fmt->tmpdir()
+sub tw {
+  return $_[0]{tw} if (defined($_[0]{tw}));
+  my $tw = $_[0]{tw} = DTA::TokWrap->new(%{$_[0]{twopts}||{}}, tokenizeClass=>$_[0]{twTokenizeClass});
+  $tw->{keeptmp} = $_[0]{keeptmp};
+  $tw->{tmpdir}  = $tw->{outdir} = $_[0]->tmpdir();
+  $tw->init();
+
+  return $tw;
 }
 
 ##=============================================================================
@@ -251,7 +258,7 @@ sub fromString {
 
   ##-- run tokwrap
   $fmt->vlog($fmt->{teilog}, "tokwrap: tmp.chr.xml -> tmp.chr.t.xml");
-  my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.chr.xml",%{$fmt->{twopen}||{}})
+  my $twdoc = $fmt->tw->open("$tmpdir/tmp.chr.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
   $twdoc->genKey('tei2txml')
     or $fmt->logdie("could generate $tmpdir/tmp.chr.t.xml with DTA::TokWrap: $!");
@@ -375,7 +382,7 @@ sub putDocument {
       or $fmt->logconfess("couldn't create temporary file $tmpdir/tmp.tei.xml: $!");
 
   ##-- get tokwrap object
-  my $twdoc = $fmt->{tw}->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
+  my $twdoc = $fmt->tw->open("$tmpdir/tmp.tei.xml",%{$fmt->{twopen}||{}})
     or $fmt->logdie("could not open $tmpdir/tmp.tei.xml as TokWrap document: $!");
   $twdoc->{xmldata}  = $$teibufr;
   $twdoc->{xtokfile} = "$tmpdir/tmp.cab.t.xml";

@@ -136,13 +136,13 @@ sub childOptionSpecs {
      'format-option|fo=s%' => sub {$job{inputOpts}{$_[1]}=$job{outputOpts}{$_[1]}=$_[2]},
 
      ##-- I/O: input
-     'input-class|ic|parser-class|pc=s'        => \$job{inputClass},
-     'input-option|io|parser-option|po=s'      =>  $job{inputOpts},
+     'input-format-class|iformat|ifmt|ifc|input-class|ic|parser-class|pc=s' => \$job{inputClass},
+     'input-format-option|ifoption|ifo|input-option|io|parser-option|po=s'  =>  $job{inputOpts},
      'tokens|t|words|w!'                       => \$job{inputWords},
 
      ##-- I/O: output
-     'output-class|oc=s'                       => \$job{outputClass},
-     'output-option|oo=s'                      =>  $job{outputOpts},
+     'output-format-class|oformat|ofmt|ofc|output-class|oc=s' => \$job{outputClass},
+     'output-format-option|ofoption|ofo|output-option|oo=s'   =>  $job{outputOpts},
      'output-level|ol|format-level|fl=s'       => \$job{outputOpts}{level},
      'output-format|output-file|output|o=s'    => \$job{outfmt},
     );

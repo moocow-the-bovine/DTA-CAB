@@ -31,7 +31,8 @@ our @ISA = qw(DTA::CAB::Queue::Server);
 ##     free   => \&free,        ##-- called as free($fp) in each subprocess before termination (default: $fp->can('free'))
 ##
 ##     logSpawn         => $level,   ##-- log-level for spawning subprocesses [default: 'info']
-##     logReap          => $level,   ##-- log-level for messages caught with default catch() [default: 'fatal']
+##     logReap          => $level,   ##-- log-level for own pids reaped with default reap() [default: 'info']
+##     logReapOther     => $level,   ##-- log-level for other pids reaped with default reap() [default: none]
 ##     propagateErrors  => $bool,    ##-- if true (default), default 'reap' method will exit() the whole process
 ##     installReaper    => $bool,    ##-- if true (default), spawn() sets $SIG{CHLD}=$fp->reaper()
 ##
@@ -81,6 +82,7 @@ sub new {
      ##-- logging
      logSpawn => 'info',
      logReap  => 'info',
+     logReapOther  => 'debug',
      #logSocket => 'debug',
      #logRequest => 'trace',
      #logBlock => 'debug',
@@ -302,10 +304,14 @@ sub free { ; }
 ##  + called from main thread on subprocess exit
 sub reap {
   my ($fp,$pid,$status) = @_;
-  $fp->vlog($fp->{logReap},"reaped subprocess $pid with exit status $status");
-  if ($fp->{propagateErrors} && $status != 0) {
-    $fp->abort();
-    $fp->logdie("subprocess $pid exited with abnormal status $status");
+  if (grep {$_==$pid} @{$fp->{pids}//[]}) {
+    $fp->vlog($fp->{logReap},"reaped subprocess $pid with exit status $status");
+    if ($fp->{propagateErrors} && $status != 0) {
+      $fp->abort();
+      $fp->logdie("subprocess $pid exited with abnormal status $status");
+    }
+  } else {
+    $fp->vlog($fp->{logReapOther},"reaped external subprocess $pid with exit status $status");
   }
 }
 
