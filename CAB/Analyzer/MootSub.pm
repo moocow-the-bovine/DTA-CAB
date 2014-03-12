@@ -71,15 +71,15 @@ sub analyzeSentences {
   $lz->_analyzeGuts($toks,$opts) if ($lz->enabled($opts));
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
-  my %cache = qw(); ##-- $cache{"$word\t$tag"} = $lemma
-  my ($w,$t,$l,$key,$ma,$maa,%l2d, $ld, $l0,$ld0);
+  my %cache = qw(); ##-- $cache{"$word\t$tag"} = $best_analysis
+  my ($w,$t,$la,$l,$key,$ma,$maa,%l2d, $ld, $a0,$ld0);
   foreach $tok (@$toks) {
     $m      = $tok->{$mlabel};
     ($w,$t) = @$m{qw(word tag)};
     $key    = "$w/$t";
-    if (defined($l=$cache{$key})) {
+    if (defined($la=$cache{$key})) {
       ##-- cached value
-      $m->{lemma} = $l;
+      @$m{qw(details lemma)} = ($la,$la->{lemma});
       next;
     }
 
@@ -101,14 +101,14 @@ sub analyzeSentences {
 	$l =~ s/[\x{ac}]//g;
 	$l = lc($l);
 	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
-	$m->{lemma} = $cache{$key} = $l;
+	$m->{details} = $cache{$key} = {lemma=>$l,tag=>$t,details=>'*[_$t]',prob=>0};
       }
     else
       {
 	##-- extract lemma from "best" analysis
 	%l2d = qw();
 
-	$l0 = $ld0 = undef;
+	$a0 = $ld0 = undef;
 	foreach (@$ma) {
 	  ##-- get lemma distance
 	  $l   = $_->{lemma};
@@ -117,11 +117,12 @@ sub analyzeSentences {
 	  $ld += 1000*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
 	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
-	  $l0  = $l;
+	  $a0  = $_;
 	}
-	$l0 =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
-	$m->{lemma} = $cache{$key} = $l0;
+	$a0->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
+	$m->{details} = $cache{$key} = $a0;
       }
+    $m->{lemma} = $m->{details}{lemma};
   }
 
   ##-- return

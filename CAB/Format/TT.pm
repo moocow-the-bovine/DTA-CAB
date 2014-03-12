@@ -308,6 +308,9 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/analysis|dmoot/analysis
 		  push(@{$tok->{$1}{analyses}}, {tag=>$2,lemma=>$3,details=>$4,prob=>$5});
+		} elsif ($field =~ m/^\[(.*?moot)\/details\]\s?(\S+)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
+		  ##-- token: field: moot/details|dmoot/details
+		  $tok->{$1}{details} = {tag=>$2,lemma=>$3,details=>$4,prob=>$5};
 		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
 		  ##-- token: field: list field (GermaNet hyperonyms / hyponyms)
 		  push(@{$tok->{$1}}, $2);
@@ -528,6 +531,12 @@ sub token2buf {
     ##-- dmoot/tag
     $$bufr .= "\t[dmoot/tag] $tok->{dmoot}{tag}";
 
+    ##-- dmoot/details
+    $$bufr .= ("\t[dmoot/details] $tok->{dmoot}{details}{tag} ~ $tok->{dmoot}{details}{details} <"
+	       .($tok->{dmoot}{details}{prob}||$tok->{dmoot}{details}{cost}||0).">"
+	      )
+      if ($tok->{dmoot}{details});
+
     ##-- dmoot/morph
     $$bufr .= join('', map {("\t[dmoot/morph] "
 			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
@@ -552,13 +561,12 @@ sub token2buf {
     ##-- moot/lemma
     $$bufr .= "\t[moot/lemma] $tok->{moot}{lemma}" if (defined($tok->{moot}{lemma}));
 
-    ##-- moot/morph (UNUSED)
-    $$bufr .= join('', map {("\t[moot/morph] "
-			   .(defined($_->{lo}) ? "$_->{lo} : " : '')
-			   .(defined($_->{lemma}) ? "$_->{lemma} @ " : '')
-			   ."$_->{hi} <$_->{w}>"
-			  )} @{$tok->{moot}{morph}})
-      if ($tok->{moot}{morph});
+    ##-- moot/details
+    $$bufr .= ("\t[moot/details] $tok->{moot}{details}{tag}"
+	       .(defined($tok->{moot}{details}{lemma}) ? " \@ $tok->{moot}{details}{lemma}" : '')
+	       ." ~ $tok->{moot}{details}{details} <".($tok->{moot}{details}{prob}||$tok->{moot}{details}{cost}||0).">"
+	      )
+      if ($tok->{moot}{details});
 
     ##-- moot/analyses
     $$bufr .= join('', map {("\t[moot/analysis] $_->{tag}"
