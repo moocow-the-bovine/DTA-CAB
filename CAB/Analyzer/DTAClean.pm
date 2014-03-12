@@ -100,7 +100,7 @@ sub analyzeClean {
 
       ##-- delete all unsafe keys
       delete @$_{@prune_keys};
-      delete $_->{moot}{analyses} if ($_->{moot}); ##-- moot/analyses: also unsafe
+      delete @{$_->{moot}}{qw(analyses details)} if ($_->{moot}); ##-- moot/analyses, moot/details: also unsafe
 
       ##-- delete any remaining keys with undef values
       #delete @$tok{grep {!defined($_->{$_})} keys %$tok};
