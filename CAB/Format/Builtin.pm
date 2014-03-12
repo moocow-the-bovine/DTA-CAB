@@ -9,6 +9,7 @@ use DTA::CAB::Format;
 
 #use DTA::CAB::Format::Freeze;
 use DTA::CAB::Format::CSV;
+use DTA::CAB::Format::CSV1g;
 use DTA::CAB::Format::Null;
 use DTA::CAB::Format::Perl;
 use DTA::CAB::Format::Storable;

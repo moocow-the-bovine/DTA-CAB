@@ -250,8 +250,8 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc|tag)|has(?:morph|lts|rw|eqphox|dmoota|moota))\] (.*)$/) {
-		  ##-- token: field: other scalar field (exlex, pnd, mapclass, errid, ...)
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|freq|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc|tag)|has(?:morph|lts|rw|eqphox|dmoota|moota))\] (.*)$/) {
+		  ##-- token: field: other scalar field (exlex, pnd, mapclass, errid, freq, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
 		  ##-- token: field: xlit
@@ -308,7 +308,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(.*?moot)\/analysis\]\s?(\S+)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/analysis|dmoot/analysis
 		  push(@{$tok->{$1}{analyses}}, {tag=>$2,lemma=>$3,details=>$4,prob=>$5});
-		} elsif ($field =~ m/^\[(.*?moot)\/details\]\s?(\S+)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
+		} elsif ($field =~ m/^\[(.*?moot)\/details\]\s?(\S*)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/details|dmoot/details
 		  $tok->{$1}{details} = {tag=>$2,lemma=>$3,details=>$4,prob=>$5};
 		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {

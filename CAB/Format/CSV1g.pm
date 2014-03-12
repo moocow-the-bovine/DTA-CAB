@@ -1,14 +1,11 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Format::CSV.pm
+## File: DTA::CAB::Format::CSV1g.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: Datum parser: concise minimal-output human-readable text
+## Description: Datum parser: concise minimal-output human-readable text, unigrams
 
-package DTA::CAB::Format::CSV;
-use DTA::CAB::Format;
-use DTA::CAB::Format::TT;
-use DTA::CAB::Datum ':all';
-use IO::File;
+package DTA::CAB::Format::CSV1g;
+use DTA::CAB::Format::CSV;
 use Carp;
 use strict;
 
@@ -16,10 +13,11 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Format::TT);
+our @ISA = qw(DTA::CAB::Format::CSV);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:csv|cab\-csv)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/(?i:\.(?:csv|cab\-csv)[\.\-]?1g)$/);
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_) foreach qw(csv1g csv-1g csv.1g);
 }
 
 ##==============================================================================
@@ -41,7 +39,7 @@ BEGIN {
 ##     ##---- Common
 ##     utf8  => $bool,                 ##-- default: 1
 ##    )
-## + inherited from DTA::CAB::Format::TT
+## + inherited from DTA::CAB::Format::TT via CSV
 
 ##==============================================================================
 ## Methods: Persistence
@@ -59,7 +57,7 @@ BEGIN { *parseTTString = \&parseCsvString; }
 sub parseCsvString {
   my ($fmt,$src) = @_;
   no warnings qw(uninitialized);
-  $$src =~ s|^([^\t]+)(?:\t([^\t]*))?\t([^\t]*)\t([^\t]*)\t([^\t\r\n]*)(?:\t([^\t\r\n]*))?$|$1\t[xlit] $2\t[dmoot/tag] $3\t[moot/word] $3\t[moot/tag] $4\t[moot/lemma] $5\t[moot/details] $6|mg;
+  $$src =~ s|^([^\t]*)\t([^\t]+)\t([^\t]*)\t([^\t]*)\t([^\t]*)\t([^\t\r\n]*)(?:\t([^\t\r\n]*))?$|$2\t[xlit] $3\t[dmoot/tag] $4\t[moot/word] $4\t[moot/tag] $5\t[moot/lemma] $6\t[moot/details] $7\t[freq] $1|mg;
   return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
@@ -72,7 +70,7 @@ sub parseCsvString {
 
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format
-sub defaultExtension { return '.csv'; }
+sub defaultExtension { return '.csv.1g'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
@@ -82,14 +80,7 @@ sub defaultExtension { return '.csv'; }
 ##  + override implements CSV format
 sub token2buf {
   my $bufr = ($_[2] ? $_[2] : \(my $buf=''));
-  $$bufr = join("\t",
-		$_[1]{text},
-		($_[1]{xlit} ? $_[1]{xlit}{latin1Text} : ''),
-		($_[1]{moot} ? (@{$_[1]{moot}}{qw(word tag lemma)}) : ('','','')),
-		(($_[0]{level}//0) >= 1
-		 ? ($_[1]{moot} && $_[1]{moot}{details} ? ($_[1]{moot}{details}{details}//'*') : '')
-		 : qw())
-	       )."\n";
+  $$bufr = ($_[1]{freq}//0)."\t".${$_[0]->SUPER::token2buf($_[1])};
   return $bufr;
 }
 
@@ -106,7 +97,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Format::CSV - Datum I/O: concise minimal-output human-readable text
+DTA::CAB::Format::CSV1g - Datum I/O: concise minimal-output human-readable text, unigrams
 
 =cut
 
@@ -116,7 +107,7 @@ DTA::CAB::Format::CSV - Datum I/O: concise minimal-output human-readable text
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Format::CSV;
+ use DTA::CAB::Format::CSV1g;
  
  ##========================================================================
  ## Methods: Constructors etc.
@@ -144,16 +135,17 @@ DTA::CAB::Format::CSV - Datum I/O: concise minimal-output human-readable text
 
 =head1 DESCRIPTION
 
-DTA::CAB::Format::CSV
+DTA::CAB::Format::CSV1g
 is a L<DTA::CAB::Format|DTA::CAB::Format> subclass
 for representing the minimal "interesting" results of a
 L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> canonicalization
-in a (more or less) human- and machine-friendly TAB-separated format.
-As for L<DTA::CAB::Format::TT|DTA::CAB::Format::TT> (from which this class inherits),
+in a (more or less) human- and machine-friendly TAB-separated format,
+including unigram counts.
+As for L<DTA::CAB::Format::TT|DTA::CAB::Format::CSV> (from which this class inherits),
 each token is represented by a single line and sentence boundaries
 are represented by blank lines.  Token lines have the format:
 
- OLD_TEXT   XLIT_TEXT   NEW_TEXT    POS_TAG    LEMMA	?DETAILS
+ FREQ	OLD_TEXT   XLIT_TEXT   NEW_TEXT    POS_TAG    LEMMA	?DETAILS
 
 =cut
 
@@ -227,7 +219,7 @@ Default returns text/plain.
  $ext = $fmt->defaultExtension();
 
 Deturns default filename extension for this format.
-Override returns '.csv'.
+Override returns '.csv.1g'.
 
 =item putToken
 
@@ -258,7 +250,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Bryan Jurish
+Copyright (C) 2014 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,
