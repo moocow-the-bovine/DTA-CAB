@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Fork::Pool.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: generic thread pool for DTA::CAB
 
 package DTA::CAB::Fork::Pool;

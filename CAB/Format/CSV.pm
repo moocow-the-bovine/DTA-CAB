@@ -33,7 +33,9 @@ BEGIN {
 ##     doc => $doc,                    ##-- buffered input document
 ##
 ##     ##---- Output
-##     #level    => $formatLevel,      ##-- output formatting level: n/a
+##     level    => $formatLevel,      ##-- output formatting level:
+##                                    ##   0: text, xlit, canon, tag, lemma
+##                                    ##   1: text, xlit, canon, tag, lemma, details
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##
 ##     ##---- Common
@@ -56,7 +58,8 @@ BEGIN {
 BEGIN { *parseTTString = \&parseCsvString; }
 sub parseCsvString {
   my ($fmt,$src) = @_;
-  $$src =~ s|^([^\t]+)(?:\t([^\t]*))?\t([^\t]*)\t([^\t]*)\t([^\t]*)$|$1\t[xlit] $2\t[moot/word] $3\t[moot/tag] $4\t[moot/lemma] $5|mg;
+  no warnings qw(uninitialized);
+  $$src =~ s|^([^\t]+)(?:\t([^\t]*))?\t([^\t]*)\t([^\t]*)\t([^\t]*)(?:\t([^\t]*))?$|$1\t[xlit] $2\t[dmoot/tag] $3\t[moot/word] $3\t[moot/tag] $4\t[moot/lemma] $5\t[moot/details] $6|mg;
   return DTA::CAB::Format::TT::parseTTString($fmt,$src);
 }
 
@@ -83,6 +86,9 @@ sub token2buf {
 		$_[1]{text},
 		($_[1]{xlit} ? $_[1]{xlit}{latin1Text} : ''),
 		($_[1]{moot} ? (@{$_[1]{moot}}{qw(word tag lemma)}) : ('','','')),
+		(($_[0]{level}//0) >= 1
+		 ? ($_[1]{moot} && $_[1]{moot}{details} ? ($_[1]{moot}{details}{details}//'*') : '')
+		 : qw())
 	       )."\n";
   return $bufr;
 }

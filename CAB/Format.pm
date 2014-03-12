@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Format.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Base class for datum I/O
 
 package DTA::CAB::Format;
@@ -1525,7 +1525,7 @@ Registered as:
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

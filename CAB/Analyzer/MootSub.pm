@@ -20,12 +20,14 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##  + object structure, %args:
 ##     mootLabel => $label,    ##-- label for Moot tagger object (default='moot')
 ##     lz => $lemmatizer,      ##-- DTA::CAB::Analyzer::Lemmatizer sub-object
+##     bytoken => $bool,       ##-- type-wise expand $mootLabel if true; depends on global option "${label}.bytoken"; see typeKeys() method
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
 			       ##-- analysis selection
 			       label => 'mootsub',
 			       mootLabel => 'moot',
+			       bytoken => 1,
 			       lz => DTA::CAB::Analyzer::Lemmatizer->new(analyzeGet    =>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_ANALYSES,
 									 analyzeGetText=>$DTA::CAB::Analyzer::Lemmatizer::GET_MOOT_TEXT,
 									 analyzeWhich  =>'Sentences',
@@ -101,7 +103,7 @@ sub analyzeSentences {
 	$l =~ s/[\x{ac}]//g;
 	$l = lc($l);
 	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
-	$m->{details} = $cache{$key} = {lemma=>$l,tag=>$t,details=>'*[_$t]',prob=>0};
+	$m->{details} = $cache{$key} = {lemma=>$l,tag=>$t,details=>"*",prob=>0};
       }
     else
       {
@@ -129,11 +131,12 @@ sub analyzeSentences {
   return $doc;
 }
 
-## @keys = $anl->typeKeys()
+## @keys = $anl->typeKeys(\%opts)
 ##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
-##  + override returns @$anl{qw(mootLabel)}
+##  + override returns $anl->{mootLabel} or empty list, depending on $anl->{bytoken}
 sub typeKeys {
-  return ($_[0]{mootLabel});
+  my ($anl,$opts) = @_;
+  return ($opts->{"$anl->{label}.bytoken"} // $anl->{bytoken} ? qw() : $_[0]{mootLabel});
 }
 
 1; ##-- be happy

@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Socket::UNIX.pm
-## Author: Bryan Jurish <jurish@uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: UNIX-socket based queue: common utilities
 
 package DTA::CAB::Socket::UNIX;

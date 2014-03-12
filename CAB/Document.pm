@@ -1,7 +1,7 @@
 ## -*- Mode: CPerl -*-
 ##
 ## File: DTA::CAB::Document.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: generic API for whole documents passed to/from DTA::CAB::Analyzer
 
 package DTA::CAB::Document;
@@ -74,7 +74,7 @@ sub types {
 sub getTypes {
   my $doc = shift;
   my $types = $doc->{types} = {};
-  my @nokeys = @{$doc->{noTypeKeys}||[]};
+  my @nokeys = @{$doc->{noTypeKeys}||[qw(moot dmoot)]};
   my ($typ);
   foreach (map {@{$_->{tokens}}} @{$doc->{body}}) {
     next if (exists($types->{$_->{text}}));
@@ -348,7 +348,7 @@ Returns number of tokens in the document.
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -38,6 +38,7 @@ my $tagx=$moot->{tagx};
 my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
+my $notag=$moot->{notag};
 my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
 sub {
  $s     = $_;
@@ -62,7 +63,7 @@ sub {
  } @{$s->{tokens}}];
  return if (!@$msent); ##-- ignore empty sentences
 
- $hmm->tag_sentence($msent, $utf8);
+ $hmm->tag_sentence($msent, $utf8) if (!$notag);
 
  ##-- language-guesser hack
  if (($lang=$s->{lang}) && $lang ne "de") {
@@ -72,9 +73,9 @@ sub {
  foreach (@$msent) {
    $_->{word}=$_->{text};
    delete($_->{text});
-   $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}}));
+   $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));
    if ($prune) {
-     $t = $_->{tag};
+     $t = $_->{tag}//"";
      @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
    }
  }
@@ -101,6 +102,7 @@ sub {
 ##     label       => $lab,      ##-- destination key (default='moot')
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##     lctext      => $bool,     ##-- if true, input text will be bashed to lower-case (default: false)
+##     notag       => $bool,     ##-- if true, hmm tagger won't actually be called; read from global analyzer options as "${lab}.notag"
 ##
 ##     ##-- Analysis Objects
 ##     hmm         => $hmm,   ##-- a moot::HMM object
@@ -128,6 +130,7 @@ sub new {
 			       label => 'moot',
 			       analyzeCode => $DEFAULT_ANALYZE_CODE,
 			       lctext => 0,
+			       #notag => undef,
 
 			       #analyzeCostFuncs => {},
 			       #requireAnalyses => 0,
@@ -312,6 +315,10 @@ sub analyzeSentences {
   return $doc if (!$moot->canAnalyze);      ##-- ok...
   $doc = toDocument($doc);
 
+  ##-- inherit global options
+  my $notag        = $moot->{notag};
+  $moot->{notag} //= $opts->{"$moot->{label}.notag"};
+
   ##-- setup access closures
   my $acode_str  = $moot->analysisCode();
   my $acode_sub  = $moot->accessClosure($acode_str);
@@ -320,6 +327,9 @@ sub analyzeSentences {
   foreach (@{$doc->{body}}) {
     $acode_sub->();
   }
+
+  ##-- restore local options
+  $moot->{notag} = $notag;
 
   return $doc;
 }
