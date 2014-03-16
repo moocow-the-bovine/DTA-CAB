@@ -78,6 +78,7 @@ sub new {
 					  LocalAddr=>'0.0.0.0', ##-- all
 					  LocalPort=>8088,
 					  ReuseAddr=>1,
+                                          ReusePort=>1,
 					 },
 			   #cxsrv => undef,
 			   xopt => {no_http=>1},
