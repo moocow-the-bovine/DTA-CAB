@@ -347,6 +347,71 @@ sub analysisCode {
     $moot->{analyzeCode} || $DEFAULT_ANALYZE_CODE;
 }
 
+##------------------------------------------------------------------------
+## Methods: Analysis: DEBUG
+
+## analysisCodeDEBUG() : from $DEFAULT_ANALYZE_CODE
+sub analysisCodeDEBUG {
+  my $anl = shift;
+
+ ## copy+paste from debugger "print $DEFAULT_ANALYZE_CODE" after breaking first e.g. in analysisCode() above
+  package DTA::CAB::Analyzer::Moot;
+  my $moot=$anl;
+  my $lab =$moot->{label};
+  my $hmm =$moot->{hmm};
+  my $tagx=$moot->{tagx};
+  my $utf8=$moot->{hmmUtf8};
+  my $prune=$moot->{prune};
+  my $lctext=$moot->{lctext};
+  my $notag=$moot->{notag};
+  my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
+  sub {
+    $s     = $_;
+    $msent = [map {
+      $w  = $_;
+      $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
+      $mw->{text} = (defined($mw->{word}) ? $mw->{word} : ($_->{dmoot} ? $_->{dmoot}->{tag} : ($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}) ##== _am_xlit
+							  ) ##== _am_tag
+		    ) if (!defined($mw->{text}));
+      $mw->{text} = lc($mw->{text}) if ($lctext);
+      $val = undef;	      ##-- temporary for _am_tagh_moota_uniq()
+      $mw->{analyses} = [(map {$val && $val->{details} eq $_->{details} ? qw() : ($val=$_)} sort {($a->{details}//"") cmp ($b->{details}//"") || ($a->{prob}//0) <=> ($b->{prob}//0)} (map {{details=>$_->{hi}, prob=>($_->{w}||0), tag=>($_->{hi} =~ /\[\_?((?:[A-Za-z0-9]+|\$[^\]]+))\]/ ? $1 : $_->{hi})} ##-- _am_tagh_fst2moota
+																							  } map {ref($_) ? $_ : {hi=>$_}} map {$_ ? @$_ : qw()}
+																						       @$w{qw(mlatin tokpp toka)},
+																						       ($w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
+																						       ($w->{dmoot} ? $w->{dmoot}{morph}
+																							: ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))) ##-- _am_tagh_list2moota
+			 )	##== _am_tagh_moota_uniq
+
+			] if (!defined($mw->{analyses}));
+      foreach (@{$mw->{analyses}}) {
+	##-- tag-translation hack: apply BEFORE sending to moot!
+	$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}}));
+      }
+      $mw
+    } @{$s->{tokens}}];
+    return if (!@$msent);	##-- ignore empty sentences
+
+    $hmm->tag_sentence($msent, $utf8) if (!$notag);
+
+    ##-- language-guesser hack
+    if (($lang=$s->{lang}) && $lang ne "de") {
+      $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+    }
+
+    foreach (@$msent) {
+      $_->{word}=$_->{text};
+      delete($_->{text});
+      $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));
+      if ($prune) {
+	$t = $_->{tag}//"";
+	@{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
+      }
+    }
+  }
+}
+
+
 1; ##-- be happy
 
 __END__
