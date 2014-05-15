@@ -139,7 +139,7 @@ sub parseYamlString {
       or $fmt->logcluck("ParseYamlString(): YAML::XS::Load() failed: $!");
   }
   elsif ($lib eq 'YAML::Syck') {
-    $doc = YAML::XS::Load($$bufr)
+    $doc = YAML::Syck::Load($$bufr)
       or $fmt->logcluck("ParseYamlString(): YAML::Syck::Load() failed: $!");
   }
   elsif ($lib eq 'YAML') {
