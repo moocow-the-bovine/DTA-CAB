@@ -1078,6 +1078,8 @@ Gets the most recent subclass registry HASH ref for the claass basename name $ba
 Wrapper for
 L<DTA::CAB::Format::Registry::base2reg|DTA::CAB::Format::Registry/base2reg>().
 
+=back
+
 =cut
 
 ##----------------------------------------------------------------
@@ -1424,12 +1426,53 @@ Registered as:
 
  name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/
 
+=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
+
+Null format for testing, registered as:
+
+ name=>__PACKAGE__
+
+
 =item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
 
 Datum parser|formatter: perl code via Data::Dumper, eval().
 Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:prl|pl|perl|dump)$/
+
+=item L<DTA::CAB::Format::Raw|DTA::CAB::Format::Raw>
+
+Abstract input-only format for reading raw untokenized text,
+wraps L<DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP|DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP> by default.
+
+=item L<DTA::CAB::Format::Raw::HTTP|DTA::CAB::Format::Raw:HTTP>
+
+Input-only format for reading raw untokenized text and analyzing it
+over HTTP using a remote WASTE FastCGI interface, registered as:
+
+ name=>__PACKAGE__, short=>'raw-http', filenameRegex=>qr/\.(?i:raw-http|txt-http)$/
+
+=item L<DTA::CAB::Format::Raw::Perl|DTA::CAB::Format::Raw::Perl>
+
+Input-only format for reading raw untokenized text and analyzing it
+using simple pure-perl heuristics. Registered as:
+
+ name=>__PACKAGE__, short=>'raw-perl', filenameRegex=>qr/\.(?i:raw-perl|txt-perl)$/
+
+=item L<DTA::CAB::Format::Raw::Waste|DTA::CAB::Format::Raw::Waste>
+
+Input-only format for reading raw untokenized text and analyzing it
+using the L<Moot::Waste|Moot::Waste> module, registered as:
+
+ name=>__PACKAGE__, short=>'raw-waste', filenameRegex=>qr/\.(?i:raw-waste|txt-waste)$/);
+
+
+=begin comment text
+
+=item L<DTA::CAB::Format::SQLite|DTA::CAB::Format::SQLite>
+
+=end comment
+
 
 =item L<DTA::CAB::Format::Storable|DTA::CAB::Format::Storable>
 
@@ -1439,27 +1482,63 @@ Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:sto|bin)$/
 
-=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Raw>
+=item L<DTA::CAB::Format::SynCoPe::CSV|DTA::CAB::Format::SynCoPe::CSV>
 
-Input-only parser for quick and dirty parsing of raw untokenized input.
+Datum parser|formatter for SynCoPe named entity recognizer C<-tab_input> mode.
 Registered as:
 
- name=>__PACKAGE__, filenameRegex=>qr/\.(?i:raw)$/
+ name=>__PACKAGE__, short=>'syncope-csv', filenameRegex=>qr/\.(?i:syn(?:cope)?[-\.](?:csv|tsv|tab)|)$/
+
+=item L<DTA::CAB::Format::TCF|DTA::CAB::Format::TCF>
+
+Datum parser|formatter for CLARIN-D TCF XML.
+Handles annoation layers tokens, sentences, orthography, postags, and lemmas.
+Registered as:
+
+ (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf[\.\-_]?xml)|(?:tcf))$/)
+ (name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'}) foreach (qw(tcf-orth tcf-web))
+ (name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'}) foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf))
+
+=item L<DTA::CAB::Format::TEI|DTA::CAB::Format::TEI>
+
+Datum parser|formatter: for raw un-tokenized TEI XML (with or without //c elements) using L<DTA::TokWrap|DTA::TokWrap>.
+Any //s or //w elements in the input will be B<IGNORED> and input will be (re-)tokenized.
+Registered as:
+
+  (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei(?:[\.\-_]?p[45])?)[\.\-_]xml|xml)$/)
+  (name=>__PACKAGE__, short=>$_) foreach (qw(chr-xml c-xml cxml tei-xml teixml tei xml))
+
+=item L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>
+
+Datum parser|formatter: for TEI XML pre-tokenized into (possibly fragmented) //w and //s elements, as output by DTA::TokWrap.
+Registered as:
+
+ (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:spliced|tei[\.\-\+]?ws?|wst?)[\.\-]xml)$/)
+ (name=>__PACKAGE__, short=>$_) foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml teiws-xml));
 
 =item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
 
 Datum parser|formatter: verbose human-readable text
-(deprecated in favor of L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>).
 Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:txt|text|cab\-txt|cab\-text)$/
 
+=item L<DTA::CAB::Format::TJ|DTA::CAB::Format::TJ>
+
+Datum parser|formatter: "vertical" text, one token per line, with a single TAB-separated
+attribute field encoding token data as JSON.
+Registered as:
+
+ (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:tj|tjson|cab\-tj|cab\-tjson)$/);
+
 =item L<DTA::CAB::Format::TT|DTA::CAB::Format::TT>
 
-Datum parser|formatter: "vertical" text, one token per line.
+Datum parser|formatter: "vertical" text, one token per line, TAB-separated attribute fields
+with conventional attribute-name prefixes.
 Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:t|tt|ttt|cab\-t|cab\-tt|cab\-ttt)$/
+
 
 =item L<DTA::CAB::Format::YAML|DTA::CAB::Format::YAML>
 
@@ -1479,6 +1558,7 @@ Registered as:
 
 Datum parser|formatter: XML: abstract base class.
 
+
 =item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
 
 Datum parser|formatter: XML (native).
@@ -1491,12 +1571,6 @@ and aliased as:
 
  name=>__PACKAGE__, short=>'xml'
 
-=item L<DTA::CAB::Format::XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
-
-=item L<DTA::CAB::Format::XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
-
-Datum parser|formatter(s): XML (TokWrap).
-
 
 =item L<DTA::CAB::Format::XmlPerl|DTA::CAB::Format::XmlPerl>
 
@@ -1505,6 +1579,7 @@ Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)perl|perl(?:[\-\.]?)xml)$/
 
+
 =item L<DTA::CAB::Format::XmlRpc|DTA::CAB::Format::XmlRpc>
 
 Datum parser|formatter: XML-RPC data structures using RPC::XML.  Much too bloated
@@ -1512,6 +1587,28 @@ to be of any real practical use.
 Registered as:
 
  name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xml(?:\-?)rpc|rpc(?:[\-\.]?)xml)$/
+
+
+=item L<DTA::CAB::Format::XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
+
+Datum parser|formatter(s): XML as read/written by L<DTA::TokWrap>.
+
+ (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:[tuws]\.?xml)$/)
+ (name=>__PACKAGE__, short=>$_) foreach (qw(txml t-xml twxml tw-xml))
+
+=item L<DTA::CAB::Format::XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
+
+Datum parser|formatter(s): XML as read/written by L<DTA::TokWrap>.
+Unlike the C<XmlTokWrap> format,
+C<XmlTokWrapFast> does not read and/or write the full document structure,
+but rather restricts itself to a finite hard-coded subset of the most commonly
+used document-, sentence-, and token-level attributes.  The input parser
+uses the expat-based XML::Parser module, which usually results in much faster
+and memory-friendlier document parsing than the C<XmlTokWrap> module.
+Registered as:
+
+ (name=>__PACKAGE__, filenameRegex=>qr/(?:\.(?i:f[tuws](?:\.?)xml))$/);
+ (name=>__PACKAGE__, short=>$_) foreach (qw(ftxml ft-xml ftwxml ftw-xml))
 
 =back
 
@@ -1529,7 +1626,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2011 by Bryan Jurish
+Copyright (C) 2009-2014 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,
