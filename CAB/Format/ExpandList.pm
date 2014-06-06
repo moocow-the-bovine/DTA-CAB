@@ -23,6 +23,8 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xl');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xlist');
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[sub {$_[0]{moot}{lemma}}]})
+      foreach (qw(LemmaList llist ll lemmata lemmas));
 }
 
 ##==============================================================================
@@ -48,7 +50,9 @@ BEGIN {
 ## + inherited from DTA::CAB::Format::TT
 sub new {
   my $that = shift;
-  return $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi)],@_);
+  my $obj  = $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi)],@_);
+  $obj->{keys} = [grep {($_//'') ne ''} split(/[\s\,]+/, $obj->{keys})] if (!ref($obj->{keys}));
+  return $obj;
 }
 
 ##==============================================================================
@@ -131,7 +135,11 @@ sub putToken {
 		  : $_)
 	       }
 	       map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
-	       @$tok{@{$fmt->{keys}}}
+	       map {
+		 (UNIVERSAL::isa($_,'CODE')
+		  ? $_->($tok)
+		  : $tok->{$_})
+	       } @{$fmt->{keys}}
 	      );
 
   $fmt->{fh}->print(join($sep, ($level > 0 ? sort(@words) : @words)), "\n");
