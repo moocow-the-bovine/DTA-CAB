@@ -24,7 +24,7 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xl');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xlist');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[sub {$_[0]{moot}{lemma}}]})
-      foreach (qw(LemmaList llist ll lemmata lemmas));
+      foreach (qw(LemmaList llist ll lemmata lemmas lemma));
 }
 
 ##==============================================================================
