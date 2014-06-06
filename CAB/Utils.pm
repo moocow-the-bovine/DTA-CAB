@@ -24,7 +24,7 @@ our %EXPORT_TAGS =
      xml  => [qw(xml_safe_string xml_escape)],
      libxml => [qw(libxml_parser libxml_doc libxml_xpnodes libxml_xpnode libxml_xpvalue libxml_xpcontext)],
      libxslt => [qw(xsl_stylesheet)],
-     data => [qw(path_value)],
+     data => [qw(path_value path_parse)],
      encode => [qw(deep_encode deep_decode deep_recode deep_utf8_upgrade)],
      profile => [qw(si_str profile_str)],
      version => [qw(cab_version)],
@@ -275,17 +275,27 @@ sub deep_utf8_upgrade {
 ## Functions: abstract data path value
 ##==============================================================================
 
-## $val_or_undef = path_value($obj,@path)
+## $val_or_undef = path_value($obj, \@path)
+## $val_or_undef = path_value($obj, $path_str)
 sub path_value {
   my $obj = shift;
-  my ($path);
-  while (defined($obj) && defined($path=shift)) {
+  foreach (@{path_parse($_[0])}) {
     return undef if (!ref($obj));
-    if    (UNIVERSAL::isa($obj,'HASH'))  { $obj = $obj->{$path}; }
-    elsif (UNIVERSAL::isa($obj,'ARRAY')) { $obj = $obj->[$path]; }
+    $obj = (UNIVERSAL::isa($obj,'HASH') ? $obj->{$_}
+	    : (UNIVERSAL::isa($obj,'ARRAY') ? $obj->[$_]
+	       : (UNIVERSAL::isa($obj,'CODE') ? $obj->($_)
+		  : die(__PACKAGE__ . "::path_value(): cannot handle object $obj"))));
   }
   return $obj;
 }
+
+## \@path = PACKAGE::path_parse(\@path)
+## \@path = PACKAGE::path_parse($path_str)
+sub path_parse {
+  no warnings 'uninitialized';
+  return UNIVERSAL::isa($_[0],'ARRAY') ? $_[0] : [split(m{/},$_[0]=~m{^/} ? substr($_[0],1) : $_[0])];
+}
+
 
 ##======================================================
 ## Profiling

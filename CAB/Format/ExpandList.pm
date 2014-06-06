@@ -8,6 +8,7 @@ package DTA::CAB::Format::ExpandList;
 use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
+use DTA::CAB::Utils ':data'; ##-- path_value()
 use IO::File;
 use Encode qw(encode decode);
 use Carp;
@@ -23,7 +24,7 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xl');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xlist');
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[sub {$_[0]{moot}{lemma}}]})
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[[qw(moot lemma)]]})
       foreach (qw(LemmaList llist ll lemmata lemmas lemma));
 }
 
@@ -135,11 +136,8 @@ sub putToken {
 		  : $_)
 	       }
 	       map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
-	       map {
-		 (UNIVERSAL::isa($_,'CODE')
-		  ? $_->($tok)
-		  : $tok->{$_})
-	       } @{$fmt->{keys}}
+	       map {path_value($tok,$_)}
+	       @{$fmt->{keys}}
 	      );
 
   $fmt->{fh}->print(join($sep, ($level > 0 ? sort(@words) : @words)), "\n");
