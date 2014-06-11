@@ -108,7 +108,8 @@ sub analyzeSentences {
     }
 
     ##-- lookup
-    $synsets = $gn->get_synsets($lemma);
+    $synsets = $gn->get_synsets($lemma) // [];
+    push(@$synsets, grep {exists($gn->{rel}{"syn2lex:$_"})} $lemma); ##-- allow synset names as 'lemma' queries
     @syns = map {
       $syn = $_;
       map {
