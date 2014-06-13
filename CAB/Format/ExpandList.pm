@@ -42,7 +42,7 @@ BEGIN {
 ##     level    => $formatLevel,      ##-- output formatting level:
 ##				      ##   0:TAB-separated (default); 1:sorted,NEWLINE-separated; 2:sorted,NEWLINE+TAB separated
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
-##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi)])
+##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)])
 ##
 ##     ##---- Common
 ##     utf8  => $bool,                 ##-- default: 1
@@ -51,7 +51,7 @@ BEGIN {
 ## + inherited from DTA::CAB::Format::TT
 sub new {
   my $that = shift;
-  my $obj  = $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi)],@_);
+  my $obj  = $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)],@_);
   $obj->{keys} = [grep {($_//'') ne ''} split(/[\s\,]+/, $obj->{keys})] if (!ref($obj->{keys}));
   return $obj;
 }

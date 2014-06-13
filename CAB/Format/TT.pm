@@ -311,8 +311,8 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(.*?moot)\/details\]\s?(\S*)(?:\s\@\s(\S+))?\s(?:\~\s)?(.*?)(?: <([0-9\.\+\-eE]+)>)?$/) {
 		  ##-- token: field: moot/details|dmoot/details
 		  $tok->{$1}{details} = {tag=>$2,lemma=>$3,details=>$4,prob=>$5};
-		} elsif ($field =~ m/^\[(gn\-(?:hyper|hypo|isa|asi))\]\s(\S+)$/) {
-		  ##-- token: field: list field (GermaNet hyperonyms / hyponyms)
+		} elsif ($field =~ m/^\[((?:gn|ot)\-(?:hyper|hypo|isa|asi|syn))\]\s(\S+)$/) {
+		  ##-- token: field: list field (GermaNet|OpenThesaurus hyperonyms / hyponyms)
 		  push(@{$tok->{$1}}, $2);
 		} elsif ($field =~ m/^\[(toka|tokpp|lang)\]\s?(.*)$/) {
 		  ##-- token: field: other known list field: (toka|tokpp)
@@ -600,6 +600,11 @@ sub token2buf {
   $$bufr .= join('', map {"\t[gn-syn] $_"} grep {defined($_)} @{$tok->{'gn-syn'}}) if ($tok->{'gn-syn'});
   $$bufr .= join('', map {"\t[gn-isa] $_"} grep {defined($_)} @{$tok->{'gn-isa'}}) if ($tok->{'gn-isa'});
   $$bufr .= join('', map {"\t[gn-asi] $_"} grep {defined($_)} @{$tok->{'gn-asi'}}) if ($tok->{'gn-asi'});
+
+  ##-- relation closure / OpenThesaurus
+  $$bufr .= join('', map {"\t[ot-syn] $_"} grep {defined($_)} @{$tok->{'ot-syn'}}) if ($tok->{'ot-syn'});
+  $$bufr .= join('', map {"\t[ot-isa] $_"} grep {defined($_)} @{$tok->{'ot-isa'}}) if ($tok->{'ot-isa'});
+  $$bufr .= join('', map {"\t[ot-asi] $_"} grep {defined($_)} @{$tok->{'ot-asi'}}) if ($tok->{'ot-asi'});
 
   ##-- NE-recognizer ('ner')
   if ($tok->{ner}) {
