@@ -87,6 +87,9 @@ sub prepare {
   ##-- prepare: subclass-local
   $rc &&= $srv->prepareLocal(@_);
 
+  ##-- prepare: timestamp
+  $srv->{t_started} //= time();
+
   ##-- return
   $srv->info("initialization complete");
 
