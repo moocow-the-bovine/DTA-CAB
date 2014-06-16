@@ -275,11 +275,11 @@ sub run {
     };
     if ($@) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>$@</pre>");
-      $srv->reapClient($csock,$handler);
+      $srv->reapClient($csock,$handler,$chost);
     }
     elsif (!defined($rsp)) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
-      $srv->reapClient($csock,$handler);
+      $srv->reapClient($csock,$handler,$chost);
     }
 
     ##-- maybe cache response
@@ -310,7 +310,7 @@ sub run {
   }
   continue {
     ##-- cleanup after client
-    $srv->reapClient($csock,$handler) if (!$pid);
+    $srv->reapClient($csock,$handler,$chost) if (!$pid);
     $hreq=$handler=$localPath=$pid=$rsp=undef;
   }
 
@@ -337,11 +337,11 @@ sub reaper {
   };
 }
 
-## undef = $srv->reapClient($csock, $handler_or_undef)
+## undef = $srv->reapClient($csock, $handler_or_undef, $chost_or_undef)
 sub reapClient {
-  my ($srv,$csock,$handler) = @_;
+  my ($srv,$csock,$handler,$chost) = @_;
   return if (!$csock);
-  $srv->vlog($srv->{logClose}, "closing connection to client ", $csock->peerhost);
+  $srv->vlog($srv->{logClose}, "closing connection to client ", ($chost // ($csock->opened ? $csock->peerhost : '-undef-')));
   if ($csock->opened) {
     $csock->force_last_request();
     $csock->shutdown(2);
