@@ -41,7 +41,7 @@ our $defaultPath = '/query';
 our $serverURL   = "http://localhost:${defaultPort}${defaultPath}";
 our %clientOpts = (
 		   timeout=>65535, ##-- wait for a *long* time (65535 = 2**16-1 ~ 18.2 hours)
-		   testConnect=>1,
+		   testConnect=>0,
 		   mode => 'xpost',
 		   post => 'urlencoded',
 		   cacheGet=>1,
@@ -411,7 +411,7 @@ dta-cab-http-client.perl - Generic HTTP client for DTA::CAB::Server::HTTP querie
  Client Options:
   -server URL                     ##-- set server URL (default: http://localhost:9099)
   -timeout SECONDS                ##-- set server timeout in seconds (default: lots)
-  -test-connect , -notest-connect ##-- do/don't send a test request to the server (default: do)
+  -test-connect , -notest-connect ##-- do/don't send a test request to the server (default: don't)
   -trace FILE                     ##-- trace request(s) sent to the server to FILE
   -header HEADER=VALUE            ##-- set additional HTTP header
   -cache-get , -nocache-get       ##-- enable/disable cached response from server (Cache-Control: no-cache)

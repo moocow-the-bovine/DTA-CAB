@@ -29,7 +29,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##  + object structure: HASH ref
 ##    {
 ##     ##-- Underlying HTTP::Daemon server
-##     daemonMode => $daemonMode,    ##-- one of 'serial', 'fork', 'xmlrpc' [default='serial']
+##     daemonMode => $daemonMode,    ##-- one of 'serial' or 'fork' [default='serial']
 ##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new(); default={LocalAddr=>'0.0.0.0',LocalPort=>8088}
 ##     paths      => \%path2handler, ##-- maps local URL paths to configs
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon object
@@ -49,6 +49,10 @@ our @ISA = qw(DTA::CAB::Server);
 ##     _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
 ##     maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
 ##     ##
+##     ##-- forking
+##     children => \%pids,	    ##-- child PIDs
+##     pid => $pid,		    ##-- PID of parent server process
+##     ##
 ##     ##-- logging
 ##     logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
 ##     logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
@@ -58,6 +62,8 @@ our @ISA = qw(DTA::CAB::Server);
 ##     logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
 ##     logClientError => $level,    ##-- log errors to client at $level (default='debug')
 ##     logClose => $level,          ##-- log close client connections (default=undef: none)
+##     logReap => $level,           ##-- log harvesting of child pids (default=undef: none)
+##     logSpawn => $level,          ##-- log spawning of child pids (default=undef: none)
 ##     ##
 ##     ##-- (inherited from DTA::CAB::Server)
 ##     as  => \%analyzers,    ##-- ($name=>$cab_analyzer_obj, ...)
@@ -114,6 +120,10 @@ sub new {
 			   logCallData => 'off',
 			   logCall => 'off',
 
+			   ##-- logging, fork-related
+			   logSpawn => 'off',
+			   logReap => 'off',
+
 			   ##-- user args
 			   @_
 			  );
@@ -154,6 +164,14 @@ sub prepareLocal {
   ##-- setup cache
   $srv->{cache} = DTA::CAB::Cache::LRU->new(max_size=>$srv->{cacheSize}) if (!$srv->{cache} && $srv->{cacheSize}>0);
 
+  ##-- setup mode-specific options
+  $srv->{daemonMode} //= 'serial';
+  if ($srv->{daemonMode} eq 'fork') {
+    $srv->{children} //= {};
+    $srv->{pid}      //= $$;
+    $SIG{CHLD} = $srv->reaper();
+  }
+
   return 1;
 }
 
@@ -165,10 +183,17 @@ sub run {
   $srv->logcroak("run(): no underlying HTTP::Daemon object!") if (!$srv->{daemon});
 
   my $daemon = $srv->{daemon};
-  $srv->info("server starting on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
+  my $mode   = $srv->{daemonMode} || 'serial';
+  $srv->info("server starting in $mode mode on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
 
-  my ($csock,$chost,$hreq,$urikey,$cacheable,$handler,$localPath,$rsp);
-  while (defined($csock=$daemon->accept)) {
+  my ($csock,$chost,$hreq,$urikey,$cacheable,$handler,$localPath,$pid,$rsp);
+  while (1) {
+    ##-- call accept() within the loop to avoid breaking out in fork mode
+    if (!defined($csock=$daemon->accept())) {
+      #sleep(1);
+      next;
+    }
+
     ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();
 
@@ -220,7 +245,7 @@ sub run {
       next;
     }
 
-    ##-- check cache
+    ##-- check cache (GET requests only)
     $cacheable = ($srv->{cache}
 		  && $hreq->method eq 'GET'
 		  && ($hreq->header('Pragma')||'') !~ /\bno-cache\b/);
@@ -235,17 +260,26 @@ sub run {
 	next;
       }
 
-    ##-- pass request to handler
+    ##-- maybe fork (POST requests only)
+    $pid = ($mode eq 'fork' && $hreq->method eq 'POST' ? fork() : undef);
+    if ($pid) {
+      ##-- parent code
+      $srv->{children}{$pid} = undef;
+      $srv->vlog($srv->{logSpawn}, "spawned subprocess $pid");
+      next;
+    }
+
+    ##-- child|serial code: pass request to handler
     eval {
       $rsp = $handler->run($srv,$localPath,$csock,$hreq);
     };
     if ($@) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>$@</pre>");
-      next;
+      $srv->reapClient($csock,$handler);
     }
     elsif (!defined($rsp)) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
-      next;
+      $srv->reapClient($csock,$handler);
     }
 
     ##-- maybe cache response
@@ -276,18 +310,45 @@ sub run {
   }
   continue {
     ##-- cleanup after client
-    $srv->vlog($srv->{logClose}, "closing connection to client $chost");
-    if ($csock->opened) {
-      $csock->force_last_request();
-      $csock->shutdown(2);
-    }
-    $handler->finish($srv,$csock) if (defined($handler));
-    $hreq=$handler=$localPath=$rsp=undef;
+    $srv->reapClient($csock,$handler) if (!$pid);
+    $hreq=$handler=$localPath=$pid=$rsp=undef;
   }
 
 
   $srv->info("server exiting\n");
   return $srv->finish();
+}
+
+
+##==============================================================================
+## Methods: Local: spawn and real
+
+## \&reaper = $srv->reaper()
+##  + zombie-harvesting code; installed to local %SIG
+sub reaper {
+  my $srv = shift;
+  return sub {
+    my ($child);
+    while (($child = waitpid(-1,WNOHANG)) > 0) {
+      $srv->vlog($srv->{logReap},"reaped subprocess pid=$child, status=$?");
+      delete $srv->{children}{$child};
+    }
+    #$SIG{CHLD}=$srv->reaper() if ($srv->{installReaper}); ##-- re-install reaper for SysV
+  };
+}
+
+## undef = $srv->reapClient($csock, $handler_or_undef)
+sub reapClient {
+  my ($srv,$csock,$handler) = @_;
+  return if (!$csock);
+  $srv->vlog($srv->{logClose}, "closing connection to client ", $csock->peerhost);
+  if ($csock->opened) {
+    $csock->force_last_request();
+    $csock->shutdown(2);
+  }
+  $handler->finish($srv,$csock) if (defined($handler));
+  exit 0 if ($srv->{pid} && $srv->{pid} != $$);
+  return;
 }
 
 ##==============================================================================
@@ -494,7 +555,7 @@ and supports the L<DTA::CAB::Server|DTA::CAB::Server> API.
 
  (
   ##-- Underlying HTTP::Daemon server
-  daemonMode => $daemonMode,    ##-- one of 'serial', 'fork', 'xmlrpc' [default='serial']
+  daemonMode => $daemonMode,    ##-- one of 'serial', or 'fork' [default='serial']
   daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new()
   paths      => \%path2handler, ##-- maps local URL paths to handlers
   daemon     => $daemon,        ##-- underlying HTTP::Daemon object
