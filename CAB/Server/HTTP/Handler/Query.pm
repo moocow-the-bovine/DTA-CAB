@@ -155,7 +155,7 @@ sub run {
 
   ##-- get format class
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
-  my $fmt = $h->{formats}->newFormat($fc, level=>$vars->{pretty})
+  my $fmt = $h->{formats}->newFormat($fc, level=>($vars->{pretty}//0))
     or return $h->cerror($c, undef, "unknown format '$fc'");
 
   ##-- parse input query

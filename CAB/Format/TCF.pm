@@ -48,6 +48,7 @@ BEGIN {
 ##     spliceback => $bool,                    ##-- (output) if true (default), splice data back into 'tcfbufr' if available; otherwise create new TCF doc
 ##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='tokens sentences postags lemmas orthography'
 ##     tcftagset => $tagset,                   ##-- tagset name for POStags element (default='stts')
+##     logsplice => $level,		       ##-- log level for spliceback messages (default:'none')
 ##
 ##     ##-- input: inherited from XmlCommon
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
@@ -67,6 +68,7 @@ sub new {
 			      tcflayers => 'tokens sentences orthography',
 			      tcftagset => 'stts',
 			      spliceback => 1,
+			      logsplice => 'none',
 
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
 			      ignoreKeys => {
@@ -234,7 +236,7 @@ sub putDocument {
     if (!$xdoc) {
       my $bufr = $doc->{tcfbufr} // $fmt->{tcfbufr};
       if (!$bufr || !$$bufr) {
-	$fmt->logwarn("spliceback mode requested but no 'tcfdoc' or 'tcfbufr' document property - creating new document!");
+	$fmt->vlog($fmt->{logsplice}, "spliceback mode requested but no 'tcfdoc' or 'tcfbufr' document property - creating new document!");
 	$spliceback = 0;
       }
     }

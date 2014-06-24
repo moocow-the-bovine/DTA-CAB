@@ -159,7 +159,7 @@ sub newFormat {
   my ($reg,$class,%opts) = @_;
   my $creg = $reg->lookup(class=>$class,%opts);
   return undef if (!defined($creg));
-  return $creg->{name}->new($reg->commonOpts($creg,%opts));
+  return $creg->{name}->new($reg->commonOpts($creg),%opts);
 }
 
 ## %opts = $reg->commonOpts($creg)
