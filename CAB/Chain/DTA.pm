@@ -155,8 +155,8 @@ sub setupChains {
      'default.dmoot1'   =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1)}],
      'default.moot'     =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot  dmootsub moot)}],
      'default.moot1'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot1)}],
-     'default.lemma'    =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot  mootsub)}],
-     'default.lemma1'   =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot1 mootsub)}],
+     'default.lemma'    =>[@$ach{qw(tokpp xlit lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot  mootsub)}],
+     'default.lemma1'   =>[@$ach{qw(tokpp xlit lts eqphox morph mlatin msafe langid rw        dmoot1 dmootsub moot1 mootsub)}],
      'default.ner'      =>[@$ach{qw(tokpp xlit              lts eqphox morph mlatin msafe langid rw        dmoot  dmootsub moot mootsub ner)}],
      'default.base'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe langid)}],
      'default.type'     =>[@$ach{qw(static exlex tokpp xlit lts        morph mlatin msafe langid rw rwsub)}],
@@ -175,6 +175,7 @@ sub setupChains {
      'expand.ot-isa' =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub ot-isa)}],
      'expand.ot-asi' =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub ot-asi)}],
      'expand.ot'     =>[@$ach{qw(static exlex       xlit lts morph mlatin msafe rw                  eqphox dmoot1 dmootsub moot1 mootsub ot-syn ot-isa ot-asi)}],
+     ##
      'norm'          =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot  dmootsub moot  mootsub)}],
      'norm1'         =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot1 dmootsub moot1 mootsub)}],
      'ner'           =>[@$ach{qw(static exlex tokpp xlit lts morph mlatin msafe langid rw                  eqphox dmoot  dmootsub moot  mootsub ner)}],
@@ -187,8 +188,9 @@ sub setupChains {
   #$chains->{'default'} = [map {@{$chains->{$_}}} qw(default.type sub.sent)];
 
   ##-- chain aliases
-  $chains->{'default'} = $chains->{'norm'};
-  $chains->{'expand'}  = $chains->{'expand.all'};
+  $chains->{'default'}  = $chains->{lemma}  = $chains->{'norm'};
+  $chains->{'default1'} = $chains->{lemma1} = $chains->{'norm1'};
+  $chains->{'expand'}   = $chains->{'expand.all'};
 
   ##-- sanitize chains
   foreach (values %{$ach->{chains}}) {
