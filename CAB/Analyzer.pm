@@ -749,7 +749,7 @@ sub _am_dmoot_list2moota {
 ## $regex_str = PACKAGE::_am_wordlike_regex()
 ##  + for use e.g. by Analyzer::Automaton subclass {allowTextRegex} property defaults
 sub _am_wordlike_regex {
-  return '^(?:(?:[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+)|(?:[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+))(?:[\'\x{2018}\x{2019}]s)?$';
+  return '^(?:(?:[[:alpha:]\p{Combining_Diacritical_Marks}\-\@\x{ac}]*[[:alpha:]\p{CombiningDiacriticalMarks}]+)|(?:[[:alpha:]\p{CombiningDiacriticalMarks}]+[[:alpha:]\p{CombiningDiacriticalMarks}\-\@\x{ac}]+))(?:[\'\x{2018}\x{2019}]s)?$';
 }
 
 

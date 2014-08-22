@@ -21,7 +21,6 @@ sub new {
   my $aut = $that->SUPER::new(
 			      ##-- overrides
 			      tolower => 1,
-			      #allowTextRegex => '(?:^[[:alpha:]\-\@\x{ac}]*[[:alpha:]]+$)|(?:^[[:alpha:]]+[[:alpha:]\-\@\x{ac}]+$)',
 			      #allowTextRegex => DTA::CAB::Analyzer::_am_wordlike_regex(),
 
 			      ##-- analysis selection
