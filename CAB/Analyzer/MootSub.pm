@@ -74,7 +74,7 @@ sub analyzeSentences {
       ##-- tag-hack: avoid TRUNC tags for non-wordlike tokens
       $m->{tag} = ($w =~ /[^[:punct:]]$/ ? 'XY' : '$(');
     }
-    elsif ($w !~ m/[^[:punct:]]/ && $m->{tag} !~ /^(?:\$|XY)/) {
+    elsif ($w !~ m/[^[:punct:]\p{MathematicalOperators}]/ && $m->{tag} !~ /^(?:\$|XY)/) {
       ##-- tag-hack: avoid "normal" tags for punctuation-only tokens
       $m->{tag} = '$(';
     }
