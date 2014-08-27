@@ -62,11 +62,22 @@ sub analyzeSentences {
   my $xytags = $asub->{xyTags};
   my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
-  ##-- Step 1: ensure $tok->{moot}, $tok->{moot}{tag} are defined (should be obsolete!)
-  my ($tok,$m);
+  ##-- Step 1: ensure $tok->{moot}, $tok->{moot}{tag} are defined (should be obsolete!), apply tag hacks
+  my ($tok,$m,$w);
   foreach $tok (@$toks) {
     $m = $tok->{$mlabel} = {} if (!defined($m=$tok->{$mlabel}));
     $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
+    $w = $m->{word} // $tok->{text};
+
+    ##-- tag hacks
+    if ($m->{tag} eq 'TRUNC' && $w !~ m/\w/) {
+      ##-- tag-hack: avoid TRUNC tags for non-wordlike tokens
+      $m->{tag} = ($w =~ /[^[:punct:]]$/ ? 'XY' : '$(');
+    }
+    elsif ($w !~ m/[^[:punct:]]/ && $m->{tag} !~ /^(?:\$|XY)/) {
+      ##-- tag-hack: avoid "normal" tags for punctuation-only tokens
+      $m->{tag} = '$(';
+    }
   }
 
   ##-- Step 2: run lemmatizer (populates $tok->{moot}{analyses}[$i]{lemma}
@@ -74,7 +85,7 @@ sub analyzeSentences {
 
   ##-- Step 3: lemma-extraction & tag-sensitive lemmatization hacks
   my %cache = qw(); ##-- $cache{"$word\t$tag"} = $best_analysis
-  my ($w,$t,$la,$l,$key,$ma,$maa,%l2d, $ld, $a0,$ld0);
+  my ($t,$la,$l,$key,$ma,$maa,%l2d, $ld, $a0,$ld0);
   foreach $tok (@$toks) {
     $m      = $tok->{$mlabel};
     ($w,$t) = @$m{qw(word tag)};
