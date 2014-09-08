@@ -223,7 +223,7 @@ sub loadFst {
 ## $result = $aut->resultFst()
 ##  + returns empty result FST
 sub resultFst {
-  return $_[0]{fst}->shadow;
+  return $_[0]{fst} ? $_[0]{fst}->shadow : undef;
 }
 
 ##--------------------------------------------------------------
@@ -310,6 +310,7 @@ sub canAnalyze {
 ##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
 sub analyzeTypes {
   my ($aut,$doc,$types,$opts) = @_;
+  return if (!$aut->canAnalyze);
   $types = $doc->types if (!$types);
 
   ##-- setup common variables
