@@ -58,7 +58,7 @@ GetOptions(##-- General
 	   'port|p=i'   => \$serverPort,
 
 	   ##-- Daemon mode options
-	   'daemon|d!'                 => \$daemonMode,
+	   'daemon|d|fork!'            => \$daemonMode,
 	   'pid-file|pidfile|pid|P=s'  => \$pidFile,
 	   'force!' => \$forceStart,
 

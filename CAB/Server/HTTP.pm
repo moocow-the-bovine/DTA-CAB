@@ -297,6 +297,8 @@ sub run {
 	}
       }
 
+    #sleep(3); ##-- DEBUG: simulate long processing
+
     ##-- ... and dump response to client
     if (!$csock->opened) {
       $srv->logwarn("client socket closed unexpectedly");
