@@ -144,6 +144,15 @@ sub putToken {
   return $fmt;
 }
 
+## $fmt = $fmt->putSentence($sent)
+##  + concatenates formatted tokens *without* any sentence-comments
+sub putSentence {
+  my ($fmt,$sent) = @_;
+  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
+  $fmt->{fh}->print("\n");
+  return $fmt;
+}
+
 
 1; ##-- be happy
 
