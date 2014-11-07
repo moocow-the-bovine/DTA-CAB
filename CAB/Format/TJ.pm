@@ -248,7 +248,7 @@ sub putSentence {
 
 ## $fmt = $fmt->putDocument($doc)
 ##  + concatenates formatted sentences, adding document 'xmlbase' comment if available
-our %TJ_BAD_DOC_KEYS = (body=>1, teibufr=>1);
+our %TJ_BAD_DOC_KEYS = (body=>1, teibufr=>1, textbufr=>1);
 sub putDocument {
   #my ($fmt,$doc) = @_;
   my $dh = { (map {($_=>$_[1]{$_})} grep {!exists($TJ_BAD_DOC_KEYS{$_})} keys %{$_[1]}) };

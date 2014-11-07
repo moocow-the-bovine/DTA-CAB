@@ -94,6 +94,7 @@ sub new {
 						   },
 			      ignoreKeys => {
 					     'teibufr'=>undef,
+					     'textbufr'=>undef,
 					    },
 			      #parseXmlData => 1,
 
