@@ -96,7 +96,9 @@ sub prepare {
 ##    q    => $queryString,          ##-- raw, untokenized query string (preferred over 'qd')
 ##    qd   => $queryData,            ##-- query data (formatted document)
 ##    a    => $analyzerName,         ##-- analyzer key in %{$h->{allowAnalyzers}}, %{$srv->{as}}
-##    fmt  => $queryFormat,          ##-- query/response format (default=$h->{defaultFormat})
+##    fmt  => $queryFormat,          ##-- query/response format (set 'ifmt', 'ofmt' simultaneously)
+##    ifmt => $inputFormat,          ##-- query INPUT format (default=$h->{defaultFormat})
+##    ofmt => $outputFormat,         ##-- response OUTPUT format (default=$inputFormat)
 ##    file => $qfilename,            ##-- query filename (for output)
 ##    #enc  => $queryEncoding,        ##-- query encoding (default='UTF-8')
 ##    raw  => $bool,                 ##-- if true, data will be returned as text/plain (default=$h->{returnRaw})
@@ -105,7 +107,7 @@ sub prepare {
 ##    ##
 ##    $opt => $value,                ##-- other options are passed to analyzeDocument() (if $h->{allowUserOptions} is true)
 ##   )
-our %localParams = map {($_=>undef)} qw(q qd a fmt raw pretty clean);
+our %localParams = map {($_=>undef)} qw(q qd a fmt ifmt ofmt raw pretty clean);
 sub run {
   my ($h,$srv,$path,$c,$hreq) = @_;
 
@@ -131,8 +133,8 @@ sub run {
   #return $h->cerror($c, undef, "unknown encoding '$enc'") if (!defined(Encode::find_encoding($enc)));
 
   ##-- pre-process query parameters
-  $h->decodeVars($vars, vars=>[qw(q a format fmt)], allowHtmlEscapes=>0);
-  $h->trimVars($vars,  vars=>[qw(q a format fmt)]);
+  $h->decodeVars($vars, vars=>[qw(q a format fmt ifmt ofmt)], allowHtmlEscapes=>0);
+  $h->trimVars($vars,  vars=>[qw(q a format fmt ifmt ofmt)]);
 
   ##-- get analyzer $a
   my $akey = $vars->{'a'} || $h->{defaultAnalyzer};
@@ -153,10 +155,17 @@ sub run {
   }
   $ao{doAnalyzeClean}=1 if ($vars->{clean} || $h->{forceClean});
 
-  ##-- get format class
+  ##-- get format class(es)
+  $vars->{fmt}    = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
+  $vars->{ifmt} ||= $vars->{fmt};
+  $vars->{ofmt} ||= $vars->{ifmt};
   my $fc  = $vars->{format} || $vars->{fmt} || $h->{defaultFormat};
-  my $fmt = $h->{formats}->newFormat($fc, level=>($vars->{pretty}//0))
-    or return $h->cerror($c, undef, "unknown format '$fc'");
+  my $ifc = $vars->{ifmt} || $fc;
+  my $ofc = $vars->{ofmt} || $ifc;
+  my $ifmt = $h->{formats}->newFormat($ifc, level=>($vars->{pretty}//0))
+    or return $h->cerror($c, undef, "unknown input format '$ifc'");
+  my $ofmt = ($ofc eq $ifc ? $ifmt : $h->{formats}->newFormat($ofc, level=>($vars->{pretty}//0)))
+    or return $h->cerror($c, undef, "unknown output format '$ofc'");
 
   ##-- parse input query
   my ($qdoc);
@@ -168,11 +177,12 @@ sub run {
       or return $h->cerror($c, undef, "cannot create 'raw' format for query parameter 'q'");
     $qdoc = $qfmt->parseString(\$vars->{q})
       or $qfmt->logwarn("parseString() failed for raw query parameter 'q'");
+    $qdoc->{textbufr} = \$vars->{q};
   }
   elsif (defined($vars->{qd})) {
     ##-- pre-tokenized query document
-    $qdoc = $fmt->parseString(\$vars->{qd})
-      or $fmt->logwarn("parseString() failed for query parameter 'qd' via format '$fc'");
+    $qdoc = $ifmt->parseString(\$vars->{qd})
+      or $ifmt->logwarn("parseString() failed for query parameter 'qd' via format '$fc'");
   }
   else {
     return $h->cerror($c, undef, "no query specified: use either the 'q' or 'qd' parameter!");
@@ -185,9 +195,9 @@ sub run {
 
   ##-- format
   my ($rstr);
-  $fmt->flush->toString(\$rstr)->putDocument($qdoc)->flush;
+  $ofmt->flush->toString(\$rstr)->putDocument($qdoc)->flush;
   utf8::encode($rstr) if (utf8::is_utf8($rstr));
-  return $h->cerror($c, undef, "could format output document using format '$fc': $@") if (!defined($rstr));
+  return $h->cerror($c, undef, "could format output document using format '$ofc': $@") if (!defined($rstr));
 
   ##-- dump to client
   my ($filename);
@@ -197,10 +207,10 @@ sub run {
     $filename = $vars->{q} // 'data';
     $filename =~ s/\W.*$/_/;
   }
-  $filename .= $fmt->defaultExtension;
+  $filename .= $ofmt->defaultExtension;
   return $h->dumpResponse(\$rstr,
 			  raw=>$vars->{raw},
-			  type=>$fmt->mimeType,
+			  type=>$ofmt->mimeType,
 			  charset=>'UTF-8',
 			  filename=>$filename);
 }

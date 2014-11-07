@@ -55,10 +55,12 @@ our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
 ##     keeptmp => $bool,                       ##-- keep temporary directory open
 ##     addc => $bool_or_guess,                 ##-- (input) whether to add //c elements (slow no-op if already present; default=0)
 ##     spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
+##     keeptext => $bool,                      ##-- (input) if true (default), include 'textbufr' element for extract TEI text
 ##     keepc => $bool,                         ##-- (output) whether to include //c elements in spliceback-mode output (default=0)
 ##     tw => $tw,                              ##-- underlying DTA::TokWrap object
 ##     twopen => \%opts,                       ##-- options for $tw->open()
 ##     teibufr => \$buf,                       ##-- raw tei+c buffer, for spliceback mode
+##     textbufr => \$buf,                      ##-- raw text buffer, for keeptext mode
 ##
 ##     txmlfmt   => $fmt,                      ##-- classname or object for parsing tokwrap *.t.xml files (default: DTA::CAB::Format::TokWrap)
 ##
@@ -93,6 +95,7 @@ sub new {
 			      addc => 0,
 			      keepc => 0,
 			      spliceback => 1,
+			      keeptext => 1,
 			      ##
 			      txmlfmt => $TXML_CLASS_DEFAULT,
 
@@ -105,6 +108,7 @@ sub new {
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
 			      ignoreKeys => {
 					     teibufr=>undef,
+					     textbufr=>undef,
 					    },
 
 			      ##-- user args
@@ -212,7 +216,7 @@ sub close {
   my $fmt = shift;
   $fmt->{twdoc}->close() if ($fmt->{twdoc});
   $fmt->{txmlfmt}->close(@_) if (ref($fmt->{txmlfmt}));
-  delete $fmt->{teibufr};
+  delete @$fmt{qw(teibufr textbufr)};
   $fmt->rmtmpdir();
   return $fmt->SUPER::close(@_);
 }
@@ -262,6 +266,10 @@ sub fromString {
     or $fmt->logdie("could not open $tmpdir/tmp.chr.xml as TokWrap document: $!");
   $twdoc->genKey('tei2txml')
     or $fmt->logdie("could generate $tmpdir/tmp.chr.t.xml with DTA::TokWrap: $!");
+  if ($fmt->{keeptext}) {
+    $fmt->vlog($fmt->{teilog}, "keeptext: slurp textbufr < $tmpdir/tmp.chr.txt");
+    $fmt->{textbufr} = DTA::TokWrap::Utils::slurp_file("$tmpdir/tmp.chr.txt");
+  }
   $twdoc->close();
 
   ##-- now process the tokwrap document
@@ -291,12 +299,13 @@ sub fromFh {
 
 ## $doc = $fmt->parseDocument()
 ##  + parses buffered XML::LibXML::Document
-##  + override inserts $doc->{teibufr} attribute for spliceback mode
+##  + override inserts $doc->{teibufr}, $doc->{textbufr} attributes for spliceback mode
 sub parseDocument {
   my $fmt = shift;
   $fmt->vlog($fmt->{teilog}, "parseDocument()");
   my $doc = $fmt->txmlfmt->parseDocument(@_) or return undef;
-  $doc->{teibufr} = $fmt->{teibufr} if ($fmt->{spliceback});
+  $doc->{teibufr}  = $fmt->{teibufr} if ($fmt->{spliceback});
+  $doc->{textbufr} = $fmt->{textbufr} if ($fmt->{keeptext});
   return $doc;
 }
 

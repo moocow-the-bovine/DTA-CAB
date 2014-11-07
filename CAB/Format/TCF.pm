@@ -23,6 +23,12 @@ our @ISA = qw(DTA::CAB::Format::XmlCommon);
 BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:tcf[\.\-_]?xml)|(?:tcf))$/);
 
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'text'})
+      foreach (qw(tcf-text));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'text tokens sentences'})
+      foreach (qw(tcf-tok));
+
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'})
       foreach (qw(tcf-orth tcf-web)); ##-- for weblicht
 
@@ -46,9 +52,10 @@ BEGIN {
 ##     tcfbufr => \$buf,                       ##-- raw TCF buffer, for spliceback mode
 ##     tcflog  => $level,		       ##-- debugging log-level (default: 'off')
 ##     spliceback => $bool,                    ##-- (output) if true (default), splice data back into 'tcfbufr' if available; otherwise create new TCF doc
-##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='tokens sentences postags lemmas orthography'
+##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='text tokens sentences postags lemmas orthography'
 ##     tcftagset => $tagset,                   ##-- tagset name for POStags element (default='stts')
 ##     logsplice => $level,		       ##-- log level for spliceback messages (default:'none')
+##     trimtext => $bool,                      ##-- if true (default), waste tokenizer hints will be trimmed from 'text' layer
 ##
 ##     ##-- input: inherited from XmlCommon
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
@@ -64,11 +71,12 @@ sub new {
 			      ##-- local
 			      #tcfbufr => undef,
 			      tcflog   => 'off', ##-- debugging log-level
-			      #tcflayers => 'tokens sentences orthography postags lemmas',
+			      #tcflayers => 'text tokens sentences orthography postags lemmas',
 			      tcflayers => 'tokens sentences orthography',
 			      tcftagset => 'stts',
 			      spliceback => 1,
 			      logsplice => 'none',
+			      trimtext => 1,
 
 			      ##-- overrides (XmlTokWrap, XmlNative, XmlCommon)
 			      ignoreKeys => {
@@ -122,6 +130,13 @@ sub parseDocument {
   ##-- parse: corpus
   my $xcorpus = $xroot->findnodes('*[local-name()="TextCorpus"]')->[0]
     or $fmt->logconfess("parseDocument(): no TextCorpus node found in XML document");
+
+  ##-- parse: text (textbufr)
+  my $xtext = $xroot->findnodes('*[local-name()="text"]')->[0];
+  if ($xtext) {
+    my $textbuf = $xtext->textContent;
+    $doc->{textbufr} = \$textbuf;
+  }
 
   ##-- parse: tokens
   my (@w,%id2w,$w);
@@ -269,7 +284,10 @@ sub putDocument {
   }
 
   ##-- document structure: corpus structure
-  my ($tokens,$sents,$lemmas,$postags,$orths);
+  my ($texts,$tokens,$sents,$lemmas,$postags,$orths);
+  if ($layers =~ /\btext\b/ && !defined($xcorpus->findnodes('*[local-name()="text"]')->[0])) {
+    $texts = $xcorpus->addNewChild(undef,'text');
+  }
   if ($layers =~ /\btokens\b/ && !defined($xcorpus->findnodes('*[local-name()="tokens"]')->[0])) {
     $tokens = $xcorpus->addNewChild(undef,'tokens');
   }
@@ -288,6 +306,24 @@ sub putDocument {
   if ($layers =~ /\borthography\b/ && !defined($xcorpus->findnodes('*[local-name()="orthography"]')->[0])) {
     $orths = $xcorpus->addNewChild(undef,'orthography');
     #$orths->setAttribute('type'=>'CAB');
+  }
+
+  ##-- add TextCorpus/text content
+  if ($texts) {
+    if (defined($doc->{textbufr})) {
+      my $txt = ${$doc->{textbufr}};
+      $txt =~ s/\$WB\$/ /sg;
+      $txt =~ s/\$SB\$/\n/sg;
+      $txt =~ s/%%[^%]*%%//sg;
+      $texts->appendText($txt);
+    }
+    elsif (defined($doc->{teibufr})) {
+      $texts->setAttribute('type'=>'text/tei+xml');
+      $texts->appendText(${$doc->{teibufr}});
+    }
+    else {
+      $texts->appendText(join(' ', map {$_->{text}} @{$_->{tokens}})."\n") foreach (@{$doc->{body}});
+    }
   }
 
   ##-- ensure ids
@@ -352,10 +388,6 @@ sub putDocument {
   $fmt->vlog($fmt->{tcflog}, "putDocument(): returning");
   return $fmt;
 }
-
-
-
-
 
 1; ##-- be happy
 
