@@ -25,15 +25,17 @@ BEGIN {
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'text'})
       foreach (qw(tcf-text));
-
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'text tokens sentences'})
       foreach (qw(tcf-tok));
-
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'})
       foreach (qw(tcf-orth tcf-web)); ##-- for weblicht
-
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'})
       foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tei text'})
+      foreach (qw(tcf-tei+text tcf-tei-text));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tei text tokens sentences'})
+      foreach (qw(tcf-tei+tok tcf-tei-tok));
 }
 
 BEGIN {
@@ -52,7 +54,7 @@ BEGIN {
 ##     tcfbufr => \$buf,                       ##-- raw TCF buffer, for spliceback mode
 ##     tcflog  => $level,		       ##-- debugging log-level (default: 'off')
 ##     spliceback => $bool,                    ##-- (output) if true (default), splice data back into 'tcfbufr' if available; otherwise create new TCF doc
-##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; default='text tokens sentences postags lemmas orthography'
+##     tcflayers => $tcf_layer_names,          ##-- layer names to include, space-separated list; known='tei text tokens sentences postags lemmas orthography'
 ##     tcftagset => $tagset,                   ##-- tagset name for POStags element (default='stts')
 ##     logsplice => $level,		       ##-- log level for spliceback messages (default:'none')
 ##     trimtext => $bool,                      ##-- if true (default), waste tokenizer hints will be trimmed from 'text' layer
@@ -71,7 +73,7 @@ sub new {
 			      ##-- local
 			      #tcfbufr => undef,
 			      tcflog   => 'off', ##-- debugging log-level
-			      #tcflayers => 'text tokens sentences orthography postags lemmas',
+			      #tcflayers => 'tei text tokens sentences orthography postags lemmas',
 			      tcflayers => 'tokens sentences orthography',
 			      tcftagset => 'stts',
 			      spliceback => 1,
@@ -283,11 +285,38 @@ sub putDocument {
     $xcorpus->setAttribute('lang'=>'de');
   }
 
-  ##-- document structure: corpus structure
-  my ($texts,$tokens,$sents,$lemmas,$postags,$orths);
-  if ($layers =~ /\btext\b/ && !defined($xcorpus->findnodes('*[local-name()="text"]')->[0])) {
-    $texts = $xcorpus->addNewChild(undef,'text');
+  ##-- document structure: TextCorpus/tei
+  if ($layers =~ /\btei\b/ && defined($doc->{teibufr})) {
+    my $teinod = $xcorpus->findnodes('*[local-name()="tei"]')->[0];
+    if (!defined($teinod)) {
+      $teinod = $xcorpus->addNewChild(undef,'tei');
+      #$teinod->setAttribute('type'=>'text/tei+xml');
+      $teinod->appendText(${$doc->{teibufr}});
+    }
   }
+
+  ##-- document structure: TextCorpus/text
+  if ($layers =~ /\btext\b/) {
+    my $textnod = $xcorpus->findnodes('*[local-name()="text"]')->[0];
+    if (!defined($textnod)) {
+      $textnod = $xcorpus->addNewChild(undef,'text');
+      if (defined($doc->{textbufr})) {
+	##-- use doc-buffered text content
+	my $txt = ${$doc->{textbufr}};
+	$txt =~ s/\$WB\$/ /sg;
+	$txt =~ s/\$SB\$/\n/sg;
+	$txt =~ s/%%[^%]*%%//sg;
+	$textnod->appendText($txt);
+      }
+      else {
+	##-- generate dummy text content
+	$textnod->appendText(join(' ', map {$_->{text}} @{$_->{tokens}})."\n") foreach (@{$doc->{body}});
+      }
+    }
+  }
+
+  ##-- document structure: corpus structure
+  my ($tokens,$sents,$lemmas,$postags,$orths);
   if ($layers =~ /\btokens\b/ && !defined($xcorpus->findnodes('*[local-name()="tokens"]')->[0])) {
     $tokens = $xcorpus->addNewChild(undef,'tokens');
   }
@@ -306,24 +335,6 @@ sub putDocument {
   if ($layers =~ /\borthography\b/ && !defined($xcorpus->findnodes('*[local-name()="orthography"]')->[0])) {
     $orths = $xcorpus->addNewChild(undef,'orthography');
     #$orths->setAttribute('type'=>'CAB');
-  }
-
-  ##-- add TextCorpus/text content
-  if ($texts) {
-    if (defined($doc->{textbufr})) {
-      my $txt = ${$doc->{textbufr}};
-      $txt =~ s/\$WB\$/ /sg;
-      $txt =~ s/\$SB\$/\n/sg;
-      $txt =~ s/%%[^%]*%%//sg;
-      $texts->appendText($txt);
-    }
-    elsif (defined($doc->{teibufr})) {
-      $texts->setAttribute('type'=>'text/tei+xml');
-      $texts->appendText(${$doc->{teibufr}});
-    }
-    else {
-      $texts->appendText(join(' ', map {$_->{text}} @{$_->{tokens}})."\n") foreach (@{$doc->{body}});
-    }
   }
 
   ##-- ensure ids
