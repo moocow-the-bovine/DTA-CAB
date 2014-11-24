@@ -124,17 +124,17 @@ sub parseDocument {
   $doc->{tcfdoc} = $xdoc if ($fmt->{spliceback});
 
   ##-- parse: metadata
-  if (defined(my $xmeta = $xroot->findnodes('*[local-name()="MetaData"]')->[0])) {
+  if (defined(my $xmeta = [$xroot->getChildrenByLocalName("MetaData")]->[0])) {
     my $tmp = $xmeta->findnodes('*[local-name()="source"][1]')->[0];
     $doc->{source} = $tmp->textContent if (defined($tmp));
   }
 
   ##-- parse: corpus
-  my $xcorpus = $xroot->findnodes('*[local-name()="TextCorpus"]')->[0]
+  my $xcorpus = [$xroot->getChildrenByLocalName('TextCorpus')]->[0]
     or $fmt->logconfess("parseDocument(): no TextCorpus node found in XML document");
 
   ##-- parse: text (textbufr)
-  my $xtext = $xroot->findnodes('*[local-name()="text"]')->[0];
+  my ($xtext) = $xroot->getChildrenByLocalName('text');
   if ($xtext) {
     my $textbuf = $xtext->textContent;
     $doc->{textbufr} = \$textbuf;
@@ -142,9 +142,9 @@ sub parseDocument {
 
   ##-- parse: tokens
   my (@w,%id2w,$w);
-  my $xtokens = $xcorpus->findnodes('*[local-name()="tokens"]')->[0]
+  my $xtokens = [$xcorpus->getChildrenByLocalName('tokens')]->[0]
     or $fmt->logconfess("parseDocument(): no TextCorpus/tokens node found in XML document");
-  foreach (@{$xtokens->findnodes('*[local-name()="token"]')}) {
+  foreach ($xtokens->getChildrenByLocalName('token')) {
     push(@w, $w={text=>$_->textContent});
     if (!defined($w->{id}=$_->getAttribute('ID'))) {
       $w->{id} = sprintf("w%x", $#w);
@@ -155,9 +155,9 @@ sub parseDocument {
 
   ##-- parse: sentences
   my ($s);
-  if (defined(my $xsents = $xcorpus->findnodes('*[local-name()="sentences"]')->[0])) {
+  if (defined(my $xsents = [$xcorpus->getChildrenByLocalName('sentences')]->[0])) {
     my $body = $doc->{body};
-    foreach (@{$xsents->findnodes('*[local-name()="sentence"]')}) {
+    foreach ($xtokens->getChildrenByLocalName('sentence')) {
       push(@$body, $s={});
       $s->{id}     = $_->getAttribute('ID') if ($_->hasAttribute('ID'));
       $s->{tokens} = [ @id2w{split(' ',$_->getAttribute('tokenIDs'))} ];
@@ -168,7 +168,7 @@ sub parseDocument {
 
   ##-- parse: POStags -> moot/tag
   my ($id);
-  if (defined(my $xpostags = $xcorpus->findnodes('*[local-name()="POStags"]')->[0])) {
+  if (defined(my $xpostags = [$xcorpus->getChildrenByLocalName('POStags')]->[0])) {
     foreach (@{$xpostags->findnodes('*[local-name()="tag"]')}) {
       $id = $_->getAttribute('tokenIDs');
       $id2w{$id}{moot}{tag} = $_->textContent;
@@ -176,7 +176,7 @@ sub parseDocument {
   }
 
   ##-- parse: lemmas -> moot/lemma
-  if (defined(my $xlemmas = $xcorpus->findnodes('*[local-name()="lemmas"]')->[0])) {
+  if (defined(my $xlemmas = [$xcorpus->getChildrenByLocalName('lemmas')]->[0])) {
     foreach (@{$xlemmas->findnodes('*[local-name()="lemma"]')}) {
       $id = $_->getAttribute('tokenIDs');
       $id2w{$id}{moot}{lemma} = $_->textContent;
@@ -184,7 +184,7 @@ sub parseDocument {
   }
 
   ##-- parse: orthography -> moot/word
-  if (defined(my $xorths = $xcorpus->findnodes('*[local-name()="orthography"]')->[0])) {
+  if (defined(my $xorths = [$xcorpus->getChildrenByLocalName('orthography')]->[0])) {
     foreach (@{$xorths->findnodes('*[local-name()="correction"][@operation="replace"]')}) {
       $id = $_->getAttribute('tokenIDs');
       $id2w{$id}{moot}{word} = $_->textContent;
