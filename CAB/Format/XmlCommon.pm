@@ -29,6 +29,7 @@ our @ISA = qw(DTA::CAB::Format);
 ##     ##-- input
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
 ##     xprs => $xprs,                          ##-- XML::LibXML parser
+##     xprsopts => \%opts,                     ##-- XML::LibXML parser options
 ##
 ##     ##-- output
 ##     #utf8  => $bool,                         ##-- always true
@@ -43,6 +44,7 @@ sub new {
 		   ##-- input
 		   xprs => undef, ##-- see xmlparser() method, below
 		   xdoc => undef,
+		   #xmlparser_opts => {},
 
 		   ##-- output
 		   utf8  => 1,
@@ -62,7 +64,7 @@ sub new {
 ##  + otherwise caches & returns DTA::CAB::Utils::libxml_parser()
 sub xmlparser {
   return $_[0]{xprs} if (ref($_[0]) && defined($_[0]{xprs}));
-  return $_[0]{xprs} = DTA::CAB::Utils::libxml_parser(@_[1..$#_]);
+  return $_[0]{xprs} = DTA::CAB::Utils::libxml_parser( %{$_[0]{xprsopts}//{}}, @_[1..$#_] );
 }
 
 ##==============================================================================

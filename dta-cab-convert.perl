@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
-#use DTA::CAB::Format::TEI; ##-- DEBUG
+use DTA::CAB::Format::TCF; ##-- DEBUG
 
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
@@ -38,7 +38,7 @@ our $doprofile = 0; ##-- compatibility only; has no other effect
 our $inputClass  = undef;  ##-- default input format class
 our $outputClass = undef;  ##-- default output format class
 our %inputOpts   = ();
-our %outputOpts  = (level=>0);
+our %outputOpts  = (level=>undef); ##-- use class default
 our $doProfile   = 1;
 our $listOnly    = 0; ##-- only list formats?
 
@@ -114,6 +114,7 @@ if ($listOnly) {
 $ifmt = DTA::CAB::Format->newReader(class=>$inputClass,file=>$ARGV[0],%inputOpts)
   or die("$0: could not create input parser of class $inputClass: $!");
 
+delete($outputOpts{level}) if (!defined($outputOpts{level}));
 $ofmt = DTA::CAB::Format->newWriter(class=>$outputClass,file=>$outfile,%outputOpts)
   or die("$0: could not create output formatter of class $outputClass: $!");
 
