@@ -362,12 +362,12 @@ sub putDocument {
   my ($s,$w,$wid,@wids,$snod,$wnod);
   my ($pos,$lemma,$orth);
   foreach $s (@{$doc->{body}}) {
+    ++$si;
     @wids = qw();
     foreach $w (@{$s->{tokens}}) {
       $wid = $w->{id} // sprintf("w%x",$wi);
       push(@wids,$wid);
       ++$wi;
-      ++$si;
 
       ##-- generate token node: <token ID="t_0">Karin</token>
       if ($tokens) {
