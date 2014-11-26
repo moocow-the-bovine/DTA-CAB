@@ -412,7 +412,7 @@ sub putDocument {
     if ($sents) {
       ##-- generate sentence node: <sentence ID="s_0" tokenIDs="t_0 t_1 t_2 t_3 t_4 t_5"></sentence>
       $snod = $sents->addNewChild(undef,'sentence');
-      $snod->setAttribute(ID=>(defined($s->{id}) ? $s->{id}) : sprintf("s%s",$si));
+      $snod->setAttribute(ID=>(defined($s->{id}) ? $s->{id}) : sprintf("s%s",$si)));
       $snod->setAttribute(tokenIDs=>join(' ',@wids));
     }
   }
