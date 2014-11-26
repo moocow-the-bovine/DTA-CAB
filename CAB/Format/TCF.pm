@@ -358,6 +358,7 @@ sub putDocument {
 
   ##-- ensure ids
   my $wi = 0;
+  my $si = 0;
   my ($s,$w,$wid,@wids,$snod,$wnod);
   my ($pos,$lemma,$orth);
   foreach $s (@{$doc->{body}}) {
@@ -366,6 +367,7 @@ sub putDocument {
       $wid = $w->{id} // sprintf("w%x",$wi);
       push(@wids,$wid);
       ++$wi;
+      ++$si;
 
       ##-- generate token node: <token ID="t_0">Karin</token>
       if ($tokens) {
@@ -410,7 +412,7 @@ sub putDocument {
     if ($sents) {
       ##-- generate sentence node: <sentence ID="s_0" tokenIDs="t_0 t_1 t_2 t_3 t_4 t_5"></sentence>
       $snod = $sents->addNewChild(undef,'sentence');
-      $snod->setAttribute(ID=>$s->{id}) if (defined($s->{id}));
+      $snod->setAttribute(ID=>(defined($s->{id}) ? $s->{id}) : sprintf("s%s",$si));
       $snod->setAttribute(tokenIDs=>join(' ',@wids));
     }
   }
