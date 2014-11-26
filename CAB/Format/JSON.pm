@@ -178,6 +178,14 @@ sub putRef {
   return $_[0];
 }
 
+## $fmt = $fmt->putDocument($doc)
+sub putDocument {
+  my $fmt = shift;
+  my $doc = {%{$_[0]}};
+  delete @$doc{grep {UNIVERSAL::isa($doc->{$_},'SCALAR') || UNIVERSAL::isa($doc->{$_},'CODE')} keys %$doc};
+  return $fmt->putRef($doc);
+}
+
 ## $fmt = $fmt->putToken($tok)
 ## $fmt = $fmt->putSentence($sent)
 ## $fmt = $fmt->putDocument($doc)
@@ -185,7 +193,6 @@ sub putRef {
 BEGIN {
   *putToken = \&putRef;
   *putSentence = \&putRef;
-  *putDocument = \&putRef;
   *putData = \&putRef;
 }
 
