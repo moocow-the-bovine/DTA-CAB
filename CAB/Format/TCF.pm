@@ -365,9 +365,9 @@ sub putDocument {
     ++$si;
     @wids = qw();
     foreach $w (@{$s->{tokens}}) {
+      ++$wi;
       $wid = $w->{id} // sprintf("w%x",$wi);
       push(@wids,$wid);
-      ++$wi;
 
       ##-- generate token node: <token ID="t_0">Karin</token>
       if ($tokens) {
