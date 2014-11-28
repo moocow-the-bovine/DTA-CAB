@@ -305,10 +305,12 @@ sub putDocument {
 
   ##-- document structure: TextCorpus/tei
   if ($layers =~ /\btei\b/ && defined($doc->{teibufr})) {
-    my ($xtei) = $xcorpus->getChildrenByLocalName("tei");
+    my ($xtei) = $xcorpus->getChildrenByLocalName("textSource");
+    my $xtype  = $xtei ? ($xtei->getAttribute('type')//'') : '';
+    undef ($xtei) if ($xtype !~ m{^(?:text|application)/tei\+xml\b} || $xtype =~ m{\btokenized=(?![0n])});
     if (!defined($xtei)) {
-      $xtei = $xcorpus->addNewChild(undef,'tei');
-      #$teinod->setAttribute('type'=>'text/tei+xml');
+      $xtei = $xcorpus->addNewChild(undef,'textSource');
+      $xtei->setAttribute('type'=>'application/tei+xml');
       $xtei->appendText(${$doc->{teibufr}});
     }
   }
