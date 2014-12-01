@@ -179,6 +179,7 @@ sub parseDocument {
   foreach $sid (grep {!exists $id2prev{$_}} @sids) {
     push(@body, $s = $id2s{$sid});
     while (($sid=$id2next{$sid})) {
+      $sid  =~ s/^\#//;
       $snxt = $id2s{$sid};
       $s->{teixp} .= "|$snxt->{teixp}";
       push(@{$s->{wids}},@{$snxt->{wids}});
@@ -187,6 +188,7 @@ sub parseDocument {
     foreach $wid (grep {!exists $id2prev{$_}} @{$s->{wids}}) {
       push(@$tokens, $w = $id2w{$wid});
       while (($wid=$id2next{$wid})) {
+	$wid  =~ s/^\#//;
 	$wnxt = $id2w{$wid};
 	$w->{teitext} .= $wnxt->{teitext};
 	$w->{teixp}  .= "|$wnxt->{teixp}";
