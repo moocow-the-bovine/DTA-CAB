@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
-use DTA::CAB::Format::TCF; ##-- DEBUG
+#use DTA::CAB::Format::TCF; ##-- DEBUG
 
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
