@@ -101,7 +101,14 @@ sub new {
 
 			      ##-- tokwrap
 			      tw => undef, ##-- see tw() method
-			      twopts => {procOpts=>{soIgnoreAttrs=>[qw(c xb)], spliceInfo=>'off',addwsInfo=>'off'}},
+			      twopts => {
+					 procOpts=>{
+						    soIgnoreAttrs=>[qw(c xb)],
+						    spliceInfo=>'off',
+						    addwsInfo=>'off',
+						    wExtAttrs=>'^(?:t|b|mapclass)',
+						   },
+					},
 			      twopen => {},
 			      twTokenizeClass => $DTA::TokWrap::Document::TOKENIZE_CLASS,
 
