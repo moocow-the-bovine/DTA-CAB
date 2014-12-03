@@ -164,13 +164,13 @@ sub parseDocument {
     my ($s);
     if (defined(my $xsents = [$xcorpus->getChildrenByLocalName('sentences')]->[0])) {
       my $body = $doc->{body};
-      foreach ($xtokens->getChildrenByLocalName('sentence')) {
+      foreach ($xsents->getChildrenByLocalName('sentence')) {
 	push(@$body, $s={});
 	$s->{id}     = $_->getAttribute('ID') if ($_->hasAttribute('ID'));
 	$s->{tokens} = [ @id2w{split(' ',$_->getAttribute('tokenIDs'))} ];
       }
     } else {
-      $doc->{body} = \@w; ##-- single-sentence
+      $doc->{body} = {tokens=>\@w}; ##-- single-sentence
     }
 
     ##-- parse: POStags -> moot/tag
