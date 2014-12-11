@@ -28,8 +28,11 @@ BEGIN {
       foreach (qw(tcf-text tcf+text));
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'text tokens sentences'})
       foreach (qw(tcf-tok tcf+tok));
+
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography'})
-      foreach (qw(tcf-orth tcf+orth tcf-web)); ##-- for weblicht
+      foreach (qw(tcf-orth tcf+orth tcf-web)); ##-- for weblicht/dta
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences postags lemmas'})
+      foreach (qw(tcf-pos tcf+pos)); ##-- for weblicht/d*
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'})
       foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf));
 
