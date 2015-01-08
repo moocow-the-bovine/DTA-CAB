@@ -155,7 +155,7 @@ log4perl.appender.AppFile = Log::Log4perl::Appender::File
 log4perl.appender.AppFile.filename = $opts{file}
 log4perl.appender.AppFile.mode = append
 log4perl.appender.AppFile.utf8 = 1
-log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayoutl
+log4perl.appender.AppFile.layout = Log::Log4perl::Layout::PatternLayout
 log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P] (%p) %c: %m%n
 ";
   }
