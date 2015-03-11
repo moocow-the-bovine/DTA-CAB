@@ -39,6 +39,8 @@ my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
 my $notag=$moot->{notag};
+my $xpne=$moot->{xpne};
+my $xpfm=$moot->{xpfm};
 my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
 sub {
  $s     = $_;
@@ -47,6 +49,8 @@ sub {
    $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
+   $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers|place)Name)\b/i);
+   $mw->{analyses} = [{tag=>"FM",details=>"FM.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
    $val = undef; ##-- temporary for _am_tagh_moota_uniq()
    $mw->{analyses} = ['._am_tagh_list2moota_uniq('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
@@ -74,6 +78,8 @@ sub {
    $_->{word}=$_->{text};
    delete($_->{text});
    $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));
+   $_->{tag}="NE" if ($xpne && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "NE.xp");
+   $_->{tag}="FM" if ($xpfm && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "FM.xp");
    if ($prune) {
      $t = $_->{tag}//"";
      @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
@@ -103,6 +109,8 @@ sub {
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##     lctext      => $bool,     ##-- if true, input text will be bashed to lower-case (default: false)
 ##     notag       => $bool,     ##-- if true, hmm tagger won't actually be called; read from global analyzer options as "${lab}.notag"
+##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers|place)Name\b/i (default=true)
+##     xpfm        => $bool,     ##-- if true, force 'FM' tags whenever $w->{xp} =~ /\bforeign\b/i (default=true)
 ##
 ##     ##-- Analysis Objects
 ##     hmm         => $hmm,   ##-- a moot::HMM object
@@ -131,6 +139,8 @@ sub new {
 			       analyzeCode => $DEFAULT_ANALYZE_CODE,
 			       lctext => 0,
 			       #notag => undef,
+			       xpne => 1,
+			       xpfm => 1,
 
 			       #analyzeCostFuncs => {},
 			       #requireAnalyses => 0,

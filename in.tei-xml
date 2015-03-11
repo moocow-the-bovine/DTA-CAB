@@ -1,3 +1,8 @@
-<text>Hello world, test this!
-Das ist ein<note>uh-oh</note> Test.
+<text>
+<!--Hello world, test this!-->
+<!--Das ist ein<note>uh-oh</note> Test.-->
+<!--Der <persName>Mann</persName> wohnt in <placeName>Buch</placeName>.-->
+<!--Der Mann wohnt in Buch.-->
+Die Exposition du <foreign>Système du Monde</foreign> ist doof.
+Die Exposition du Système du Monde ist doof.
 </text>

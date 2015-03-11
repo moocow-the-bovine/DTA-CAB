@@ -160,13 +160,20 @@ sub {
    $mw = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{dmoot} if present
    $text = $mw->{text} = (defined($mw->{word}) ? $mw->{word} : $w->{text}) if (!defined($text=$mw->{text}));
    if (!$mw->{analyses}) {
-     if ($w->{exlex}) {
-       ##-- special case for exception lexicon: clobber all other alternatives
+     if (($w->{xp}//"") =~ /\bpersName\b/i) {
+       ##-- special case for explicit TEI <persName> tag: use unicruft for latinExt=1 to scrub out long s
+       $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
+       $mw->{analyses} = [{tag=>$text, prob=>0}];
+     } elsif (($w->{xp}//"") =~ /\bforeign\b/i) {
+       ##-- special case for explicit TEI <foreign> tag: leave literal
+       $mw->{analyses} = [{tag=>$text, prob=>0}];
+     } elsif ($w->{exlex}) {
+       ##-- special case for exception lexicon: remaining alternatives
        $mw->{analyses} = (ref($w->{exlex})
                           ? [map {{tag=>$_->{text}, prob=>-log($_->{freq}||$dynbase)/($logbase*$dynbeta)}} @{$w->{exlex}}] ##-- non-deterministic: ARRAY
                           : [{tag=>$w->{exlex}, prob=>0}]);								   ##-- deterministic: string
-     } elsif ($w->{xr} && $w->{xr} =~ /\baq\b/) {
-       ##-- special case for antiqua typesetting in fraktur text: use unicruft for latinExt=1 to scrub out long s
+     } elsif (($w->{xr}//"") =~ /\baq\b/ || ($w->{xp}//"") =~ /\bpersName\b/i) {
+       ##-- special case for antiqua-rendition in fraktur text: use unicruft for latinExt=1 to scrub out long s
        $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
        $mw->{analyses} = [{tag=>$text, prob=>0}];
      } elsif ($w->{msafe}) {

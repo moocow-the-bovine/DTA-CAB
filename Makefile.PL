@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.66';
+my $VERSION = '1.67';
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
