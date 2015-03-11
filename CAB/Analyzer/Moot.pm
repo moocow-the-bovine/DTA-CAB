@@ -49,7 +49,7 @@ sub {
    $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
-   $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers|place)Name)\b/i);
+   $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers)Name)\b/i); #place
    $mw->{analyses} = [{tag=>"FM",details=>"FM.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
    $val = undef; ##-- temporary for _am_tagh_moota_uniq()
    $mw->{analyses} = ['._am_tagh_list2moota_uniq('map {$_ ? @$_ : qw()}
@@ -109,7 +109,7 @@ sub {
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##     lctext      => $bool,     ##-- if true, input text will be bashed to lower-case (default: false)
 ##     notag       => $bool,     ##-- if true, hmm tagger won't actually be called; read from global analyzer options as "${lab}.notag"
-##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers|place)Name\b/i (default=true)
+##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers)Name\b/i (default=true) #NOT 'placeName', the tags are often appositions
 ##     xpfm        => $bool,     ##-- if true, force 'FM' tags whenever $w->{xp} =~ /\bforeign\b/i (default=true)
 ##
 ##     ##-- Analysis Objects
