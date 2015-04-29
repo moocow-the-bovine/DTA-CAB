@@ -80,7 +80,7 @@ sub analyzeTypes {
     elsif ($_->{text} =~ /[[:alpha:]](?:.?)[[:digit:]]/) { push(@l,'xy'); }
 
     push(@l, 'la') if ($_->{mlatin});
-    push(@l, $l0) if ($l0 && $_->{morph} && $_->{msafe} && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
+    push(@l, $l0) if ($l0 && $_->{morph} && ($_->{msafe}//1) && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
     #push(@l, 'de','exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
 
     ##-- make unique
