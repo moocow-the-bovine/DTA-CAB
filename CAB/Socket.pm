@@ -10,6 +10,7 @@ use DTA::CAB::Utils ':files';
 use IO::Handle;
 use IO::File;
 use IO::Socket;
+use Errno qw(EINTR);
 use Fcntl ':DEFAULT';
 use Storable;
 use Carp;
@@ -375,14 +376,31 @@ sub put {
 ##--------------------------------------------------------------
 ## Protocol: Read
 
+## $nbytes_read = $s->safe_sysread(\$bufr, $nbytes)
+##  + safe wrapper for CORE::sysread which avoids EINTR ("Interrupted system call") errors
+sub safe_sysread {
+  my ($s,$bufr,$nbytes) = @_;
+  my ($rc);
+  my $nread = 0;
+  while ($nbytes > 0) {
+    if ( !($rc = CORE::sysread($s->{fh},$$bufr,$nbytes,$nread)) ) {
+      next if ($! == EINTR);
+      return undef; ##-- other error
+    }
+    $nbytes -= $rc;
+    $nread  += $rc;
+  }
+  return $nread;
+}
+
 ## ($flags,$len)  = $s->get_header(); ##-- list context
 ## $header_packed = $s->get_header(); ##-- scalar context
 ##  + gets header from socket
 sub get_header {
   $_[0]->vtrace("get_header", @_[1..$#_]);
   my ($hdr);
-  CORE::sysread($_[0]{fh}, $hdr, 8)==8
-  #defined($_[0]{fh}->read($hdr,8,0))
+  #CORE::sysread($_[0]{fh}, $hdr, 8)==8
+  $_[0]->safe_sysread(\$hdr,8)==8
     or $_[0]->logconfess("get_header(): could not read message header from socket: $!");
   return wantarray ? unpack('NN',$hdr) : $hdr;
 }
@@ -396,7 +414,8 @@ sub get_data {
   $bufr  = \(my $buf) if (!defined($bufr));
   $$bufr = undef;
   if ($len > 0) {
-    sysread($s->{fh}, $$bufr, $len)==$len
+    #CORE::sysread($s->{fh}, $$bufr, $len)==$len
+    $s->safe_sysread($bufr, $len)==$len
       or $s->logconfess("get_data(): could not read message of length=$len bytes from socket: $!");
   }
   return $bufr;
