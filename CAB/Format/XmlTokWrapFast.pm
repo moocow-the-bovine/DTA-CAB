@@ -74,7 +74,7 @@ sub xmlparser {
 
   ##--------------------------------------
   ## parser
-  return $_[0]{xprs} = XML::Parser->new
+  $_[0]{xprs} = XML::Parser->new
     (
      ErrorContext => 1,
      ProtocolEncoding => 'UTF-8',
@@ -144,7 +144,9 @@ sub xmlparser {
 		  },
 		 },
     )
-      or $_[0]->logconfess("couldn't create XML::Parser");
+    or $_[0]->logconfess("couldn't create XML::Parser");
+
+  return $_[0]{xprs};
 }
 
 ##==============================================================================
