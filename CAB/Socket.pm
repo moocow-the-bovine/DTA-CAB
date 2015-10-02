@@ -428,7 +428,7 @@ sub get_ref_data {
   $_[0]->vtrace("get_ref_data", @_[1..$#_]);
   return
     Storable::fd_retrieve($_[0]{fh})
-	or $_[0]->logconfess("get_ref_data(): fd_retrieve() failed");
+      || $_[0]->logconfess("get_ref_data(): fd_retrieve() failed");
 }
 
 ## \$str_or_undef = $s->get_str_data($flags, $len)

@@ -260,8 +260,8 @@ sub outfilename {
 ##   + %_job is a subprocess option hash like global %job (default)
 sub new_ifmt {
   my %_job = (%job,@_);
-  return $ifmt = DTA::CAB::Format->newReader(class=>$_job{inputClass},file=>($_job{input}||$ARGV[0]),%{$_job{inputOpts}||{}})
-    or die("$0: could not create input parser of class $_job{inputClass}: $!");
+  return ($ifmt = DTA::CAB::Format->newReader(class=>$_job{inputClass},file=>($_job{input}||$ARGV[0]),%{$_job{inputOpts}||{}}))
+    || die("$0: could not create input parser of class $_job{inputClass}: $!");
 }
 
 ## $ofmt = new_ofmt()
@@ -271,8 +271,8 @@ sub new_ifmt {
 sub new_ofmt {
   my %_job = (%job,@_);
   my $outfile = outfilename(($_job{input}||$ARGV[0]), $_job{outfmt});
-  return $ofmt = DTA::CAB::Format->newWriter(class=>$_job{outputClass},file=>$outfile,%{$_job{outputOpts}||{}})
-    or die("$0: could not create output formatter of class $_job{outputClass}: $!");
+  return ($ofmt = DTA::CAB::Format->newWriter(class=>$_job{outputClass},file=>$outfile,%{$_job{outputOpts}||{}}))
+    || die("$0: could not create output formatter of class $_job{outputClass}: $!");
 }
 
 ##======================================================================
