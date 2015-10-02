@@ -39,6 +39,7 @@ my $utf8=$moot->{hmmUtf8};
 my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
 my $notag=$moot->{notag};
+my $use_dmoot=$moot->{use_dmoot};
 my $xpne=$moot->{xpne};
 my $xpfm=$moot->{xpfm};
 my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
@@ -47,15 +48,15 @@ sub {
  $msent = [map {
    $w  = $_;
    $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
-   $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('$_->{dmoot}', _am_xlit).') if (!defined($mw->{text}));
+   $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('($use_dmoot ? $_->{dmoot} : undef)', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
    $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers)Name)\b/i); #place
    $mw->{analyses} = [{tag=>"FM",details=>"FM.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
    $val = undef; ##-- temporary for _am_tagh_moota_uniq()
    $mw->{analyses} = ['._am_tagh_list2moota_uniq('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
-                            ($w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
-			    ($w->{dmoot} ? $w->{dmoot}{morph}
+                            ($use_dmoot && $w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
+			    ($use_dmoot && $w->{dmoot} ? $w->{dmoot}{morph}
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
 			   ).'
      ] if (!defined($mw->{analyses}));
@@ -109,6 +110,7 @@ sub {
 ##     prune       => $bool,     ##-- if true (default), prune analyses after tagging
 ##     lctext      => $bool,     ##-- if true, input text will be bashed to lower-case (default: false)
 ##     notag       => $bool,     ##-- if true, hmm tagger won't actually be called; read from global analyzer options as "${lab}.notag"
+##     use_dmoot   => $bool,     ##-- if true, hmm tagger will try to get text & analyses from token {dmoot} key, otherwise it will be ignored
 ##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers)Name\b/i (default=true) #NOT 'placeName', the tags are often appositions
 ##     xpfm        => $bool,     ##-- if true, force 'FM' tags whenever $w->{xp} =~ /\bforeign\b/i (default=true)
 ##
@@ -139,6 +141,7 @@ sub new {
 			       analyzeCode => $DEFAULT_ANALYZE_CODE,
 			       lctext => 0,
 			       #notag => undef,
+			       #use_dmoot => undef,
 			       xpne => 1,
 			       xpfm => 1,
 
@@ -327,7 +330,9 @@ sub analyzeSentences {
 
   ##-- inherit global options
   my $notag        = $moot->{notag};
-  $moot->{notag} //= $opts->{"$moot->{label}.notag"};
+  my $use_dmoot    = $moot->{use_dmoot};
+  $moot->{notag}     //= $opts->{"$moot->{label}.notag"};
+  $moot->{use_dmoot} //= $opts->{"$moot->{label}.use_dmoot"};
 
   ##-- setup access closures
   my $acode_str  = $moot->analysisCode();
@@ -339,7 +344,8 @@ sub analyzeSentences {
   }
 
   ##-- restore local options
-  $moot->{notag} = $notag;
+  $moot->{notag}     = $notag;
+  $moot->{use_dmoot} = $use_dmoot;
 
   return $doc;
 }
@@ -374,13 +380,14 @@ sub analysisCodeDEBUG {
   my $prune=$moot->{prune};
   my $lctext=$moot->{lctext};
   my $notag=$moot->{notag};
+  my $use_dmoot=$moot->{use_dmoot};
   my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
   sub {
     $s     = $_;
     $msent = [map {
       $w  = $_;
       $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
-      $mw->{text} = (defined($mw->{word}) ? $mw->{word} : ($_->{dmoot} ? $_->{dmoot}->{tag} : ($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}) ##== _am_xlit
+      $mw->{text} = (defined($mw->{word}) ? $mw->{word} : (($use_dmoot ? $_->{dmoot} : undef) ? $_->{dmoot}->{tag} : ($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}) ##== _am_xlit
 							  ) ##== _am_tag
 		    ) if (!defined($mw->{text}));
       $mw->{text} = lc($mw->{text}) if ($lctext);
@@ -388,8 +395,8 @@ sub analysisCodeDEBUG {
       $mw->{analyses} = [(map {$val && $val->{details} eq $_->{details} ? qw() : ($val=$_)} sort {($a->{details}//"") cmp ($b->{details}//"") || ($a->{prob}//0) <=> ($b->{prob}//0)} (map {{details=>$_->{hi}, prob=>($_->{w}||0), tag=>($_->{hi} =~ /\[\_?((?:[A-Za-z0-9]+|\$[^\]]+))\]/ ? $1 : $_->{hi})} ##-- _am_tagh_fst2moota
 																							  } map {ref($_) ? $_ : {hi=>$_}} map {$_ ? @$_ : qw()}
 																						       @$w{qw(mlatin tokpp toka)},
-																						       ($w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
-																						       ($w->{dmoot} ? $w->{dmoot}{morph}
+																						       ($use_dmoot && $w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
+																						       ($use_dmoot && $w->{dmoot} ? $w->{dmoot}{morph}
 																							: ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))) ##-- _am_tagh_list2moota
 			 )	##== _am_tagh_moota_uniq
 
