@@ -333,6 +333,7 @@ sub analyzeSentences {
   my $use_dmoot    = $moot->{use_dmoot};
   $moot->{notag}     //= $opts->{"$moot->{label}.notag"};
   $moot->{use_dmoot} //= $opts->{"$moot->{label}.use_dmoot"};
+  $moot->{use_dmoot} //= 1;
 
   ##-- setup access closures
   my $acode_str  = $moot->analysisCode();
