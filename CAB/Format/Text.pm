@@ -148,6 +148,8 @@ __END__
 ## NAME
 =pod
 
+=encoding utf8
+
 =head1 NAME
 
 DTA::CAB::Format::Text - Datum parser: verbose human-readable text
