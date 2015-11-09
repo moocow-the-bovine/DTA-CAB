@@ -248,6 +248,14 @@ and
 L<dta-cab-http-client.perl(1)|dta-cab-http-client.perl>
 implement the HTTP server/client protocol.
 
+=head3 CLARIN-D WebLicht Protocol
+
+A running L<DTA::CAB::Server::HTTP|DTA::CAB::Server::HTTP> server can be used directly
+as a CLARIN-D WebLicht web-service by using the "tcf" or "tcf-orth" formats.
+The "CAB historical text analysis"
+and "CAB orthographic canonicalizer" WebLicht chain components are implemented
+in this fashion; see L<http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> for details.
+
 =cut
 
 
@@ -264,10 +272,10 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2008-2011 by Bryan Jurish
+Copyright (C) 2008-2015 by Bryan Jurish
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

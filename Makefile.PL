@@ -186,7 +186,8 @@ sub MY::manifypods {
 .SUFFIXES: .html
 
 INST_CSS ?= ../../$(CSS)
-POD2HTMLFLAGS ?= --css="$(INST_CSS)" --backlink="(Back to Top)" --podroot=blib --podpath=script --header
+#POD2HTMLFLAGS ?= --css="$(INST_CSS)" --backlink="(Back to top)" --podroot=blib --podpath=script --header
+POD2HTMLFLAGS ?= --css="$(INST_CSS)" --backlink --podroot=blib --podpath=lib:script --noheader
 POD2HTML ?= pod2html $(POD2HTMLFLAGS)
 
 INST_HTMLDIR ?= blib/html
@@ -213,7 +214,7 @@ $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
   $rules =~ s/\\\n/\n/sg;
   my $hackit = ("\\\n"
 		."\t | ".'$(PERL) -p'." \\\n"
-		."\t   ".'-e\'sub hackhref {($$href=shift)=~s|^/*||; $$href=~s|^script/||; $$href=~s|/|'.$html_ns_sep.'|g; $$href;}\''." \\\n"
+		."\t   ".'-e\'sub hackhref {if (($$href=shift)=~s{^[\/\.]*/(?:script|lib)/}{}) { $$href=~s{/}{'.$html_ns_sep.'}g; } $$href;}\''." \\\n"
 		."\t   ".'-e\'s/<a href="([^"]*)/\'\\\'\'<a href="\'\\\'\'.hackhref($$1)/eg;\''
                );
   #$hackit = ' | cat - ';

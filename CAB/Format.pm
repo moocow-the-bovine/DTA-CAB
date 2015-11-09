@@ -1157,7 +1157,7 @@ Always deletes @$fmt{qw(fh doc)}.
  $fmt = $fmt->fromString(\$string);
 
 Select input from the string $string.
-Default implementation calls L<$fmt-E<gt>fromFh($fmt-E<gt>{tmpfh}=$new_fh)/fromFh>.
+Default implementation calls L<$fmt-E<gt>fromFh($fmt-E<gt>{tmpfh}=$new_fh)|/fromFh>.
 
 =item fromFile
 
@@ -1177,7 +1177,7 @@ Default implementation just calls L<$fmt-E<gt>close(1)|/close> and sets $fmt->{f
 
  $fmt = $fmt->fromFh_str($handle);
 
-Alternate fromFh() implementation which slurps contents of $fh and calls L<$fmt-E<gt>fromString(\$str)/fromString>.
+Alternate fromFh() implementation which slurps contents of $fh and calls L<$fmt-E<gt>fromString(\$str)|/fromString>.
 
 =item parseDocument
 

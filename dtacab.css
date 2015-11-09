@@ -24,6 +24,12 @@ H1,H2,H3,H4,H5,H6,P,CENTER,CL,DIV,TD,TH,DL,DT,DIV,UL {
 	margin-right: 24px;
 }
 
+UL#index {
+    background-color: #f5f5f5;
+    border: 1px solid #000099;
+    padding-top: .5em;
+    padding-bottom: .5em;
+}
 UL UL { margin-left: 0px; }
 LI > P  {
   margin-left: 0px;

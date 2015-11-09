@@ -2,6 +2,13 @@
 ^Makefile$
 ^pm_to_blib$
 ^blib
+^nytprof
+^MYMETA\.
+^kant\.
+^moot\b
+^rs\.
+^t\.
+^gn-
 
 \bpod2htm[di]\.
 

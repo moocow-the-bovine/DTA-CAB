@@ -703,14 +703,7 @@ just calls $fmt-E<gt>fromString()
 
  $doc = $fmt->parseDocument();
 
-
-=over 4
-
-
-=item *
-
-parses buffered XML::LibXML::Document
-
+parses buffered XML::LibXML::Document;
 local override inserts $doc-E<gt>{teibufr}, $doc-E<gt>{textbufr} attributes for spliceback mode
 
 =back

@@ -1,0 +1,454 @@
+=encoding utf8
+
+=pod
+
+=head1 NAME
+
+DTA::CAB:WebServiceTutorial - User tutorial for DTA::CAB web-service
+
+=cut
+
+##========================================================================
+## DESCRIPTION
+=pod
+
+=head1 DESCRIPTION
+
+This document describes the use of the L<DTA::CAB|DTA::CAB> (demo) web-service accessible
+at L<http://www.deutschestextarchiv.de/demo/cab/>.
+The L<DTA::CAB|DTA::CAB> web-service provides
+error-tolerant linguistic analysis for historical German text,
+including normalization of historical orthographic variants
+to "canonical" modern forms using the method described in L<Jurish (2012)|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+Due to legal restrictions on some of the underlying resources,
+not all available analysis layers can be returned
+by the publically accessible "demo" web-service, but it is hoped that the available
+layers (linguistically salient TEI-XML serialization,
+sentence- and word-level tokenization,
+orthographic normalization,
+part-of-speech tags, and (normalized) lemmata) should suffice for most purposes.
+
+=cut
+
+##========================================================================
+## Interface Elements
+=pod
+
+=head2 Interface Elements
+
+Upon accessing the top-level web-service URL ( L<http://www.deutschestextarchiv.de/demo/cab/> )
+in a web browser, the user is presented with a graphical interface in which CAB queries can
+be constructed and submitted to the underlying server.  This section describes the various
+elements of that interface.
+
+=over 4
+
+=item Query Form
+
+At the top of the web-service interface is a query form on a gray background including input fields for the CAB
+query parameters ("Query", "Analyzer", "Format", etc.).
+
+=item Status Line
+
+Immediately beneath the query form is a status display line ("URL line") on a white background with no border,
+which contains a link to the raw response data for the current query, if any.  In the case of
+singleton (1-word) queries, the status line also contains
+a simple heuristic "traffic-light" indicator of the query word's morphological security status, where
+green indicates a "safe" known modern form, red indicates an unknown (assumedly historical) form,
+and yellow indicates a known modern form which is judged unsafe for identity canonicalization (typically
+a proper name).
+
+=item Response Data
+
+Immediately below the URL line is the response data area ("data area") on a white background with a gray border, which
+displays the results for the current query, if any.
+
+=item Link Buttons
+
+Below the data area are a number of static link buttons for
+the file upload demo ("File Demo") or the live user-input demo ("Live Demo"),
+the list of analyzers supported by the underlying CAB instance ("Analyzers"),
+the list of I/O formats supported by the underlying CAB instance ("Formats"),
+administrative data for the CAB server instance ("Status"),
+and the CAB documentation ("Documentation").
+
+=back
+
+=cut
+
+##========================================================================
+## Basic Usage
+=pod
+
+=head2 Basic Usage
+
+This section briefly describes the basic usage offered by the DTA::CAB
+web-service by reference to some simple examples.
+
+=cut
+
+##========================================================================
+## Basic Usage: Simple Query
+=pod
+
+=head3 A Simple Query
+
+Most CAB parameters in the query form are initialized with sensible default values, with the exception
+of the "Query" parameter itself, which should contain the text string to be analyzed.
+Say we wish to analyze the text string "C<Elephanten>":
+simply entering this string (or copy & paste it) into the text input box associated with the "Query" parameter,
+and then pressing the <i>Enter</i> key or clicking the "submit" button will cause the query to be
+submitted to the underlying CAB server and the response data to be displayed in the data area:
+L<http://www.deutschestextarchiv.de/demo/cab/?q=Elephanten>
+
+The results are displayed by default in CAB's native "text" format (L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>),
+in which the first line contains the input surface form (C<Elephanten>), and the remaining lines are the CAB
+attributes for the query word,
+where each attribute line is indicated by an initial TAB character, a plus ("+") sign,
+and the attribute label enclosed in square brackets ("[...]"), followed by the attribute value.
+Useful attributes include "moot/word" (canonical modern form), "moot/tag" (part-of-speech tag), and
+"moot/lemma" (modern lemma).
+
+The example query for instance should produce a response such as:
+
+ Elephanten
+ 	+[moot/word] Elefanten
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Elefant
+
+... indicating that the query was correctly normalized to the canonical modern form "Elefanten",
+tagged as a common noun ("NN"), and assigned the correct canonical lemma "Elefant".
+
+=cut
+
+##========================================================================
+## Basic Usage: Sentence Query
+=pod
+
+=head3 A Sentence Query
+
+Suppose we wish to take advantage of context information while normalizing
+a whole sentence of historical text, as described in 
+L<Jurish (2012), Chapter 4|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+Simply enter the entire text of the sentence to be analyzed in the "Query"
+input, and ensure that the checkbox for the "tokenize" flag is checked,
+and submit the query, e.g.
+
+ EJn zamer Elephant gillt ohngefähr zweyhundert Thaler.
+
+The output now contains multiple tokens (words), where the analysis for
+each token begins with a line containing only its surface form (no leading whitespace).
+Token attribute lines (introduced by a leading TAB character) refer to the token
+most recently introduced.
+The output for the example query can be directly accessed
+L<here|http://www.deutschestextarchiv.de/demo/cab/?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.>,
+and should look something like the following:
+
+ EJn
+ 	+[moot/word] Ein
+ 	+[moot/tag] ART
+ 	+[moot/lemma] eine
+ zamer
+ 	+[moot/word] zahmer
+ 	+[moot/tag] ADJA
+ 	+[moot/lemma] zahm
+ Elephant
+ 	+[moot/word] Elefant
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Elefant
+ gillt
+ 	+[moot/word] gilt
+ 	+[moot/tag] VVFIN
+ 	+[moot/lemma] gelten
+ ohngefähr
+ 	+[moot/word] ungefähr
+ 	+[moot/tag] ADJD
+ 	+[moot/lemma] ungefähr
+ zweyhundert
+ 	+[moot/word] zweihundert
+ 	+[moot/tag] CARD
+ 	+[moot/lemma] zweihundert
+ Thaler
+ 	+[moot/word] Taler
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Taler
+ .
+ 	+[moot/word] .
+ 	+[moot/tag] $.
+ 	+[moot/lemma] .
+
+=cut
+
+##========================================================================
+## Basic Usage: Multi-Sentence Query
+=pod
+
+=head3 A Multi-Sentence Query
+
+The CAB web service can analyze multiple sentences as well, for example:
+
+ EJn zamer Elephant gillt ohngefähr zweyhundert Thaler.
+ Ceterum censeo Carthaginem esse delendam.
+
+The corresponding output can be viewed L<here|http://www.deutschestextarchiv.de/demo/cab/?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>, which should look something like:
+
+ %% $s:lang=de
+ EJn
+ 	+[moot/word] Ein
+ 	+[moot/tag] ART
+ 	+[moot/lemma] eine
+ ...
+ .
+ 	+[moot/word] .
+ 	+[moot/tag] $.
+ 	+[moot/lemma] .
+ 
+ %% $s:lang=la
+ Ceterum
+ 	+[moot/word] Ceterum
+ 	+[moot/tag] FM.la
+ 	+[moot/lemma] ceterum
+ censeo
+ 	+[moot/word] censeo
+ 	+[moot/tag] FM.la
+ 	+[moot/lemma] censeo
+ Carthaginem
+ 	+[moot/word] Carthaginem
+ 	+[moot/tag] FM.la
+ 	+[moot/lemma] carthaginem
+ esse
+ 	+[moot/word] esse
+ 	+[moot/tag] FM.la
+ 	+[moot/lemma] esse
+ delendam
+ 	+[moot/word] delendam
+ 	+[moot/tag] FM.la
+ 	+[moot/lemma] delendam
+ .
+ 	+[moot/word] .
+ 	+[moot/tag] $.
+ 	+[moot/lemma] .
+
+
+Here, blank lines indicate sentence boundaries, and comments (non-tokens) are lines
+introduced by two percent signs ("%%").  The special comments immediately preceding each sentence
+of the form "C<%% $s:lang=>I<LANG>" indicate the result of CAB's language-guessing module
+L<DTA::CAB::Analyzer::LangId::Simple|DTA::CAB::Analyzer::LangId::Simple>.
+The blank line between the final "." of the first sentence and the first word of the second
+sentence indicates that the sentence boundary was correctly detected,
+and the "C<%% $s.lang=>I<LANG>" comments indicate that the source language of both
+sentences was correctly guessed ("de" indicating German in the former case, and "la" indicating
+Latin in the latter).  Due to the language-guesser's assignment for the second sentence,
+all words in that sentence are tagged as foreign material ("FM"), with the suffix ".la" indicating
+the language-guesser's output.  Otherwise, no analysis (normalization or lemmatization) is performed
+for sentences recognized as non-German.
+
+=cut
+
+##========================================================================
+## Analysis Chains
+=pod
+
+=head2 Analysis Chains
+
+The CAB server supports a number of different analysis modes, corresponding to
+different sorts of input data and/or different user tasks.  The various analysis
+modes are implemented in terms of different analysis chains (a.k.a. "analyzers" or just "chains")
+supported by the underlying analysis dispatcher class, L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>.
+The analysis mode to be used for a particular CAB request is specified by the
+"analyzer" or "a" paramter, which is initially set to use the "default" analysis chain
+(which is itself just an alias for the "norm" chain).
+
+This section briefly describes some alternative analysis chains and situations in which
+they might be useful.
+For a full list of available analysis chains, see the list returned by the
+"L<Analyzers|http://www.deutschestextarchiv.de/demo/cab/analyzers>" button in the link area,
+and see L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>
+for a list of the available atomic analyzers and aliases for complex analysis chains.
+For details on individual atomic analyzers, see the appropriate L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
+subclass documentation.
+
+=cut
+
+##========================================================================
+## Analysis Chains: Type-wise
+=pod
+
+=head3 Type-wise Analysis
+
+As noted L<above|/"A Sentence Query">, the default "norm" analysis chain uses
+sentential context to improve the precision of the normalization process
+as described in L<Jurish (2012), Chapter 4|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+This behavior is not always desirable, however.  In particular, if your data
+is not arranged into linguistically meaningful sentence-like units -- e.g.
+a simple flat list of surface types -- then no real context information is available,
+and the "sentential" context CAB would use would more likely hinder the normalization
+than help it.  For such cases, the "norm1" analysis chain can be employed instead
+of the default "norm" chain.  The "norm1" chain uses only unigram-based probabilities
+during normalization, so is less likely to be "confused" by non-sentence-like inputs.
+
+Consider for example the input list:
+
+ Fliegen fliegen nach
+
+passing this list to the "norm1" chain inhibits context-dependent processing
+and results in L<the following|http://www.deutschestextarchiv.de/demo/cab/?a=norm1&q=Fliegen+fliegen+nach>
+
+ Fliegen
+ 	+[moot/word] Fliegen
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Fliege
+ fliegen
+ 	+[moot/word] fliegen
+ 	+[moot/tag] VVINF
+ 	+[moot/lemma] fliegen
+ nach
+ 	+[moot/word] nach
+ 	+[moot/tag] APPR
+ 	+[moot/lemma] nach
+
+contrast this to L<the output of the default "norm" chain|http://www.deutschestextarchiv.de/demo/cab/?a=norm&q=Fliegen+fliegen+nach.>:
+
+ Fliegen
+ 	+[moot/word] Fliegen
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Fliege
+ fliegen
+ 	+[moot/word] fliegen
+ 	+[moot/tag] VVFIN
+ 	+[moot/lemma] fliegen
+ nach
+ 	+[moot/word] nach
+ 	+[moot/tag] PTKVZ
+ 	+[moot/lemma] nach
+
+In the above example, the second item "fliegen" is analyzed as an infinite verb (VVINF) for the unigram-based analyzer "norm1",
+but as a finite verb (VVFIN) for the default analyzer.  Similarly, the final item "nach" is analyzed as a preposition (APPR) by
+the unigram-based analyzer but as a verb particle (PTKVZ) by the default analyzer.  Although use of the "norm1" analyzer does
+not alter either the canonical modern form or canonical lemma in this case, such cases are theoretically possible.
+
+=cut
+
+##========================================================================
+## Analysis Chains: Expansion
+=pod
+
+=head3 Term Expansion
+
+It is sometimes useful to have a list of all known orthographic variants of a given input form, e.g.
+for runtime queries of a database which indexes only surface forms.  For such tasks, the analysis
+chain "expand" can be used.  To
+see all the variants of the surface form "Elephant" in the I<Deutsches Textarchiv> corpus for example, one could query
+L<http://deutschestextarchiv.de/demo/cab/?a=expand&q=Elephant>, and expect a response something like:
+
+ Elephant
+ 	+[moot/word] Elefant
+ 	+[moot/tag] NN
+ 	+[moot/lemma] Elefant
+ 	+[eqpho] Elephant <0>
+ 	+[eqpho] Elefant <14>
+ 	+[eqpho] elephant <17>
+ 	+[eqpho] elevant <17>
+ 	+[eqpho] Elephand <18>
+ 	+[eqpho] Elevant <18>
+ 	+[eqpho] elefant <18>
+ 	+[eqpho] Elephandt <19>
+ 	+[eqpho] Elephanth <19>
+ 	+[eqrw] Elefant <0>
+ 	+[eqrw] Elephant <0>
+ 	+[eqrw] Elephandt <8.44527626037598>
+ 	+[eqrw] elefant <8.44683265686035>
+ 	+[eqrw] Elephanth <8.70806312561035>
+ 	+[eqrw] elephant <9.01417255401611>
+ 	+[eqrw] Elephand <18.6624526977539>
+ 	+[eqrw] Eliphant <18.7045001983643>
+ 	+[eqrw] Elephants <21.1982593536377>
+ 	+[eqrw] elevant <21.3945064544678>
+ 	+[eqrw] Elphant <23.2134704589844>
+ 	+[eqrw] Elesant <27.7278366088867>
+ 	+[eqrw] Elephanta <30.2710800170898>
+ 	+[eqlemma] Elefannten <0>
+ 	+[eqlemma] Elefant <0>
+ 	+[eqlemma] Elefanten <0>
+ 	+[eqlemma] Elefantin <0>
+ 	+[eqlemma] Elefantine <0>
+ 	+[eqlemma] Elephandten <0>
+ 	+[eqlemma] Elephant <0>
+ 	+[eqlemma] Elephanten <0>
+ 	+[eqlemma] Elesant <0>
+ 	+[eqlemma] elefant <0>
+ 	+[eqlemma] elephanten <0>
+
+Here, the "eqpho" attribute contains all surface forms recognized as phonetic variants of the query term,
+"eqrw" contains those surface forms recognized as variants by the heuristic rewrite cascade,
+and "eqlemma" contains the surface forms most likely to be mapped to the same modern lemma as the query term.
+This online expansion strategy was used by an earlier version of the DTA corpus index
+as described in L<Jurish et al. (2014)|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>,
+but has since been superseded by an online lemmatization query using the "lemma" expander,
+in conjunction with a direct query of the underlying corpus $Lemma index.
+
+=cut
+
+##========================================================================
+## I/O Formats
+=pod
+
+=head2 I/O Formats
+
+The CAB web-service supports a number of different I/O formats for
+L<document data|DTA::CAB/"Data Model">,
+including
+L<"CSV"|DTA::CAB::Format::CSV>,
+L<"JSON"|DTA::CAB::Format::JSON>,
+L<"TEI"|DTA::CAB::Format::TEI>,
+L<"TCF"|DTA::CAB::Format::TCF>,
+L<"TT"|DTA::CAB::Format::TT>,
+L<"YAML"|DTA::CAB::Format::YAML>,
+and
+various L<"XML"|DTA::CAB::Format::XmlNative> formats
+in addition to the
+L<Text|DTA::CAB::Format::Text> format already described.
+See L<DTA::CAB::Format> for details on the I/O format API,
+and see L<DTA::CAB::Format/SUBCLASSES> for a list of currently
+implemented format subclasses.
+
+
+
+##========================================================================
+## References
+=pod
+
+=head1 REFERENCES
+
+Jurish, B., C. Thomas, & F. Wiegand. "Querying the Deutsches Textarchiv."
+In U. Kruschwitz, F. Hopfgartner, & C. Gurrin (editors),
+Proceedings of the Workshop I<L<MindTheGap 2014: Beyond Single-Shot Text Queries: Bridging the Gap(s) between Research Communities|http://ceur-ws.org/Vol-1131/>>
+Berlin, Germany, 4th March, 2014, pages 25-30, 2014.
+URL L<http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>
+
+Jurish, B. I<Finite-state Canonicalization Techniques for Historical German.>
+PhD thesis, Universität Potsdam, 2012 (defended 2011).
+URN urn:nbn:de:kobv:517-opus-55789,
+URL L<http://opus.kobv.de/ubp/volltexte/2012/5578/|http://opus.kobv.de/ubp/volltexte/2012/5578/>
+
+=cut
+
+##======================================================================
+## Footer
+##======================================================================
+
+=pod
+
+=head1 AUTHOR
+
+Bryan Jurish E<lt>L<jurish@bbaw.de|mailto:jurish@bbaw.de>E<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2015 by Bryan Jurish
+
+This package is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut

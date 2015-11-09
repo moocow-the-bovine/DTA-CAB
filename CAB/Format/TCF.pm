@@ -703,7 +703,7 @@ L<DTA::CAB::Server(3pm)|DTA::CAB::Server>,
 L<DTA::CAB::Client(3pm)|DTA::CAB::Client>,
 L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
-L<perl(1)|perl>,
+perl(1),
 ...
 
 
