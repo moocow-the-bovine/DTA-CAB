@@ -824,7 +824,7 @@ An example B<output> file in the format returned by this module is:
      <fw>Running headers are ignored</fw>
      <s lang="de">
        <w msafe="1" t="wie" errid="ec" hasmorph="1" exlex="wie" lang="de">
-	 <moot word="wie" lemma="wie" tag="KOKOM"/>
+	 <moot word="wie" lemma="wie" tag="PWAV"/>
 	 <xlit isLatinExt="1" isLatin1="1" latin1Text="wie"/>
        </w>
        <w msafe="0" t="oede">
@@ -839,6 +839,9 @@ An example B<output> file in the format returned by this module is:
      <lb/>
    </text>
  </TEI>
+
+Any //s or //w elements in the input will be B<IGNORED> and input will be (re-)tokenized.
+Outputs files are themselves parseable by L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>.
 
 =cut
 
