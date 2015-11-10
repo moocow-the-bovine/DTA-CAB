@@ -246,6 +246,25 @@ for sentences recognized as non-German.
 =cut
 
 ##========================================================================
+## Basic Usage: Document Query
+=pod
+
+=head3 A File Query
+
+In addition to the default "live" query interface, the CAB web-service interface
+also offers users the opportunity to upload an entire document file to be analyzed
+and allowing the analysis results to be saved to the user's local machine.
+The CAB file interface is accessible via the "File Demo"
+button in the link area, which resolves to L<http://www.deutschestextarchiv.de/demo/cab/file|http://www.deutschestextarchiv.de/demo/cab/file>.
+Suppose we have a simple plain-text file F<elephant.txt> containing the document to be analyzed:
+
+
+
+
+=cut
+
+
+##========================================================================
 ## Analysis Chains
 =pod
 
@@ -395,23 +414,27 @@ in conjunction with a direct query of the underlying corpus $Lemma index.
 
 =head2 I/O Formats
 
+B<TODO>
+
 The CAB web-service supports a number of different I/O formats for
-L<document data|DTA::CAB/"Data Model">,
+L<document data|DTA::CAB/"Data Model">, 
 including
-L<"CSV"|DTA::CAB::Format::CSV>,
-L<"JSON"|DTA::CAB::Format::JSON>,
-L<"TEI"|DTA::CAB::Format::TEI>,
-L<"TCF"|DTA::CAB::Format::TCF>,
-L<"TT"|DTA::CAB::Format::TT>,
-L<"YAML"|DTA::CAB::Format::YAML>,
+L<simple CSV|DTA::CAB::Format::CSV>,
+L<JSON|DTA::CAB::Format::JSON>,
+L<CLARIN-D TCF-XML|DTA::CAB::Format::TCF>,
+L<"raw" TEI-XML|DTA::CAB::Format::TEI>,
+L<pre-tokenized TEI-XML|DTA::CAB::Format::TEIws>,
+L<"vertical" TT|DTA::CAB::Format::TT>,
 and
-various L<"XML"|DTA::CAB::Format::XmlNative> formats
+L<YAML|DTA::CAB::Format::YAML>,
 in addition to the
 L<Text|DTA::CAB::Format::Text> format already described.
+
 See L<DTA::CAB::Format> for details on the I/O format API,
 and see L<DTA::CAB::Format/SUBCLASSES> for a list of currently
 implemented format subclasses.
 
+=cut
 
 
 ##========================================================================

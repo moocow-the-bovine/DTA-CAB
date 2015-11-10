@@ -1404,13 +1404,6 @@ may not be available on all systems.
 
 Just a convenience package: load all built-in DTA::CAB::Format subclasses.
 
-=item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
-
-Null-op parser/formatter for debugging and testing purposes.
-Registered as:
-
- name=>__PACKAGE__
-
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
@@ -1428,10 +1421,10 @@ Registered as:
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
 
-Null format for testing, registered as:
+Null-op parser/formatter for debugging and testing purposes.
+Registered as:
 
  name=>__PACKAGE__
-
 
 =item L<DTA::CAB::Format::Perl|DTA::CAB::Format::Perl>
 
@@ -1503,6 +1496,7 @@ Registered as:
 
 Datum parser|formatter: for raw un-tokenized TEI XML (with or without //c elements) using L<DTA::TokWrap|DTA::TokWrap>.
 Any //s or //w elements in the input will be B<IGNORED> and input will be (re-)tokenized.
+Outputs files are themselves parseable by L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>.
 Registered as:
 
   (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei(?:[\.\-_]?p[45])?)[\.\-_]xml|xml)$/)
@@ -1600,11 +1594,11 @@ Datum parser|formatter(s): XML as read/written by L<DTA::TokWrap>.
 
 Datum parser|formatter(s): XML as read/written by L<DTA::TokWrap>.
 Unlike the C<XmlTokWrap> format,
-C<XmlTokWrapFast> does not read and/or write the full document structure,
+the L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast> class does not read and/or write the full document structure,
 but rather restricts itself to a finite hard-coded subset of the most commonly
 used document-, sentence-, and token-level attributes.  The input parser
-uses the expat-based XML::Parser module, which usually results in much faster
-and memory-friendlier document parsing than the C<XmlTokWrap> module.
+uses the expat-based L<XML::Parser|XML::Parser> module, which usually results in much faster
+and memory-friendlier document parsing than offered by the L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap> class.
 Registered as:
 
  (name=>__PACKAGE__, filenameRegex=>qr/(?:\.(?i:f[tuws](?:\.?)xml))$/);
@@ -1626,10 +1620,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2014 by Bryan Jurish
+Copyright (C) 2009-2015 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
