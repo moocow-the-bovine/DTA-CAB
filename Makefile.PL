@@ -196,6 +196,8 @@ HTML_EXT ?= html
 HTML1EXT ?= $(HTML_EXT)
 HTML3EXT ?= $(HTML_EXT)
 
+HTML_EXTRA ?= doc-extra/elephant.raw
+
 ##-- lifted from MakeMaker blibdir section
 $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
 	$(NOECHO) $(MKPATH) $(INST_HTMLDIR)
@@ -205,6 +207,7 @@ $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
 ';
   ($deps,$rules) = ($deps0,$rules0);
   $deps =~ s/^manifypods\b/htmlifypods/;
+  $deps .= "\\\n\thtmlifypods-extra";
   $deps .= "\\\n\t".'$(INST_HTMLDIR)$(DFSEP).exists';
   $rules =~ s/POD2MAN/POD2HTML/g;
   $rules =~ s/MAN(\d)EXT/HTML$1EXT/g;
@@ -212,9 +215,20 @@ $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
   $rules =~ s/^\s+\$\(NOECHO\).*?\n//smg;
   $rules =~ s/::/${html_ns_sep}/sg if ($html_ns_sep ne '::');
   $rules =~ s/\\\n/\n/sg;
+  $rules .= '
+
+htmlifypods-extra: $(HTML_EXTRA) $(INST_HTMLDIR)$(DFSEP).exists
+	$(CP) $(HTML_EXTRA) $(INST_HTMLDIR)
+
+';
   my $hackit = ("\\\n"
 		."\t | ".'$(PERL) -p'." \\\n"
-		."\t   ".'-e\'sub hackhref {if (($$href=shift)=~s{^[\/\.]*/(?:script|lib)/}{}) { $$href=~s{/}{'.$html_ns_sep.'}g; } $$href;}\''." \\\n"
+		."\t   ".'-e\'sub hackhref {'.(
+					       'if (($$href=shift)=~s{^[\/\.]*/(?:script|lib)/}{}) { $$href=~s{/}{'.$html_ns_sep.'}g; }'
+					       .' $$href=~s{^http://\./}{};'
+					       .' $$href;}\''
+					      )
+		." \\\n"
 		."\t   ".'-e\'s/<a href="([^"]*)/\'\\\'\'<a href="\'\\\'\'.hackhref($$1)/eg;\''
                );
   #$hackit = ' | cat - ';
