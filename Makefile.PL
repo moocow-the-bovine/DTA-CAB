@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.71';
+my $VERSION = '1.72';
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
@@ -196,7 +196,12 @@ HTML_EXT ?= html
 HTML1EXT ?= $(HTML_EXT)
 HTML3EXT ?= $(HTML_EXT)
 
-HTML_EXTRA ?= doc-extra/elephant.raw
+HTML_EXTRA ?= \
+  doc-extra/elephant.raw \
+  doc-extra/elephant.tei-xml \
+  doc-extra/elephant.teiws-xml \
+  doc-extra/elephant.raw.tcf \
+  doc-extra/elephant.tok.tcf
 
 ##-- lifted from MakeMaker blibdir section
 $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL

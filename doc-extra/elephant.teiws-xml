@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI>
+  <text>
+    <!-- running headers are ignored by the tokenizer -->
+    <fw>Running header</fw>
+    <p>
+      <s>
+        <w>EJn</w>
+        <w>zamer</w>
+        <w>Elephant</w>
+        <w>gillt</w>
+        <w>ohngefähr</w>
+        <w>zweyhundert</w>
+        <w>Thaler</w>
+      </s>
+    </p>
+    <!-- paragraph boundaries imply sentence boundaries, even without punctuation -->
+    <p>
+      <s>
+        <w>Ceterum</w>
+        <w>censeo</w>
+        <w>Carthaginem</w>
+        <w>esse</w>
+        <w>delendam</w>
+      </s>
+    </p>
+  </text>
+</TEI>

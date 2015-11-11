@@ -211,6 +211,7 @@ sub putSentenceRaw {
 ## Methods: Output: Required API
 
 ## $fmt = $fmt->putDocument($doc)
+our %IGNORE_DOC_ATTRS = (body=>1,textbufr=>1,teibufr=>1);
 sub putDocument { $_[0]->putDocumentRaw(Storable::dclone($_[1])); }
 sub putDocumentRaw {
   my ($fmt,$doc) = @_;
@@ -221,7 +222,7 @@ sub putDocumentRaw {
   } else {
     ##-- append $doc->{body} onto $buf->{body}
     push(@{$buf->{body}}, @{$doc->{body}});
-    foreach (grep {$_ ne 'body'} keys(%$doc)) {
+    foreach (grep {!exists $IGNORE_DOC_ATTRS{$_}} keys(%$doc)) {
       $buf->{$_} = $doc->{$_}; ##-- clobber existing keys
     }
   }

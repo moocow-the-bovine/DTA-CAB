@@ -1,0 +1,121 @@
+%% $s:lang=de
+EJn
+	+[exlex] Ein
+	+[errid] 72751
+	+[xlit] l1=1 lx=1 l1s=Ejn
+	+[morph/safe] 0
+	+[moot/word] Ein
+	+[moot/tag] ART
+	+[moot/lemma] eine
+zamer
+	+[xlit] l1=1 lx=1 l1s=zamer
+	+[morph/safe] 0
+	+[moot/word] zahmer
+	+[moot/tag] ADJA
+	+[moot/lemma] zahm
+Elephant
+	+[exlex] Elefant
+	+[errid] ec
+	+[lang] de
+	+[xlit] l1=1 lx=1 l1s=Elephant
+	+[hasmorph] 1
+	+[morph/safe] 1
+	+[moot/word] Elefant
+	+[moot/tag] NN
+	+[moot/lemma] Elefant
+gillt
+	+[xlit] l1=1 lx=1 l1s=gillt
+	+[morph/safe] 0
+	+[moot/word] gilt
+	+[moot/tag] VVFIN
+	+[moot/lemma] gelten
+ohngefähr
+	+[exlex] ungefähr
+	+[errid] 633
+	+[lang] de
+	+[xlit] l1=1 lx=1 l1s=ohngefähr
+	+[hasmorph] 1
+	+[morph/safe] 1
+	+[moot/word] ungefähr
+	+[moot/tag] ADJD
+	+[moot/lemma] ungefähr
+zweyhundert
+	+[exlex] zweihundert
+	+[errid] ec
+	+[xlit] l1=1 lx=1 l1s=zweyhundert
+	+[morph/safe] 0
+	+[moot/word] zweihundert
+	+[moot/tag] CARD
+	+[moot/lemma] zweihundert
+Thaler
+	+[exlex] Taler
+	+[errid] 57836
+	+[xlit] l1=1 lx=1 l1s=Thaler
+	+[hasmorph] 1
+	+[morph/safe] 0
+	+[moot/word] Taler
+	+[moot/tag] NN
+	+[moot/lemma] Taler
+.
+	+[exlex] .
+	+[errid] ec
+	+[xlit] l1=1 lx=1 l1s=.
+	+[morph/safe] 1
+	+[moot/word] .
+	+[moot/tag] $.
+	+[moot/lemma] .
+
+%% $s:lang=la
+Ceterum
+	+[lang] la
+	+[xlit] l1=1 lx=1 l1s=Ceterum
+	+[morph/lat] [_FM][lat] <0>
+	+[morph/safe] 1
+	+[moot/word] Ceterum
+	+[moot/tag] FM.la
+	+[moot/lemma] ceterum
+censeo
+	+[lang] la
+	+[xlit] l1=1 lx=1 l1s=censeo
+	+[morph/lat] [_FM][lat] <0>
+	+[morph/safe] 1
+	+[moot/word] censeo
+	+[moot/tag] FM.la
+	+[moot/lemma] censeo
+Carthaginem
+	+[lang] la
+	+[xlit] l1=1 lx=1 l1s=Carthaginem
+	+[morph/lat] [_FM][lat] <0>
+	+[morph/safe] 1
+	+[moot/word] Carthaginem
+	+[moot/tag] FM.la
+	+[moot/lemma] carthaginem
+esse
+	+[exlex] esse
+	+[errid] 71075
+	+[lang] de
+	+[lang] la
+	+[xlit] l1=1 lx=1 l1s=esse
+	+[hasmorph] 1
+	+[morph/lat] [_FM][lat] <0>
+	+[morph/safe] 1
+	+[moot/word] esse
+	+[moot/tag] FM.la
+	+[moot/lemma] esse
+delendam
+	+[lang] la
+	+[xlit] l1=1 lx=1 l1s=delendam
+	+[morph/lat] [_FM][lat] <0>
+	+[morph/safe] 1
+	+[moot/word] delendam
+	+[moot/tag] FM.la
+	+[moot/lemma] delendam
+.
+	+[exlex] .
+	+[errid] ec
+	+[xlit] l1=1 lx=1 l1s=.
+	+[morph/safe] 1
+	+[moot/word] .
+	+[moot/tag] $.
+	+[moot/lemma] .
+

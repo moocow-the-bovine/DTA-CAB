@@ -101,7 +101,7 @@ and then pressing the <i>Enter</i> key or clicking the "submit" button will caus
 submitted to the underlying CAB server and the response data to be displayed in the data area:
 L<http://www.deutschestextarchiv.de/demo/cab/?q=Elephanten>
 
-The results are displayed by default in CAB's native "text" format (L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>),
+The results are displayed by default in CAB's native "L<Text|/Text>" format,
 in which the first line contains the input surface form (C<Elephanten>), and the remaining lines are the CAB
 attributes for the query word,
 where each attribute line is indicated by an initial TAB character, a plus ("+") sign,
@@ -268,7 +268,9 @@ Clicking on the "submit" button will cause the contents of the selected file to 
 to the CAB server, analyzed, and prompt you for a location to which the analysis results
 should be saved (by default F<elephant.raw.txt>).
 Assuming the default options were active, you should have a result file
-resembling L<this|http://www.deutschestextarchiv.de/demo/cab/query?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>, identical to the results displayed in the data area for
+resembling
+L<this|http://www.deutschestextarchiv.de/demo/cab/query?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>,
+identical to the results displayed in the data area for
 L<the multi-sentence query example|/A Multi-Sentence Query>.
 
 Due to bandwidth limitations, the CAB server currently only accepts input files of size B<E<lt>= 512 KB>.
@@ -456,6 +458,8 @@ by the server.
 
 =head4 L<Text|DTA::CAB::Format::Text>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=text&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Simple human-readable text format as described under "L<Basic Usage|/Basic Usage>", above.
 Blank lines indicate sentence boundaries,
 comments are lines beginning with "%%",
@@ -473,6 +477,8 @@ Primarily useful for direct inspection and debugging.
 =pod
 
 =head4 L<CSV|DTA::CAB::Format::CSV>
+
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=csv&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
 Simple fixed-width "vertical" text format containing only selected
 attribute values.
@@ -504,6 +510,8 @@ but lacks flexibility.
 
 =head4 L<TT|DTA::CAB::Format::TT>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=tt&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Simple machine-readable "vertical" text format similar to that used by
 L<Corpus WorkBench|http://cwb.sourceforge.net/>.  Each line is either a
 comment introduced by "%%", an empty line indicating a sentence boundary,
@@ -523,7 +531,9 @@ Useful for further quick and dirty script-based processing.
 
 =head4 L<TJ|DTA::CAB::Format::TJ>
 
-Simple machine-readable "vertical" text format based on the L<TT|DTA::CAB::Format::TT>
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=tj&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
+Simple machine-readable "vertical" text format based on the L<TT|/TT>
 format but using L<JSON|http://json.org/> to encode sentence- and token-level attributes
 rather than an explicit attribute labelling scheme.
 Each line is either a
@@ -559,6 +569,8 @@ Useful for further script-based processing.
 
 =head4 L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=twxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
 module.  Supports arbitrary token attribute substructure, but fairly slow.
 
@@ -570,8 +582,10 @@ module.  Supports arbitrary token attribute substructure, but fairly slow.
 
 =head4 L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=ftwxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
-module.  Faster than L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>, but doesn't support all attributes.
+module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't support all attributes.
 
 =cut
 
@@ -581,12 +595,15 @@ module.  Faster than L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>, but doesn't sup
 
 =head4 L<TEI|DTA::CAB::Format::TEI>
 
+[L<example input|http://./elephant.tei-xml>,
+L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]>
+
 Parses raw un-tokenized TEI-like XML input (with or without //c elements) using
 L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/> to reserialize and tokenize the
 source text, and splices analysis results into the resulting XML document
-using the L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap> format.
+using the L<XmlTokWrap|/XmlTokWrap> format.
 Any C<E<lt>sE<gt>> or C<E<lt>sE<gt>> elements in the input will be ignored and the input will be (re-)tokenized.
-Output data is itself parseable by L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>.
+Output data is itself parseable by by the L<TEIws|/TEIws> formatter.
 
 B<Be warned> that output sentence- and token-nodes (E<lt>sE<gt> and E<lt>wE<gt> elements, respectively)
 may be I<fragmented> in the final output file.  A "fragmented" node
@@ -614,13 +631,16 @@ structural information encoded in the source XML itself.
 
 =head4 L<TEIws|DTA::CAB::Format::TEIws>
 
+[L<example input|http://./elephant.teiws-xml>,
+L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]>
+
 High-level parser/formatter class for pre-tokenized (and possibly fragmented) TEI-like XML
-as output by the L<TEI|DTA::CAB::Format::TEI> formatter class.
+as output by the L<TEI|/TEI> formatter.
 Input files should be encoded in L<UTF-8|https://en.wikipedia.org/wiki/UTF-8>.
 
 Potentially useful for analyzing pre-tokenized TEI-like XML data,
 but primarily used for converting to other, script-friendlier formats
-such as L<CSV|DTA::CAB::Format::CSV>.
+such as L<CSV|/CSV>.
 
 =cut
 
@@ -629,6 +649,10 @@ such as L<CSV|DTA::CAB::Format::CSV>.
 =pod
 
 =head4 L<TCF|DTA::CAB::Format::TCF>
+
+[L<example input (raw text)|http://./elephant.raw.tcf>,
+L<example input (tokenized text)|http://./elephant.tok.tcf>,
+L<example output|http://www.deutschestextarchiv.de/demo/cab/?fmt=tcf&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
 Layer-based XML format used by CLARIN-D, in particlar by the
 L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer.
@@ -644,6 +668,8 @@ TCF layers.
 =pod
 
 =head4 L<XML-RPC|DTA::CAB::Format::XmlRpc>
+
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=xmlrpc&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
 Flexible but obscenely inefficient format used for data transfer
 in the L<XML-RPC Protocol|https://en.wikipedia.org/wiki/XML-RPC>.
@@ -673,6 +699,33 @@ Very fast and flexible, suitable for further automated processing.
 =cut
 
 ##========================================================================
+## I/O Formats: Data-oriented: YAML
+=pod
+
+=head4 L<YAML|DTA::CAB::Format::YAML>
+
+Direct dump of the underlying
+L<DTA::CAB::Document|DTA::CAB::Document> structure
+as L<YAML|https://en.wikipedia.org/wiki/YAML> markup.
+Fast, flexible, and supports shared substructures, unlike the L<JSON|/JSON> formatter.
+
+=cut
+
+##========================================================================
+## I/O Formats: Data-oriented: Perl
+=pod
+
+=head4 L<Perl|DTA::CAB::Format::Perl>
+
+Direct dump of the underlying
+L<DTA::CAB::Document|DTA::CAB::Document> structure
+using the Perl L<Data::Dumper|https://metacpan.org/release/Data-Dumper> module.
+Mainly useful for further automated processing with Perl
+while retaining some degree of human readability.
+
+=cut
+
+##========================================================================
 ## I/O Formats: Data-oriented: Storable
 =pod
 
@@ -683,19 +736,6 @@ L<DTA::CAB::Document|DTA::CAB::Document> structure
 using the Perl L<Storable|https://metacpan.org/release/Storable> module.
 This is currently the fastest I/O class for both in- and output,
 mainly useful for further automated processing with Perl.
-
-=cut
-
-##========================================================================
-## I/O Formats: Data-oriented: YAML
-=pod
-
-=head4 L<JSON|DTA::CAB::Format::YAML>
-
-Direct dump of the underlying
-L<DTA::CAB::Document|DTA::CAB::Document> structure
-as L<YAML|https://en.wikipedia.org/wiki/YAML> markup.
-Fast, flexible, and supports shared substructures, unlike the L<JSON|/JSON> formatter.
 
 =cut
 
