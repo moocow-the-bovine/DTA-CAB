@@ -234,18 +234,7 @@ htmlifypods-extra: $(HTML_EXTRA) $(INST_HTMLDIR)$(DFSEP).exists
 	$(CP) $(HTML_EXTRA) $(INST_HTMLDIR)
 
 ';
-  my $hackit = ("\\\n"
-		."\t | ".'$(PERL) -p'." \\\n"
-		."\t   ".'-e\'sub hackhref {'.(
-					       'if (($$href=shift)=~s{^[\/\.]*/(?:script|lib)/}{}) { $$href=~s{/}{'.$html_ns_sep.'}g; }'
-					       .' $$href=~s{^http://\./}{};'
-					       .' $$href;}\''
-					      )
-		." \\\n"
-		."\t   ".'-e\'s/<a href="([^"]*)/\'\\\'\'<a href="\'\\\'\'.hackhref($$1)/eg;\''
-               );
-  #$hackit = ' | cat - ';
-  $rules =~ s/\t\s+(\S+)\s+(\S+)/\t\$(POD2HTML) --infile=$1 ${hackit} \\\n\t > $2 || (rm -f $2 && false)/sg;
+  $rules =~ s/\t\s+(\S+)\s+(\S+)/\t\$(POD2HTML) --infile=$1 | \$(PERL) pod2htmlhack.perl \\\n\t > $2 || (rm -f $2 && false)/sg;
   $out .= $htmlvars.$deps."\n".$rules."\n\n";
 
   ##-----------------------

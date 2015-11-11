@@ -1037,12 +1037,4 @@ L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jtw2014querying.bib>]
 
 Bryan Jurish E<lt>L<jurish@bbaw.de|mailto:jurish@bbaw.de>E<gt>
 
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2015 by Bryan Jurish
-
-This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.20.2 or,
-at your option, any later version of Perl 5 you may have available.
-
 =cut
