@@ -165,7 +165,7 @@ sub parseDocument {
     foreach $wnod (@{$xc->findnodes('.//*[local-name()="w"]',$snod)}) {
       $wid = $wnod->getAttribute('id') || $wnod->getAttribute('xml:id') || ("teiws_w_".++$wi);
       $w   = $id2w{$wid} = $fmt->parseNode($wnod);
-      @$w{qw(id teixp teitext)} = ($wid,$wnod->nodePath,$wnod->textContent);
+      @$w{qw(id teixp teitext)} = ($wid,$wnod->nodePath,join('', map {$_->nodeValue} grep {UNIVERSAL::isa($_,'XML::LibXML::Text')} $wnod->childNodes));
       $id2prev{$wid} = $wnod->getAttribute('prev') if ($wnod->hasAttribute('prev'));
       $id2next{$wid} = $wnod->getAttribute('next') if ($wnod->hasAttribute('next'));
       push(@{$s->{wids}},$wid);
@@ -194,7 +194,7 @@ sub parseDocument {
 	$w->{teixp}  .= "|$wnxt->{teixp}";
       }
       delete @$w{qw(prev next part ref XMLNS)};
-      if (0 && !defined($w->{text})) {
+      if (!defined($w->{text})) {
 	##-- hack for tei without //w/@t or //w/@text: heuristically analyze raw text content
 	($w->{text}=$w->{teitext}) =~ s/[\-¬⁊‒–—]?\s+["'«»٬ۥ‘’‚‛“”„‟′″]*//g;
       }

@@ -72,6 +72,11 @@ the list of I/O formats supported by the underlying CAB instance ("Formats"),
 administrative data for the CAB server instance ("Status"),
 and the CAB documentation ("Documentation").
 
+=item Footer
+
+Below the link buttons is a short footer on a gray background containing
+administrative information about the underlying CAB server.
+
 =back
 
 =cut
@@ -420,18 +425,48 @@ L<http://deutschestextarchiv.de/demo/cab/?a=expand&q=Elephant>, and expect a res
 Here, the "eqpho" attribute contains all surface forms recognized as phonetic variants of the query term,
 "eqrw" contains those surface forms recognized as variants by the heuristic rewrite cascade,
 and "eqlemma" contains the surface forms most likely to be mapped to the same modern lemma as the query term.
-This online expansion strategy was used by an earlier version of the DTA corpus index
+This online expansion strategy
+is used by the L<DTA Query Lizard|http://kaskade.dwds.de/dstar/dta/lizard?q=Elephant>,
+and was also used by an earlier the DTA corpus index
 as described in L<Jurish et al. (2014)|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>,
-but has since been superseded by an online lemmatization query using the "lemma" expander,
+but has since been replaced there by an online lemmatization query using the "lemma" expander,
 in conjunction with a direct query of the underlying corpus $Lemma index.
 
 =cut
 
 ##========================================================================
-## I/O Formats
+## Analysis Chains: Format Conversion
 =pod
 
-=head2 I/O Formats
+=head3 Format Conversion
+
+The CAB server can be used to convert between various
+supported I/O L<Formats|/Formats>.  In this mode,
+no analysis is performed on the input data
+(with the exception of tokenization for raw untokenized input),
+but the input document is parsed and re-formatted according to
+the selected output format.  The analysis chain "null" can be
+selected for such tasks.  To tokenize a simple text
+string for instance, you can select the "null" analyzer and the
+"text" format, and expect output such as
+L<this|http://www.deutschestextarchiv.de/demo/cab/?a=null&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>.
+
+This mode of operation is mostly useful in conjunction with
+L<file upload queries|/A File Query> to convert analyzed files.
+If you only need to tokenize raw text files, consider using
+the more efficient L<WASTE tokenizer web-service|http://www.dwds.de/waste/>
+directly,
+or the L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer,
+which offers a number of different tokenizer components.
+
+=cut
+
+
+##========================================================================
+## Formats
+=pod
+
+=head2 Formats
 
 The CAB web-service supports a number of different I/O formats for
 document data.  This section presents a brief outline of some of the more
@@ -444,16 +479,23 @@ by the server.
 =cut
 
 ##========================================================================
-## I/O Formats: Text-based
+## Formats: Text-based
 =pod
 
 =head3 Text-based Formats
+
+CAB supports various text-based formats for human consumption and/or further processing.
+While typically not as flexible or efficient as the "pure" data-oriented formats
+described L<below|/Data-oriented formats>, CAB's native text-based formats offer
+a reasonable compromise between human- and machine-readability.
+All text-based CAB formats expect and return data encoded in L<UTF-8|https://en.wikipedia.org/wiki/UTF-8>,
+B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 
 =cut
 
 
 ##========================================================================
-## I/O Formats: Text-based: Text
+## Formats: Text-based: Text
 =pod
 
 =head4 L<Text|DTA::CAB::Format::Text>
@@ -473,7 +515,7 @@ Primarily useful for direct inspection and debugging.
 =cut
 
 ##========================================================================
-## I/O Formats: Text-based: CSV
+## Formats: Text-based: CSV
 =pod
 
 =head4 L<CSV|DTA::CAB::Format::CSV>
@@ -505,7 +547,7 @@ but lacks flexibility.
 
 
 ##========================================================================
-## I/O Formats: Text-based: TT
+## Formats: Text-based: TT
 =pod
 
 =head4 L<TT|DTA::CAB::Format::TT>
@@ -526,7 +568,7 @@ Useful for further quick and dirty script-based processing.
 =cut
 
 ##========================================================================
-## I/O Formats: Text-based: TJ
+## Formats: Text-based: TJ
 =pod
 
 =head4 L<TJ|DTA::CAB::Format::TJ>
@@ -556,15 +598,23 @@ Useful for further script-based processing.
 
 
 ##========================================================================
-## I/O Formats: XML-based
+## Formats: XML-based
 =pod
 
 =head3 XML-based Formats
 
+The CAB web-service supports a number of XML-based formats for data exchange.
+XML data formats are in general less efficient to parse and/or generate
+than L<text-based|/Text-based Formats> or L<data-oriented|/Data-oriented Formats> formats,
+but they do retain some degree of human-readability and the easy availability
+of XML processing software packages such as L<libxml|http://www.xmlsoft.org/>
+or L<XMLStarlet|http://xmlstar.sourceforge.net/>
+makes such formats a reasonable candidate for archiving and cross-platform data sharing.
+
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: XmlTokWrap
+## Formats: XML-based: XmlTokWrap
 =pod
 
 =head4 L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
@@ -577,7 +627,7 @@ module.  Supports arbitrary token attribute substructure, but fairly slow.
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: XmlTokWrapFast
+## Formats: XML-based: XmlTokWrapFast
 =pod
 
 =head4 L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
@@ -590,13 +640,13 @@ module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't suppor
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: TEI
+## Formats: XML-based: TEI
 =pod
 
 =head4 L<TEI|DTA::CAB::Format::TEI>
 
 [L<example input|http://./elephant.tei-xml>,
-L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]>
+L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
 
 Parses raw un-tokenized TEI-like XML input (with or without //c elements) using
 L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/> to reserialize and tokenize the
@@ -626,13 +676,15 @@ structural information encoded in the source XML itself.
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: TEIws
+## Formats: XML-based: TEIws
 =pod
 
 =head4 L<TEIws|DTA::CAB::Format::TEIws>
 
 [L<example input|http://./elephant.teiws-xml>,
-L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]>
+L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>
+L<example output 2|http://www.deutschestextarchiv.de/demo/cab/query?fmt=teiws&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A++%3Ctext%3E%0A++++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A++++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A++++%3Cp%3E%0A++++++%3Cs%3E%0A++++++++%3Cw%3EEJn%3C%2Fw%3E%0A++++++++%3Cw%3Ezamer%3C%2Fw%3E%0A++++++++%3Cw%3EElephant%3C%2Fw%3E%0A++++++++%3Cw%3Egillt%3C%2Fw%3E%0A++++++++%3Cw%3Eohngef%C3%A4hr%3C%2Fw%3E%0A++++++++%3Cw%3Ezweyhundert%3C%2Fw%3E%0A++++++++%3Cw%3EThaler%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++%3C%2Fp%3E%0A++++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A++++%3Cp%3E%0A++++++%3Cs%3E%0A++++++++%3Cw%3ECeterum%3C%2Fw%3E%0A++++++++%3Cw%3Ecenseo%3C%2Fw%3E%0A++++++++%3Cw%3ECarthaginem%3C%2Fw%3E%0A++++++++%3Cw%3Eesse%3C%2Fw%3E%0A++++++++%3Cw%3Edelendam%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++%3C%2Fp%3E%0A++%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>
+]
 
 High-level parser/formatter class for pre-tokenized (and possibly fragmented) TEI-like XML
 as output by the L<TEI|/TEI> formatter.
@@ -645,16 +697,16 @@ such as L<CSV|/CSV>.
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: TCF
+## Formats: XML-based: TCF
 =pod
 
 =head4 L<TCF|DTA::CAB::Format::TCF>
 
-[L<example input (raw text)|http://./elephant.raw.tcf>,
-L<example input (tokenized text)|http://./elephant.tok.tcf>,
+[L<example input (untokenized)|http://./elephant.raw.tcf>,
+L<example input (pre-tokenized)|http://./elephant.tok.tcf>,
 L<example output|http://www.deutschestextarchiv.de/demo/cab/?fmt=tcf&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
-Layer-based XML format used by CLARIN-D, in particlar by the
+Monolithic stand-off XML format used by CLARIN-D, in particlar by the
 L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer.
 See L<the TCF format documentation|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/index.php/The_TCF_Format>
 for details on the TCF format.
@@ -664,7 +716,7 @@ TCF layers.
 =cut
 
 ##========================================================================
-## I/O Formats: XML-based: XML-RPC
+## Formats: XML-based: XML-RPC
 =pod
 
 =head4 L<XML-RPC|DTA::CAB::Format::XmlRpc>
@@ -672,53 +724,64 @@ TCF layers.
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=xmlrpc&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
 Flexible but obscenely inefficient format used for data transfer
-in the L<XML-RPC Protocol|https://en.wikipedia.org/wiki/XML-RPC>.
+by the L<XML-RPC Protocol|https://en.wikipedia.org/wiki/XML-RPC>.
 Avoid it if you can.
 
 =cut
 
 ##========================================================================
-## I/O Formats: Data-oriented
+## Formats: Data-oriented
 =pod
 
 =head3 Data-oriented Formats
 
+The following formats provide direct dumps of the
+underlying L<DTA::CAB::Document|DTA::CAB/Data Model> used internally by CAB itself.
+They are efficient to parse and to produce, may not be suitable for direct
+human consumption.
+
 =cut
 
 ##========================================================================
-## I/O Formats: Data-oriented: JSON
+## Formats: Data-oriented: JSON
 =pod
 
 =head4 L<JSON|DTA::CAB::Format::JSON>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=json&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Direct L<JSON|http://json.org/> dump of the underlying
-L<DTA::CAB::Document|DTA::CAB::Document> structure
+L<DTA::CAB::Document|DTA::CAB/Data Model> structure
 using the Perl L<JSON::XS|https://metacpan.org/release/JSON-XS> module.
 Very fast and flexible, suitable for further automated processing.
 
 =cut
 
 ##========================================================================
-## I/O Formats: Data-oriented: YAML
+## Formats: Data-oriented: YAML
 =pod
 
 =head4 L<YAML|DTA::CAB::Format::YAML>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=yaml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Direct dump of the underlying
-L<DTA::CAB::Document|DTA::CAB::Document> structure
+L<DTA::CAB::Document|DTA::CAB/Data Model> structure
 as L<YAML|https://en.wikipedia.org/wiki/YAML> markup.
 Fast, flexible, and supports shared substructures, unlike the L<JSON|/JSON> formatter.
 
 =cut
 
 ##========================================================================
-## I/O Formats: Data-oriented: Perl
+## Formats: Data-oriented: Perl
 =pod
 
 =head4 L<Perl|DTA::CAB::Format::Perl>
 
+[L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=perl&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
 Direct dump of the underlying
-L<DTA::CAB::Document|DTA::CAB::Document> structure
+L<DTA::CAB::Document|DTA::CAB/Data Model> structure
 using the Perl L<Data::Dumper|https://metacpan.org/release/Data-Dumper> module.
 Mainly useful for further automated processing with Perl
 while retaining some degree of human readability.
@@ -726,13 +789,15 @@ while retaining some degree of human readability.
 =cut
 
 ##========================================================================
-## I/O Formats: Data-oriented: Storable
+## Formats: Data-oriented: Storable
 =pod
 
 =head4 L<Storable|DTA::CAB::Format::Storable>
 
-Direct dump of the underlying
-L<DTA::CAB::Document|DTA::CAB::Document> structure
+[L<example|http://www.deutschestextarchiv.de/demo/cab/query?fmt=bin&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+
+Direct binary dump of the underlying
+L<DTA::CAB::Document|DTA::CAB/Data Model> structure
 using the Perl L<Storable|https://metacpan.org/release/Storable> module.
 This is currently the fastest I/O class for both in- and output,
 mainly useful for further automated processing with Perl.
