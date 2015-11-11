@@ -18,6 +18,7 @@ use Pod::Usage;
 #BEGIN { require "./CabOpt.pm"; }
 use DTA::CAB::Chain::DTA;##-- DEBUG
 #use DTA::CAB::Analyzer::Moot; ##-- DEBUG
+#use DTA::CAB::Format::TEIws; ##-- DEBUG
 
 use strict;
 
