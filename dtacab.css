@@ -36,6 +36,11 @@ DIV.bib p {
     padding: .5em;
 }
 
+DT {
+    color: #000099;
+    font-weight: bold;
+}
+
 
 UL#index {
     background-color: #f5f5f5;

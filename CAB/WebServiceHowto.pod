@@ -14,9 +14,9 @@ DTA::CAB:WebServiceHowto - User documentation for DTA::CAB web-service
 
 =head1 DESCRIPTION
 
-This document describes the use of the L<DTA::CAB|DTA::CAB> (demo) web-service accessible
+This document describes the use of the L<DTA::CAB|http://odo.dwds.de/~jurish/software/dta-cab/> (demo) web-service accessible
 at L<http://www.deutschestextarchiv.de/demo/cab/>.
-The L<DTA::CAB|DTA::CAB> web-service provides
+The CAB web-service provides
 error-tolerant linguistic analysis for historical German text,
 including normalization of historical orthographic variants
 to "canonical" modern forms using the method described in
@@ -507,7 +507,9 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 ## Formats: Text-based: Text
 =pod
 
-=head4 L<Text|DTA::CAB::Format::Text>
+=over 4
+
+=item L<Text|DTA::CAB::Format::Text>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=text&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -527,7 +529,7 @@ Primarily useful for direct inspection and debugging.
 ## Formats: Text-based: CSV
 =pod
 
-=head4 L<CSV|DTA::CAB::Format::CSV>
+=item L<CSV|DTA::CAB::Format::CSV>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=csv&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -559,7 +561,7 @@ but lacks flexibility.
 ## Formats: Text-based: TT
 =pod
 
-=head4 L<TT|DTA::CAB::Format::TT>
+=item L<TT|DTA::CAB::Format::TT>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=tt&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -580,7 +582,7 @@ Useful for further quick and dirty script-based processing.
 ## Formats: Text-based: TJ
 =pod
 
-=head4 L<TJ|DTA::CAB::Format::TJ>
+=item L<TJ|DTA::CAB::Format::TJ>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=tj&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -602,6 +604,8 @@ followed by a TAB character,
 followed by a JSON object representing the internal token structure.
 
 Useful for further script-based processing.
+
+=back
 
 =cut
 
@@ -626,7 +630,9 @@ makes such formats a reasonable candidate for archiving and cross-platform data 
 ## Formats: XML-based: XmlTokWrap
 =pod
 
-=head4 L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
+=over 4
+
+=item L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=twxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -639,7 +645,7 @@ module.  Supports arbitrary token attribute substructure, but fairly slow.
 ## Formats: XML-based: XmlTokWrapFast
 =pod
 
-=head4 L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
+=item L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=ftwxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -652,7 +658,7 @@ module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't suppor
 ## Formats: XML-based: TEI
 =pod
 
-=head4 L<TEI|DTA::CAB::Format::TEI>
+=item L<TEI|DTA::CAB::Format::TEI>
 
 [L<example input|http://./elephant.tei-xml>,
 L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
@@ -688,7 +694,7 @@ structural information encoded in the source XML itself.
 ## Formats: XML-based: TEIws
 =pod
 
-=head4 L<TEIws|DTA::CAB::Format::TEIws>
+=item L<TEIws|DTA::CAB::Format::TEIws>
 
 [L<example input|http://./elephant.teiws-xml>,
 L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=teiws&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A++%3Ctext%3E%0A++++%3C%21--+untokenized+material+is+ignored+--%3E%0A++++%3Cfw%3ERunning+header+%28untokenized%29%3C%2Ffw%3E%0A++++%3Cp%3E%0A++++++%3C%21--+every+sentence+%2F%2Fs+and+token+%2F%2Fw+must+have+an+%40id+or+%40xml%3Aid+attribute+--%3E%0A++++++%3Cs+id%3D%22s1%22%3E%0A++++++++%3Cw+id%3D%22w1%22%3EEJn%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w2%22%3Ezamer%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w3%22%3EElephant%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w4%22%3Egillt%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w5%22%3Eohngef%C3%A4hr%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w6%22%3Ezweyhundert%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w7%22%3EThaler%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w8%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++++%3Cs+id%3D%22s2%22%3E%0A++++++++%3Cw+id%3D%22w9%22%3ECeterum%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w10%22%3Ecenseo%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w11%22%3ECarthaginem%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w12%22%3Eesse%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w13%22%3Edelendam%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w14%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++%3C%2Fp%3E%0A++%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
@@ -708,7 +714,7 @@ such as L<CSV|/CSV>.
 ## Formats: XML-based: TCF
 =pod
 
-=head4 L<TCF|DTA::CAB::Format::TCF>
+=item L<TCF|DTA::CAB::Format::TCF>
 
 [L<example input (untokenized)|http://./elephant.raw.tcf>,
 L<example input (pre-tokenized)|http://./elephant.tok.tcf>,
@@ -727,13 +733,15 @@ TCF layers.
 ## Formats: XML-based: XML-RPC
 =pod
 
-=head4 L<XML-RPC|DTA::CAB::Format::XmlRpc>
+=item L<XML-RPC|DTA::CAB::Format::XmlRpc>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=xmlrpc&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
 Flexible but obscenely inefficient format used for data transfer
 by the L<XML-RPC Protocol|https://en.wikipedia.org/wiki/XML-RPC>.
 Avoid it if you can.
+
+=back
 
 =cut
 
@@ -754,7 +762,9 @@ human consumption.
 ## Formats: Data-oriented: JSON
 =pod
 
-=head4 L<JSON|DTA::CAB::Format::JSON>
+=over 4
+
+=item L<JSON|DTA::CAB::Format::JSON>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=json&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -769,7 +779,7 @@ Very fast and flexible, suitable for further automated processing.
 ## Formats: Data-oriented: YAML
 =pod
 
-=head4 L<YAML|DTA::CAB::Format::YAML>
+=item L<YAML|DTA::CAB::Format::YAML>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=yaml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -784,7 +794,7 @@ Fast, flexible, and supports shared substructures, unlike the L<JSON|/JSON> form
 ## Formats: Data-oriented: Perl
 =pod
 
-=head4 L<Perl|DTA::CAB::Format::Perl>
+=item L<Perl|DTA::CAB::Format::Perl>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/?fmt=perl&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -800,7 +810,7 @@ while retaining some degree of human readability.
 ## Formats: Data-oriented: Storable
 =pod
 
-=head4 L<Storable|DTA::CAB::Format::Storable>
+=item L<Storable|DTA::CAB::Format::Storable>
 
 [L<example|http://www.deutschestextarchiv.de/demo/cab/query?fmt=bin&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
 
@@ -847,7 +857,7 @@ please respect the L<caveats|/Caveats> mentioned above in the L<file query examp
 ## Advanced Usage: curl
 =pod
 
-=head2 Querying CAB with curl
+=head3 Querying CAB with curl
 
 To analyze a L<TEI-like|/TEI> XML file F<FILE.xml> using L<curl|http://curl.haxx.se/>
 and save the analysis results to F<FILE.cab.xml>,
@@ -874,7 +884,7 @@ wrapper scripts, which encapsulate some of the common curl command-line options.
 ## Advanced Usage: TEI
 =pod
 
-=head2 Post-processing TEI XML
+=head3 Post-processing TEI XML
 
 The following L<XSL|https://en.wikipedia.org/wiki/XSL> scripts are provided for post-processing the
 L<"spliced" TEI-like output format|/TEI>.
