@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI>
+  <text>
+    <!-- running headers are ignored by the tokenizer -->
+    <fw>Running header</fw>
+    <p>
+      <s id="s1" pn="p2">
+        <w id="w1" t="EJn" b="14 3"><moot word="Ein" lemma="eine" tag="ART"/><xlit isLatin1="1" latin1Text="Ejn" isLatinExt="1"/>EJn</w>
+        <w id="w2" t="zamer" b="18 5"><moot word="zahmer" lemma="zahm" tag="ADJA"/><xlit isLatin1="1" latin1Text="zamer" isLatinExt="1"/>zamer</w>
+        <w id="w3" t="Elephant" b="24 8"><moot word="Elefant" lemma="Elefant" tag="NN"/><xlit isLatin1="1" latin1Text="Elephant" isLatinExt="1"/>Elephant</w>
+        <w id="w4" t="gillt" b="33 5"><moot word="gilt" lemma="gelten" tag="VVFIN"/><xlit isLatin1="1" latin1Text="gillt" isLatinExt="1"/>gillt</w>
+        <w id="w5" t="ohngefähr" b="39 10"><moot word="ungefähr" lemma="ungefähr" tag="ADJD"/><xlit isLatin1="1" latin1Text="ohngefähr" isLatinExt="1"/>ohngefähr</w>
+        <w id="w6" t="zweyhundert" b="50 11"><moot word="zweihundert" lemma="zweihundert" tag="CARD"/><xlit isLatin1="1" latin1Text="zweyhundert" isLatinExt="1"/>zweyhundert</w>
+        <w id="w7" t="Thaler" b="62 6"><moot word="Taler" lemma="Taler" tag="NN"/><xlit isLatin1="1" latin1Text="Thaler" isLatinExt="1"/>Thaler</w>
+      </s>
+    </p>
+    <!-- paragraph boundaries imply sentence boundaries, even without punctuation -->
+    <p>
+      <s id="s2" pn="p4">
+        <w id="w8" t="Ceterum" b="84 7"><moot word="Ceterum" lemma="ceterum" tag="FM.la"/><mlatin><a w="0" hi="[_FM][lat]"/></mlatin><xlit isLatin1="1" latin1Text="Ceterum" isLatinExt="1"/>Ceterum</w>
+        <w id="w9" t="censeo" b="92 6"><moot word="censeo" lemma="censeo" tag="FM.la"/><mlatin><a w="0" hi="[_FM][lat]"/></mlatin><xlit isLatin1="1" latin1Text="censeo" isLatinExt="1"/>censeo</w>
+        <w id="wa" t="Carthaginem" b="99 11"><moot word="Carthaginem" lemma="carthaginem" tag="FM.la"/><mlatin><a w="0" hi="[_FM][lat]"/></mlatin><xlit isLatin1="1" latin1Text="Carthaginem" isLatinExt="1"/>Carthaginem</w>
+        <w id="wb" t="esse" b="111 4"><moot word="esse" lemma="esse" tag="FM.la"/><mlatin><a w="0" hi="[_FM][lat]"/></mlatin><xlit isLatin1="1" latin1Text="esse" isLatinExt="1"/>esse</w>
+        <w id="wc" t="delendam" b="116 8"><moot word="delendam" lemma="delendam" tag="FM.la"/><mlatin><a w="0" hi="[_FM][lat]"/></mlatin><xlit isLatin1="1" latin1Text="delendam" isLatinExt="1"/>delendam</w>
+      </s>
+    </p>
+  </text>
+</TEI>

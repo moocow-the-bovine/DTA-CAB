@@ -24,6 +24,19 @@ H1,H2,H3,H4,H5,H6,P,CENTER,CL,DIV,TD,TH,DL,DT,DIV,UL {
 	margin-right: 24px;
 }
 
+DIV.bib {
+    /*color: #a0522d;*/ /*-- sienna --*/
+    /*color: #7b3f22;*/ /*-- sienna-like, darker --*/
+    /*background-color: #cee8ff;*//*-- aliceblue --*/
+    margin-left: 48px;
+    margin-right: 48px;
+}
+DIV.bib p {
+    background-color: #cee8ff;/*-- aliceblue --*/
+    padding: .5em;
+}
+
+
 UL#index {
     background-color: #f5f5f5;
     border: 1px solid #000099;

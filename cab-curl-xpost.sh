@@ -5,7 +5,7 @@ if test "$#" -eq 0 ; then
 
  Usage: $0 URL INFILE [CONTENT_TYPE=text/plain [CURL_ARGS]]
 
-  e.g. $0 http://kaskade.dwds.de:9099/query?a=default;clean=1;fmt=json FILE.tj 'application/json; charset=utf8' -o out.json
+  e.g. $0 "http://www.deutschestextarchiv.de/demo/cab/query?a=default;clean=1;fmt=json" FILE.json "application/json; charset=utf8" -o out.json
 
 EOF
   exit 1

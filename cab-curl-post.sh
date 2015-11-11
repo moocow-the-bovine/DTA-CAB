@@ -5,7 +5,7 @@ if test "$#" -eq 0 ; then
 
  Usage: $0 URL INFILE [CURL_ARGS]
 
-  e.g. $0 http://kaskade.dwds.de:9099/query?a=default;clean=1;fmt=th FILE.tj -o out.tj
+  e.g. $0 "http://www.deutschestextarchiv.de/demo/cab/query?a=default&clean=1&fmt=tei" FILE.xml -o out.xml
 
 EOF
   exit 1

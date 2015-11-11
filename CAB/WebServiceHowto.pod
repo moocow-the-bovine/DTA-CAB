@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-DTA::CAB:WebServiceTutorial - User tutorial for DTA::CAB web-service
+DTA::CAB:WebServiceHowto - User documentation for DTA::CAB web-service
 
 =cut
 
@@ -19,7 +19,9 @@ at L<http://www.deutschestextarchiv.de/demo/cab/>.
 The L<DTA::CAB|DTA::CAB> web-service provides
 error-tolerant linguistic analysis for historical German text,
 including normalization of historical orthographic variants
-to "canonical" modern forms using the method described in L<Jurish (2012)|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+to "canonical" modern forms using the method described in
+L<Jurish (2012)|http://./#jurish2012>.
+
 Due to legal restrictions on some of the underlying resources,
 not all available analysis layers can be returned
 by the publically accessible "demo" web-service, but it is hoped that the available
@@ -47,10 +49,13 @@ elements of that interface.
 
 At the top of the web-service interface is a query form on a gray background including input fields for the CAB
 query parameters ("Query", "Analyzer", "Format", etc.).
+Each query form input element should display a tooltip briefly describing its function if you hover your mouse
+pointer over it in a browser.
+See L<DTA::CAB::HttpProtocol/query Requests> for more details on supported query request parameters.
 
 =item Status Line
 
-Immediately beneath the query form is a status display line ("URL line") on a white background with no border,
+Immediately beneath the L<query form|/Query Form> is a status display line ("URL line") on a white background with no border,
 which contains a link to the raw response data for the current query, if any.  In the case of
 singleton (1-word) queries, the status line also contains
 a simple heuristic "traffic-light" indicator of the query word's morphological security status, where
@@ -60,12 +65,12 @@ a proper name).
 
 =item Response Data
 
-Immediately below the URL line is the response data area ("data area") on a white background with a gray border, which
+Immediately below the L<URL line|/Status Line> is the response data area ("data area") on a white background with a gray border, which
 displays the results for the current query, if any.
 
 =item Link Buttons
 
-Below the data area are a number of static link buttons for
+Below the L<data area|/Response Data> are a number of static link buttons for
 the file upload demo ("File Demo") or the live user-input demo ("Live Demo"),
 the list of analyzers supported by the underlying CAB instance ("Analyzers"),
 the list of I/O formats supported by the underlying CAB instance ("Formats"),
@@ -74,7 +79,7 @@ and the CAB documentation ("Documentation").
 
 =item Footer
 
-Below the link buttons is a short footer on a gray background containing
+Below the L<link button area|/Link Buttons> is a short footer on a gray background containing
 administrative information about the underlying CAB server.
 
 =back
@@ -103,7 +108,7 @@ of the "Query" parameter itself, which should contain the text string to be anal
 Say we wish to analyze the text string "C<Elephanten>":
 simply entering this string (or copy & paste it) into the text input box associated with the "Query" parameter,
 and then pressing the <i>Enter</i> key or clicking the "submit" button will cause the query to be
-submitted to the underlying CAB server and the response data to be displayed in the data area:
+submitted to the underlying CAB server and the response data to be displayed in the L<data area|/Response Data>:
 L<http://www.deutschestextarchiv.de/demo/cab/?q=Elephanten>
 
 The results are displayed by default in CAB's native "L<Text|/Text>" format,
@@ -133,8 +138,8 @@ tagged as a common noun ("NN"), and assigned the correct canonical lemma "Elefan
 =head3 A Sentence Query
 
 Suppose we wish to take advantage of context information while normalizing
-a whole sentence of historical text, as described in 
-L<Jurish (2012), Chapter 4|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+a whole sentence of historical text, as described in
+L<Jurish (2012), Chapter 4|http://./#jurish2012>.
 Simply enter the entire text of the sentence to be analyzed in the "Query"
 input, and ensure that the checkbox for the "tokenize" flag is checked,
 and submit the query, e.g.
@@ -260,7 +265,7 @@ In addition to the default "live" query interface, the CAB web-service interface
 also offers users the opportunity to upload an entire document file to be analyzed
 and allowing the analysis results to be saved to the user's local machine.
 The CAB file interface is accessible via the "File Demo"
-button in the link area, which resolves to L<http://www.deutschestextarchiv.de/demo/cab/file|http://www.deutschestextarchiv.de/demo/cab/file>
+button in the L<link area|/Link Buttons>, which resolves to L<http://www.deutschestextarchiv.de/demo/cab/file|http://www.deutschestextarchiv.de/demo/cab/file>
 Suppose we have a simple plain-text file L<F<elephant.raw>|http://./elephant.raw> containing the document to be analyzed:
 
  EJn zamer Elephant gillt ohngefähr zweyhundert Thaler.
@@ -275,8 +280,10 @@ should be saved (by default F<elephant.raw.txt>).
 Assuming the default options were active, you should have a result file
 resembling
 L<this|http://www.deutschestextarchiv.de/demo/cab/query?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>,
-identical to the results displayed in the data area for
+identical to the results displayed in the L<data area|/Response Data> for
 L<the multi-sentence query example|/A Multi-Sentence Query>.
+
+=head4 Caveats
 
 Due to bandwidth limitations, the CAB server currently only accepts input files of size B<E<lt>= 512 KB>.
 If you need analyze a large amount of data, you will first need to split your input files into
@@ -305,7 +312,7 @@ The analysis mode to be used for a particular CAB request is specified by the
 This section briefly describes some alternative analysis chains and situations in which
 they might be useful.
 For a full list of available analysis chains, see the list returned by the
-"L<Analyzers|http://www.deutschestextarchiv.de/demo/cab/analyzers>" button in the link area,
+"L<Analyzers|http://www.deutschestextarchiv.de/demo/cab/analyzers>" button in the L<link area|/Link Buttons>,
 and see L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>
 for a list of the available atomic analyzers and aliases for complex analysis chains.
 For details on individual atomic analyzers, see the appropriate L<DTA::CAB::Analyzer|DTA::CAB::Analyzer>
@@ -321,7 +328,8 @@ subclass documentation.
 
 As noted L<above|/"A Sentence Query">, the default "norm" analysis chain uses
 sentential context to improve the precision of the normalization process
-as described in L<Jurish (2012), Chapter 4|http://opus.kobv.de/ubp/volltexte/2012/5578/>.
+as described in
+L<Jurish (2012), Chapter 4|http://./#jurish2012>.
 This behavior is not always desirable, however.  In particular, if your data
 is not arranged into linguistically meaningful sentence-like units -- e.g.
 a simple flat list of surface types -- then no real context information is available,
@@ -428,7 +436,8 @@ and "eqlemma" contains the surface forms most likely to be mapped to the same mo
 This online expansion strategy
 is used by the L<DTA Query Lizard|http://kaskade.dwds.de/dstar/dta/lizard?q=Elephant>,
 and was also used by an earlier the DTA corpus index
-as described in L<Jurish et al. (2014)|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>,
+as described in
+L<Jurish et al. (2014)|http://./#jtw2014>,
 but has since been replaced there by an online lemmatization query using the "lemma" expander,
 in conjunction with a direct query of the underlying corpus $Lemma index.
 
@@ -441,7 +450,7 @@ in conjunction with a direct query of the underlying corpus $Lemma index.
 =head3 Format Conversion
 
 The CAB server can be used to convert between various
-supported I/O L<Formats|/Formats>.  In this mode,
+supported L<IO Formats|/I-O Formats>.  In this mode,
 no analysis is performed on the input data
 (with the exception of tokenization for raw untokenized input),
 but the input document is parsed and re-formatted according to
@@ -466,14 +475,14 @@ which offers a number of different tokenizer components.
 ## Formats
 =pod
 
-=head2 Formats
+=head2 I/O Formats
 
-The CAB web-service supports a number of different I/O formats for
+The CAB web-service supports a number of different input- and output-formats for
 document data.  This section presents a brief outline of some of the more
 popular formats.  See L<DTA::CAB::Format/SUBCLASSES> for a list of currently
 implemented format subclasses, and see
 the "L<Formats|http://www.deutschestextarchiv.de/demo/cab/formats>" link
-in the CAB web-service interface link area for a list of format aliases supported
+in the CAB web-service interface L<link area|/Link Buttons> for a list of format aliases supported
 by the server.
 
 =cut
@@ -682,7 +691,7 @@ structural information encoded in the source XML itself.
 =head4 L<TEIws|DTA::CAB::Format::TEIws>
 
 [L<example input|http://./elephant.teiws-xml>,
-L<example output 2|http://www.deutschestextarchiv.de/demo/cab/query?fmt=teiws&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A++%3Ctext%3E%0A++++%3C%21--+untokenized+material+is+ignored+--%3E%0A++++%3Cfw%3ERunning+header+%28untokenized%29%3C%2Ffw%3E%0A++++%3Cp%3E%0A++++++%3C%21--+every+sentence+%2F%2Fs+and+token+%2F%2Fw+must+have+an+%40id+or+%40xml%3Aid+attribute+--%3E%0A++++++%3Cs+id%3D%22s1%22%3E%0A++++++++%3Cw+id%3D%22w1%22%3EEJn%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w2%22%3Ezamer%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w3%22%3EElephant%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w4%22%3Egillt%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w5%22%3Eohngef%C3%A4hr%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w6%22%3Ezweyhundert%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w7%22%3EThaler%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w8%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++++%3Cs+id%3D%22s2%22%3E%0A++++++++%3Cw+id%3D%22w9%22%3ECeterum%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w10%22%3Ecenseo%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w11%22%3ECarthaginem%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w12%22%3Eesse%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w13%22%3Edelendam%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w14%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++%3C%2Fp%3E%0A++%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
+L<example output|http://www.deutschestextarchiv.de/demo/cab/query?fmt=teiws&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A++%3Ctext%3E%0A++++%3C%21--+untokenized+material+is+ignored+--%3E%0A++++%3Cfw%3ERunning+header+%28untokenized%29%3C%2Ffw%3E%0A++++%3Cp%3E%0A++++++%3C%21--+every+sentence+%2F%2Fs+and+token+%2F%2Fw+must+have+an+%40id+or+%40xml%3Aid+attribute+--%3E%0A++++++%3Cs+id%3D%22s1%22%3E%0A++++++++%3Cw+id%3D%22w1%22%3EEJn%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w2%22%3Ezamer%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w3%22%3EElephant%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w4%22%3Egillt%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w5%22%3Eohngef%C3%A4hr%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w6%22%3Ezweyhundert%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w7%22%3EThaler%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w8%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++++%3Cs+id%3D%22s2%22%3E%0A++++++++%3Cw+id%3D%22w9%22%3ECeterum%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w10%22%3Ecenseo%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w11%22%3ECarthaginem%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w12%22%3Eesse%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w13%22%3Edelendam%3C%2Fw%3E%0A++++++++%3Cw+id%3D%22w14%22%3E.%3C%2Fw%3E%0A++++++%3C%2Fs%3E%0A++++%3C%2Fp%3E%0A++%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
 
 High-level parser/formatter class for pre-tokenized (and possibly fragmented) TEI-like XML
 as output by the L<TEI|/TEI> formatter.
@@ -803,23 +812,206 @@ mainly useful for further automated processing with Perl.
 
 =cut
 
+##========================================================================
+## Advanced Usage
+=pod
+
+=head2 Advanced Usage
+
+The CAB web-service is a request-oriented service:
+it accepts a user request as a set of I<parameter>=I<value> pairs
+and returns the analyzed data as a L<DTA::CAB::Document|DTA::CAB::Document> object
+encoded according to the L<output format|/I-O Formats> specified by the C<ofmt> parameter.
+Paramters are passed to the DiaCollo web-service
+L<RESTfully|https://en.wikipedia.org/wiki/Representational_state_transfer>
+via the L<URL query string|http://en.wikipedia.org/wiki/Query_string>
+or L<HTTP POST request|http://en.wikipedia.org/wiki/POST_(HTTP)#Use_for_submitting_web_forms>
+as for a standard L<web form|http://en.wikipedia.org/wiki/Form_(HTML)>.
+The URL for the low-level request including all user parameters
+is displayed in the web front-end in the L<status line|/Status Line>.
+See L<DTA::CAB::HttpProtocol/query Requests> for more details on the
+RESTful CAB request protocol and a list of supported parameters.
+
+Since CAB requests are really nothing more than standard HTTP form requests,
+a large variety of existing software packages can be used to generate and dispatch CAB
+requests, e.g
+L<LWP::UserAgent|https://metacpan.org/pod/LWP::UserAgent>,
+L<curl|http://curl.haxx.se/>,
+or L<wget|https://www.gnu.org/software/wget/>.
+When automating CAB requsts,
+please respect the L<caveats|/Caveats> mentioned above in the L<file query example|/A File Query>.
+
+=cut
 
 ##========================================================================
-## References
+## Advanced Usage: curl
+=pod
+
+=head2 Querying CAB with curl
+
+To analyze a L<TEI-like|/TEI> XML file F<FILE.xml> using L<curl|http://curl.haxx.se/>
+and save the analysis results to F<FILE.cab.xml>,
+the following command-line ought to suffice:
+
+ curl -sSF "qd=<FILE.xml" -o "FILE.cab.xml" "http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei"
+
+Alternative L<IO formats|/I-O Formats> and L<request parameters|DTA::CAB::HttpProtocol/query-Requests>
+can be accommodated by inserting them into the L<URL query string|http://en.wikipedia.org/wiki/Query_string>
+passed to C<curl>.
+You can also make use of the
+inline POSTDATA mechanism (a.k.a "xpost") described in L<DTA::CAB::HttpProtocol/query-Requests>
+in order to save yourself and the CAB server the effort of encoding/decoding the document data.
+In this case, you need to specify an appropriate "C<Content-Type>" header, e.g:
+
+ curl -sSX POST -H "Content-Type: application/tei+xml; charset=utf8" --data-binary @"FILE.xml" -o "FILE.cab.xml" "http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei"
+
+You might be interested in the L<cab-curl-post.sh|http://./cab-curl-post.sh> and/or L<cab-curl-xpost.sh|http://./cab-curl-xpost.sh>
+wrapper scripts, which encapsulate some of the common curl command-line options.
+
+=cut
+
+##========================================================================
+## Advanced Usage: TEI
+=pod
+
+=head2 Post-processing TEI XML
+
+The following L<XSL|https://en.wikipedia.org/wiki/XSL> scripts are provided for post-processing the
+L<"spliced" TEI-like output format|/TEI>.
+
+=over 4
+
+=item L<spliced2norm.xsl|http://./spliced2norm.xsl>
+
+Removes C<//s> and C<//w> elements, replacing the surface text of each token
+with its CAB-normalized form, so that e.g.
+
+ <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/><xlit isLatin1="1" latin1Text="Elephant" isLatinExt="1"/>Elephant</w>
+
+becomes simply the text node
+
+ Elefant
+
+=item L<spliced2orig+reg.xsl|http://./spliced2orig+reg.xsl>
+
+Removes C<//s> and C<//w> elements, replacing non-identity normalizations
+with a C<choice> element containing a daughter C<orig> with the original surface form
+and a C<reg[@resp="#cab"]> daughter containing the CAB-normalized form, so that e.g.
+
+ <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/><xlit isLatin1="1" latin1Text="Elephant" isLatinExt="1"/>Elephant</w>
+
+becomes
+
+ <choice><orig>Elephant</orig><reg resp="#cab">Elefant</reg></choice>
+
+=item L<spliced2cab.xsl|http://./spliced2cab.xsl>
+
+Resolves fragmented nodes and converts a "spliced" TEI-like XML file into
+a serial format as output by the L<XmlTokWrap|/XmlTokWrap> formatter class.
+
+=item L<spliced2clean.xsl|http://./spliced2clean.xsl>
+
+Removes some extraneous CAB-markup from TEI-like XML files.
+Probably not really useful for files returned by the CAB web-service.
+
+=item L<spliced2cleaner.xsl|http://./spliced2cleaner.xsl>
+
+Removes most CAB-markup from TEI-like XML files, so that e.g.
+
+ <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/><xlit isLatin1="1" latin1Text="Elephant" isLatinExt="1"/>Elephant</w>
+
+becomes
+
+ <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/>Elephant</w>
+
+=item L<spliced2clean+cabns.xsl|http://./spliced2clean+cabns.xsl>
+
+Removes most CAB-markup from TEI-like XML files and assigns CAB-internal
+attributes to the L<XML namespace|https://en.wikipedia.org/wiki/XML_namespace> "cab" (C<http://deutschestextarchiv.de/ns/cab/1.0>),
+so that e.g.
+
+ <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/><xlit isLatin1="1" latin1Text="Elephant" isLatinExt="1"/>Elephant</w>
+
+becomes
+
+ <w xml:id="w3" cab:t="Elephant" cab:word="Elefant" cab:tag="NN" cab:lemma="Elefant">Elephant</w>
+
+=back
+
+=cut
+
+##========================================================================
+## REFERENCES
 =pod
 
 =head1 REFERENCES
 
-Jurish, B., C. Thomas, & F. Wiegand. "Querying the Deutsches Textarchiv."
+The author would appreciate CAB users citing its use in the publications.
+As a general CAB-related reference,
+and for analysis and canonicalizaion of historical text to modern forms in particular, you can cite:
+
+=begin html
+
+<div class="bib">
+
+=end html
+
+L<Jurish, B.|name:jurish2012> I<Finite-state Canonicalization Techniques for Historical German.>
+PhD thesis, Universität Potsdam, 2012 (defended 2011).
+URN urn:nbn:de:kobv:517-opus-55789,
+[L<epub|http://opus.kobv.de/ubp/volltexte/2012/5578/>,
+L<PDF|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2012diss.pdf>,
+L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2012diss.bib>]
+
+=begin html
+
+</div>
+
+=end html
+
+For the concrete architecture of the CAB system as used by the I<Deutsches Textarchiv> (DTA) project, you can cite:
+
+=begin html
+
+<div class="bib">
+
+=end html
+
+Jurish, B. "Canonicalizing the Deutsches Textarchiv." In
+L<Proceedings of I<Perspektiven einer corpusbasierten historischen Linguistik und Philologie>|http://edoc.bbaw.de/abfrage_collections.php?coll_id=203&la=de>
+(Berlin, Germany, 12th-13th December 2011), volume 4 of
+L<Thesaurus Linguae Aegyptiae|http://aaew.bbaw.de/tla/>,
+Berlin-Brandenburgische Akademie der Wissenschaften, 2013.
+[L<PDF|http://edoc.bbaw.de/volltexte/2013/2443/pdf/Jurish.pdf>,
+L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2013canonicalizing.bib>]
+
+=begin html
+
+</div>
+
+=end html
+
+For online term expansion with the "L<expand|/Term Expansion>" analysis chain,
+you can cite:
+
+=begin html
+
+<div class="bib">
+
+=end html
+
+L<Jurish, B., C. Thomas, & F. Wiegand.|name:jtw2014> "Querying the Deutsches Textarchiv."
 In U. Kruschwitz, F. Hopfgartner, & C. Gurrin (editors),
 Proceedings of the Workshop I<L<MindTheGap 2014: Beyond Single-Shot Text Queries: Bridging the Gap(s) between Research Communities|http://ceur-ws.org/Vol-1131/>>
 Berlin, Germany, 4th March, 2014, pages 25-30, 2014.
-URL L<http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>
+[L<PDF|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>,
+L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jtw2014querying.bib>]
 
-Jurish, B. I<Finite-state Canonicalization Techniques for Historical German.>
-PhD thesis, Universität Potsdam, 2012 (defended 2011).
-URN urn:nbn:de:kobv:517-opus-55789,
-URL L<http://opus.kobv.de/ubp/volltexte/2012/5578/|http://opus.kobv.de/ubp/volltexte/2012/5578/>
+=begin html
+
+</div>
+
+=end html
 
 =cut
 

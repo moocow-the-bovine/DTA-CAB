@@ -201,7 +201,15 @@ HTML_EXTRA ?= \
   doc-extra/elephant.tei-xml \
   doc-extra/elephant.teiws-xml \
   doc-extra/elephant.raw.tcf \
-  doc-extra/elephant.tok.tcf
+  doc-extra/elephant.tok.tcf \
+  cab-curl-post.sh \
+  cab-curl-xpost.sh \
+  doc-extra/dstar-bin/spliced2norm.xsl \
+  doc-extra/dstar-bin/spliced2orig+reg.xsl \
+  doc-extra/dstar-bin/spliced2clean.xsl \
+  doc-extra/dstar-bin/spliced2cleaner.xsl \
+  doc-extra/dstar-bin/spliced2clean+cabns.xsl \
+  doc-extra/dstar-bin/spliced2cab.xsl
 
 ##-- lifted from MakeMaker blibdir section
 $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
