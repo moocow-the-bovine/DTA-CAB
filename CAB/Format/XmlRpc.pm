@@ -218,7 +218,11 @@ sub putDocumentRaw {
   my $buf = $fmt->{docbuf};
   if (scalar(keys(%$buf))==1 && !@{$buf->{body}}) {
     ##-- steal $doc
-    $fmt->{docbuf} = $doc;
+    $fmt->{docbuf} = bless({
+			    map {($_=>$doc->{$_})}
+			    grep {!exists $IGNORE_DOC_ATTRS{$_}} ##... but ignore some attributes
+			    keys %$doc
+			   }, ref($doc)||$doc);
   } else {
     ##-- append $doc->{body} onto $buf->{body}
     push(@{$buf->{body}}, @{$doc->{body}});
