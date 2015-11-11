@@ -820,6 +820,8 @@ using the Perl L<Storable|https://metacpan.org/release/Storable> module.
 This is currently the fastest I/O class for both in- and output,
 mainly useful for further automated processing with Perl.
 
+=back
+
 =cut
 
 ##========================================================================
