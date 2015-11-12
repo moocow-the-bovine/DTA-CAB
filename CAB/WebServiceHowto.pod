@@ -151,7 +151,7 @@ each token begins with a line containing only its surface form (no leading white
 Token attribute lines (introduced by a leading TAB character) refer to the token
 most recently introduced.
 The output for the example query can be directly accessed
-L<here|http://www.deutschestextarchiv.de/demo/cab/?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.>,
+L<here|http://www.deutschestextarchiv.de/demo/cab/?q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.>,
 and should look something like the following:
 
  EJn
@@ -200,7 +200,7 @@ The CAB web service can analyze multiple sentences as well, for example:
  EJn zamer Elephant gillt ohngefähr zweyhundert Thaler.
  Ceterum censeo Carthaginem esse delendam.
 
-The corresponding output can be viewed L<here|http://www.deutschestextarchiv.de/demo/cab?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>, which should look something like:
+The corresponding output can be viewed L<here|http://www.deutschestextarchiv.de/demo/cab?q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>, which should look something like:
 
  %% $s:lang=de
  EJn
@@ -279,7 +279,7 @@ to the CAB server, analyzed, and prompt you for a location to which the analysis
 should be saved (by default F<elephant.raw.txt>).
 Assuming the default options were active, you should have a result file
 resembling
-L<this|http://www.deutschestextarchiv.de/demo/cab/query?q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>,
+L<this|http://www.deutschestextarchiv.de/demo/cab/query?q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>,
 identical to the results displayed in the L<data area|/Response Data> for
 L<the multi-sentence query example|/A Multi-Sentence Query>.
 
@@ -459,7 +459,7 @@ the selected output format.  The analysis chain "null" can be
 selected for such tasks.  To tokenize a simple text
 string for instance, you can select the "null" analyzer and the
 "text" format, and expect output such as
-L<this|http://www.deutschestextarchiv.de/demo/cab?a=null&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>.
+L<this|http://www.deutschestextarchiv.de/demo/cab?a=null&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>.
 
 This mode of operation is mostly useful in conjunction with
 L<file upload queries|/A File Query> to convert analyzed files.
@@ -512,7 +512,7 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 
 =item L<Text|DTA::CAB::Format::Text>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=text&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=text&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple human-readable text format as described under "L<Basic Usage|/Basic Usage>", above.
 Blank lines indicate sentence boundaries,
@@ -532,7 +532,7 @@ Primarily useful for direct inspection and debugging.
 
 =item L<CSV|DTA::CAB::Format::CSV>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=csv&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=csv&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple fixed-width "vertical" text format containing only selected
 attribute values.
@@ -564,7 +564,7 @@ but lacks flexibility.
 
 =item L<TT|DTA::CAB::Format::TT>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=tt&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=tt&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple machine-readable "vertical" text format similar to that used by
 L<Corpus WorkBench|http://cwb.sourceforge.net/>.  Each line is either a
@@ -585,7 +585,7 @@ Useful for further quick and dirty script-based processing.
 
 =item L<TJ|DTA::CAB::Format::TJ>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=tj&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=tj&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple machine-readable "vertical" text format based on the L<TT|/TT>
 format but using L<JSON|http://json.org/> to encode sentence- and token-level attributes
@@ -635,7 +635,7 @@ makes such formats a reasonable candidate for archiving and cross-platform data 
 
 =item L<XmlTokWrap|DTA::CAB::Format::XmlTokWrap>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=twxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=twxml&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
 module.  Supports arbitrary token attribute substructure, but fairly slow.
@@ -648,7 +648,7 @@ module.  Supports arbitrary token attribute substructure, but fairly slow.
 
 =item L<XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=ftwxml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=ftwxml&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
 module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't support all attributes.
@@ -719,7 +719,7 @@ such as L<CSV|/CSV>.
 
 [L<example input (untokenized)|http://./elephant.raw.tcf>,
 L<example input (pre-tokenized)|http://./elephant.tok.tcf>,
-L<example output|http://www.deutschestextarchiv.de/demo/cab?fmt=tcf&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+L<example output|http://www.deutschestextarchiv.de/demo/cab?fmt=tcf&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Monolithic stand-off XML format used by CLARIN-D, in particlar by the
 L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer.
@@ -736,7 +736,7 @@ TCF layers.
 
 =item L<XML-RPC|DTA::CAB::Format::XmlRpc>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=xmlrpc&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=xmlrpc&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Flexible but obscenely inefficient format used for data transfer
 by the L<XML-RPC Protocol|https://en.wikipedia.org/wiki/XML-RPC>.
@@ -767,7 +767,7 @@ human consumption.
 
 =item L<JSON|DTA::CAB::Format::JSON>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=json&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=json&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Direct L<JSON|http://json.org/> dump of the underlying
 L<DTA::CAB::Document|DTA::CAB/Data Model> structure
@@ -782,7 +782,7 @@ Very fast and flexible, suitable for further automated processing.
 
 =item L<YAML|DTA::CAB::Format::YAML>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=yaml&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=yaml&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Direct dump of the underlying
 L<DTA::CAB::Document|DTA::CAB/Data Model> structure
@@ -797,7 +797,7 @@ Fast, flexible, and supports shared substructures, unlike the L<JSON|/JSON> form
 
 =item L<Perl|DTA::CAB::Format::Perl>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=perl&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab?fmt=perl&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Direct dump of the underlying
 L<DTA::CAB::Document|DTA::CAB/Data Model> structure
@@ -813,7 +813,7 @@ while retaining some degree of human readability.
 
 =item L<Storable|DTA::CAB::Format::Storable>
 
-[L<example|http://www.deutschestextarchiv.de/demo/cab/query?fmt=bin&q=EJn%20zamer%20Elephant%20gillt%20ohngef%C3%A4hr%20zweyhundert%20Thaler.%20Ceterum%20censeo%20Carthaginem%20esse%20delendam.>]
+[L<example|http://www.deutschestextarchiv.de/demo/cab/query?fmt=bin&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Direct binary dump of the underlying
 L<DTA::CAB::Document|DTA::CAB/Data Model> structure
