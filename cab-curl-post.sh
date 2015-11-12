@@ -19,6 +19,7 @@ fi
 url="$1"; shift
 infile="$1"; shift;
 
+##-- prepend base URL if required
 case "$url" in
     "?"*)
 	url="${url_base}${url}"
@@ -26,4 +27,5 @@ case "$url" in
     *)
 	;;
 esac
-echo curl -X POST "$url" -sSL --post301 --post302 --post303 -F qd="@$infile" "$@"
+
+exec curl -X POST -sSF qd="@$infile" -L --post301 --post302 --post303 "$@" "$url"

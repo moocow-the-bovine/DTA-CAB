@@ -861,11 +861,11 @@ please respect the L<caveats|/Caveats> mentioned above in the L<file query examp
 
 =head3 Querying CAB with curl
 
-To analyze a L<TEI-like|/TEI> XML file F<FILE.xml> using L<curl|http://curl.haxx.se/>
-and save the analysis results to F<FILE.cab.xml>,
+To analyze a L<TEI-like|/TEI> XML file F<FILE.tei.xml> using L<curl|http://curl.haxx.se/>
+and save the analysis results to a "spliced" TEI file F<FILE.teiws.xml>,
 the following command-line ought to suffice:
 
- curl -sSF "qd=<FILE.xml" -o "FILE.cab.xml" "http://www.deutschestextarchiv.de/cab/query?fmt=tei"
+ curl -X POST -sSF "qd=@FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei"
 
 Alternative L<IO formats|/I-O Formats> and L<request parameters|DTA::CAB::HttpProtocol/query-Requests>
 can be accommodated by inserting them into the L<URL query string|http://en.wikipedia.org/wiki/Query_string>
@@ -875,10 +875,14 @@ inline POSTDATA mechanism (a.k.a "xpost") described in L<DTA::CAB::HttpProtocol/
 in order to save yourself and the CAB server the effort of encoding/decoding the document data.
 In this case, you need to specify an appropriate "C<Content-Type>" header, e.g:
 
- curl -sSX POST -H "Content-Type: application/tei+xml; charset=utf8" --data-binary @"FILE.xml" -o "FILE.cab.xml" "http://www.deutschestextarchiv.de/cab/query?fmt=tei"
+ curl -X POST -sSH "Content-Type: text/tei+xml; charset=utf8" --data-binary @"FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/demo/cab/query?fmt=tei"
 
 You might be interested in the L<cab-curl-post.sh|http://./cab-curl-post.sh> and/or L<cab-curl-xpost.sh|http://./cab-curl-xpost.sh>
 wrapper scripts, which encapsulate some of the common curl command-line options.
+The preceding 2 example C<curl> calls should be equivalent to:
+
+ bash cab-curl-post.sh  "?fmt=tei" "FILE.xml" -o "FILE.teiws.xml"
+ bash cab-curl-xpost.sh "?fmt=tei" "FILE.xml" -o "FILE.teiws.xml"
 
 =cut
 
