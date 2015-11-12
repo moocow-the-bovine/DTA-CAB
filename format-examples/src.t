@@ -1,4 +1,0 @@
-wie
-bloed
-!
-
