@@ -1,0 +1,45 @@
+--- !!perl/hash:DTA::CAB::Document
+body:
+- !!perl/hash:DTA::CAB::Sentence
+  lang: de
+  tokens:
+  - !!perl/hash:DTA::CAB::Token
+    text: wie
+    errid: ec
+    exlex: wie
+    hasmorph: '1'
+    lang:
+    - de
+    moot:
+      lemma: wie
+      tag: PWAV
+      word: wie
+    msafe: '1'
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: wie
+  - !!perl/hash:DTA::CAB::Token
+    text: oede
+    moot:
+      lemma: öde
+      tag: ADJD
+      word: öde
+    msafe: '0'
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: oede
+  - !!perl/hash:DTA::CAB::Token
+    text: '!'
+    errid: ec
+    exlex: '!'
+    moot:
+      lemma: '!'
+      tag: $.
+      word: '!'
+    msafe: '1'
+    xlit:
+      isLatin1: '1'
+      isLatinExt: '1'
+      latin1Text: '!'

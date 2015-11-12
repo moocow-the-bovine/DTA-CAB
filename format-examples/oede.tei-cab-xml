@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI>
+  <text>
+    <fw>Running headers are ignored</fw>
+    <s id="s1" pn="p1">
+      <w id="w1" t="Wie" b="12 3"><moot word="Wie" lemma="wie" tag="PWAV"/><xlit isLatin1="1" latin1Text="Wie" isLatinExt="1"/>Wie</w>
+      <w id="w2" t="oede" b="16 4"><moot word="öde" lemma="öde" tag="ADJD"/><xlit isLatin1="1" latin1Text="oede" isLatinExt="1"/>oede</w>
+      <w id="w3" t="!" b="20 1"><moot word="!" lemma="!" tag="$."/><xlit isLatin1="1" latin1Text="!" isLatinExt="1"/>!</w>
+    </s>
+    <lb/>
+  </text>
+</TEI>

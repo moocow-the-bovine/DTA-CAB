@@ -14,7 +14,7 @@ DTA::CAB:WebServiceHowto - User documentation for DTA::CAB web-service
 
 =head1 DESCRIPTION
 
-This document describes the use of the L<DTA::CAB|http://odo.dwds.de/~jurish/software/dta-cab/> (demo) web-service accessible
+This document describes the use of the L<DTA::CAB|http://odo.dwds.de/~jurish/software/dta-cab/> web-service accessible
 at L<http://www.deutschestextarchiv.de/cab/>.
 The CAB web-service provides
 error-tolerant linguistic analysis for historical German text,
@@ -71,7 +71,7 @@ displays the results for the current query, if any.
 =item Link Buttons
 
 Below the L<data area|/Response Data> are a number of static link buttons for
-the file upload demo ("File Demo") or the live user-input demo ("Live Demo"),
+the file upload ("File Upload") or the live user-input interface ("Live Query"),
 the list of analyzers supported by the underlying CAB instance ("Analyzers"),
 the list of I/O formats supported by the underlying CAB instance ("Formats"),
 administrative data for the CAB server instance ("Status"),
@@ -264,15 +264,15 @@ for sentences recognized as non-German.
 In addition to the default "live" query interface, the CAB web-service interface
 also offers users the opportunity to upload an entire document file to be analyzed
 and allowing the analysis results to be saved to the user's local machine.
-The CAB file interface is accessible via the "File Demo"
-button in the L<link area|/Link Buttons>, which resolves to L<http://www.deutschestextarchiv.de/demo/cab/file|http://www.deutschestextarchiv.de/demo/cab/file>
+The CAB file interface is accessible via the "File Upload"
+button in the L<link area|/Link Buttons>, which resolves to L<http://www.deutschestextarchiv.de/cab/file|http://www.deutschestextarchiv.de/cab/file>
 Suppose we have a simple plain-text file L<F<elephant.raw>|http://./elephant.raw> containing the document to be analyzed:
 
  EJn zamer Elephant gillt ohngefähr zweyhundert Thaler.
  Ceterum censeo Carthaginem esse delendam.
 
 First, save the input file L<F<elephant.raw>|http://./elephant.raw> to your local computer.
-Then, in the CAB L<file input form|http://www.deutschestextarchiv.de/demo/cab/file>,
+Then, in the CAB L<file input form|http://www.deutschestextarchiv.de/cab/file>,
 click on on the "Choose File" button and select F<elephant.raw> from wherever you saved it.
 Clicking on the "submit" button will cause the contents of the selected file to be sent
 to the CAB server, analyzed, and prompt you for a location to which the analysis results

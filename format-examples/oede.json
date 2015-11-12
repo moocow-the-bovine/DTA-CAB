@@ -1,0 +1,61 @@
+{
+    "docattr" : "foo",
+   "body" : [
+       {
+	       "sattr" : "bar",
+         "tokens" : [
+            {
+               "moot" : {
+                  "tag" : "PWAV",
+                  "word" : "wie",
+                  "lemma" : "wie"
+               },
+               "lang" : [
+                  "de"
+               ],
+               "msafe" : "1",
+               "errid" : "ec",
+               "exlex" : "wie",
+               "text" : "wie",
+               "hasmorph" : "1",
+               "xlit" : {
+                  "latin1Text" : "wie",
+                  "isLatinExt" : "1",
+                  "isLatin1" : "1"
+               }
+            },
+            {
+               "text" : "oede",
+               "msafe" : "0",
+               "moot" : {
+                  "lemma" : "öde",
+                  "tag" : "ADJD",
+                  "word" : "öde"
+               },
+               "xlit" : {
+                  "isLatin1" : "1",
+                  "latin1Text" : "oede",
+                  "isLatinExt" : "1"
+               }
+            },
+            {
+               "text" : "!",
+               "errid" : "ec",
+               "exlex" : "!",
+               "xlit" : {
+                  "isLatinExt" : "1",
+                  "latin1Text" : "!",
+                  "isLatin1" : "1"
+               },
+               "moot" : {
+                  "lemma" : "!",
+                  "tag" : "$.",
+                  "word" : "!"
+               },
+               "msafe" : "1"
+            }
+         ],
+         "lang" : "de"
+      }
+   ]
+}
