@@ -36,8 +36,8 @@ BEGIN {
 }
 
 ##-- HACK for broken tokenizer on services.dwds.de (2011-07-27)
-$DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
-#$DTA::TokWrap::Document::TOKENIZE_CLASS = 'auto';  ##-- fixed (?) 2013-06-21
+#$DTA::TokWrap::Document::TOKENIZE_CLASS = 'http';
+$DTA::TokWrap::Document::TOKENIZE_CLASS = 'auto';  ##-- fixed (?) 2013-06-21; changed 2015-11-12
 
 ##-- default parser/formatter for *.t.xml files
 our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
@@ -91,6 +91,7 @@ sub new {
 			      tmpdir => undef, ##-- see tmpdir() method
 			      keeptmp=>0,
 			      teilog => 'off', ##-- tei format debug log level
+			      twlog => 'off',  ##-- DTA::TokWrap debug log level
 			      ##
 			      addc => 0,
 			      keepc => 0,
@@ -122,12 +123,15 @@ sub new {
 			      @_
 			     );
 
+  if ($fmt->{twlog}) {
+    ##-- set DTA::TokWrap logging options (also consider specifying '-lo=twLevel=TRACE' on the command-line)
+    $fmt->{twopen}{"trace$_"}    = $fmt->{twlog} foreach (qw(Proc Open Close Load Gen Subproc Run));
+    $fmt->{twopts}{procOpts}{$_} = $fmt->{twlog} foreach (qw(traceLevel));
+    $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
+    $fmt->{twopts}{$_} = uc($fmt->{twlog}) foreach (qw(addwsInfo spliceInfo));
+  }
   if (0) {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
-    $fmt->{twopen}{"trace$_"}    = 'debug' foreach (qw(Proc Open Close Load Gen Subproc Run));
-    $fmt->{twopts}{procOpts}{$_} = 'debug' foreach (qw(traceLevel));
-    $DTA::TokWrap::Utils::TRACE_RUNCMD = 'debug';
-    $fmt->{twopts}{$_} = 'DEBUG' foreach (qw(addwsInfo spliceInfo));
     $fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
   }
@@ -580,6 +584,8 @@ object structure: HASH ref
      ##-- new in TEI
      tmpdir => $dir,                         ##-- temporary directory for this object (default: new)
      keeptmp => $bool,                       ##-- keep temporary directory open
+     teilog => 'off',                        ##-- tei format debug log level
+     twlog => 'off',                         ##-- DTA::TokWrap debug log level (also consider specifying e.g. -lo=twLevel=TRACE on the command-line)
      addc => $bool_or_guess,                 ##-- (input) whether to add //c elements (slow no-op if already present; default=0)
      spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
      keeptext => $bool,                      ##-- (input) if true (default), include 'textbufr' element for extract TEI text
