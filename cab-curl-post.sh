@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ## url_base : base url to use for query-string arguments
-url_base="http://www.deutschestextarchiv.de/cab/query";
+url_base="http://www.deutschestextarchiv.de/demo/cab/query";
 
-if test "$#" -eq 0 ; then
+if test "$#" -eq 0 -o "$1" = "-h" -o "$1" = "--help" ; then
   cat <<EOF >&2
 
  Usage: $0 URL_OR_QUERY_STRING INFILE [CURL_ARGS]
