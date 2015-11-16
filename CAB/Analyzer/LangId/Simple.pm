@@ -79,9 +79,14 @@ sub analyzeTypes {
     if    ($_->{text} =~ /[\p{InMathematicalOperators}]/) { push(@l,'xy'); }
     elsif ($_->{text} =~ /[[:alpha:]](?:.?)[[:digit:]]/) { push(@l,'xy'); }
 
-    push(@l, 'la') if ($_->{mlatin});
+    ##-- latin: use {mlatin}, but don't count known NE; workaround for mantis bug #6737
+    push(@l, 'la') if ($_->{mlatin} && (!$_->{morph} || !grep {$_->{hi} =~ /\[_NE\]/} @{$_->{morph}}));
+
+    ##-- default language: use {morph} and {msafe}, disregarding NE,FM
     push(@l, $l0) if ($l0 && $_->{morph} && ($_->{msafe}//1) && grep {$_->{hi} !~ /\[_(?:FM|NE)\]/} @{$_->{morph}});
-    #push(@l, 'de','exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
+
+    ##-- exlex language (not really)
+    #push(@l, $l0, 'exlex') if (($_->{exlex} && $_->{exlex} ne $_->{text}));
 
     ##-- make unique
     if (@l) {
