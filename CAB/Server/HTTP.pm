@@ -185,6 +185,10 @@ sub run {
   my $daemon = $srv->{daemon};
   my $mode   = $srv->{daemonMode} || 'serial';
   $srv->info("server starting in $mode mode on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
+  
+  ##-- setup SIGPIPE handler (avoid heinous death)
+  ##  + following suggestion on http://www.perlmonks.org/?node_id=580411
+  $SIG{PIPE} = sub { $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
 
   my ($csock,$chost,$hreq,$urikey,$cacheable,$handler,$localPath,$pid,$rsp);
   while (1) {
