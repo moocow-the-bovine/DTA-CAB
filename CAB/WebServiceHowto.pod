@@ -674,7 +674,7 @@ module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't suppor
 [L<example input|http://./elephant.tei-xml>,
 L<example output|http://www.deutschestextarchiv.de/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
 
-Parses raw un-tokenized TEI-like XML input (with or without //c elements) using
+Parses raw un-tokenized TEI-like input (with or without //c elements) using
 L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/> to reserialize and tokenize the
 source text, and splices analysis results into the resulting XML document
 using the L<XmlTokWrap|/XmlTokWrap> format.
@@ -1080,6 +1080,12 @@ L<format classes|DTA::CAB::Format/SUBCLASSES>.
 
 The L<DTA::CAB::HttpProtocol|DTA::CAB::HttpProtocol> manual page describes
 the conventions used by the CAB web-service API.
+
+=item *
+
+The L<DTA 'Base Format' Guidelines (DTABf)|http://www.deutschestextarchiv.de/doku/basisformat>
+describes the subset of the L<TEI|http://www.tei-c.org/> encoding guidelines which can reasonably be
+expected to be handled gracefully by the CAB L<TEI|/TEI> and/or L<TEIws|/TEIws> formatters.
 
 =item *
 
