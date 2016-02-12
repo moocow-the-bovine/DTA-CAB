@@ -2,8 +2,7 @@
 
 ## Alias: DTA::CAB::Server::HTTP::Handler::Alias.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description:
-##  + DTA::CAB::Server::HTTP::Handler class: path alias
+## Description: DTA::CAB::Server::HTTP::Handler class: path alias
 ##======================================================================
 
 package DTA::CAB::Server::HTTP::Handler::Alias;

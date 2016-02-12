@@ -2,8 +2,7 @@
 
 ## File: DTA::CAB::Server::HTTP::Handler::Template.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description:
-##  + DTA::CAB::Server::HTTP::Handler class: static files
+## Description: DTA::CAB::Server::HTTP::Handler class: Template-Toolkit templates
 ##======================================================================
 
 package DTA::CAB::Server::HTTP::Handler::Template;

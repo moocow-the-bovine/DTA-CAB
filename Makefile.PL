@@ -18,7 +18,11 @@ my ($SVNVERSION);
     open(VERSION_PM,">CAB/Version.pm")
       or die("$0: could not open CAB/Version.pm for write: $!");
     print VERSION_PM <<EOF;
-##-- automatically generated file: DO NOT EDIT!
+##--- automatically generated file: DO NOT EDIT! ---
+##
+## File: DTA/CAB/Version.pm
+## Description: DTA::CAB version constants (auto-generated)
+##
 package DTA::CAB::Version;
 \$DTA::CAB::VERSION = '$VERSION';
 \$DTA::CAB::SVNVERSION = '$SVNVERSION';
