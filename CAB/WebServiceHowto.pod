@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-DTA::CAB:WebServiceHowto - User documentation for DTA::CAB web-service
+DTA::CAB::WebServiceHowto - User documentation for DTA::CAB web-service
 
 =cut
 

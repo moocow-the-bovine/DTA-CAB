@@ -654,15 +654,15 @@ DTA::CAB version constants (auto-generated)
 
 automatically generated index of DTA::CAB sub-modules
 
-=item L<DTA::CAB:HttpProtocol|DTA::CAB:HttpProtocol>
+=item L<DTA::CAB::HttpProtocol|DTA::CAB::HttpProtocol>
 
 HTTP query protocol for use with DTA::CAB::Server::HTTP::Handler::Query
 
-=item L<DTA::CAB:WebServiceHowto|DTA::CAB:WebServiceHowto>
+=item L<DTA::CAB::WebServiceHowto|DTA::CAB::WebServiceHowto>
 
 User documentation for DTA::CAB web-service
 
-=item L<DTA::CAB:XmlRpcProtocol|DTA::CAB:XmlRpcProtocol>
+=item L<DTA::CAB::XmlRpcProtocol|DTA::CAB::XmlRpcProtocol>
 
 XML-RPC protocol for use with DTA::CAB::Server::XmlRpc
 

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-DTA::CAB:XmlRpcProtocol - XML-RPC protocol for use with DTA::CAB::Server::XmlRpc
+DTA::CAB::XmlRpcProtocol - XML-RPC protocol for use with DTA::CAB::Server::XmlRpc
 
 =cut
 
