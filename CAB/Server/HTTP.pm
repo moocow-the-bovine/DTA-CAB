@@ -8,6 +8,7 @@ package DTA::CAB::Server::HTTP;
 use DTA::CAB::Server;
 use DTA::CAB::Server::HTTP::Handler::Builtin;
 use DTA::CAB::Cache::LRU;
+use DTA::CAB::Utils qw(:xml);
 use HTTP::Daemon;
 use HTTP::Status;
 use POSIX ':sys_wait_h';
@@ -227,7 +228,7 @@ sub run {
     ${*$csock}{'httpd_client_proto'} = HTTP::Daemon::ClientConn::_http_version("HTTP/1.0"); ##-- HACK: force status line on send_error() from $csock->get_request()
     $hreq = $csock->get_request();
     if (!$hreq) {
-      $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", ($csock->reason || 'get_request() failed'));
+      $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", xml_escape($csock->reason || 'get_request() failed'));
       next;
     }
 
@@ -245,7 +246,7 @@ sub run {
     ##-- map request to handler
     ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
     if (!defined($handler)) {
-      $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", $hreq->uri);
+      $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", xml_escape($hreq->uri));
       next;
     }
 
@@ -278,7 +279,7 @@ sub run {
       $rsp = $handler->run($srv,$localPath,$csock,$hreq);
     };
     if ($@) {
-      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>$@</pre>");
+      $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>", xml_escape($@), "</pre>");
       $srv->reapClient($csock,$handler,$chost);
     }
     elsif (!defined($rsp)) {
@@ -446,7 +447,8 @@ sub clientError {
       ##-- don't try to write to sockets reporting 'client closed': this crashes the running server inexplicably!
       my $_warn=$^W;
       $^W=0;
-      $csock->send_error($status, $msg);
+      #$csock->send_error($status, $msg);
+      $csock->send_response(DTA::CAB::Server::HTTP::Handler->errorResponse($status,$msg));
       $^W=$_warn;
     }
     $csock->force_last_request();

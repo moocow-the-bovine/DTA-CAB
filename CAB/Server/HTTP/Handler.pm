@@ -86,22 +86,32 @@ sub headResponse {
 
 ## $rsp = $CLASS_OR_OBJECT->errorResponse()
 ## $rsp = $CLASS_OR_OBJECT->errorResponse($code)
-## $rsp = $CLASS_OR_OBJECT->errorResponse($code, $body)
+## $rsp = $CLASS_OR_OBJECT->errorResponse($code, @body)
 ## + rudimentary error responses; workaround for missing root element in html from HTTP::Daemon::ClientConn::send_error()
 sub errorResponse {
-  my ($h,$code,$body) = @_;
+  my ($h,$code,@body) = @_;
   $code     //= 500;
   my $msg     = status_message($code);
-  my $content =<<EOT
+  @body       = ($msg) if (!@body);
+  my $content =<<EOT;
 <html>
  <head><title>$code $msg</title></head>
  <body>
   <h1>$code $msg</h1>
-  $body
+  @body
  </body>
 </html>
 EOT
   return $h->response($code,$msg,undef,$content);
+}
+
+## $rsp = $CLASS_OR_OBJECT->errorResponseRaw()
+## $rsp = $CLASS_OR_OBJECT->errorResponseRaw($code)
+## $rsp = $CLASS_OR_OBJECT->errorResponseRaw($code, @body)
+## + rudimentary error response for raw (un-escaped) body strings
+sub errorResponseRaw {
+  my ($h,$code,@body) = @_;
+  return $h->errorResponse($code, "<pre>", xml_escape(join('',@body)), "</pre>");
 }
 
 
@@ -113,13 +123,13 @@ sub cerror {
   if (defined($c) && $c->opened) {
     $status   = RC_INTERNAL_SERVER_ERROR if (!defined($status));
     my $chost = $c->peerhost();
-    my $msg   = @msg ? join('',@msg) : status_message($status);
+    my $msg   = @msg ? xml_escape(join('',@msg)) : status_message($status);
     $h->vlog(($h->{logError}||'error'), "client=$chost: $msg");
     {
       my $_warn=$^W;
       $^W=0;
       #$c->send_error($status, $msg);
-      $c->send_response($h->response($status, $msg));
+      $c->send_response($h->errorResponseRaw($status, $msg));
       $^W=$_warn;
     }
     $c->shutdown(2);

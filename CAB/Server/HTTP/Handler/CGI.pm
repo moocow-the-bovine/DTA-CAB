@@ -213,7 +213,7 @@ sub contentParams {
 	  ##-- multipart/form-data: part: form-data; name="PARAMNAME"
 	  $h->addVars($vars, { $1 => $part->content });
 	} else {
-	  ##-- multipart/form-data: part: form-data
+	  ##-- multipart/form-data: part: form-data; other (POSTDATA)
 	  $h->addVars($vars, { $opts{defaultName} => $part->content });
 	}
       }
