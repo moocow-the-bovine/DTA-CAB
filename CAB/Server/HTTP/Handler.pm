@@ -102,7 +102,7 @@ sub errorResponse {
  </body>
 </html>
 EOT
-  return $h->response($code,$msg,undef,$content);
+  return $h->response($code,$msg,["Content-Type"=>"text/html"],$content);
 }
 
 ## $rsp = $CLASS_OR_OBJECT->errorResponseRaw()
