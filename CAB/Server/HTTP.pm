@@ -327,7 +327,7 @@ sub run {
 
 
 ##==============================================================================
-## Methods: Local: spawn and real
+## Methods: Local: spawn and reap
 
 ## \&reaper = $srv->reaper()
 ##  + zombie-harvesting code; installed to local %SIG

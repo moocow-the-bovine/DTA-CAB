@@ -9,6 +9,7 @@
 package DTA::CAB::Server::HTTP::Handler;
 use HTTP::Status;
 use DTA::CAB::Logger;
+use DTA::CAB::Utils qw(:xml);
 use UNIVERSAL;
 use strict;
 
@@ -55,16 +56,6 @@ sub finish {
 ##======================================================================
 ## Generic Utilities
 
-## $rsp = $h->headResponse()
-## $rsp = $h->headResponse(\@headers)
-## #$rsp = $h->headResponse(\%headers)
-## $rsp = $h->headResponse($httpHeaders)
-## + rudimentary handling for HEAD requests
-sub headResponse {
-  my ($h,$hdr) = @_;
-  return $h->response(RC_OK,undef,$hdr);
-}
-
 ## $rsp = $CLASS_OR_OBJECT->response($code=RC_OK, $msg=status_message($code), $hdr, $content)
 ##  + $hdr may be a HTTP::Headers object, an array or hash-ref
 ##  + wrapper for HTTP::Response->new()
@@ -83,6 +74,37 @@ sub response {
   return HTTP::Response->new($code,$msg,$hdr,@_);
 }
 
+## $rsp = $CLASS_OR_OBJECT->headResponse()
+## $rsp = $CLASS_OR_OBJECT->headResponse(\@headers)
+## #$rsp = $CLASS_OR_OBJECT->headResponse(\%headers)
+## $rsp = $CLASS_OR_OBJECT->headResponse($httpHeaders)
+## + rudimentary handling for HEAD requests
+sub headResponse {
+  my ($h,$hdr) = @_;
+  return $h->response(RC_OK,undef,$hdr);
+}
+
+## $rsp = $CLASS_OR_OBJECT->errorResponse()
+## $rsp = $CLASS_OR_OBJECT->errorResponse($code)
+## $rsp = $CLASS_OR_OBJECT->errorResponse($code, $body)
+## + rudimentary error responses; workaround for missing root element in html from HTTP::Daemon::ClientConn::send_error()
+sub errorResponse {
+  my ($h,$code,$body) = @_;
+  $code     //= 500;
+  my $msg     = status_message($code);
+  my $content =<<EOT
+<html>
+ <head><title>$code $msg</title></head>
+ <body>
+  <h1>$code $msg</h1>
+  $body
+ </body>
+</html>
+EOT
+  return $h->response($code,$msg,undef,$content);
+}
+
+
 ## undef = $h->cerror($csock, $status=RC_INTERNAL_SERVER_ERROR, @msg)
 ##  + sends an error response and sends it to the client socket
 ##  + also logs the error at level ($c->{logError}||'warn') and shuts down the socket
@@ -96,7 +118,8 @@ sub cerror {
     {
       my $_warn=$^W;
       $^W=0;
-      $c->send_error($status, $msg);
+      #$c->send_error($status, $msg);
+      $c->send_response($h->response($status, $msg));
       $^W=$_warn;
     }
     $c->shutdown(2);
