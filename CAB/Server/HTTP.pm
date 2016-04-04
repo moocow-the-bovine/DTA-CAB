@@ -447,7 +447,7 @@ sub clientError {
       ##-- don't try to write to sockets reporting 'client closed': this crashes the running server inexplicably!
       my $_warn=$^W;
       $^W=0;
-      #$csock->send_error($status, $msg);
+      #$csock->send_error($status, $msg); ##-- response not parseable as xml (see mantis bug #12941)
       $csock->send_response(DTA::CAB::Server::HTTP::Handler->errorResponse($status,$msg));
       $^W=$_warn;
     }
