@@ -213,7 +213,8 @@ HTML_EXTRA ?= \
   doc-extra/dstar-bin/spliced2clean.xsl \
   doc-extra/dstar-bin/spliced2cleaner.xsl \
   doc-extra/dstar-bin/spliced2clean+cabns.xsl \
-  doc-extra/dstar-bin/spliced2cab.xsl
+  doc-extra/dstar-bin/spliced2cab.xsl \
+  doc-extra/cab-screenshot-annotated.png
 
 ##-- lifted from MakeMaker blibdir section
 $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL

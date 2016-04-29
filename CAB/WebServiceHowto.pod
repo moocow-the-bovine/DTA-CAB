@@ -43,6 +43,12 @@ in a web browser, the user is presented with a graphical interface in which CAB 
 be constructed and submitted to the underlying server.  This section describes the various
 elements of that interface.
 
+=begin html
+
+<a href="cab-screenshot-annotated.png"><img style="display:block;margin-left:auto;margin-right:auto;max-width:50%;" src="cab-screenshot-annotated.png"/></a>
+
+=end html
+
 =over 4
 
 =item Query Form
