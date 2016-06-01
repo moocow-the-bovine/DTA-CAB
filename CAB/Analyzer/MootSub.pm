@@ -142,19 +142,19 @@ sub analyzeSentences {
 	%l2d = qw();
 
 	$a0 = $ld0 = undef;
-	foreach (@$ma) {
+	foreach (sort {($a->{cost}||$a->{prob}||0)<=>($b->{cost}||$b->{prob}||0)} @$ma) {
 	  ##-- get lemma distance
 	  $l   = $_->{lemma};
-	  if (!defined($ld=$l2d{$l})) {
-	    $ld  = Text::LevenshteinXS::distance($w, $l) ;
-	    $ld += $wmorph*($_->{cost}||$_->{prob}||0);				     ##-- hack: morph cost clobbers edit-distance
-	    $ld += $wmorph*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
-	    $l2d{$l} = $ld;
-	  }
+	  $ld  = Text::LevenshteinXS::distance($w, $l) ;
+	  $ld += $wmorph*($_->{cost}||$_->{prob}||0);				     ##-- hack: morph cost clobbers edit-distance
+	  $ld += $wmorph*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
+	  $l2d{$l} = $ld if (!defined($l2d{$l}) || $l2d{$l} > $ld);
 	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
 	  $a0  = $_;
 	}
+	print STDERR "$tok->{text}:\n", map {"\t$_ : $l2d{$_}\n"} sort keys %l2d;
+
 	$a0->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if (exists($uctags->{$t})); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
 	$m->{details} = $cache{$key} = $a0;
       }

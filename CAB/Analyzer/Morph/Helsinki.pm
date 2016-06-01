@@ -58,8 +58,10 @@ sub analyzeTypes {
 	$lemma = substr($hi, 0, length($hi)-length($tag));
 	$tag   = join('.', ($tag =~ /\[\+?([^\<\>\[\]\/\\]+)\\?\]/g));
       }
-      else {
-	($lemma,$tag) = ('','');
+      elsif ($hi =~ /((?:\\?\[\<?[^\<\>\[\]\/\\]+\>?\\?\]))$/) {
+	$tag   = $1;
+	$lemma = substr($hi, 0, length($hi)-length($tag));
+	$tag   =~ s/[\\\<\>\[\]\+]//g;
       }
       $lemma =~ s/(?:\[[^\+\]]*\]|\\)//g;
       $lemma =~ s/\[([A-Z]+)\+\]/lc($1)."+"/eg;

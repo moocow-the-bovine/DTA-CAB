@@ -48,7 +48,7 @@ sub new {
      ##
      moot  => DTA::CAB::Analyzer::Moot->new(lang=>'en'), ##-- moot tagger (on dmoot output; (n>1)-grams)
      moot1 => DTA::CAB::Analyzer::Moot->new(lang=>'en'), ##-- moot tagger (on dmoot output; 1-grams only)
-     mootsub => DTA::CAB::Analyzer::MootSub->new(ucTags=>[],stts=>0,wMorph=>.001), ##-- moot tagger, post-processing hacks
+     mootsub => DTA::CAB::Analyzer::MootSub->new(ucTags=>[],stts=>0,wMorph=>.2), ##-- moot tagger, post-processing hacks
      ##
      langid => DTA::CAB::Analyzer::LangId::Simple->new(defaultLang=>'en'), ##-- language-guesser (stopword-based; between msafe and rw)
      ##
