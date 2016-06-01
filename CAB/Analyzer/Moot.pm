@@ -40,6 +40,7 @@ my $prune=$moot->{prune};
 my $lctext=$moot->{lctext};
 my $notag=$moot->{notag};
 my $use_dmoot=$moot->{use_dmoot};
+my $moot_lang=$moot->{lang};
 my $xpne=$moot->{xpne};
 my $xpfm=$moot->{xpfm};
 my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
@@ -71,7 +72,7 @@ sub {
  $hmm->tag_sentence($msent, $utf8) if (!$notag);
 
  ##-- language-guesser hack
- if (($lang=$s->{lang}) && $lang ne "de") {
+ if ($moot_lang && ($lang=$s->{lang}) && $lang ne $moot_lang) {
    $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
  }
 
@@ -113,6 +114,7 @@ sub {
 ##     use_dmoot   => $bool,     ##-- if true, hmm tagger will try to get text & analyses from token {dmoot} key, otherwise it will be ignored
 ##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers)Name\b/i (default=true) #NOT 'placeName', the tags are often appositions
 ##     xpfm        => $bool,     ##-- if true, force 'FM' tags whenever $w->{xp} =~ /\bforeign\b/i (default=true)
+##     lang        => $lang,     ##-- only tag sentences marked as language "$lang"; read from global analyzer options as "${lab}.lang" (default='de')
 ##
 ##     ##-- Analysis Objects
 ##     hmm         => $hmm,   ##-- a moot::HMM object
@@ -142,6 +144,7 @@ sub new {
 			       lctext => 0,
 			       #notag => undef,
 			       #use_dmoot => undef,
+			       lang => 'de',
 			       xpne => 1,
 			       xpfm => 1,
 
@@ -334,6 +337,7 @@ sub analyzeSentences {
   $moot->{notag}     //= $opts->{"$moot->{label}.notag"};
   $moot->{use_dmoot} //= $opts->{"$moot->{label}.use_dmoot"};
   $moot->{use_dmoot} //= 1;
+  $moot->{lang}        = $opts->{"$moot->{label}.lang"} if ($opts->{"$moot->{label}.lang"});
 
   ##-- setup access closures
   my $acode_str  = $moot->analysisCode();
@@ -382,6 +386,7 @@ sub analysisCodeDEBUG {
   my $lctext=$moot->{lctext};
   my $notag=$moot->{notag};
   my $use_dmoot=$moot->{use_dmoot};
+  my $moot_lang=$moot->{lang};
   my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
   sub {
     $s     = $_;
@@ -413,7 +418,7 @@ sub analysisCodeDEBUG {
     $hmm->tag_sentence($msent, $utf8) if (!$notag);
 
     ##-- language-guesser hack
-    if (($lang=$s->{lang}) && $lang ne "de") {
+    if ($moot_lang && ($lang=$s->{lang}) && $lang ne $moot_lang) {
       $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
     }
 

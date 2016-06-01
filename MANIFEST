@@ -90,6 +90,7 @@ CAB/Analyzer/Unidecode.pm
 CAB/Cache/LRU.pm
 CAB/Chain.pm
 CAB/Chain/DTA.pm
+CAB/Chain/EN.pm
 CAB/Chain/Multi.pm
 CAB/Chain/Tweet.pm
 CAB/Client.pm

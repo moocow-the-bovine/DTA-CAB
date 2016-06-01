@@ -53,13 +53,10 @@ sub analyzeTypes {
   foreach $w (values %$types) {
     foreach $a (@{$w->{$label}//$null}) {
       $hi = $a->{hi};
-      if ($hi =~ /((?:\[\+[^\]]+\])+)$/) {
+      if ($hi =~ /((?:\\?\[[^\<\>\[\]\/\\]+\\?\])+)$/) {
 	$tag   = $1;
 	$lemma = substr($hi, 0, length($hi)-length($tag));
-	$tag   = join('.', ($tag =~ /\[\+([^\]]+)\]/g));
-      }
-      elsif ($hi =~ /^(.*?)\[[<_]?([^\]\s\>\\]+)(?:\\?[\]\s\>])/) {
-	($lemma,$tag) = ($1,$2);
+	$tag   = join('.', ($tag =~ /\[\+?([^\<\>\[\]\/\\]+)\\?\]/g));
       }
       else {
 	($lemma,$tag) = ('','');

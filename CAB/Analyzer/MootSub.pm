@@ -23,6 +23,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     bytoken => $bool,       ##-- type-wise expand $mootLabel if true; depends on global option "${label}.bytoken"; see typeKeys() method
 ##     xyTags => $xytags,      ##-- use literal text (not dmoot) for these tags (string, array, or HASH-ref; default=[qw(XY FM)])
 ##     ucTags => $uctags,      ##-- implicitly upper-case lemmata for these tags (string, array, or HASH-ref; default=[qw(NN NE)])
+##     stts => $bool,          ##-- implicitly use STTS-specific heuristics? (default=1)
+##     wMorph => $bool,        ##-- morph-cost coefficient for lemma-selection heuristics (default=1000)
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
@@ -37,6 +39,8 @@ sub new {
 									),
 			       xyTags => 'XY FM', #CARD NE ##-- use literal text (not dmoot) for these tags
 			       ucTags => 'NN NE',          ##-- implicitly upper-case lemmata for these tags
+			       stts   => 1,
+			       wMorph => 1000,
 
 			       ##-- user args
 			       @_
@@ -72,6 +76,8 @@ sub analyzeSentences {
   my $lz     = $asub->{lz};
   my $xytags = $asub->{xyTags} // {};
   my $uctags = $asub->{ucTags} // {};
+  my $stts   = $asub->{stts};
+  my $wmorph = $asub->{wMorph};
   my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
   ##-- Step 1: ensure $tok->{moot}, $tok->{moot}{tag} are defined (should be obsolete!), apply tag hacks
@@ -81,14 +87,16 @@ sub analyzeSentences {
     $m->{tag} = '@UNKNOWN' if (!defined($m->{tag}));
     $w = $m->{word} // $tok->{text};
 
-    ##-- tag hacks
-    if ($m->{tag} eq 'TRUNC' && $w !~ m/\w/) {
-      ##-- tag-hack: avoid TRUNC tags for non-wordlike tokens
-      $m->{tag} = ($w =~ /[^[:punct:]]$/ ? 'XY' : '$(');
-    }
-    elsif ($w !~ m/[^[:punct:]\p{MathematicalOperators}]/ && $m->{tag} !~ /^(?:\$|XY)/) {
-      ##-- tag-hack: avoid "normal" tags for punctuation-only tokens
-      $m->{tag} = '$(';
+    ##-- tag hacks: stts
+    if ($stts) {
+      if ($m->{tag} eq 'TRUNC' && $w !~ m/\w/) {
+	##-- tag-hack: avoid TRUNC tags for non-wordlike tokens
+	$m->{tag} = ($w =~ /[^[:punct:]]$/ ? 'XY' : '$(');
+      }
+      elsif ($w !~ m/[^[:punct:]\p{MathematicalOperators}]/ && $m->{tag} !~ /^(?:\$|XY)/) {
+	##-- tag-hack: avoid "normal" tags for punctuation-only tokens
+	$m->{tag} = '$(';
+      }
     }
   }
 
@@ -137,9 +145,12 @@ sub analyzeSentences {
 	foreach (@$ma) {
 	  ##-- get lemma distance
 	  $l   = $_->{lemma};
-	  $ld  = $l2d{$l} = Text::LevenshteinXS::distance($w, $l) if (!defined($ld=$l2d{$l}));
-	  $ld += 1000*($_->{cost}||$_->{prob}||0);				##-- hack: morph cost clobbers edit-distance
-	  $ld += 1000*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
+	  if (!defined($ld=$l2d{$l})) {
+	    $ld  = Text::LevenshteinXS::distance($w, $l) ;
+	    $ld += $wmorph*($_->{cost}||$_->{prob}||0);				     ##-- hack: morph cost clobbers edit-distance
+	    $ld += $wmorph*(10) if (($_->{hi}||$_->{details}||'') =~ /\[orgname\]/); ##-- hack: punish orgname targets
+	    $l2d{$l} = $ld;
+	  }
 	  next if (defined($ld0) && $ld0 <= $ld);
 	  $ld0 = $ld;
 	  $a0  = $_;
