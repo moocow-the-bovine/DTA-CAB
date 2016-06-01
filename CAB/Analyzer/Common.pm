@@ -2,6 +2,7 @@
 ## File: DTA::CAB::Analyzer::Common.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: CAB analyzers: common analyzers
+##  + see also
 
 package DTA::CAB::Analyzer::Common;
 
@@ -19,6 +20,7 @@ use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
 #use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
 
 use DTA::CAB::Analyzer::Morph;
+#use DTA::CAB::Analyzer::Morph::Helsinki;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Null;

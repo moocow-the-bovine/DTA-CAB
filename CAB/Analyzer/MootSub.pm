@@ -21,6 +21,8 @@ our @ISA = qw(DTA::CAB::Analyzer);
 ##     mootLabel => $label,    ##-- label for Moot tagger object (default='moot')
 ##     lz => $lemmatizer,      ##-- DTA::CAB::Analyzer::Lemmatizer sub-object
 ##     bytoken => $bool,       ##-- type-wise expand $mootLabel if true; depends on global option "${label}.bytoken"; see typeKeys() method
+##     xyTags => $xytags,      ##-- use literal text (not dmoot) for these tags (string, array, or HASH-ref; default=[qw(XY FM)])
+##     ucTags => $uctags,      ##-- implicitly upper-case lemmata for these tags (string, array, or HASH-ref; default=[qw(NN NE)])
 sub new {
   my $that = shift;
   my $asub = $that->SUPER::new(
@@ -33,11 +35,13 @@ sub new {
 									 analyzeWhich  =>'Sentences',
 									 segmentLabel  =>'segs',
 									),
-			       xyTags => {map {($_=>undef)} qw(XY FM)}, #CARD NE ##-- use literal text (not dmoot) for these tags
+			       xyTags => 'XY FM', #CARD NE ##-- use literal text (not dmoot) for these tags
+			       ucTags => 'NN NE',          ##-- implicitly upper-case lemmata for these tags
 
 			       ##-- user args
 			       @_
 			      );
+
   $asub->{lz}{label} = $asub->{label}."_lz";
   return $asub;
 }
@@ -56,10 +60,18 @@ sub analyzeSentences {
   my ($asub,$doc,$opts) = @_;
   return $doc if (!$asub->enabled($opts));
 
+  ##-- tweak list-tags
+  foreach my $lkey (grep {defined($asub->{$_})} qw(xyTags ucTags)) {
+    $asub->{$lkey} = [split(' ',$asub->{$lkey})] if (!ref($asub->{$lkey}));
+    $asub->{$lkey} = {map {($_=>undef)} @{$asub->{$lkey}}} if (!UNIVERSAL::isa($asub->{$lkey},'HASH'));
+    $asub->trace("$lkey = ".join(' ', sort keys %{$asub->{$lkey}}));
+  }
+
   ##-- common variables
   my $mlabel = $asub->{mootLabel};
   my $lz     = $asub->{lz};
-  my $xytags = $asub->{xyTags};
+  my $xytags = $asub->{xyTags} // {};
+  my $uctags = $asub->{ucTags} // {};
   my $toks   = [map {@{$_->{tokens}}} @{$doc->{body}}];
 
   ##-- Step 1: ensure $tok->{moot}, $tok->{moot}{tag} are defined (should be obsolete!), apply tag hacks
@@ -113,7 +125,7 @@ sub analyzeSentences {
 	#$l =~ s/^(.)(.*)$/$1\L$2\E/ ;#if (length($l) > 3 || $l =~ /[[:lower:]]/);
 	$l =~ s/[\x{ac}]//g;
 	$l = lc($l);
-	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
+	$l =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if (exists($uctags->{$t})); ##-- implicitly upper-case NN, NE (in case e.g. 'NE' \in $xytags)
 	$m->{details} = $cache{$key} = {lemma=>$l,tag=>$t,details=>"*",prob=>0};
       }
     else
@@ -132,7 +144,7 @@ sub analyzeSentences {
 	  $ld0 = $ld;
 	  $a0  = $_;
 	}
-	$a0->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if ($t =~ /^N/); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
+	$a0->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if (exists($uctags->{$t})); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
 	$m->{details} = $cache{$key} = $a0;
       }
     $m->{lemma} = $m->{details}{lemma};

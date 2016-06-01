@@ -692,7 +692,7 @@ sub _am_tagh_fst2moota {
   my $taghvar = shift||'$_';
   return ("{details=>$taghvar\->{hi},"
 	  ." prob=>($taghvar\->{w}||0),"
-	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?((?:[A-Za-z0-9]+|\\\$[^\\]]+))\\]/ ? \$1 : $taghvar\->{hi})" ##-- allow e.g. [$(] tags from tokenizer!
+	  ." tag=>($taghvar\->{hi} =~ /\\[\\_?((?:[A-Za-z0-9\.]+|\\\$[^\\]]+))\\]/ ? \$1 : $taghvar\->{hi})" ##-- allow e.g. [$(] tags from tokenizer!
 	  ."} ##-- _am_tagh_fst2moota\n");
 }
 

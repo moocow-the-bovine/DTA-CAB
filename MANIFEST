@@ -66,6 +66,7 @@ CAB/Analyzer/Moot.pm
 CAB/Analyzer/Moot/Boltzmann.pm
 CAB/Analyzer/MootSub.pm
 CAB/Analyzer/Morph.pm
+CAB/Analyzer/Morph/Helsinki.pm
 CAB/Analyzer/Morph/Latin.pm
 CAB/Analyzer/Morph/Latin/BDB.pm
 CAB/Analyzer/Morph/Latin/Dict.pm

@@ -127,7 +127,9 @@ sub _analyzeGuts {
     if ($_->{tag} ? ($_->{tag} ne 'XY') : ($_->{hi} && $_->{hi}!~m/\[_XY\]/)) {
       $lemma = lc($lemma);
       $lemma =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g
-	if ($_->{tag} ? ($_->{tag}=~m/^N/) : ($_->{hi} && $_->{hi}=~m/\[_N/));
+	if (#$_->{tag} ? ($_->{tag}=~m/^N/) :  ##-- disabled 2016-06-01 for Helsinki-style english morphology; see ucTags key in Analyzer::MootSub
+	    ($_->{hi} && $_->{hi}=~m/\[_N/)
+	   );
     }
     $_->{$alab} = $lemma;
   }

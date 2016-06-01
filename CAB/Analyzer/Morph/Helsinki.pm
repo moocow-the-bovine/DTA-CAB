@@ -1,13 +1,14 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Morph.pm
+## File: DTA::CAB::Analyzer::Morph::Helsinki.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: morphological analysis via Gfsm automata
+## Description: morphological analysis via Gfsm automata, for use with Helsinki-style transducers
+## + transducers available in HFST format from https://sourceforge.net/projects/hfst/files/resources/morphological-transducers/
 
 ##==============================================================================
 ## Package: Analyzer::Morph
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph;
+package DTA::CAB::Analyzer::Morph::Helsinki;
 use DTA::CAB::Analyzer::Automaton::Gfsm;
 use Carp;
 use strict;
@@ -22,14 +23,9 @@ sub new {
 
 			      ##-- analysis selection
 			      label => 'morph',
-			      capsFallback => 1,
-			      qsFallback => 1,
 			      wantAnalysisLo => 0,
-			      #wantAnalysisLemma => 1, ##-- default=0
 			      wantAnalysisLemma => 0, ##-- default=0
-
-			      ##-- analysis selection
-			      #analyzeGet => '$_->{$lab} ? qw() : '._am_xlit; ##-- default
+			      tolower => 1,
 
 			      ##-- verbosity
 			      check_symbols => 0,
@@ -41,9 +37,42 @@ sub new {
 }
 
 ##==============================================================================
-## Analysis Formatting
+## Methods: Analysis: v1.x
 ##==============================================================================
 
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
+sub analyzeTypes {
+  my ($aut,$doc,$types,$opts) = @_;
+  return if (!$aut->SUPER::analyzeTypes($doc,$types,$opts));
+
+  ##-- post-process: simulate TAGH-notation
+  my $label = $aut->{label};
+  my $null  = [];
+  my ($w,$a,$hi,$tag,$lemma);
+  foreach $w (values %$types) {
+    foreach $a (@{$w->{$label}//$null}) {
+      $hi = $a->{hi};
+      if ($hi =~ /((?:\[\+[^\]]+\])+)$/) {
+	$tag   = $1;
+	$lemma = substr($hi, 0, length($hi)-length($tag));
+	$tag   = join('.', ($tag =~ /\[\+([^\]]+)\]/g));
+      }
+      elsif ($hi =~ /^(.*?)\[[<_]?([^\]\s\>\\]+)(?:\\?[\]\s\>])/) {
+	($lemma,$tag) = ($1,$2);
+      }
+      else {
+	($lemma,$tag) = ('','');
+      }
+      $lemma =~ s/(?:\[[^\+\]]*\]|\\)//g;
+      $lemma =~ s/\[([A-Z]+)\+\]/lc($1)."+"/eg;
+      $lemma =~ s/\[\+([A-Z]+)\]/"~".lc($1)/eg;
+      $a->{hi} = "$lemma\[_$tag]=$hi" if ($lemma || $tag);
+    }
+  }
+
+  return $doc;
+}
 
 1; ##-- be happy
 
@@ -70,9 +99,9 @@ DTA::CAB::Analyzer::Morph - morphological analysis via Gfsm automata
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Morph;
+ use DTA::CAB::Analyzer::Morph::Helsinki;
  
- $morph = DTA::CAB::Analyzer::Morph->new(%args);
+ $morph = DTA::CAB::Analyzer::Morph::Helsinki->new(%args);
  $morph->analyze($tok);
 
 =cut
@@ -84,13 +113,16 @@ DTA::CAB::Analyzer::Morph - morphological analysis via Gfsm automata
 =head1 DESCRIPTION
 
 DTA::CAB::Analyzer::Morph
-is a just a simplified wrapper for
+a simplified wrapper for
 L<DTA::CAB::Analyzer::Automaton::Gfsm|DTA::CAB::Analyzer::Automaton::Gfsm>
 which sets the following default options:
 
  ##-- analysis selection
  label => 'morph',        ##-- analysis output property
  wantAnalysisLo => 0,     ##-- don't output lower label paths
+ tolower => 1,            ##-- bash input to lower-case
+
+It also adds TAGH-style tag-extraction post-processing in its analyzeTypes() method.
 
 =cut
 
@@ -109,10 +141,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.4 or,
+it under the same terms as Perl itself, either Perl version 5.14.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
