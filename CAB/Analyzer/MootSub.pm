@@ -68,7 +68,7 @@ sub analyzeSentences {
   foreach my $lkey (grep {defined($asub->{$_})} qw(xyTags ucTags)) {
     $asub->{$lkey} = [split(' ',$asub->{$lkey})] if (!ref($asub->{$lkey}));
     $asub->{$lkey} = {map {($_=>undef)} @{$asub->{$lkey}}} if (!UNIVERSAL::isa($asub->{$lkey},'HASH'));
-    $asub->trace("$lkey = ".join(' ', sort keys %{$asub->{$lkey}}));
+    #$asub->trace("$lkey = ".join(' ', sort keys %{$asub->{$lkey}})); ##-- DEBUG
   }
 
   ##-- common variables
@@ -153,7 +153,7 @@ sub analyzeSentences {
 	  $ld0 = $ld;
 	  $a0  = $_;
 	}
-	print STDERR "$tok->{text}:\n", map {"\t$_ : $l2d{$_}\n"} sort keys %l2d;
+	#print STDERR "$tok->{text}:\n", map {"\t$_ : $l2d{$_}\n"} sort keys %l2d; ##-- DEBUG
 
 	$a0->{lemma} =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g if (exists($uctags->{$t})); ##-- implicitly upper-case lemmata NN, NE (in case e.g. 'NE')
 	$m->{details} = $cache{$key} = $a0;

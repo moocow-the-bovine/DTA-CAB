@@ -43,6 +43,7 @@ my $use_dmoot=$moot->{use_dmoot};
 my $moot_lang=$moot->{lang};
 my $xpne=$moot->{xpne};
 my $xpfm=$moot->{xpfm};
+my $fmtag=$moot->{fmtag};
 my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
 sub {
  $s     = $_;
@@ -52,11 +53,11 @@ sub {
    $mw->{text} = (defined($mw->{word}) ? $mw->{word} : '._am_tag('($use_dmoot ? $_->{dmoot} : undef)', _am_xlit).') if (!defined($mw->{text}));
    $mw->{text} = lc($mw->{text}) if ($lctext);
    $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers)Name)\b/i); #place
-   $mw->{analyses} = [{tag=>"FM",details=>"FM.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
+   $mw->{analyses} = [{tag=>$fmtag,details=>"$fmtag.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
    $val = undef; ##-- temporary for _am_tagh_moota_uniq()
    $mw->{analyses} = ['._am_tagh_list2moota_uniq('map {$_ ? @$_ : qw()}
 			    @$w{qw(mlatin tokpp toka)},
-                            ($use_dmoot && $w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
+                            ($use_dmoot && $w->{xlit} && !$w->{xlit}{isLatinExt} ? [$fmtag, "XY"] : qw()),
 			    ($use_dmoot && $w->{dmoot} ? $w->{dmoot}{morph}
                              : ($w->{morph}, ($w->{rw} ? (map {$_->{morph}} @{$w->{rw}}) : qw())))'
 			   ).'
@@ -73,15 +74,15 @@ sub {
 
  ##-- language-guesser hack
  if ($moot_lang && ($lang=$s->{lang}) && $lang ne $moot_lang) {
-   $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+   $_->{tag} = "$fmtag.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
  }
 
  foreach (@$msent) {
    $_->{word}=$_->{text};
    delete($_->{text});
-   $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));
-   $_->{tag}="NE" if ($xpne && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "NE.xp");
-   $_->{tag}="FM" if ($xpfm && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "FM.xp");
+   #$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""})); ##-- do NOT translate output tags (breaks en-wsj, 2016-06-09)
+   $_->{tag}="NE"   if ($xpne && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "NE.xp");
+   $_->{tag}=$fmtag if ($xpfm && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "FM.xp");
    if ($prune) {
      $t = $_->{tag}//"";
      @{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
@@ -115,6 +116,7 @@ sub {
 ##     xpne        => $bool,     ##-- if true, force 'NE' tags whenever $w->{xp} =~ /\b(?:pers)Name\b/i (default=true) #NOT 'placeName', the tags are often appositions
 ##     xpfm        => $bool,     ##-- if true, force 'FM' tags whenever $w->{xp} =~ /\bforeign\b/i (default=true)
 ##     lang        => $lang,     ##-- only tag sentences marked as language "$lang"; read from global analyzer options as "${lab}.lang" (default='de')
+##     fmtag       => $fmtag,    ##-- prefix for "foreign-material" tags; default='FM'
 ##
 ##     ##-- Analysis Objects
 ##     hmm         => $hmm,   ##-- a moot::HMM object
@@ -147,6 +149,7 @@ sub new {
 			       lang => 'de',
 			       xpne => 1,
 			       xpfm => 1,
+			       fmtag => 'FM',
 
 			       #analyzeCostFuncs => {},
 			       #requireAnalyses => 0,
@@ -375,7 +378,7 @@ sub analysisCode {
 sub analysisCodeDEBUG {
   my $anl = shift;
 
- ## copy+paste from debugger "print $DEFAULT_ANALYZE_CODE" after breaking first e.g. in analysisCode() above
+  ## copy+paste from debugger "print $DEFAULT_ANALYZE_CODE" after breaking first e.g. in analysisCode() above
   package DTA::CAB::Analyzer::Moot;
   my $moot=$anl;
   my $lab =$moot->{label};
@@ -387,18 +390,23 @@ sub analysisCodeDEBUG {
   my $notag=$moot->{notag};
   my $use_dmoot=$moot->{use_dmoot};
   my $moot_lang=$moot->{lang};
+  my $xpne=$moot->{xpne};
+  my $xpfm=$moot->{xpfm};
+  my $fmtag=$moot->{fmtag};
   my ($s,$msent,$w,$mw,$t,$at,$lang,$val);
   sub {
     $s     = $_;
     $msent = [map {
       $w  = $_;
       $mw = $w->{$lab} = $w->{$lab} ? {%{$w->{$lab}}} : ($w->{$lab}={}); ##-- copy $w->{moot} if present
-      $mw->{text} = (defined($mw->{word}) ? $mw->{word} : (($use_dmoot ? $_->{dmoot} : undef) ? $_->{dmoot}->{tag} : ($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}) ##== _am_xlit
+      $mw->{text} = (defined($mw->{word}) ? $mw->{word} : (($use_dmoot ? $_->{dmoot} : undef) ? ($use_dmoot ? $_->{dmoot} : undef)->{tag} : ($_->{xlit} ? $_->{xlit}{latin1Text} : $_->{text}) ##== _am_xlit
 							  ) ##== _am_tag
 		    ) if (!defined($mw->{text}));
       $mw->{text} = lc($mw->{text}) if ($lctext);
+      $mw->{analyses} = [{tag=>"NE",details=>"NE.xp",prob=>0}] if ($xpne && ($w->{xp}//"") =~ /\b((?:pers)Name)\b/i); #place
+      $mw->{analyses} = [{tag=>$fmtag,details=>"${fmtag}.xp",prob=>0}] if ($xpfm && ($w->{xp}//"") =~ /\bforeign\b/i);
       $val = undef;	      ##-- temporary for _am_tagh_moota_uniq()
-      $mw->{analyses} = [(map {$val && $val->{details} eq $_->{details} ? qw() : ($val=$_)} sort {($a->{details}//"") cmp ($b->{details}//"") || ($a->{prob}//0) <=> ($b->{prob}//0)} (map {{details=>$_->{hi}, prob=>($_->{w}||0), tag=>($_->{hi} =~ /\[\_?((?:[A-Za-z0-9]+|\$[^\]]+))\]/ ? $1 : $_->{hi})} ##-- _am_tagh_fst2moota
+      $mw->{analyses} = [(map {$val && $val->{details} eq $_->{details} ? qw() : ($val=$_)} sort {($a->{details}//"") cmp ($b->{details}//"") || ($a->{prob}//0) <=> ($b->{prob}//0)} (map {{details=>$_->{hi}, prob=>($_->{w}||0), tag=>($_->{hi} =~ /\[\_?((?:[A-Za-z0-9.]+|\$[^\]]+))\]/ ? $1 : $_->{hi})} ##-- _am_tagh_fst2moota
 																							  } map {ref($_) ? $_ : {hi=>$_}} map {$_ ? @$_ : qw()}
 																						       @$w{qw(mlatin tokpp toka)},
 																						       ($use_dmoot && $w->{xlit} && !$w->{xlit}{isLatinExt} ? [qw(FM XY)] : qw()),
@@ -419,13 +427,15 @@ sub analysisCodeDEBUG {
 
     ##-- language-guesser hack
     if ($moot_lang && ($lang=$s->{lang}) && $lang ne $moot_lang) {
-      $_->{tag} = "FM.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+      $_->{tag} = "$fmtag.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
     }
 
     foreach (@$msent) {
       $_->{word}=$_->{text};
       delete($_->{text});
-      $_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));
+      #$_->{tag}=$t if (defined($t=$tagx->{$_->{tag}//""}));	##-- don't translate output tags (breaks en-wsj, 2016-06-09)
+      $_->{tag}="NE" if ($xpne && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "NE.xp");
+      $_->{tag}="FM" if ($xpfm && $_->{analyses} && $_->{analyses}[0] && $_->{analyses}[0]{details} eq "FM.xp");
       if ($prune) {
 	$t = $_->{tag}//"";
 	@{$_->{analyses}} = grep {$_->{tag} eq $t} @{$_->{analyses}};
@@ -433,7 +443,6 @@ sub analysisCodeDEBUG {
     }
   }
 }
-
 
 1; ##-- be happy
 
