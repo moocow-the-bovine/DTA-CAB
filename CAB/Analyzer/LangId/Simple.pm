@@ -77,7 +77,10 @@ sub analyzeTypes {
       elsif ($_->{text} =~ /[[:alpha:]]{2,}/ && $_->{text} !~ /\p{Latin}/) { push(@l,'xy'); } ##-- combination of latin and non-latin characters
     }
     if    ($_->{text} =~ /[\p{InMathematicalOperators}]/) { push(@l,'xy'); }
-    elsif ($_->{text} =~ /[[:alpha:]](?:.?)[[:digit:]]/) { push(@l,'xy'); }
+    elsif ($_->{text} =~ /[[:alpha:]](?:.?)[[:digit:]]/ && $_->{text} !~ m{^[a-zA-Z]+://}) {
+      ##-- don't treat links as 'xy' specials
+      push(@l,'xy');
+    }
 
     ##-- latin: use {mlatin}, but don't count known NE; workaround for mantis bug #6737
     push(@l, 'la') if ($_->{mlatin} && (!$_->{morph} || !grep {$_->{hi} =~ /\[_NE\]/} @{$_->{morph}}));
