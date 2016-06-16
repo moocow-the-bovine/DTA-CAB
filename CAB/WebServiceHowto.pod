@@ -460,9 +460,45 @@ a good idea when using single-token queries or pre-tokenized documents, since it
 ## Analysis Chains: Date-optimized
 =pod
 
-=head3 Date Optimization
+=head3 Date-optimized Analysis
 
-As of DTA::CAB v1.78, the default L<DTA analysis chain|DTA::CAB::Chain::DTA>
+As of DTA::CAB v1.78, the L<DTA Dispatcher|DTA::CAB::Chain::DTA>
+includes specialized L<rewrite models|DTA::CAB::Chain::DTA/rw>
+(C<rw.1600-1700>, C<rw.1700-1800>, C<rw.1800-1900>),
+and the L<DTA Dispatcher|DTA::CAB::Chain::DTA/setupChains>
+provides high-level chains
+C<norm.1600-1700>, C<norm1.1600-1700>, etc. using these models
+instead of the default "generic" rewrite cascade (C<rw>)
+to provide canonicalization hypotheses for unknown words.
+The weights for these specialized models
+were trained on a modest number of manually assigned canonicalization pairs
+from the period in question
+extracted from the L<CabErrorDb|http://kaskade.dwds.de/caberr/>
+error database (4,000-8,000 pair types per model), and may provide a slight
+improvement in canonicalization accuracy with respect to the generic model,
+provided that you specify the appropriate analysis chain ("Analyzer") in your request.
+Compare for example the outputs of the various chains for the input forms
+I<avf>, I<Auffichten>, and I<Büberchens>:
+
+=over 4
+
+=item *
+
+L<generic|http://www.deutschestextarchiv.de/demo/cab/?a=default1&q=avf%20Auffichten%20B%C3%BCberchens>
+
+=item *
+
+L<1600-1700|http://www.deutschestextarchiv.de/demo/cab/?a=default1.1600-1700&q=avf%20Auffichten%20B%C3%BCberchens>
+
+=item *
+
+L<1700-1800|http://www.deutschestextarchiv.de/demo/cab/?a=default1.1700-1800&q=avf%20Auffichten%20B%C3%BCberchens>
+
+=item *
+
+L<1800-1900|http://www.deutschestextarchiv.de/demo/cab/?a=default1.1800-1900&q=avf%20Auffichten%20B%C3%BCberchens>
+
+=back
 
 =cut
 
