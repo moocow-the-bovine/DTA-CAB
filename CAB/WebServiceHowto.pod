@@ -465,12 +465,11 @@ a good idea when using single-token queries or pre-tokenized documents, since it
 As of DTA::CAB v1.78, the L<DTA Dispatcher|DTA::CAB::Chain::DTA>
 includes specialized L<rewrite models|DTA::CAB::Chain::DTA/rw>
 (C<rw.1600-1700>, C<rw.1700-1800>, C<rw.1800-1900>),
-and the L<DTA Dispatcher|DTA::CAB::Chain::DTA/setupChains>
-provides high-level chains
-C<norm.1600-1700>, C<norm1.1600-1700>, etc. using these models
+and provides a number of L<high-level convenience chains|DTA::CAB::Chain::DTA/setupChains>
+(C<norm.1600-1700>, C<norm1.1600-1700>, etc.) using these models
 instead of the default "generic" rewrite cascade (C<rw>)
 to provide canonicalization hypotheses for unknown words.
-The weights for these specialized models
+The weights for the specialized rewrite models
 were trained on a modest number of manually assigned canonicalization pairs
 from the period in question
 extracted from the L<CabErrorDb|http://kaskade.dwds.de/caberr/>
