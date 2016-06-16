@@ -199,8 +199,14 @@ sub setupChains {
 
   ##-- date-dependent chains
   foreach my $rng (@RW_RANGES) {
-    foreach my $key (qw(norm norm1 lemma lemma1 default default1 expand)) {
-      $chains->{"$key.$rng"} = [map {$_ eq $ach->{rw} ? $ach->{"rw.$rng"} : $_} @{$chains->{$key}}];
+    if ($ach->{"rw.$rng"} && ($ach->{"rw.$rng"}{enabled}//1)) {
+      foreach my $key (qw(norm norm1 lemma lemma1 default default1 expand)) {
+	$chains->{"$key.$rng"} = [map {$_ eq $ach->{rw} ? $ach->{"rw.$rng"} : $_} @{$chains->{$key}}];
+      }
+    } else {
+      $ach->warn("optimized rewrite cascade rw.$rng not available: disabling derived chains for range $rng");
+      delete $ach->{"rw.$rng"};
+      delete $chains->{"sub.rw.$rng"};
     }
   }
 
