@@ -44,6 +44,9 @@ use strict;
 ##==============================================================================
 our @ISA = qw(DTA::CAB::Chain::Multi);
 
+## supported date-optimized rewrite-ranges
+our @RW_RANGES = qw(1600-1700 1700-1800 1800-1900);
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -66,6 +69,7 @@ sub new {
      mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
      msafe => DTA::CAB::Analyzer::MorphSafe->new(),
      rw    => DTA::CAB::Analyzer::Rewrite->new(),
+     (map {("rw.$_" => DTA::CAB::Analyzer::Rewrite->new())} @RW_RANGES),
      rwsub => DTA::CAB::Analyzer::RewriteSub->new(),
      ##
      eqphox => DTA::CAB::Analyzer::EqPhoX->new(),
@@ -193,6 +197,13 @@ sub setupChains {
   $chains->{'default1'} = $chains->{lemma1} = $chains->{'norm1'};
   $chains->{'expand'}   = $chains->{'expand.all'};
 
+  ##-- date-dependent chains
+  foreach my $rng (@RW_RANGES) {
+    foreach my $key (qw(norm norm1 lemma lemma1 default default1 expand)) {
+      $chains->{"$key.$rng"} = [map {$_ eq $ach->{rw} ? $ach->{"rw.$rng"} : $_} @{$chains->{$key}}];
+    }
+  }
+
   ##-- sanitize chains
   foreach (values %{$ach->{chains}}) {
     @$_ = grep {ref($_)} @$_;
@@ -203,7 +214,7 @@ sub setupChains {
 
   ##-- force default labels
   foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach)) {
-    next if ($_ =~ /^(?:langid)$/);       ##-- keep these labels
+    next if ($_ =~ /^(?:langid|rw\.[0-9\-]+)$/);    ##-- keep these labels
     ($ach->{$_}{label} = $_) =~ s/1$//;   ##-- truncate '1' suffix for label (e.g. dmoot1, moot1)
   }
   return $ach;
