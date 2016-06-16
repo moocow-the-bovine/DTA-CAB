@@ -457,6 +457,17 @@ a good idea when using single-token queries or pre-tokenized documents, since it
 =cut
 
 ##========================================================================
+## Analysis Chains: Date-optimized
+=pod
+
+=head3 Date Optimization
+
+As of DTA::CAB v1.78, the default L<DTA analysis chain|DTA::CAB::Chain::DTA>
+
+=cut
+
+
+##========================================================================
 ## Analysis Chains: Format Conversion
 =pod
 

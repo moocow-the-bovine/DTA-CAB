@@ -479,6 +479,8 @@ a L<DTA::CAB::Analyzer::MorphSafe|DTA::CAB::Analyzer::MorphSafe> object.
 Weighted finite-state rewrite cascade,
 a L<DTA::CAB::Analyzer::Rewrite|DTA::CAB::Analyzer::Rewrite> object.
 
+Date-optimized variants C<rw.1600-1700>, C<rw.1700-1800>, and C<rw.1800-1900> may also be included.
+
 =item rwsub
 
 Post-processing for rewrite cascade,
@@ -595,6 +597,10 @@ non-trivial chains:
  'clean'          =>[@$ach{qw(clean)}],
  ##
  'null'           =>[$ach->{null}],
+
+High-level date-optimized chains C<norm.RNG>, C<norm1.RNG>, C<lemma.RNG>, C<lemma1.RNG>, C<default.RNG>, and C<expand.RNG>
+are also defined using the date-optimized rewrite cascade C<rw.RNG> in place of the default "generic" cascade C<rw>
+for each range I<RNG> in C<1600-1700>, C<1700-1800>, and C<1800-1900>.
 
 =item ensureLoaded
 
