@@ -53,6 +53,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     ##-- forking
 ##     forkOnGet => $bool,	    ##-- fork() handler for HTTP GET requests? (default=0)
 ##     forkOnPost => $bool,	    ##-- fork() handler for HTTP POST requests? (default=1)
+##     forkMax => $n,		    ##-- maximum number of subprocess to spwan (default=4; 0~no limit)
 ##     children => \%pids,	    ##-- child PIDs
 ##     pid => $pid,		    ##-- PID of parent server process
 ##     ##
@@ -112,6 +113,7 @@ sub new {
 			   children => {},
 			   forkOnGet => 0,
 			   forkOnPost => 1,
+			   forkMax => 4,
 
 			   ##-- logging
 			   logRegisterPath => 'info',
@@ -198,7 +200,7 @@ sub run {
   ##  + following suggestion on http://www.perlmonks.org/?node_id=580411
   $SIG{PIPE} = sub { $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
 
-  my ($csock,$chost,$hreq,$urikey,$cacheable,$handler,$localPath,$pid,$rsp);
+  my ($csock,$chost,$hreq,$urikey,$forkable,$cacheable,$handler,$localPath,$pid,$rsp);
   while (1) {
     ##-- call accept() within the loop to avoid breaking out in fork mode
     if (!defined($csock=$daemon->accept())) {
@@ -257,6 +259,11 @@ sub run {
       next;
     }
 
+    ##-- check whether we can fork for this request (by default only for POST)
+    $forkable = ($mode eq 'fork'
+		 && $srv->{"forkOn".ucfirst(lc($hreq->method))}
+		 && (!$srv->{forkMax} || scalar(keys %{$srv->{children}}) < $srv->{forkMax}));
+
     ##-- check cache (GET requests only)
     $cacheable = ($srv->{cache}
 		  && $hreq->method eq 'GET'
@@ -272,8 +279,8 @@ sub run {
 	next;
       }
 
-    ##-- maybe fork (request-type sensitive; by default only for POST)
-    $pid = ($mode eq 'fork' && $srv->{"forkOn".ucfirst(lc($hreq->method))} ? fork() : undef);
+    ##-- maybe fork
+    $pid = $forkable ? fork() : undef;
     if ($pid) {
       ##-- parent code
       $srv->{children}{$pid} = undef;
@@ -296,6 +303,7 @@ sub run {
 
     ##-- maybe cache response
     if ($cacheable
+	&& !$forkable ##-- no caching if we're forked
 	&& ($hreq->header('Cache-Control')||'') !~ /\bno-store\b/)
       {
 	if (!defined($srv->{cacheLimit}) || length(${$rsp->content_ref}) <= $srv->{cacheLimit}) {
