@@ -585,19 +585,37 @@ and supports the L<DTA::CAB::Server|DTA::CAB::Server> API.
   cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object (for XML-RPC handlers)
   xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1,logRegisterProc=>'off'})
   ##
+  ##-- caching
+  cacheSize  => $nelts,         ##-- maximum number of responses to cache (default=1024; undef for no cache)
+  cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=undef: no limit)
+  cache      => $lruCache,      ##-- response cache: (key = $url, value = $response), a DTA::CAB::Cache::LRU object
+  ##
   ##-- security
-  #allowUserOptions => $bool,   ##-- allow client-specified analysis options? (default: true)
+  allowUserOptions => $bool,   ##-- allow client-specified analysis options? (default: true)
   allow => \@allow_ip_regexes, ##-- allow queries from these clients (default=none)
   deny  => \@deny_ip_regexes,  ##-- deny queries from these clients (default=none)
   _allow => $allow_ip_regex,   ##-- single allow regex (compiled by 'prepare()')
   _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
+  maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
+  ##
+  ##-- forking
+  forkOnGet => $bool,	    ##-- fork() handler for HTTP GET requests? (default=0)
+  forkOnPost => $bool,	    ##-- fork() handler for HTTP POST requests? (default=1)
+  forkMax => $n,	    ##-- maximum number of subprocess to spwan (default=4; 0~no limit)
+  children => \%pids,	    ##-- child PIDs
+  pid => $pid,		    ##-- PID of parent server process
   ##
   ##-- logging
+  logRegisterPath => $level,   ##-- log registration of path handlers at $level (default='info')
   logAttempt => $level,        ##-- log connection attempts at $level (default=undef: none)
   logConnect => $level,        ##-- log successful connections (client IP and requested path) at $level (default='debug')
   logRquestData => $level,     ##-- log full client request data at $level (default=undef: none)
+  logResponse => $level,       ##-- log full client response at $level (default=undef: none)
+  logCache => $level,          ##-- log cache hit data at $level (default=undef: none)
   logClientError => $level,    ##-- log errors to client at $level (default='debug')
   logClose => $level,          ##-- log close client connections (default=undef: none)
+  logReap => $level,           ##-- log harvesting of child pids (default=undef: none)
+  logSpawn => $level,          ##-- log spawning of child pids (default=undef: none)
   ##
   ##-- (inherited from DTA::CAB::Server)
   as  => \%analyzers,    ##-- ($name=>$cab_analyzer_obj, ...)
@@ -758,10 +776,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by Bryan Jurish
+Copyright (C) 2010-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
