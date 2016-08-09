@@ -51,6 +51,8 @@ our @ISA = qw(DTA::CAB::Server);
 ##     maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
 ##     ##
 ##     ##-- forking
+##     forkOnGet => $bool,	    ##-- fork() handler for HTTP GET requests? (default=0)
+##     forkOnPost => $bool,	    ##-- fork() handler for HTTP POST requests? (default=1)
 ##     children => \%pids,	    ##-- child PIDs
 ##     pid => $pid,		    ##-- PID of parent server process
 ##     ##
@@ -105,6 +107,11 @@ sub new {
 			   _allow => undef,
 			   _deny  => undef,
 			   maxRequestSize => undef,
+
+			   ##-- forking
+			   children => {},
+			   forkOnGet => 0,
+			   forkOnPost => 1,
 
 			   ##-- logging
 			   logRegisterPath => 'info',
@@ -265,8 +272,8 @@ sub run {
 	next;
       }
 
-    ##-- maybe fork (POST requests only)
-    $pid = ($mode eq 'fork' && $hreq->method eq 'POST' ? fork() : undef);
+    ##-- maybe fork (request-type sensitive; by default only for POST)
+    $pid = ($mode eq 'fork' && $srv->{"forkOn".ucfirst(lc($hreq->method))} ? fork() : undef);
     if ($pid) {
       ##-- parent code
       $srv->{children}{$pid} = undef;
