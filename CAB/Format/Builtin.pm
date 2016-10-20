@@ -22,6 +22,7 @@ use DTA::CAB::Format::Text;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Format::TJ;     ##-- tt-like with json-encoded token data
 use DTA::CAB::Format::ExpandList; ##-- flat tt-like expansion list, for DDC
+use DTA::CAB::Format::LemmaList; ##-- flat tt-like lemma-list, for DDC
 use DTA::CAB::Format::YAML;
 use DTA::CAB::Format::JSON;
 use DTA::CAB::Format::XmlCommon;

@@ -107,6 +107,7 @@ CAB/Format/Builtin.pm
 CAB/Format/CSV.pm
 CAB/Format/CSV1g.pm
 CAB/Format/ExpandList.pm
+CAB/Format/LemmaList.pm
 CAB/Format/JSON.pm
 CAB/Format/Null.pm
 CAB/Format/Perl.pm

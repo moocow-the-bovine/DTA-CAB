@@ -4,11 +4,11 @@
 ## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: Datum parser: verbose human-readable text
 
-package DTA::CAB::Format::ExpandList;
+package DTA::CAB::Format::LemmaList;
 use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
+use DTA::CAB::Format::ExpandList;
 use DTA::CAB::Datum ':all';
-use DTA::CAB::Utils ':data'; ##-- path_value()
 use IO::File;
 use Encode qw(encode decode);
 use Carp;
@@ -18,14 +18,11 @@ use strict;
 ## Globals
 ##==============================================================================
 
-our @ISA = qw(DTA::CAB::Format::TT);
+our @ISA = qw(DTA::CAB::Format::ExpandList);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/);
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xl');
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xlist');
-  #DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[[qw(moot lemma)]]})
-  #    foreach (qw(LemmaList llist ll lemmata lemmas lemma));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
+      foreach (qw(LemmaList llist ll lemmata lemmas lemma));
 }
 
 ##==============================================================================
@@ -42,7 +39,9 @@ BEGIN {
 ##     level    => $formatLevel,      ##-- output formatting level:
 ##				      ##   0:TAB-separated (default); 1:sorted,NEWLINE-separated; 2:sorted,NEWLINE+TAB separated
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
-##     keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)])
+##     keys      => \@expandKeys,      ##-- IGNORED: keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)])
+##     ftagre    => $ftagre,          ##-- regex matching function-word tags (default: for STTS)
+##
 ##
 ##     ##---- Common
 ##     utf8  => $bool,                 ##-- default: 1
@@ -51,8 +50,11 @@ BEGIN {
 ## + inherited from DTA::CAB::Format::TT
 sub new {
   my $that = shift;
-  my $obj  = $that->SUPER::new(keys=>[qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)],@_);
-  $obj->{keys} = [grep {($_//'') ne ''} split(/[\s\,]+/, $obj->{keys})] if (!ref($obj->{keys}));
+  my $obj  = $that->SUPER::new(
+			       keys=>[],
+			       ftagre=>'^(?:[CKP\$]|A[PR]|V[AM])',
+			       @_);
+
   return $obj;
 }
 
@@ -63,6 +65,10 @@ sub new {
 ## @keys = $class_or_obj->noSaveKeys()
 ##  + returns list of keys not to be saved: qw(doc outbuf)
 ##  + inherited from DTA::CAB::Format::TT
+sub noSaveKeys {
+  my $that = shift;
+  return ($that->SUPER::noSaveKeys(), 'ftagre');
+}
 
 ##==============================================================================
 ## Methods: Input
@@ -110,7 +116,7 @@ sub mimeType { return 'text/plain'; }
 
 ## $ext = $fmt->defaultExtension()
 ##  + returns default filename extension for this format
-sub defaultExtension { return '.xl'; }
+sub defaultExtension { return '.ll'; }
 
 ##--------------------------------------------------------------
 ## Methods: Output: output selection
@@ -126,32 +132,32 @@ sub putToken {
   my $sep = ($level>=2 ? "\n\t"
 	     : ($level>=1 ? "\n"
 		: "\t"));
-  my @words = (
-	       grep {defined($_) && $_ ne ''}
-	       map {
-		 (UNIVERSAL::isa($_,'HASH')
-		  ? (exists($_->{hi})
-		     ? $_->{hi}
-		     : (exists($_->{latin1Text}) ? $_->{latin1Text} : $_))
-		  : $_)
-	       }
-	       map {UNIVERSAL::isa($_,'ARRAY') ? @$_ : $_}
-	       map {path_value($tok,$_)}
-	       @{$fmt->{keys}}
-	      );
+  my $ftagre = $fmt->{ftagre};
+  $ftagre = qr{$ftagre} if (!ref($ftagre));
 
-  $fmt->{fh}->print(join($sep, ($level > 0 ? sort(@words) : @words)), "\n");
+  return $fmt if (!$tok->{moot});
+  my (@lemmas);
+
+  if ($tok->{moot}{tag} =~ $ftagre) {
+    ##-- function word: return all lemmata
+    @lemmas = (
+	       grep {defined($_) && $_ ne ''}
+	       map { $_->{lemma} }
+	       $tok->{moot},
+	       @{$tok->{moot}{analyses}//[]}
+	      );
+  } else {
+    ##-- lexical word: return only best lemma
+    @lemmas = ($tok->{moot}{lemma});
+  }
+
+  $fmt->{fh}->print(join($sep, ($level > 0 ? sort(@lemmas) : @lemmas)), "\n");
   return $fmt;
 }
 
 ## $fmt = $fmt->putSentence($sent)
 ##  + concatenates formatted tokens *without* any sentence-comments
-sub putSentence {
-  my ($fmt,$sent) = @_;
-  $fmt->putToken($_) foreach (@{toSentence($sent)->{tokens}});
-  $fmt->{fh}->print("\n");
-  return $fmt;
-}
+##  + INHERITED fromk ExpandList
 
 
 1; ##-- be happy
@@ -169,7 +175,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Format::ExpandList - Datum I/O: expansion list for use with DDC
+DTA::CAB::Format::LemmaLlist - Datum I/O: lemma-list for use with DDC
 
 =cut
 
@@ -179,7 +185,7 @@ DTA::CAB::Format::ExpandList - Datum I/O: expansion list for use with DDC
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Format::ExpandList;
+ use DTA::CAB::Format::LemmaList;
  
  ##========================================================================
  ## Methods: Constructors etc.
@@ -202,16 +208,16 @@ DTA::CAB::Format::ExpandList - Datum I/O: expansion list for use with DDC
 
 =head1 DESCRIPTION
 
-DTA::CAB::Format::ExpandList
+DTA::CAB::Format::LemmaList
 is a L<DTA::CAB::Format|DTA::CAB::Format> subclass
 intended for use in a CAB HTTP server as a CAB-class term expander for the DDC corpus query engine.
-As for L<DTA::CAB::Format::TT|DTA::CAB::Format::TT> (from which this class inherits),
+As for L<DTA::CAB::Format::ExpandList|DTA::CAB::Format::ExpandList> (from which this class inherits),
 each token is represented by a single line and sentence boundaries
 are represented by blank lines.  Token lines have the format:
 
- ORIG_TEXT   EQUIVALENT(s)...
+ ORIG_TEXT   LEMMA(s)...
 
-Where C<EQUIVALENT(s)> is a list of TAB-separated equivalent forms as determined
+Where C<LEMMA(s)> is a list of TAB-separated lemma form(s) as determined
 by the analysis phase.
 
 
@@ -239,7 +245,7 @@ Recognized %args:
                                  ##   0: TAB-separated (default)
                                  ##   1: sorted, NEWLINE-separated
                                  ##   2: sorted, NEWLINE+TAB-separated
- keys      => \@expandKeys,      ##-- keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi)])
+ftagre    => $ftagre,            ##-- regex matching function-word tags (default: for STTS)
  
  ##---- Common
  utf8  => $bool,                 ##-- default: 1
@@ -294,7 +300,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2014 by Bryan Jurish
+Copyright (C) 2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,
