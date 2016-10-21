@@ -132,7 +132,7 @@ sub putToken {
   my $sep = ($level>=2 ? "\n\t"
 	     : ($level>=1 ? "\n"
 		: "\t"));
-  my $cctagre = $fmt->{cctagre};
+  my $cctagre = $fmt->{cctagre} // '';
   $cctagre = qr{$cctagre} if (!ref($cctagre));
 
   return $fmt if (!$tok->{moot});
