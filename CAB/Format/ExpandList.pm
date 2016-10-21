@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Format::ExpandList.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: Datum parser: verbose human-readable text
+## Description: Datum formatter: expansion list for use with DDC
 
 package DTA::CAB::Format::ExpandList;
 use DTA::CAB::Format;
@@ -24,8 +24,8 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xl');
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'xlist');
-  #DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[[qw(moot lemma)]]})
-  #    foreach (qw(LemmaList llist ll lemmata lemmas lemma));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{keys=>[[qw(moot lemma)]]})
+      foreach (qw(BestLemmaList BestLemma bllist bll bl bestlemma blemma lemma));
 }
 
 ##==============================================================================
@@ -294,10 +294,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2014 by Bryan Jurish
+Copyright (C) 2011-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
@@ -307,8 +307,8 @@ L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
 L<DTA::CAB::Format::TT(3pm)|DTA::CAB::Format::TT>,
 L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
-L<ddc_opt(3pm)|ddc_opt>,
-L<ddc_proto(3pm)|ddc_proto>,
+L<ddc_opt(5)|ddc_opt>,
+L<ddc_proto(5)|ddc_proto>,
 L<perl(1)|perl>,
 ...
 
