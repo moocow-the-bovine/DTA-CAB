@@ -1412,6 +1412,7 @@ registerd as:
 
  name=>__PACKAGE__, short=>'xl', filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/
 
+
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
@@ -1427,12 +1428,14 @@ Registered as:
 
  name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/
 
+
 =item L<DTA::CAB::Format::LemmaList|DTA::CAB::Format::LemmaList>
 
 Formatter for runtime term lemmatization, for use e.g. with
 DDC L<Cab Expander|http://odo.dwds.de/~moocow/software/ddc/ddc_opt.html#Cab>.
 
  name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/
+
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
 
@@ -1451,7 +1454,7 @@ Registered as:
 =item L<DTA::CAB::Format::Raw|DTA::CAB::Format::Raw>
 
 Abstract input-only format for reading raw untokenized text,
-wraps L<DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP|DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP> by default.
+wraps L<DTA::CAB::Format::Raw:HTTP|DTA::CAB::Format::Raw:HTTP> by default.
 
 =item L<DTA::CAB::Format::Raw::HTTP|DTA::CAB::Format::Raw:HTTP>
 
