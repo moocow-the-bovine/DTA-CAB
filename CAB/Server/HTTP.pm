@@ -228,7 +228,7 @@ sub run {
     if ($bgConnectTimeout > 0) {
       vec(($fdset=""), $csock->fileno, 1) = 1;
       if (!select($fdset,undef,undef,$bgConnectTimeout)) {
-	$srv->vlog($srv->{logAttempt}, "no data on newly connected socket from client $chost");
+	$srv->vlog($srv->{logAttempt}, "ignoring background connection from client $chost");
 	#++$srv->{nErrors};
 	next;
       }
@@ -236,7 +236,6 @@ sub run {
 
     ##-- access control
     $srv->vlog($srv->{logAttempt}, "attempted connect from client $chost");
-    #$srv->vlog($srv->{logAttempt}, "peer=$chost:".$csock->peerport."\n".Data::Dumper->Dump([$csock, \%{*$csock}], ['csock','_csock'])); ##-- DEBUG
     if (!$srv->clientAllowed($csock,$chost)) {
       $srv->denyClient($csock);
       next;
