@@ -29,8 +29,9 @@ our $SVNID   = q(
 our ($help,$version);
 our $mp = 'Monitoring::Plugin';   ##-- later: object
 our $prog = basename($0);
-our $qmode = 'status';
+our $qmode = 'status'; ##-- 'status' or 'query'
 our $query = '';
+our $expect = ''; ##-- regex for expected response in 'query' mode
 
 our $timeout   = 30;
 our $time_warn =  5;
@@ -55,6 +56,7 @@ GetOptions(##-- general
 	   ##-- query mode
 	   'status|s' => sub { $qmode='status'; },
 	   'query|q=s' => sub { $qmode='query'; $query=$_[1]; },
+	   'expect|e=s' => \$expect,
 
 	   ##-- logging
 	   'verbose|v' => sub { ++$verbose; },
@@ -105,7 +107,8 @@ my $url    = shift(@ARGV);
 my ($geturl);
 if ($qmode eq 'status' && $url !~ /\bstatus\b/) {
   $geturl = "$url/status?f=json";
-} elsif ($qmode eq 'query') {
+}
+elsif ($qmode eq 'query') {
   $geturl  = "$url/query" if ($url !~ /\bquery\b/);
   $geturl .= ($url =~ /\?/ ? '&' : '?');
   my $qstr = $query;
@@ -143,10 +146,11 @@ my $status = {};
 my $rc  = OK;
 my $msg = '';
 if ($rsp->is_success) {
+  my $data = $rsp->decoded_content;
+  vmsg($vl_trace, "got response = ", $data);
+
   if ($qmode eq 'status') {
     ##-- status check
-    my $data = $rsp->decoded_content;
-    vmsg($vl_trace, "got response = ", $data);
     eval { $status = from_json($data); };
     die("$prog: failed to parse status response: $@") if (!$status);
 
@@ -163,14 +167,24 @@ if ($rsp->is_success) {
     ##-- get return message
     $msg = "$url - ${time}s ${memMB}MB";
   }
-  else {
+  elsif ($qmode eq 'query') {
     ##-- query check
+    $msg = "$url - ${time}s";
+    if ($expect) {
+      if ($data !~ /$expect/o) {
+	$rc = CRITICAL;
+	$msg = "$url - ERROR - pattern not found";
+      }
+    }
+  }
+  else {
+    ##-- unknown query mode
     $msg = "$url - ${time}s";
   }
 }
 else {
   $rc = CRITICAL;
-  $msg = "ERROR ".$rsp->status_line;
+  $msg = "$url - ERROR - ".$rsp->status_line;
 }
 
 ##-- check threshholds
