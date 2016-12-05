@@ -12,8 +12,7 @@ our @ISA = qw(DTA::CAB::Analyzer);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
 ##  + object structure, %args
-##    alg => $alg,            ##-- Text::Phonetic subclass, e.g. 'Soundex','Koeln','Metaphone' (default='Koeln')
-##    tpo => $obj,            ##-- underlying Text::Phonetic::Whatever object
+##    sleepfor   => $seconds, ##-- sleep for $seconds seconds on AnalyzeLocal()
 ##    analyzeGet => $codestr, ##-- accessor: coderef or string: source text (default=$DEFAULT_ANALYZE_GET)
 sub new {
   my $that = shift;
@@ -24,6 +23,19 @@ sub new {
 			    @_
 			   );
   return $a;
+}
+
+## $doc = $anl->analyzeLocal($doc,\%opts)
+##  + perform analyzer-local document-level analysis of $doc
+##  + default implementation sleeps if $anl->{sleepfor} is defined
+sub analyzeLocal {
+  my ($anl,$doc,$opts) = @_;
+  my $sleep = defined($opts->{sleepfor}) ? $opts->{sleepfor} : $anl->{sleepfor};
+  if ($sleep) {
+    $anl->vlog('trace', (ref($anl)||$anl)."::analyzeLocal(): sleepfor=$sleep");
+    sleep($sleep);
+  }
+  return $doc;
 }
 
 
@@ -89,7 +101,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Bryan Jurish
+Copyright (C) 2011-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

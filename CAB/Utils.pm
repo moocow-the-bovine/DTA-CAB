@@ -32,6 +32,7 @@ our %EXPORT_TAGS =
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
      files => [qw(fhbits)],
+     proc => [qw(mstat memsize)],
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -475,6 +476,33 @@ sub fhbits {
   return $bits;
 }
 
+##==============================================================================
+## Functions: proc filestsystem
+
+## \%mstat_or_undef = mstat()
+## \%mstat_or_undef = mstat($pid=$$)
+##   + class or instance method
+sub mstat {
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $pid  = shift || $$;
+  open(my $fh, "/proc/$pid/statm") or return {pid=>$pid};
+  local $/ = undef;
+  my $buf = <$fh>;
+  chomp($buf);
+  close($fh);
+  my (%mstat);
+  @mstat{qw(pid size resident share text lib data dt)} = ($pid, split(' ',$buf));
+  return \%mstat;
+}
+
+## $memsize_kb_or_undef = memsize()
+## $memsize_kb_or_undef = memsize($pid)
+sub memsize {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $mstat = $that->mstat(@_);
+  return defined($mstat) ? $mstat->{size} : undef;
+}
+
 1; ##-- be happy
 
 __END__
@@ -660,7 +688,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -6,6 +6,7 @@
 
 package DTA::CAB::Server;
 use DTA::CAB;
+use DTA::CAB::Utils qw();
 use IO::File;
 use Carp;
 use strict;
@@ -141,6 +142,11 @@ sub finish {
   delete @SIG{qw(HUP TERM KILL __DIE__)}; ##-- unset signal handlers
   unlink($srv->{pidfile}) if ($srv->{pidfile});
   return 1;
+}
+
+## $memsize_kb_or_undef = $srv->memsize()
+sub memsize {
+  return DTA::CAB::Utils::memsize();
 }
 
 1; ##-- be happy
@@ -311,7 +317,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2010 by Bryan Jurish
+Copyright (C) 2009-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

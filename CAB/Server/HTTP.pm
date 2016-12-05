@@ -37,10 +37,13 @@ our @ISA = qw(DTA::CAB::Server);
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
 ##     xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
 ##     ##
-##     ##-- caching
+##     ##-- caching & status
 ##     cacheSize  => $nelts,         ##-- maximum number of responses to cache (default=1024; undef for no cache)
 ##     cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=undef: no limit)
 ##     cache      => $lruCache,      ##-- response cache: (key = $url, value = $response), a DTA::CAB::Cache::LRU object
+##     nRequests  => $nRequests,     ##-- number of requests (after access control)
+##     nCacheHits => $nCacheHits,    ##-- number of cache hits
+##     nErrors    => $nErrors,       ##-- number of client errors
 ##     ##
 ##     ##-- security
 ##     allowUserOptions => $bool,   ##-- allow user options? (default: true)
@@ -96,10 +99,13 @@ sub new {
 			   ##-- path config
 			   paths => {},
 
-			   ##-- caching
+			   ##-- caching & status
 			   cacheSize  => 1024,
 			   cacheLimit => undef,
 			   cache      => undef,
+			   nRequests  => 0,
+			   nCacheHits => 0,
+			   nErrors => 0,
 
 			   ##-- security
 			   allowUserOptions => 1,
@@ -218,6 +224,9 @@ sub run {
       next;
     }
 
+    ##-- track number of requests
+    ++$srv->{nRequests};
+
     ##-- serve client: parse HTTP request
     ##
     ## Strangeness Fri, 17 May 2013 14:14:56 +0200
@@ -238,6 +247,7 @@ sub run {
     $hreq = $csock->get_request();
     if (!$hreq) {
       $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", xml_escape($csock->reason || 'get_request() failed'));
+      ++$srv->{nErrors};
       next;
     }
 
@@ -249,6 +259,7 @@ sub run {
     ##-- check global content-length limit
     if (($srv->{maxRequestSize}//-1) >= 0 && ($hreq->content_length//0) > $srv->{maxRequestSize}) {
       $srv->clientError($csock, RC_REQUEST_ENTITY_TOO_LARGE, "request exceeds server limit (max=$srv->{maxRequestSize} bytes)");
+      ++$srv->{nErrors};
       next;
     }
 
@@ -256,6 +267,7 @@ sub run {
     ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
     if (!defined($handler)) {
       $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", xml_escape($hreq->uri));
+      ++$srv->{nErrors};
       next;
     }
 
@@ -266,12 +278,14 @@ sub run {
 
     ##-- check cache (GET requests only)
     $cacheable = ($srv->{cache}
+		  && (!defined($handler->{cacheable}) || $handler->{cacheable})
 		  && $hreq->method eq 'GET'
 		  && ($hreq->header('Pragma')||'') !~ /\bno-cache\b/);
     if ($cacheable
 	&& ($hreq->header('Cache-Control')||'') !~ /\bno-cache\b/
 	&& defined($rsp = $srv->{cache}->get($urikey)))
       {
+	++$srv->{nCacheHits};
 	$srv->vlog($srv->{logCache}, "using cached response");
 	$rsp->header('X-Cached' => 1);
 	$srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
@@ -295,10 +309,12 @@ sub run {
     if ($@) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>", xml_escape($@), "</pre>");
       $srv->reapClient($csock,$handler,$chost);
+      ++$srv->{nErrors};
     }
     elsif (!defined($rsp)) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
       $srv->reapClient($csock,$handler,$chost);
+      ++$srv->{nErrors};
     }
 
     ##-- maybe cache response
@@ -322,9 +338,11 @@ sub run {
     ##-- ... and dump response to client
     if (!$csock->opened) {
       $srv->logwarn("client socket closed unexpectedly");
+      ++$srv->{nErrors};
       next;
     } elsif ($csock->error) {
       $srv->logwarn("client socket has errors");
+      ++$srv->{nErrors};
       next;
     }
     $srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
