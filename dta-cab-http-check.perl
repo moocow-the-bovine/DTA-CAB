@@ -19,8 +19,8 @@ use strict;
 ## Version
 our $VERSION = 0.01;
 our $SVNID   = q(
-  $HeadURL: svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk/dta-cab-check.perl $
-  $Id: dta-cab-check.perl 16718 2016-11-21 08:59:33Z moocow $
+  $HeadURL$
+  $Id$
 );
 
 ##======================================================================
