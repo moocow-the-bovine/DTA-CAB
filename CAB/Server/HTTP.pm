@@ -52,6 +52,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     _allow => $allow_ip_regex,   ##-- single allow regex (compiled by 'prepare()')
 ##     _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
 ##     maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
+##     bgConnectTimeout => $secs,   ##-- timeout for detecting chrome-style "background connections": connected sockets with no data on them (0:none; default=1)
 ##     ##
 ##     ##-- forking
 ##     forkOnGet => $bool,	    ##-- fork() handler for HTTP GET requests? (default=0)
@@ -114,6 +115,7 @@ sub new {
 			   _allow => undef,
 			   _deny  => undef,
 			   maxRequestSize => undef,
+			   bgConnectTimeout => 1,
 
 			   ##-- forking
 			   children => {},
@@ -200,13 +202,18 @@ sub run {
 
   my $daemon = $srv->{daemon};
   my $mode   = $srv->{daemonMode} || 'serial';
+  my $bgConnectTimeout = $srv->{bgConnectTimeout} || 0;
   $srv->info("server starting in $mode mode on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
-  
+
   ##-- setup SIGPIPE handler (avoid heinous death)
   ##  + following suggestion on http://www.perlmonks.org/?node_id=580411
-  $SIG{PIPE} = sub { $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
+  $SIG{PIPE} = sub { ++$srv->{nErrors}; $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
+
+  ##-- HACK: set HTTP::Daemon protocol to HTTP 1.0 (avoid keepalive)
+  $HTTP::Daemon::PROTO = "HTTP/1.0";
 
   my ($csock,$chost,$hreq,$urikey,$forkable,$cacheable,$handler,$localPath,$pid,$rsp);
+  my ($fdset);
   while (1) {
     ##-- call accept() within the loop to avoid breaking out in fork mode
     if (!defined($csock=$daemon->accept())) {
@@ -217,8 +224,19 @@ sub run {
     ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();
 
+    ##-- avoid blocking on weird EOF sockets sent e.g. by chromium: no joy
+    if ($bgConnectTimeout > 0) {
+      vec(($fdset=""), $csock->fileno, 1) = 1;
+      if (!select($fdset,undef,undef,$bgConnectTimeout)) {
+	$srv->vlog($srv->{logAttempt}, "no data on newly connected socket from client $chost");
+	#++$srv->{nErrors};
+	next;
+      }
+    }
+
     ##-- access control
     $srv->vlog($srv->{logAttempt}, "attempted connect from client $chost");
+    #$srv->vlog($srv->{logAttempt}, "peer=$chost:".$csock->peerport."\n".Data::Dumper->Dump([$csock, \%{*$csock}], ['csock','_csock'])); ##-- DEBUG
     if (!$srv->clientAllowed($csock,$chost)) {
       $srv->denyClient($csock);
       next;
@@ -242,8 +260,9 @@ sub run {
     ##DEBUG
     #$srv->vlog($srv->{logAttempt}, "get_request() for client $chost");
     #$HTTP::Daemon::DEBUG=1;
-    ##/DEBUG
+    ${*$csock}{'io_socket_timeout'} = 5;
     ${*$csock}{'httpd_client_proto'} = HTTP::Daemon::ClientConn::_http_version("HTTP/1.0"); ##-- HACK: force status line on send_error() from $csock->get_request()
+    ##/DEBUG
     $hreq = $csock->get_request();
     if (!$hreq) {
       $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", xml_escape($csock->reason || 'get_request() failed'));
