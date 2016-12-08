@@ -161,7 +161,7 @@ if ($rsp->is_success) {
     $mp->add_perfdata(label=>'nerr', value=>($status->{nErrors}//0), uom=>'c');
     {
       no warnings 'numeric';
-      $mp->add_perfdata(label=>'cached', value=>($status->{cacheHitRate}+0), uom=>'%');
+      $mp->add_perfdata(label=>'ncached', value=>($status->{nCacheHits}+0), uom=>'c');
     };
 
     ##-- get return message
