@@ -172,10 +172,10 @@ sub {
        $mw->{analyses} = (ref($w->{exlex})
                           ? [map {{tag=>$_->{text}, prob=>-log($_->{freq}||$dynbase)/($logbase*$dynbeta)}} @{$w->{exlex}}] ##-- non-deterministic: ARRAY
                           : [{tag=>$w->{exlex}, prob=>0}]);								   ##-- deterministic: string
-     } elsif (($w->{xr}//"") =~ /\baq\b/ || ($w->{xp}//"") =~ /\bpersName\b/i) {
-       ##-- special case for antiqua-rendition in fraktur text: use unicruft for latinExt=1 to scrub out long s
-       $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
-       $mw->{analyses} = [{tag=>$text, prob=>0}];
+     #} elsif (($w->{xr}//"") =~ /\baq\b/) {
+     #  ##-- CAB <= v1.81 special case for antiqua-rendition in fraktur text via (($w->{xr}//"") =~ /\baq\b/) :: DISABLED for CAB v1.82
+     #  $text = $w->{xlit}{latin1Text} if ($w->{xlit} && $w->{xlit}{isLatinExt});
+     #  $mw->{analyses} = [{tag=>$text, prob=>0}];
      } elsif ($w->{msafe}) {
        ##-- safe contemporary form: leave as-is
        $mw->{analyses} = [{tag=>'._am_xlit('$w').', prob=>0}];
