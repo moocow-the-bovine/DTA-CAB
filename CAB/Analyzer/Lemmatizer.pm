@@ -116,7 +116,7 @@ sub _analyzeGuts {
       #$lemma =~ s/\~e?t(?=\W)/\~en/g;	##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
       $lemma =~ s/\[.*$//;	        ##-- trim everything after first non-character symbol
       #$lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\bge\\\|)|(?:[\\\~\|\=\+\#\x{ac}])//g;  ##-- hack: remove "ge\|" prefixes too (but not e.g. "ver\|", "be\|", etc.)
-      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:[\\\~\|\=\+\#\x{ac}])//g;  		  ##-- unhack: don't remove "ge\|" prefixes (for consistency e.g. with dwds-kc20)
+      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\[?<[^>]+>\]?)|(?:[\@\\\~\|\=\+\#\x{ac}])//g;   ##-- unhack: don't remove "ge\|" prefixes (for consistency e.g. with dwds-kc20)
     } else {
       $lemma = $_->{$lab_txt};
       $lemma =~ s/\x{ac}//g;
