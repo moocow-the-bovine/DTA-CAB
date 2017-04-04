@@ -236,6 +236,8 @@ sub loadLabels {
   $aut->{lab} = $aut->labClass->new() if (!defined($aut->{lab}));
   $aut->{lab}->load($labfile)
     or $aut->logconfess("loadLabels(): load failed for '$labfile': $!");
+  $aut->{lab}->utf8(1)
+    if ($aut->{lab}->can('utf8') && (($aut->{labenc}||'') =~ /^utf\-?8$/i));
   $aut->parseLabels();
   delete($aut->{_analyze});
   return $aut;
