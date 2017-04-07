@@ -9,6 +9,7 @@ use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
 use IO::File;
+use URI;
 use Encode qw(encode decode);
 
 use LWP::UserAgent;
