@@ -1028,6 +1028,45 @@ becomes
 =cut
 
 ##========================================================================
+## Advanced Usage: TCF
+=pod
+
+=head3 Post-processing TCF XML
+
+=over 4
+
+=item L<tcf-orthswap.xsl|http://./tcf-orthswap.xsl>
+
+Swaps the text content of 1:1-corresponding C<//tokens/token> and C<//orthography/correction[@operation="replace"]> elements,
+so that e.g.
+
+ <tokens>
+   <token ID="w1">Ein</token>
+   <token ID="w2">Elephant</token>
+ </tokens>
+ ...
+ <orthography>
+   <correction tokenIDs="w2" operation="replace">Elefant</correction>
+ </orthography>
+
+becomes
+
+ <tokens>
+   <token ID="w1">Ein</token>
+   <token ID="w2">Elefant</token>
+ </tokens>
+ ...
+ <orthography>
+   <correction tokenIDs="w2" operation="replace">Elephant</correction>
+ </orthography>
+
+Potentially useful for preparing CAB-annotated TCF data for submission to other text-sensitive TCF processors
+which themselves do not respect the C<//orthography> layer.
+
+=cut
+
+
+##========================================================================
 ## REFERENCES
 =pod
 
