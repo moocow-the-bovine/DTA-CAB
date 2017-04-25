@@ -1106,11 +1106,12 @@ project, you can cite:
 =end html
 
 L<Jurish, B.|name:jurish2013> "Canonicalizing the Deutsches Textarchiv." In
-L<Proceedings of I<Perspektiven einer corpusbasierten historischen Linguistik und Philologie>|http://edoc.bbaw.de/abfrage_collections.php?coll_id=203&la=de>
+L<Proceedings of I<Perspektiven einer corpusbasierten historischen Linguistik und Philologie>|https://edoc.bbaw.de/solrsearch/index/search/searchtype/collection/id/16386>
 (Berlin, Germany, 12th-13th December 2011), volume 4 of
 L<Thesaurus Linguae Aegyptiae|http://aaew.bbaw.de/tla/>,
 Berlin-Brandenburgische Akademie der Wissenschaften, 2013.
-[L<PDF|http://edoc.bbaw.de/volltexte/2013/2443/pdf/Jurish.pdf>,
+[L<epub|http://nbn-resolving.de/urn/resolver.pl?urn:nbn:de:kobv:b4-opus-24433>,
+L<PDF|http://edoc.bbaw.de/volltexte/2013/2443/pdf/Jurish.pdf>,
 L<BibTeX|http://kaskade.dwds.de/~jurish/pubs/jurish2013canonicalizing.bib>]
 
 =begin html
