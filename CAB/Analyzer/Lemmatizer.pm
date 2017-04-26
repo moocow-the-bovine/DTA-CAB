@@ -113,8 +113,9 @@ sub _analyzeGuts {
   foreach (values %$key2a) {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
-      #$lemma =~ s/\~e?t(?=\W)/\~en/g;	##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
-      $lemma =~ s/\[.*$//;	        ##-- trim everything after first non-character symbol
+      #$lemma =~ s/\~e?t(?=\W)/\~en/g;	   ##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
+      $lemma =~ s/\[<([^\>\]]*)>\]/<$1>/g; ##-- unquote taghm-2.5 "diamond-tags", e.g "kurz<A>\@Stiel<N>~ig[_ADJD]<none>"
+      $lemma =~ s/\[.*$//;	           ##-- trim everything after first non-character symbol
       #$lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\bge\\\|)|(?:[\\\~\|\=\+\#\x{ac}])//g;  ##-- hack: remove "ge\|" prefixes too (but not e.g. "ver\|", "be\|", etc.)
       $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\[?<[^>]+>\]?)|(?:[\@\\\~\|\=\+\#\x{ac}])//g;   ##-- unhack: don't remove "ge\|" prefixes (for consistency e.g. with dwds-kc20)
     } else {
