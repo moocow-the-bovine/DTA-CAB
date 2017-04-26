@@ -214,6 +214,7 @@ HTML_EXTRA ?= \
   doc-extra/dstar-bin/spliced2cleaner.xsl \
   doc-extra/dstar-bin/spliced2clean+cabns.xsl \
   doc-extra/dstar-bin/spliced2cab.xsl \
+  doc-extra/dstar-bin/tcf-orthswap.xsl \
   doc-extra/cab-screenshot-annotated.png
 
 ##-- lifted from MakeMaker blibdir section
