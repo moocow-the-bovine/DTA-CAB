@@ -10,6 +10,7 @@ use Carp;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use File::Temp;
+use POSIX qw(strftime); ##-- for strftime
 use strict;
 
 ##==============================================================================
@@ -31,8 +32,9 @@ our %EXPORT_TAGS =
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
-     files => [qw(fhbits)],
      proc => [qw(mstat memsize)],
+     files => [qw(fhbits file_mtime)],
+     time => [qw(timestamp_str)]
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -502,6 +504,31 @@ sub memsize {
   my $mstat = $that->mstat(@_);
   return defined($mstat) ? $mstat->{size} : undef;
 }
+
+##==============================================================================
+## Functions: files
+
+## $mtime_in_floating_seconds = file_mtime($filename_or_fh)
+##  + de-references symlinks
+sub file_mtime {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $file = shift;
+  my @stat = (UNIVERSAL::can('Time::HiRes','stat') ? Time::HiRes::stat($file) : stat($file));
+  return $stat[9];
+}
+
+##==============================================================================
+## Functions: time
+
+## $timestamp_str = PACAKGE::timestamp_str()
+## $timestamp_str = PACAKGE::timestamp_str($time)
+sub timestamp_str {
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $time = @_ ? shift : time();
+  return POSIX::strftime("%FT%T%z", localtime($time));
+}
+
+
 
 1; ##-- be happy
 

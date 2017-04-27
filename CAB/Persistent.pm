@@ -142,7 +142,7 @@ sub savePerlFile {
 }
 
 ## $obj = $CLASS_OR_OBJ->loadPerlFile($filename_or_fh, %args)
-##  + calls $CLASS_OR_OBJ->loadPerlString(var=>undef,src=>$filename_or_fh, %args)
+##  + calls $CLASS_OR_OBJ->loadPerlString(var=>undef,src=>$filename_or_fh, cabSrcFile=>$file, %args)
 sub loadPerlFile {
   my ($that,$file,%args) = @_;
   my $fh = ref($file) ? $file : IO::File->new("<$file");

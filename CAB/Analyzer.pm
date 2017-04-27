@@ -8,7 +8,8 @@ package DTA::CAB::Analyzer;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
-use DTA::CAB::Utils ':minmax';
+use DTA::CAB::Utils ':minmax', ':files', ':time';
+use File::Basename qw(basename dirname);
 use Exporter;
 use Carp;
 use strict;
@@ -97,6 +98,88 @@ sub analysisClass {
 ##  + default returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label})
 sub typeKeys {
   return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : (defined($_[0]{label}) ? ($_[0]{label}) : qw());
+}
+
+##==============================================================================
+## Methods: version
+##==============================================================================
+
+## $timestamp_str_or_undef = $anl->timestamp()
+##  + gets analyzer timestamp
+##  + default implementation returns $anl->{timestamp} or newest mtime among all $anl->timestampFiles()
+sub timestamp {
+  my $anl = shift;
+  return $anl->{timestamp} if (defined($anl->{timestamp}));
+  my @tsfiles = grep {defined($_) && -e $_} $anl->timestampFiles;
+  my $mtime = @tsfiles ? (sort {$b<=>$a} map {(stat($_))[9]} @tsfiles)[0] : undef;
+  return $anl->{timestamp} = defined($mtime) ? timestamp_str($mtime) : undef;
+}
+
+## @files = $anl->timestampFiles()
+##  + resource files for determining this analyzer's timestamp
+##  + default checks for analyzer keys matching m/file/i
+sub timestampFiles {
+  my $anl = shift;
+  return @$anl{grep {m/file/i} keys %$anl};
+}
+
+## $version_or_undef = $anl->version()
+##  + gets analyzer version string
+##  + default implementation returns $anl->{version} if defined, otherwise caches from first available file from $anl->versionFiles()
+sub version {
+  my $anl   = shift;
+  return $anl->{version} if (defined($anl->{version}));
+  my $vfile = (grep {defined($_) && -e $_} $anl->versionFiles())[0];
+  return undef if (!defined($vfile));
+  open(my $vfh,"<$vfile")
+    or $anl->logconfess("version(): open failed for version file '$vfile': $!");
+  my ($version);
+  {
+    local $/=undef;
+    $version = <$vfh>;
+  }
+  chomp($version);
+  close($vfh);
+  return $anl->{version} = $version;
+}
+
+## @files = $anl->versionFiles()
+##  + resource files for reading this analyzer's version
+##  + default searches $_.ver, noext($_).ver for all $anl->timestampFiles(), finally dirname($_)/version.txt
+sub versionFiles {
+  my $anl = shift;
+  my @tsfiles = grep {defined($_)} $anl->timestampFiles();
+  my ($base);
+  return (
+	  (map {$base=$_; $base =~ s/\.[^\.]*$//; ("$_.ver","$base.ver")} @tsfiles),
+	  (map {dirname($_)."/version.txt"} @tsfiles),
+	 );
+}
+
+## \%vinfo = $anl->versionInfo()
+##  + gets analyzer version info, including sub-analyzers
+##  + returned HASH %vinfo =
+##    (
+##     class => $class,
+##     label => $label,
+##     version => $version,
+##     timestamp => $timestamp,
+##     newest => $timestamp, ##-- youngest local or sub-analyzer timestamp
+##     subs => \@subAnalyzerVersionInfo,
+##    )
+sub versionInfo {
+  my $anl = shift;
+  my $subs = $anl->subAnalyzers;
+  my $vinfo = {
+	       class => ref($anl),
+	       label => $anl->{label},
+	       version => $anl->version(),
+	       timestamp => $anl->timestamp(),
+	       ($subs && @$subs ? (subs=>[map {$_->versionInfo} @$subs]) : qw()),
+	      };
+  $vinfo->{newest} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestamp}, map {$_->{newest}} @{$vinfo->{subs}||[]}))[0];
+  delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
+  return $vinfo;
 }
 
 ##==============================================================================

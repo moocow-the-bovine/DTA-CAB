@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use lib qw(.);
-use DTA::CAB::Format::TEIws; ##-- DEBUG
+#use DTA::CAB::Format::TEIws; ##-- DEBUG
 
 use DTA::CAB;
 use DTA::CAB::Utils ':all';
@@ -325,9 +325,6 @@ at your option, any later version of Perl 5 you may have available.
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
 L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
-L<dta-cab-cachegen.perl(1)|dta-cab-cachegen.perl>,
-L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
-L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<perl(1)|perl>,
 ...
