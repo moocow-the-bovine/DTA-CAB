@@ -250,7 +250,7 @@ sub parseTTString {
 		} elsif ($field =~ m/^\[(?:xml\:?)?(id|chars)\] (.*)$/) {
 		  ##-- token: field: DTA::TokWrap special fields: (id|chars|xml:id|xml:chars)
 		  $tok->{$1} = $2;
-		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|freq|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|syncope_(?:type|loc|tag)|has(?:morph|lts|rw|eqphox|dmoota|moota))\] (.*)$/) {
+		} elsif ($field =~ m/^\[(exlex|pnd|mapclass|errid|freq|xc|xr|xp|pb|lb|bb|c|b|coff|clen|boff|blen|(?:syncope|ner)_(?:type|loc|tag)|has(?:morph|lts|rw|eqphox|dmoota|moota))\] (.*)$/) {
 		  ##-- token: field: other scalar field (exlex, pnd, mapclass, errid, freq, ...)
 		  $tok->{$1} = $2;
 		} elsif ($field =~ m/^\[xlit\] /) {
@@ -287,8 +287,10 @@ sub parseTTString {
 				   (?:\ (\#\S*))?		##-- $3: syncope label name (terminal/label/@name)
 				   (?:\ ([0-9]*))?		##-- $4: syncope label id (terminal/label/@id)
 				   (?:\ \:\ (\S*))?		##-- $5: syncope category (terminal/category/@name | nonterminal/category-close/@name)
-				   (?:\ \/ (\S*?))?		##-- $6: syncope function (terminal/function/@name)
-				   (?:\ \<([0-9]+)\>)?$		##-- $7: syncope depth (nonterminal/@depth)
+				   (?:\ \/ (\S*?))?		##-- $6: syncope function (terminal/function/@name) OR teiws-parsed type (//name/@type)
+				   (?:\ \<([0-9]+)\>)?		##-- $7: syncope depth (nonterminal/@depth)
+				   (?:\ \@ (\S*?))?             ##-- $8: teiws-parsed reference-URL (//name/@ref)
+				   $
 				  }x)
 		  {
 		    ##-- token fields: ne-recognizer analysis: syncope
@@ -298,6 +300,7 @@ sub parseTTString {
 					  (defined($5) ? (cat=>$5) : qw()),
 					  (defined($6) ? (func=>$6) : qw()),
 					  (defined($7) ? (depth=>$7) : qw()),
+					  (defined($8) ? (depth=>$8) : qw()),
 					});
 		} elsif ($field =~ m/^\[m(?:orph\/)?safe\] ([0-9])$/) {
 		  ##-- token: field: morph-safety check (msafe|morph/safe)
@@ -616,6 +619,7 @@ sub token2buf {
 		       .(defined($_->{cat}) ? " : $_->{cat}" : '')
 		       .(defined($_->{func}) ? " / $_->{func}" : '')
 		       .(defined($_->{depth}) ? " <$_->{depth}>" : '')
+		       .(defined($_->{ref}) ? " @ $_->{ref}" : '')
 		      )} @{$tok->{ner}});
   }
 

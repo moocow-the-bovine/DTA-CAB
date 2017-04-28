@@ -44,6 +44,8 @@ BEGIN {
 ##    {
 ##     ##-- new in Format::TEIws
 ##     spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
+##     teinames => $bool,                      ##-- parse named-entity information from tei qw(persName placeName orgName name)? (default=false)
+##     teiner => $attr,                        ##-- output attribute for tei name information (default='ner'; only used if 'teinames' is true)
 ##     teibufr => \$buf,                       ##-- tei+ws buffer, for spliceback mode
 ##     teidoc => $doc,			       ##-- tei+ws XML::LibXML::Document
 ##     spliceopts => \%opts,		       ##-- options for DTA::ToKWrap::Processor::idsplice::new()
@@ -72,6 +74,7 @@ sub new {
 			      ##-- defaults
 			      spliceback => 1,
 			      spliceopts => {soIgnoreAttrs=>[qw(xb c teitext teixp)]},
+			      teinames => undef,
 
 			      ##-- user args
 			      @_
@@ -148,6 +151,7 @@ sub parseDocument {
   }
   my $teidoc = $fmt->{teidoc} or return undef;
   my $teiroot = $teidoc->documentElement or die("parseDocument(): no root element!");
+  my $teinames = $fmt->{teinames};
 
   ##-- setup xpath context
   my $xc = libxml_xpcontext($teiroot);
@@ -156,6 +160,7 @@ sub parseDocument {
   my (@sids);
   my (%id2s,%id2w); ##-- %id2s->{$sid} = \%s ; %id2w->{$wid} = $w
   my (%id2prev,%id2next);
+  my (%ukey2wid); ##-- ($libxml_wnod_unique_key => $wid); for name-parsing
   my ($snod,$wnod,$sid,$wid,$s,$w, $si,$wi);
   foreach $snod (@{$xc->findnodes('//*[local-name()="s"]',$teiroot)}) {
     $sid = $snod->getAttribute('id') || $snod->getAttribute('xml:id') || ("teiws_s_".++$si);
@@ -168,9 +173,27 @@ sub parseDocument {
       @$w{qw(id teixp teitext)} = ($wid,$wnod->nodePath,join('', map {$_->nodeValue} grep {UNIVERSAL::isa($_,'XML::LibXML::Text')} $wnod->childNodes));
       $id2prev{$wid} = $wnod->getAttribute('prev') if ($wnod->hasAttribute('prev'));
       $id2next{$wid} = $wnod->getAttribute('next') if ($wnod->hasAttribute('next'));
+      $ukey2wid{$wnod->unique_key} = $wid if ($teinames);
       push(@{$s->{wids}},$wid);
     }
     push(@sids,$sid);
+  }
+
+  ##-- parse teinames?
+  if ($teinames) {
+    my $teiner = $fmt->{teiner} || 'ner';
+    my ($nnod,$ntyp,$nid,$nref);
+    foreach $nnod (@{$xc->findnodes('//*[local-name()="persName" or local-name()="placeName" or local-name()="orgName" or local-name()="name"]')}) {
+      $nid  = $nnod->getAttribute('id') || $nnod->getAttribute('xml:id') || ("teiws_ne_".$nnod->unique_key);
+      $nref = $nnod->getAttribute('ref');
+      $ntyp = ($nnod->nodeName =~ /Name/ ? $nnod->nodeName : ($nnod->getAttribute('type') || 'MISC'));
+
+      foreach $wnod (@{$xc->findnodes('.//*[local-name()="w"]',$nnod)}) {
+	next if (!defined($wid=$ukey2wid{$wnod->unique_key}) || !defined($w=$id2w{$wid}));
+	##-- see DTA::CAB::Format::TT for syncope-style $w->{ner} conventions
+	push(@{$w->{$teiner}}, { nid=>$nid, func=>$ntyp, ($nref ? (ref=>$nref) : qw()) });
+      }
+    }
   }
 
   ##-- construct output document, de-fragmenting as we go
