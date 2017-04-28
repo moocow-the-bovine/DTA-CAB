@@ -431,8 +431,6 @@ sub putDocument {
 	    ##-- create new tcf namedEntities/entity node
 	    ++$ni;
 	    $nnod = $nid2nod{$neid} = $names->addNewChild(undef,'entity');
-	    $nnod->setAttribute('tokenIDs' => $wid);
-	    $nnod->setAttribute('ID' => $neid);
 
 	    ##-- CoNLL2002 ner categories: PER, LOC, ORG, MISC
 	    $necls = $nea->{func} || 'MISC';
@@ -440,7 +438,10 @@ sub putDocument {
 		      : ($necls =~ /^place|loc|geo/i ? 'LOC'
 			 : ($necls =~ /^org/i ? 'ORG'
 			    : 'MISC')));
-	    $nnod->setAttribute('class'=>$necls);
+
+	    $nnod->setAttribute('ID' => $neid);
+	    $nnod->setAttribute('class' => $necls);
+	    $nnod->setAttribute('tokenIDs' => $wid);
 	  }
 	}
       }
