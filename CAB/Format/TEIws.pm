@@ -156,9 +156,15 @@ sub parseDocument {
   ##-- setup xpath context
   my $xc = libxml_xpcontext($teiroot);
 
-  ##-- hack for old libxml without unique_key() method (e.g. kaskade)
-  my $nod2key = (XML::LibXML::Node->can('unique_key')
-		 || sub { return ref($_[0]) && UNIVERSAL::isa($_[0],'SCALAR') ? ${$_[0]} : "$_[0]"; }
+  ##-- hack for old libxml without unique_key() method (e.g. kaskade); but BROKEN there!
+  my $nod2key = (XML::LibXML::Node->can('unique_key') ##-- introduced in XML::LibXML v2.0100 2013-08-14
+		 || sub {
+		   ##-- workaround: use IDs if available
+		   $_[0]->getAttribute('id')
+		     || $_[0]->getAttribute('xml:id')
+		       ##-- fallback (fails on kaskade: libxml-libxml-perl/2.0001+dfsg-1+deb7u1)
+		       || (ref($_[0]) && UNIVERSAL::isa($_[0],'SCALAR') ? ${$_[0]} : "$_[0]");
+		 }
 		);
 
   ##-- parse nodes
