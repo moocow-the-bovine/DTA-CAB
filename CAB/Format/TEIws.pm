@@ -193,9 +193,10 @@ sub parseDocument {
   ##-- parse teinames?
   if ($teinames) {
     my $teiner = $fmt->{teiner} || 'ner';
+    my $ni = 0;
     my ($nnod,$ntyp,$nid,$nref);
     foreach $nnod (@{$xc->findnodes('//*[local-name()="persName" or local-name()="placeName" or local-name()="orgName" or local-name()="name"]')}) {
-      $nid  = $nnod->getAttribute('id') || $nnod->getAttribute('xml:id') || ("teiws_ne_".$nod2key->($nnod));
+      $nid  = $nnod->getAttribute('id') || $nnod->getAttribute('xml:id') || ("teiws_ne_".++$ni);
       $nref = $nnod->getAttribute('ref');
       $ntyp = ($nnod->nodeName =~ /Name/ ? $nnod->nodeName : ($nnod->getAttribute('type') || 'MISC'));
 
