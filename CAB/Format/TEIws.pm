@@ -156,6 +156,11 @@ sub parseDocument {
   ##-- setup xpath context
   my $xc = libxml_xpcontext($teiroot);
 
+  ##-- hack for old libxml without unique_key() method (e.g. kaskade)
+  my $nod2key = (XML::LibXML::Node->can('unique_key')
+		 || sub { return ref($_[0]) && UNIVERSAL::isa($_[0],'SCALAR') ? ${$_[0]} : "$_[0]"; }
+		);
+
   ##-- parse nodes
   my (@sids);
   my (%id2s,%id2w); ##-- %id2s->{$sid} = \%s ; %id2w->{$wid} = $w
@@ -173,7 +178,7 @@ sub parseDocument {
       @$w{qw(id teixp teitext)} = ($wid,$wnod->nodePath,join('', map {$_->nodeValue} grep {UNIVERSAL::isa($_,'XML::LibXML::Text')} $wnod->childNodes));
       $id2prev{$wid} = $wnod->getAttribute('prev') if ($wnod->hasAttribute('prev'));
       $id2next{$wid} = $wnod->getAttribute('next') if ($wnod->hasAttribute('next'));
-      $ukey2wid{$wnod->unique_key} = $wid if ($teinames);
+      $ukey2wid{$nod2key->($wnod)} = $wid if ($teinames);
       push(@{$s->{wids}},$wid);
     }
     push(@sids,$sid);
@@ -184,12 +189,12 @@ sub parseDocument {
     my $teiner = $fmt->{teiner} || 'ner';
     my ($nnod,$ntyp,$nid,$nref);
     foreach $nnod (@{$xc->findnodes('//*[local-name()="persName" or local-name()="placeName" or local-name()="orgName" or local-name()="name"]')}) {
-      $nid  = $nnod->getAttribute('id') || $nnod->getAttribute('xml:id') || ("teiws_ne_".$nnod->unique_key);
+      $nid  = $nnod->getAttribute('id') || $nnod->getAttribute('xml:id') || ("teiws_ne_".$nod2key->($nnod));
       $nref = $nnod->getAttribute('ref');
       $ntyp = ($nnod->nodeName =~ /Name/ ? $nnod->nodeName : ($nnod->getAttribute('type') || 'MISC'));
 
       foreach $wnod (@{$xc->findnodes('.//*[local-name()="w"]',$nnod)}) {
-	next if (!defined($wid=$ukey2wid{$wnod->unique_key}) || !defined($w=$id2w{$wid}));
+	next if (!defined($wid=$ukey2wid{$nod2key->($wnod)}) || !defined($w=$id2w{$wid}));
 	##-- see DTA::CAB::Format::TT for syncope-style $w->{ner} conventions
 	push(@{$w->{$teiner}}, { nid=>$nid, func=>$ntyp, ($nref ? (ref=>$nref) : qw()) });
       }
