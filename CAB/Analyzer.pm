@@ -104,27 +104,34 @@ sub typeKeys {
 ## Methods: version
 ##==============================================================================
 
-## $timestamp_str_or_undef = $anl->timestamp()
-##  + gets analyzer timestamp
-##  + default implementation returns $anl->{timestamp} or newest mtime among all $anl->timestampFiles()
+## $timestamp_str_or_undef = $anl->timestamp($deep=0)
+##  + gets local ($deep=0) or recursive timestamp ($deep1)
 sub timestamp {
+  my ($anl,$deep) = @_;
+  return $deep ? $anl->versionInfo->{timestamp} : $anl->timestampLocal;
+}
+
+## $timestamp_str_or_undef = $anl->timestampLocal()
+##  + gets local analyzer timestamp
+##  + default implementation returns $anl->{timestampLocal} or newest mtime among all $anl->timestampFiles()
+sub timestampLocal {
   my $anl = shift;
-  return $anl->{timestamp} if (defined($anl->{timestamp}));
+  return $anl->{timestampLocal} if (defined($anl->{timestampLocal}));
   my @tsfiles = grep {defined($_) && -e $_} $anl->timestampFiles;
   my $mtime = @tsfiles ? (sort {$b<=>$a} map {(stat($_))[9]} @tsfiles)[0] : undef;
-  return $anl->{timestamp} = defined($mtime) ? timestamp_str($mtime) : undef;
+  return $anl->{timestampLocal} = defined($mtime) ? timestamp_str($mtime) : undef;
 }
 
 ## @files = $anl->timestampFiles()
-##  + resource files for determining this analyzer's timestamp
-##  + default checks for analyzer keys matching m/file/i
+##  + resource files for determining this analyzer's local timestamp
+##  + default checks for analyzer keys matching m/file$/i
 sub timestampFiles {
   my $anl = shift;
-  return @$anl{grep {m/file/i} keys %$anl};
+  return @$anl{grep {m/file$/i} keys %$anl};
 }
 
 ## $version_or_undef = $anl->version()
-##  + gets analyzer version string
+##  + gets local analyzer version string
 ##  + default implementation returns $anl->{version} if defined, otherwise caches from first available file from $anl->versionFiles()
 sub version {
   my $anl   = shift;
@@ -144,7 +151,7 @@ sub version {
 }
 
 ## @files = $anl->versionFiles()
-##  + resource files for reading this analyzer's version
+##  + resource files for determining this analyzer's local version
 ##  + default searches $_.ver, noext($_).ver for all $anl->timestampFiles(), finally dirname($_)/version.txt
 sub versionFiles {
   my $anl = shift;
@@ -163,8 +170,8 @@ sub versionFiles {
 ##     class => $class,
 ##     label => $label,
 ##     version => $version,
-##     timestamp => $timestamp,
-##     newest => $timestamp, ##-- youngest local or sub-analyzer timestamp
+##     timestampLocal => $timestampLocal,
+##     timestamp => $timestampDeep, ##-- youngest local or sub-analyzer timestamp
 ##     subs => \@subAnalyzerVersionInfo,
 ##    )
 sub versionInfo {
@@ -174,10 +181,10 @@ sub versionInfo {
 	       class => ref($anl),
 	       label => $anl->{label},
 	       version => $anl->version(),
-	       timestamp => $anl->timestamp(),
+	       timestampLocal => $anl->timestampLocal(),
 	       ($subs && @$subs ? (subs=>[map {$_->versionInfo} @$subs]) : qw()),
 	      };
-  $vinfo->{newest} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestamp}, map {$_->{newest}} @{$vinfo->{subs}||[]}))[0];
+  $vinfo->{newest} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
   delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
   return $vinfo;
 }

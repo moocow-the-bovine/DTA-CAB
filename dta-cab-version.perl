@@ -6,6 +6,7 @@ use DTA::CAB::Utils ':all';
 use File::Basename qw(basename);
 use IO::File;
 use Getopt::Long qw(:config no_ignore_case);
+use Data::Dumper;
 use Pod::Usage;
 use JSON;
 
@@ -37,6 +38,7 @@ GetOptions(##-- General
 	   'help|h'    => \$help,
 	   'man|m'     => \$man,
 	   'version|V' => \$version,
+	   'verbose|v!' => \$verbose,
 
 	   ##-- Analyzer
 	   'configuration|c=s' => \$rcFile,
@@ -49,7 +51,7 @@ GetOptions(##-- General
 	   'json|j' => sub { $fmt='json' },
 
 	   ##-- Log4perl
-	   DTA::CAB::Logger->cabLogOptions('verbose'=>1),
+	   DTA::CAB::Logger->cabLogOptions('verbose'=>0),
 	  );
 
 if ($version) {
@@ -60,6 +62,22 @@ if ($version) {
 pod2usage({-exitval=>0, -verbose=>1}) if ($man);
 pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 
+
+##------------------------------------------------------
+## subs: dump: text
+
+sub dumpText {
+  my ($vinfo,$path) = @_;
+  $path = '' if (!defined($path));
+  $path .= "." if ($path ne '');
+  foreach my $key (sort keys %$vinfo) {
+    if (ref($vinfo->{$key})) {
+      dumpText($vinfo->{$key},$path.$key);
+    } else {
+      print $path, $key, "=", ($vinfo->{$key} || '(unknown)'), "\n";
+    }
+  }
+}
 
 ##==============================================================================
 ## MAIN
@@ -95,15 +113,28 @@ if (defined($rcFile)) {
 #  or die("$0: could not prepare analyzer: $!");
 
 $cab->{_cabSrcFile} = $rcFile; ##-- hack to get timestampFiles() & co to Do The Right Thing
-my $aversion = $cab->version;
-my $timestamp = $cab->timestamp;
-my $vinfo = $cab->versionInfo;
-print
-  ("FILE=", ($rcFile||'(none)'), "\n",
-   "version=$aversion\n",
-   "timestamp=$timestamp\n",
-   "vinfo=", JSON::to_json($vinfo,{pretty=>1,canonical=>1}), "\n",
-  );
+my $vinfo = ($verbose ? $cab->versionInfo : { version=>$cab->version, timestamp=>$cab->timestamp(1) });
+$vinfo->{FILE} = $rcFile if ($rcFile);
+
+##------------------------------------------------------
+## dump
+if ($fmt eq 'json') {
+  print JSON::to_json($vinfo,{pretty=>1,canonical=>1});
+}
+elsif ($fmt eq 'perl') {
+  print Data::Dumper->Dump([$vinfo],[qw(v)]);
+}
+else { # ($fmt eq 'text')
+  dumpText($vinfo);
+}
+
+
+#print
+#  ("FILE=", ($rcFile||'(none)'), "\n",
+#   "version=$aversion\n",
+#   "timestamp=$timestamp\n",
+#   "vinfo=", JSON::to_json($vinfo,{pretty=>1,canonical=>1}), "\n",
+#  );
 print STDERR "$0: what now?\n";
 exit 0;
 
