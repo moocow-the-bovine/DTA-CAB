@@ -108,7 +108,7 @@ sub typeKeys {
 ##  + gets local ($opts{deep}=0) or recursive timestamp ($opts{deep}=1)
 sub timestamp {
   my ($anl,%opts) = @_;
-  return $opts{deep} ? $anl->versionInfo->{timestamp} : $anl->timestampLocal;
+  return $opts{deep} ? $anl->versionInfo(%opts)->{timestamp} : $anl->timestampLocal;
 }
 
 ## $timestamp_str_or_undef = $anl->timestampLocal()
@@ -178,7 +178,7 @@ sub versionFiles {
 sub versionInfo {
   my ($anl,%opts) = @_;
   return undef if (!$anl->enabled(\%opts)); ##-- no version information for disabled analyzer
-  my $subs = $anl->subAnalyzers(\%opts);
+  my $subs = $opts{chain} && $anl->can('chain') ? $anl->chain(\%opts) : $anl->subAnalyzers(\%opts);
   my $vinfo = {
 	       class => ref($anl),
 	       label => $anl->{label},
@@ -188,6 +188,7 @@ sub versionInfo {
 	      };
   $vinfo->{timestamp} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
   delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
+  return undef if (!%$vinfo);
   return $vinfo;
 }
 

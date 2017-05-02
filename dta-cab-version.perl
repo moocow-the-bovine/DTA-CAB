@@ -125,7 +125,7 @@ my ($vinfo);
 if ($verbose) {
   $vinfo = { %{$cab->versionInfo(%analyzeOpts)}, modules=>DTA::CAB->moduleVersions(%analyzeOpts) };
 } else {
-   $vinfo = { version=>$cab->version(%analyzeOpts), timestamp=>$cab->timestamp(%analyzeOpts,deep=>1) };
+  $vinfo = { version=>$cab->version(%analyzeOpts), timestamp=>$cab->timestamp(%analyzeOpts,deep=>1) };
 }
 $vinfo->{FILE} = $rcFile if ($rcFile);
 
