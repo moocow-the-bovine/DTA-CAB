@@ -53,7 +53,7 @@ sub moduleVersions {
     $pkg =~ s{\.pm$}{}i;
     next if (($re_match && $pkg !~ m{$re_match}) || ($re_ignore && $pkg =~ m{$re_ignore}));
     next if ( !($ver = ${"${pkg}::VERSION"}) );
-    $versions{$pkg} = $ver;
+    $versions{$pkg} = "$ver";
   }
   return \%versions;
 }
