@@ -34,15 +34,15 @@ our @ISA = qw(DTA::CAB::Logger); ##-- for compatibility
 ##  + checks all loaded modules in %::INC for $VERSION
 ##  + known %opts:
 ##    (
-##     match => $regex,   ##-- only report modules matching $regex
-##     ignore => $regex,  ##-- ignore modules matching $regex
+##     moduleMatch => $regex,   ##-- only report modules matching $regex
+##     moduleIgnore => $regex,  ##-- ignore modules matching $regex
 ##    )
 sub moduleVersions {
   no strict 'refs';
   my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
   my %opts      = @_;
-  my $re_match  = $opts{match};
-  my $re_ignore = $opts{ignore};
+  my $re_match  = $opts{moduleMatch};
+  my $re_ignore = $opts{moduleIgnore};
   $re_match     = qr{$re_match} if (defined($re_match) && !ref($re_match));
   $re_ignore    = qr{$re_ignore} if (defined($re_ignore) && !ref($re_ignore));
   my ($inc,$pkg,$ver,%versions);
