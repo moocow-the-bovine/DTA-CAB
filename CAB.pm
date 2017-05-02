@@ -41,7 +41,7 @@ sub moduleVersions {
   no strict 'refs';
   my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
   my %opts      = @_;
-  my $re_match  = $opts{matchre};
+  my $re_match  = $opts{match};
   my $re_ignore = $opts{ignore};
   $re_match     = qr{$re_match} if (defined($re_match) && !ref($re_match));
   $re_ignore    = qr{$re_ignore} if (defined($re_ignore) && !ref($re_ignore));
