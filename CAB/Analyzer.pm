@@ -104,11 +104,11 @@ sub typeKeys {
 ## Methods: version
 ##==============================================================================
 
-## $timestamp_str_or_undef = $anl->timestamp($deep=0)
-##  + gets local ($deep=0) or recursive timestamp ($deep1)
+## $timestamp_str_or_undef = $anl->timestamp(%opts)
+##  + gets local ($opts{deep}=0) or recursive timestamp ($opts{deep}=1)
 sub timestamp {
-  my ($anl,$deep) = @_;
-  return $deep ? $anl->versionInfo->{timestamp} : $anl->timestampLocal;
+  my ($anl,%opts) = @_;
+  return $opts{deep} ? $anl->versionInfo->{timestamp} : $anl->timestampLocal;
 }
 
 ## $timestamp_str_or_undef = $anl->timestampLocal()
@@ -163,8 +163,9 @@ sub versionFiles {
 	 );
 }
 
-## \%vinfo = $anl->versionInfo()
+## \%vinfo = $anl->versionInfo(%opts)
 ##  + gets analyzer version info, including sub-analyzers
+##  + options %opts as for analyzeDocument()
 ##  + returned HASH %vinfo =
 ##    (
 ##     class => $class,
@@ -175,14 +176,15 @@ sub versionFiles {
 ##     subs => \@subAnalyzerVersionInfo,
 ##    )
 sub versionInfo {
-  my $anl = shift;
-  my $subs = $anl->subAnalyzers;
+  my ($anl,%opts) = @_;
+  return undef if (!$anl->enabled(\%opts)); ##-- no version information for disabled analyzer
+  my $subs = $anl->subAnalyzers(\%opts);
   my $vinfo = {
 	       class => ref($anl),
 	       label => $anl->{label},
-	       version => $anl->version(),
-	       timestampLocal => $anl->timestampLocal(),
-	       ($subs && @$subs ? (subs=>[map {$_->versionInfo} @$subs]) : qw()),
+	       version => $anl->version(%opts),
+	       timestampLocal => $anl->timestampLocal(%opts),
+	       ($subs && @$subs ? (subs=>[map {$_->versionInfo(%opts)} @$subs]) : qw()),
 	      };
   $vinfo->{timestamp} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
   delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};

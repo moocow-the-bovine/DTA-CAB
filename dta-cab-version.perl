@@ -123,9 +123,9 @@ if (defined($rcFile)) {
 $cab->{_cabSrcFile} = $rcFile; ##-- hack to get timestampFiles() & co to Do The Right Thing
 my ($vinfo);
 if ($verbose) {
-  $vinfo = { %{$cab->versionInfo}, modules=>DTA::CAB->moduleVersions() };
+  $vinfo = { %{$cab->versionInfo(%analyzeOpts)}, modules=>DTA::CAB->moduleVersions(%analyzeOpts) };
 } else {
-   $vinfo = { version=>$cab->version, timestamp=>$cab->timestamp(1) };
+   $vinfo = { version=>$cab->version(%analyzeOpts), timestamp=>$cab->timestamp(%analyzeOpts,deep=>1) };
 }
 $vinfo->{FILE} = $rcFile if ($rcFile);
 
