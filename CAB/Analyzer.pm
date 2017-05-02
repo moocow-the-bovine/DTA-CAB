@@ -184,7 +184,7 @@ sub versionInfo {
 	       timestampLocal => $anl->timestampLocal(),
 	       ($subs && @$subs ? (subs=>[map {$_->versionInfo} @$subs]) : qw()),
 	      };
-  $vinfo->{newest} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
+  $vinfo->{timestamp} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
   delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
   return $vinfo;
 }

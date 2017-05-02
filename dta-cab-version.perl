@@ -22,7 +22,6 @@ our $VERSION = $DTA::CAB::VERSION;
 
 ##-- General Options
 our ($help,$man,$version,$verbose);
-our $outfile = '-';
 
 ##-- Options: Main: analysis
 our $rcFile       = undef;
@@ -30,7 +29,10 @@ our $analyzeClass = 'DTA::CAB::Analyzer';
 our %analyzeOpts  = qw();
 
 ##-- Options: format
-our $fmt = 'text'; ##-- output format one of qw(text perl json)
+our $fmt = 'text'; ##-- output format one of qw(text perl json yaml)
+
+##-- Options: logging
+$DTA::CAB::Logger::defaultLogOpts{level} = 'INFO';
 
 ##==============================================================================
 ## Command-line
@@ -49,6 +51,7 @@ GetOptions(##-- General
 	   'text|txt|tt|t' => sub { $fmt='text' },
 	   'perl' => sub { $fmt='perl' },
 	   'json|j' => sub { $fmt='json' },
+	   'yaml|yml|y' => sub { $fmt='yaml' },
 
 	   ##-- Log4perl
 	   DTA::CAB::Logger->cabLogOptions('verbose'=>0),
@@ -67,15 +70,20 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 ## subs: dump: text
 
 sub dumpText {
-  my ($vinfo,$path) = @_;
-  $path = '' if (!defined($path));
-  $path .= "." if ($path ne '');
-  foreach my $key (sort keys %$vinfo) {
-    if (ref($vinfo->{$key})) {
-      dumpText($vinfo->{$key},$path.$key);
-    } else {
-      print $path, $key, "=", ($vinfo->{$key} || '(unknown)'), "\n";
+  my ($v,$path) = @_;
+  $path  = '' if (!defined($path));
+  if (UNIVERSAL::isa($v,'HASH')) {
+    foreach my $key (sort keys %$v) {
+      dumpText($v->{$key}, ($path eq '' ? $key : "$path.$key"));
     }
+  }
+  elsif (UNIVERSAL::isa($v,'ARRAY')) {
+    foreach my $key (0..$#$v) {
+      dumpText($v->[$key], ($path eq '' ? $key : "$path.$key"));
+    }
+  }
+  else {
+    print $path, "=", $v, "\n";
   }
 }
 
@@ -113,13 +121,21 @@ if (defined($rcFile)) {
 #  or die("$0: could not prepare analyzer: $!");
 
 $cab->{_cabSrcFile} = $rcFile; ##-- hack to get timestampFiles() & co to Do The Right Thing
-my $vinfo = ($verbose ? $cab->versionInfo : { version=>$cab->version, timestamp=>$cab->timestamp(1) });
+my ($vinfo);
+if ($verbose) {
+  $vinfo = { %{$cab->versionInfo}, modules=>DTA::CAB->moduleVersions() };
+} else {
+   $vinfo = { version=>$cab->version, timestamp=>$cab->timestamp(1) };
+}
 $vinfo->{FILE} = $rcFile if ($rcFile);
 
 ##------------------------------------------------------
 ## dump
 if ($fmt eq 'json') {
   print JSON::to_json($vinfo,{pretty=>1,canonical=>1});
+}
+elsif ($fmt eq 'yaml') {
+  DTA::CAB::Format::YAML->new->toFh(\*STDOUT)->putData($vinfo);
 }
 elsif ($fmt eq 'perl') {
   print Data::Dumper->Dump([$vinfo],[qw(v)]);
@@ -128,14 +144,6 @@ else { # ($fmt eq 'text')
   dumpText($vinfo);
 }
 
-
-#print
-#  ("FILE=", ($rcFile||'(none)'), "\n",
-#   "version=$aversion\n",
-#   "timestamp=$timestamp\n",
-#   "vinfo=", JSON::to_json($vinfo,{pretty=>1,canonical=>1}), "\n",
-#  );
-print STDERR "$0: what now?\n";
 exit 0;
 
 __END__
@@ -154,21 +162,13 @@ dta-cab-version.perl - report analyzer and resource version information
   -man                            ##-- show longer help message
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- set default log level
+  -log-level LEVEL                ##-- set minimum log level (default=INFO)
 
  I/O Options:
   -text                           ##-- text output (default)
   -json                           ##-- JSON output
+  -yaml                           ##-- YAML output
   -perl                           ##-- perl output
-
- Logging Options                  ##-- see Log::Log4perl(3pm)
-  -log-level LEVEL                ##-- set minimum log level (default=TRACE)
-  -log-stderr , -nolog-stderr     ##-- do/don't log to stderr (default=true)
-  -log-syslog , -nolog-syslog     ##-- do/don't log to syslog (default=false)
-  -log-file LOGFILE               ##-- log directly to FILE (default=none)
-  -log-rotate , -nolog-rotate     ##-- do/don't auto-rotate log files (default=true)
-  -log-config L4PFILE             ##-- log4perl config file (overrides -log-stderr, etc.)
-  -log-watch  , -nowatch          ##-- do/don't watch log4perl config file (default=false)
-  -log-option OPT=VALUE           ##-- set any logging option (e.g. -log-option twlevel=trace)
 
 =cut
 

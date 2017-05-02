@@ -27,6 +27,33 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Logger); ##-- for compatibility
 
+##==============================================================================
+## Version Information
+
+## \%moduleVersions => DTA::CAB->moduleVersions()
+## \%moduleVersions => DTA::CAB->moduleVersions($regex)
+##  + checks all loaded modules in %::INC for $VERSION
+sub moduleVersions {
+  no strict 'refs';
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $re   = shift;
+  $re      = qr{$re} if (defined($re));
+  my ($inc,$pkg,$ver,%versions);
+  foreach $inc (sort keys %::INC) {
+    next if ($inc !~ m/\.pm$/i);
+    $pkg = $inc;
+    $pkg =~ s{/}{::}g;
+    $pkg =~ s{\.pm$}{}i;
+    next if ($re && $pkg !~ m{$re});
+    next if ( !($ver = ${"${pkg}::VERSION"}) );
+    $versions{$pkg} = $ver;
+  }
+  return \%versions;
+}
+
+
+
+
 1; ##-- be happy
 
 __END__

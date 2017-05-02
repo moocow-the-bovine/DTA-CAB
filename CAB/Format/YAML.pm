@@ -219,7 +219,7 @@ sub putSentence {
 sub putDocument {
   my ($tmp);
   if (!$lib) {
-    $_[0]->logconfess("ParseYamlString(): no underlying YAML library found!");
+    $_[0]->logconfess("putDocument(): no underlying YAML library found!");
   }
   elsif ($lib eq 'YAML::XS') {
     $tmp = YAML::XS::Dump($_[1]);
