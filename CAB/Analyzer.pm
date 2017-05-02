@@ -163,7 +163,7 @@ sub versionFiles {
 	 );
 }
 
-## \%vinfo = $anl->versionInfo(%opts)
+## \%vinfo_or_undef = $anl->versionInfo(%opts)
 ##  + gets analyzer version info, including sub-analyzers
 ##  + options %opts as for analyzeDocument()
 ##  + returned HASH %vinfo =
@@ -184,11 +184,10 @@ sub versionInfo {
 	       label => $anl->{label},
 	       version => $anl->version(%opts),
 	       timestampLocal => $anl->timestampLocal(%opts),
-	       ($subs && @$subs ? (subs=>[map {$_->versionInfo(%opts)} @$subs]) : qw()),
+	       ($subs && @$subs ? (subs=>[grep {defined($_)} map {$_->versionInfo(%opts)} @$subs]) : qw()),
 	      };
   $vinfo->{timestamp} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
   delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
-  return undef if (!%$vinfo);
   return $vinfo;
 }
 
