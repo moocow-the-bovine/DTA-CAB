@@ -178,7 +178,7 @@ sub versionFiles {
 sub versionInfo {
   my ($anl,%opts) = @_;
   return undef if (!$anl->enabled(\%opts)); ##-- no version information for disabled analyzer
-  my $subs = $opts{chain} && $anl->can('chain') ? $anl->chain(\%opts) : $anl->subAnalyzers(\%opts);
+  my $subs = $anl->can('chain') ? $anl->chain(\%opts) : $anl->subAnalyzers(\%opts);
   my $vinfo = {
 	       class => ref($anl),
 	       label => $anl->{label},
