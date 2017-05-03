@@ -168,6 +168,7 @@ sub versionFiles {
 ##  + options %opts as for analyzeDocument()
 ##  + returned HASH %vinfo =
 ##    (
+##     rcfile => $rcfile, ##-- from $anl->{rcfile} if available
 ##     class => $class,
 ##     label => $label,
 ##     version => $version,
@@ -182,6 +183,7 @@ sub versionInfo {
   my $vinfo = {
 	       class => ref($anl),
 	       label => $anl->{label},
+	       rcfile => $anl->{rcfile},
 	       version => $anl->version(%opts),
 	       timestampLocal => $anl->timestampLocal(%opts),
 	       ($subs && @$subs ? (subs=>[grep {defined($_)} map {$_->versionInfo(%opts)} @$subs]) : qw()),

@@ -120,14 +120,13 @@ if (defined($rcFile)) {
 #$cab->prepare($job{analyzeOpts})
 #  or die("$0: could not prepare analyzer: $!");
 
-$cab->{_cabSrcFile} = $rcFile; ##-- hack to get timestampFiles() & co to Do The Right Thing
+$cab->{rcfile} = $rcFile if ($rcFile && !$cab->{rcfile}); ##-- hack to get timestampFiles() & co to Do The Right Thing
 my ($vinfo);
 if ($verbose) {
   $vinfo = { %{$cab->versionInfo(%analyzeOpts)}, modules=>DTA::CAB->moduleVersions(%analyzeOpts) };
 } else {
-  $vinfo = { version=>$cab->version(%analyzeOpts), timestamp=>$cab->timestamp(%analyzeOpts,deep=>1) };
+  $vinfo = { rcfile=>($rcFile||$cab->{rcfile}), version=>$cab->version(%analyzeOpts), timestamp=>$cab->timestamp(%analyzeOpts,deep=>1) };
 }
-$vinfo->{FILE} = $rcFile if ($rcFile);
 
 ##------------------------------------------------------
 ## dump
