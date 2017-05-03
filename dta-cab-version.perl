@@ -83,6 +83,7 @@ sub dumpText {
     }
   }
   else {
+    no warnings 'uninitialized';
     print $path, "=", $v, "\n";
   }
 }
