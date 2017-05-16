@@ -40,6 +40,7 @@ our ($help,$version,$verbose);
 
 ##-- Options: eval
 our @eval_begin = qw();
+our @eval_onload = qw();
 our @eval_end   = qw();
 
 ##-- Options: Main: forking options
@@ -97,6 +98,7 @@ sub globalOptionSpecs {
      'version|V' => \$version,
      'module|M=s'  => sub {push(@eval_begin,"use $_[1];")},
      'eval-begin|begin|eb=s'  => \@eval_begin,
+     'eval-onload|onload|el=s' => \@eval_onload,
      'eval-end|end|ee=s'      => \@eval_end,
 
      ##-- Parallelization
@@ -212,6 +214,11 @@ if (defined($rcFile)) {
   DTA::CAB->debug("${analyzeClass}->new()");
   $cab = $analyzeClass->new(%{$job{analyzeOpts}})
     or die("$0: $analyzeClass->new() failed: $!");
+}
+
+foreach (@eval_onload) {
+  eval "$_;";
+  die("$prog: error evaluating user ONLOAD code ($_): $@") if ($@);
 }
 
 ##------------------------------------------------------
@@ -585,7 +592,8 @@ dta-cab-analyze.perl - Command-line analysis interface for DTA::CAB
   -help                           ##-- show short usage summary
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- alias for -log-level=LEVEL
-  -begin CODE                     ##-- evaluade CODE early in script
+  -begin CODE                     ##-- evaluate CODE early in script
+  -onload CODE                    ##-- evaluate CODE after loading analyzer(s)
   -module MODULE                  ##-- alias for -begin="use MODULE;"
   -end CODE                       ##-- evaluade CODE late in script
 
