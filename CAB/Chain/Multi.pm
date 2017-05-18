@@ -97,7 +97,7 @@ sub chain {
 ## $chainAnalyzer = $ach->getChain($chainSpec)
 ##  + returns a new DTA::CAB::Chain for the appropriate spec
 sub getChain {
-  return DTA::CAB::Chain->new( $_[0]->chain({chain=>$_[1]}) );
+  return DTA::CAB::Chain->new( chain=>$_[0]->chain({chain=>$_[1]}) );
 }
 
 ## \@analyzers = $ach->subAnalyzers()
