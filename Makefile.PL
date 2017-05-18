@@ -36,6 +36,17 @@ EOF
   }
 }
 
+##----------------------------------------------------------------------
+## Hacks
+use version;
+if (qv($ExtUtils::MakeMaker::VERSION) >= qv(7.0401)) {
+  ##-- workaround for irritating symlink-related errors on kira (ubuntu 16.04 LTS / EUMM v7.0401)
+  use ExtUtils::Manifest;
+  no warnings 'redefine';
+  *{ExtUtils::Manifest::manicheck}    = sub {};
+  *{ExtUtils::Manifest::_check_files} = sub {};
+}
+
 
 ##----------------------------------------------------------------------
 ## MAIN
