@@ -63,7 +63,7 @@ our $DEFAULT_ANALYZE_SET = '$_->{$lab} = ($wa && @$wa ? [@$wa] : undef);';
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
 ##     check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
-##     labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+##     labenc         => $enc,  ##-- encoding of labels file (default='auto' [utf8 if applicable, otherwise latin1])
 ##     #dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8') (set $aut->{dict}{encoding} instead)
 ##     auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
 ##     tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
@@ -109,7 +109,7 @@ sub new {
 			      ##-- options
 			      eow            =>'',
 			      check_symbols  => 1,
-			      labenc         => 'latin1',
+			      labenc         => 'auto',
 			      auto_connect   => 0,
 			      tolower        => 0,
 			      tolowerNI      => 0,
@@ -236,6 +236,12 @@ sub loadLabels {
   $aut->{lab} = $aut->labClass->new() if (!defined($aut->{lab}));
   $aut->{lab}->load($labfile)
     or $aut->logconfess("loadLabels(): load failed for '$labfile': $!");
+  if (!$aut->{labenc} || $aut->{labenc} eq 'auto') {
+    ##-- guess label encoding
+    my $buf = join('',@{$aut->{lab}->toArray});
+    $aut->{labenc} = utf8::decode($buf) ? 'utf8' : 'latin1';
+    $aut->debug("loadLabels(): guessed label encoding '$aut->{labenc}'");
+  }
   $aut->{lab}->utf8(1)
     if ($aut->{lab}->can('utf8') && (($aut->{labenc}||'') =~ /^utf\-?8$/i));
   $aut->parseLabels();
@@ -579,7 +585,7 @@ Constuctor.
  ##-- Analysis Options
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
- labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+ labenc         => $enc,  ##-- encoding of labels file (default='auto': utf8 if valid, else latin1)
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
  tolowerNI      => $bool, ##-- if true, all non-initial characters of inputs will be lower-cased (default=0)

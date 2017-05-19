@@ -4,6 +4,6 @@
 ## Description: DTA::CAB version constants (auto-generated)
 ##
 package DTA::CAB::Version;
-$DTA::CAB::VERSION = '1.88';
-$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 26669';
+$DTA::CAB::VERSION = '1.89';
+$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 26696M';
 1;

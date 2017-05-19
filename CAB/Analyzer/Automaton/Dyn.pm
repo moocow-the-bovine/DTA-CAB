@@ -65,7 +65,7 @@ our $DEFAULT_ANALYZE_SET = '$tok->{$aut->{label}}=$wa';
 ##     ##-- Analysis Options
 ##     eow            => $sym,  ##-- EOW symbol for analysis FST
 ##     check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
-##     labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+##     labenc         => $enc,  ##-- encoding of labels file (default='auto')
 ##     #dictenc        => $enc,  ##-- dictionary encoding (default='UTF-8') (set $aut->{dict}{encoding} instead)
 ##     auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
 ##     tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
@@ -110,7 +110,7 @@ sub new {
 			      ##-- options
 			      eow            =>'',
 			      check_symbols  => 1,
-			      labenc         => 'latin1',
+			      labenc         => 'auto',
 			      #dictenc        => 'utf8',
 			      auto_connect   => 0,
 			      tolower        => 0,
@@ -239,6 +239,14 @@ sub loadLabels {
   $aut->{lab} = $aut->labClass->new() if (!defined($aut->{lab}));
   $aut->{lab}->load($labfile)
     or $aut->logconfess("loadLabels(): load failed for '$labfile': $!");
+  if (!$aut->{labenc} || $aut->{labenc} eq 'auto') {
+    ##-- guess label encoding
+    my $buf = join('',@{$aut->{lab}->toArray});
+    $aut->{labenc} = utf8::decode($buf) ? 'utf8' : 'latin1';
+    $aut->debug("loadLabels(): guessed label encoding '$aut->{labenc}'");
+  }
+  $aut->{lab}->utf8(1)
+    if ($aut->{lab}->can('utf8') && (($aut->{labenc}||'') =~ /^utf\-?8$/i));
   $aut->parseLabels();
   delete($aut->{_analyze});
   return $aut;
@@ -582,7 +590,7 @@ Constuctor.
  ##-- Analysis Options
  eow            => $sym,  ##-- EOW symbol for analysis FST
  check_symbols  => $bool, ##-- check for unknown symbols? (default=1)
- labenc         => $enc,  ##-- encoding of labels file (default='latin1')
+ labenc         => $enc,  ##-- encoding of labels file (default='auto': utf8 > latin1)
  #dictenc        => $enc,  ##-- dictionary encoding (default='utf8') : prefer $aut->{dict}{encoding}
  auto_connect   => $bool, ##-- whether to call $result->_connect() after every lookup   (default=0)
  tolower        => $bool, ##-- if true, all input words will be bashed to lower-case (default=0)
