@@ -293,11 +293,8 @@ sub blockScan {
   File::Map::map_file($buf, $infile,'<',0,$opts{fsize});
 
   ##-- scan blocks into head, body, foot
-  $fmt->trace("blockScanHead()");
   my $ihead = $opts{ihead} = $fmt->blockScanHead(\$buf,'i',\%opts);
-  $fmt->trace("blockScanBody()");
   my $ibody = $opts{ibody} = $fmt->blockScanBody(\$buf,    \%opts);
-  $fmt->trace("blockScanFoot()");
   my $ifoot = $opts{ifoot} = $fmt->blockScanFoot(\$buf,'i',\%opts);
 
   ##-- adopt 'n', 'head', 'foot' keys into body blocks
