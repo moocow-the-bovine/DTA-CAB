@@ -211,7 +211,7 @@ sub blockScanBody {
 
   ##-- hack workaround for slow m($re_qr)g on kira (ubuntu 16.04.1 LTS, perl 5.22.1)
   #my $re     = qr($re_s);
-  my $matchoff = eval qq{sub { \$\$bufr =~ m{$re_s} ? \$-[0] : \$fsize }};
+  my $matchoff = eval qq{sub { \$\$bufr =~ m{$re_s}g ? \$-[0] : \$fsize }};
 
   my ($off0,$off1,$blk);
   for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
