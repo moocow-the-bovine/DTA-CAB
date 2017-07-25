@@ -24,6 +24,15 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>'raw-waste', filenameRegex=>qr/\.(?i:raw-waste|txt-waste)$/);
 }
 
+our @DEFAULT_WASTERC_PATHS =
+  (
+   ($ENV{TOKWRAP_RCDIR} ? "$ENV{TOKWRAP_RCDIR}/waste/waste.rc" : qw()),
+   (defined($DTA::TokWrap::VersionVERSION) ? "$DTA::TokWrap::Version::RCDIR/waste/waste.rc" : qw()),
+   "$ENV{HOME}/.wasterc",
+   "/etc/wasterc",
+   "/etc/default/wasterc"
+  );
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -92,9 +101,10 @@ sub ensureLoaded {
 
   ##-- get rc file
   if (!$fmt->{wasterc}) {
-    $fmt->{wasterc} = (grep {-f $_} "$ENV{HOME}/.wasterc", "/etc/wasterc", "/etc/default/wasterc")[0];
+    $fmt->{wasterc} = (grep {-f $_} @DEFAULT_WASTERC_PATHS)[0];
     $fmt->logconfess("cannot tokenize without a model -- specify wasterc!") if (!$fmt->{wasterc});
   }
+  $fmt->trace("using waste model configuration $fmt->{wasterc}");
 
   return $fmt->loadModel();
 }
