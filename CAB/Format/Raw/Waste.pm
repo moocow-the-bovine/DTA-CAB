@@ -27,7 +27,7 @@ BEGIN {
 our @DEFAULT_WASTERC_PATHS =
   (
    ($ENV{TOKWRAP_RCDIR} ? "$ENV{TOKWRAP_RCDIR}/waste/waste.rc" : qw()),
-   (defined($DTA::TokWrap::VersionVERSION) ? "$DTA::TokWrap::Version::RCDIR/waste/waste.rc" : qw()),
+   (defined($DTA::TokWrap::Version::VERSION) ? "$DTA::TokWrap::Version::RCDIR/waste/waste.rc" : qw()),
    "$ENV{HOME}/.wasterc",
    "/etc/wasterc",
    "/etc/default/wasterc"
@@ -54,6 +54,10 @@ our @DEFAULT_WASTERC_PATHS =
 ##     ##-- Runtime HACKS
 ##     wwriter => $wwriter,            ##-- native-format writer (hack)
 ##
+##     ##-- Logging
+##     wasteLogModel => $level,        ##-- log-level for model loading (default=off)
+##     wasteLogRun   => $level,        ##-- log-level for runtime (default=off)
+##
 ##     ##-- Common
 ##     #utf8 => $bool,		       ##-- utf8 mode always on
 sub new {
@@ -62,7 +66,7 @@ sub new {
 		   ##-- common
 		   utf8 => 1,
 
-		   ##-- inputz
+		   ##-- input
 		   doc => undef,
 		   wasterc => undef,
 
