@@ -8,7 +8,7 @@ package DTA::CAB::Format::Raw::Waste;
 use DTA::CAB::Format;
 use DTA::CAB::Format::TT;
 use DTA::CAB::Datum ':all';
-use DTA::CAB::Utils qw(file_mtime);
+use DTA::CAB::Utils qw(file_mtime timestamp_str);
 use IO::File;
 use Cwd qw(abs_path);
 use Encode qw(encode decode);
@@ -35,6 +35,15 @@ our @DEFAULT_WASTERC_PATHS =
    "/etc/default/wasterc"
   );
 
+## $logLoad : default logLoad option
+our $logLoad = 'trace';
+
+## $logCache : default logCache option
+our $logCache = undef;
+
+## $logRun : default logRun option
+our $logRun = undef;
+
 ##==============================================================================
 ## Constructors etc.
 ##==============================================================================
@@ -58,10 +67,10 @@ our @DEFAULT_WASTERC_PATHS =
 ##                                     #    wwriter => $wwriter,   #-- native-format writer (hack)
 ##                                     # )
 ##
-##     ##-- logging
-##     logLoad => $level,              # log-level for model loading (default=trace)
-##     logCache => $level,             # cache operation log-level (default=undef)
-##     logRun => $level,               # runtime operation log-level (default=undef)
+##     ##-- logging (in order of increasing verbosity)
+##     logLoad => $level,              # log-level for model loading (default=$logLoad)
+##     logCache => $level,             # cache operation log-level (default=$logCache)
+##     logRun => $level,               # runtime operation log-level (default=$logRun)
 ##
 ##     ##-- Common
 ##     #utf8 => $bool,		       ##-- utf8 mode always on
@@ -79,9 +88,9 @@ sub new {
 		   wmodel => undef,
 
 		   ##-- logging
-		   logLoad => 'trace',
-		   logCache => undef,
-		   logRun => undef,
+		   logLoad => $logLoad,
+		   logCache => $logCache,
+		   logRun => $logRun,
 
 		   ##-- user args
 		   @_
@@ -101,6 +110,19 @@ sub noSaveKeys {
 }
 
 ##==============================================================================
+## Methods: Local: log levels
+
+## $logLoad = $CLASS_OR_OBJECT->logLevelLoad()
+sub logLevelLoad { return ref($_[0]) ? $_[0]{logLoad} : $logLoad; }
+
+## $logCache = $CLASS_OR_OBJECT->logLevelCache()
+sub logLevelCache { return ref($_[0]) ? $_[0]{logCache} : $logCache; }
+
+## $logRun = $CLASS_OR_OBJECT->logLevelRun()
+sub logLevelRun { return ref($_[0]) ? $_[0]{logRun} : $logRun; }
+
+
+##==============================================================================
 ## Methods: Local: model caching
 
 ## %MODELS : cached models ("$wasterc_abspath:$PID" => \%wmodel)
@@ -109,7 +131,7 @@ our %MODELS = qw();
 END {
   ##-- END block clears cached waste models for this PID
   my @cached = grep {/:${$}$/} keys %MODELS;
-  #__PACKAGE__->debug("clearing model cache for PID $$: ", join(' ', @cached));
+  __PACKAGE__->vlog(__PACKAGE__->logLevelCache, "clearing model cache for PID $$: ", join(' ', @cached));
   delete @MODELS{@cached};
 }
 
@@ -130,13 +152,24 @@ sub ensureModel {
   ##-- cache lookup
   my $mkey   = abs_path($rcfile).":$$";
   my $wmodel = $MODELS{$mkey};
-  if (defined($wmodel) && $wmodel->{loaded} >= int(file_mtime($rcfile))) {
-    $fmt->vlog((ref($fmt) ? $fmt->{logCache} : 'trace'), "using cached waste model: $mkey");
-    return $wmodel;
+  ##-- debug
+  if (defined($wmodel)) {
+    $fmt->vlog($fmt->logLevelCache, "found cached waste model: $mkey");
+
+    my $modeltime = int(file_mtime($rcfile));
+    if ($wmodel->{loaded} >= $modeltime) {
+      $fmt->vlog($fmt->logLevelCache, "using cached waste model: $mkey");
+      return $wmodel;
+    } else {
+      $fmt->vlog($fmt->logLevelCache,
+		 "cached waste model is stale (".timestamp_str($wmodel->{loaded}).' < '.timestamp_str($modeltime)."): $mkey");
+    }
+  } else {
+    $fmt->vlog($fmt->logLevelCache, "no cached waste model found: $mkey");
   }
 
   ##-- not cached or stale: create a new model & update the cache
-  $fmt->vlog((ref($fmt) ? $fmt->{logCache} : 'trace'), "updating waste model cache: $mkey");
+  $fmt->vlog($fmt->logLevelCache, "updating waste model cache: $mkey");
   my $config = $fmt->loadModelConfig($rcfile);
   $wmodel = $MODELS{$mkey} =
     {
@@ -168,7 +201,7 @@ sub ensureModel {
 ##   + loads rc-file with keys qw(abbrevs conjunctions stopwords dehyphenate hmm)
 sub loadModelConfig {
   my ($fmt,$rcfile) = @_;
-  $fmt->vlog((ref($fmt) ? $fmt->{logCache} : undef), "loading waste model configuration $rcfile");
+  $fmt->vlog($fmt->logLevelCache, "loading waste model configuration $rcfile");
 
   open(my $rc,"<$rcfile")
     or $fmt->logconfess("open failed for waste-rc $rcfile: $!");
@@ -189,7 +222,7 @@ sub loadModelConfig {
   }
   close($rc);
 
-  $fmt->vlog((ref($fmt) ? $fmt->{logLoad} : 'trace'), "loaded waste model configuration $rcfile");
+  $fmt->vlog($fmt->logLevelLoad, "loaded waste model configuration $rcfile");
   return $config;
 }
 
@@ -206,7 +239,7 @@ sub ensureLoaded {
     $fmt->{wasterc} = (grep {-f $_} @DEFAULT_WASTERC_PATHS)[0];
     $fmt->logconfess("cannot tokenize without a model -- specify wasterc!") if (!$fmt->{wasterc});
   }
-  #$fmt->vlog($fmt->{logRun}, "using waste model configuration $fmt->{wasterc}");
+  #$fmt->vlog($fmt->logLevelRun, "using waste model configuration $fmt->{wasterc}");
 
   return $fmt->loadModel();
 }
@@ -218,7 +251,7 @@ sub loadModel {
   my ($fmt,$rcfile) = @_;
   $rcfile //= $fmt->{wasterc};
   $fmt->{wasterc} = $rcfile;
-  $fmt->vlog($fmt->{logRun}, "using waste model $rcfile");
+  $fmt->vlog($fmt->logLevelRun, "using waste model $rcfile");
   $fmt->{wmodel} = $fmt->ensureModel($rcfile)
     or $fmt->logconfess("failed to load waste model '$rcfile': $!");
 
@@ -397,6 +430,11 @@ default value:
  "/etc/wasterc",
  "/etc/default/wasterc"
 
+=item Variable: $logLoad
+
+=item Variable: $logCache
+
+=item Variable: $logRun
 
 =back
 
@@ -433,9 +471,10 @@ object structure: assumed HASH
                                      #    wwriter => $wwriter,   #-- native-format writer (hack)
                                      # )
  
-     ##-- logging
-     logCache => $level,             # cache operation log-level (default=trace)
-     logRun => $level,               # runtime operation log-level (default=undef)
+     ##-- logging (in order of increasing verbosity)
+     logLoad => $level,              # model loading log-level (default=$logLoad)
+     logCache => $level,             # cache operation log-level (default=$logCache)
+     logRun => $level,               # runtime operation log-level (default=$logRun)
  
      ##-- Common
      #utf8 => $bool,		       ##-- utf8 mode always on
