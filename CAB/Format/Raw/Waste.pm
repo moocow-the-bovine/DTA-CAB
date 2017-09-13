@@ -30,7 +30,7 @@ our @DEFAULT_WASTERC_PATHS =
   (
    ($ENV{TOKWRAP_RCDIR} ? "$ENV{TOKWRAP_RCDIR}/waste/waste.rc" : qw()),
    (defined($DTA::TokWrap::Version::VERSION) ? "$DTA::TokWrap::Version::RCDIR/waste/waste.rc" : qw()),
-   "$ENV{HOME}/.wasterc",
+   (defined $ENV{HOME} ? "$ENV{HOME}/.wasterc" : qw()),
    "/etc/wasterc",
    "/etc/default/wasterc"
   );
