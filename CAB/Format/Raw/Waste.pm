@@ -275,6 +275,15 @@ sub close {
 ## $fmt = $fmt->fromString(\$string)
 ##  + select input from string $string
 ##  + default calls fromFh()
+sub fromString {
+  my $fmt = shift;
+  my $ref = ref($_[0]) ? $_[0] : \$_[0];
+  return $fmt->SUPER::fromString(@_) if (!utf8::is_utf8($$ref));
+
+  my $raw = $$ref;
+  utf8::encode($raw);
+  return $fmt->SUPER::fromString(\$raw);
+}
 
 ## $fmt = $fmt->fromFh($fh)
 sub fromFh {
@@ -296,6 +305,7 @@ sub fromFh {
   $wmodel->{wwriter}->close();
 
   ##-- construct & buffer document
+  utf8::decode($ttstr) if (!utf8::is_utf8($ttstr));
   $fmt->{doc} = DTA::CAB::Format::TT->parseTokenizerString(\$ttstr);
   return $fmt;
 }
