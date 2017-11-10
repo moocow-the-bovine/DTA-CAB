@@ -1,36 +1,26 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Morph::Latin::CDB.pm
+## File: DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: auxilliary latin-language analysis, dictionary-based
+## Description: auxilliary full-form pseudo-morphology, dictionary-based: historical place-names, Hessen, from HLGL Marburg
 
 ##==============================================================================
-## Package: Analyzer::Morph::Latin::CDB
+## Package: Analyzer::Morph::Extra::OrtLexHessen
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph::Latin::CDB;
+package DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen;
+use DTA::CAB::Analyzer::Morph::Extra::BDB;
 use DTA::CAB::Analyzer ':child';
-use DTA::CAB::Analyzer::Dict;
-use DTA::CAB::Analyzer::Dict::CDB;
 use Carp;
 use strict;
-our @ISA = qw(DTA::CAB::Analyzer::Dict::CDB);
+our @ISA = qw(DTA::CAB::Analyzer::Morph::Extra::BDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Dict::CDB
+##  + object structure: see DTA::CAB::Analyzer::Dict::BDB
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- analysis selection
-			      label      => 'mlatin',
-			      #analyzeGet => "lc($DICT_GET_TEXT)",
-			      #analyzeSet => $DICT_SET_FST,
-			      ##
-			      analyzeCode => join("\n",
-						  'return if (defined($_->{$lab})); ##-- avoid re-analysis',
-						  #'@vals='._am_tt_fst_list('( $dhash->{lc($_->{text})} || "" )').';',
-						  '@vals='._am_tt_fst_list('($dhash->{lc('._am_xlit.')}||"")').';',
-						  '$_->{$lab}=[@vals] if (@vals && (!$_->{xlit} || $_->{xlit}{isLatinExt}));',
-						 ),
+			      checkLabel => 'mextra.OrtLexHessen', ##-- key to check for re-analysis
 			      ##-- user args
 			      @_
 			     );
@@ -57,7 +47,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via external full-form DB
+DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen - auxilliary full-form pseudo-morphology, historical place names (Hessen)
 
 =cut
 
@@ -67,9 +57,9 @@ DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via ext
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Morph::Latin::CDB;
+ use DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen;
  
- $latin = DTA::CAB::Analyzer::Morph::Latin::CDB->new(%args);
+ $mextra = DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen->new(%args);
  
 
 =cut
@@ -80,13 +70,13 @@ DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via ext
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Morph::Latin::CDB
+DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen
 is a just a simplified wrapper for
-L<DTA::CAB::Analyzer::Dict::CDB|DTA::CAB::Analyzer::Dict::CDB>
-which sets the following default options:
+L<DTA::CAB::Analyzer::Morph::Extra::BDB|DTA::CAB::Analyzer::Morph::Extra::BDB>
+which sets the following options:
 
- label      => 'mlatin',
- analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').'] if (!defined($_->{$lab}));',
+ label       => 'morph',
+ checkLabel  => 'mextra.OrtLexHessen', ##-- boolean flag to avoid re-analysis
 
 =cut
 
@@ -105,10 +95,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Bryan Jurish
+Copyright (C) 2017 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.1 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

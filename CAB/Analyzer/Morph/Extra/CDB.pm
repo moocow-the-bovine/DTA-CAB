@@ -1,13 +1,13 @@
 ## -*- Mode: CPerl -*-
 ##
-## File: DTA::CAB::Analyzer::Morph::Latin::CDB.pm
+## File: DTA::CAB::Analyzer::Morph::Extra::CDB.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: auxilliary latin-language analysis, dictionary-based
+## Description: auxilliary full-form pseudo-morphology, dictionary-based: CDB
 
 ##==============================================================================
 ## Package: Analyzer::Morph::Latin::CDB
 ##==============================================================================
-package DTA::CAB::Analyzer::Morph::Latin::CDB;
+package DTA::CAB::Analyzer::Morph::Extra::CDB;
 use DTA::CAB::Analyzer ':child';
 use DTA::CAB::Analyzer::Dict;
 use DTA::CAB::Analyzer::Dict::CDB;
@@ -21,15 +21,17 @@ sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(
 			      ##-- analysis selection
-			      label      => 'mlatin',
-			      #analyzeGet => "lc($DICT_GET_TEXT)",
-			      #analyzeSet => $DICT_SET_FST,
+			      label      => 'mextra',     ##-- local 'morph' key (append)
+			      checkLabel => 'mextra.bdb', ##-- local boolean key (avoid re-analysis)
+			      morphLabel => 'morph',      ##-- global 'morph' key (append)
 			      ##
 			      analyzeCode => join("\n",
-						  'return if (defined($_->{$lab})); ##-- avoid re-analysis',
-						  #'@vals='._am_tt_fst_list('( $dhash->{lc($_->{text})} || "" )').';',
-						  '@vals='._am_tt_fst_list('($dhash->{lc('._am_xlit.')}||"")').';',
-						  '$_->{$lab}=[@vals] if (@vals && (!$_->{xlit} || $_->{xlit}{isLatinExt}));',
+						  'return if (defined($_->{$checkLab})); ##-- avoid re-analysis',
+						  '$_->{$checkLab}=1;',
+						  '@vals='._am_tt_fst_list('($dhash->{'._am_xlit.'}||"")').';',
+						  'if (@vals) {', # && (!$_->{xlit} || $_->{xlit}{isLatinExt})
+						  '  push(@{$_->{$morphLab}},@vals); push(@{$_->{$lab}},@vals);',
+						  '}',
 						 ),
 			      ##-- user args
 			      @_
@@ -37,9 +39,22 @@ sub new {
   return $aut;
 }
 
-##==============================================================================
-## Analysis Formatting
-##==============================================================================
+## @keys = $anl->typeKeys(\%opts)
+##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
+##  + override returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label},$anl->{morphLabel})
+sub typeKeys {
+  return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : grep {defined($_)} @$_{qw(label morphLabel)};
+}
+
+##------------------------------------------------------------------------
+## Methods: Analysis: Utils
+
+## $prefix = $dict->analyzePre()
+sub analyzePre {
+  my $dic = shift;
+  return ($dic->SUPER::analyzePre(@_)
+	  .'my ($checkLab,$morphLab) = @$anl{qw(checkLabel morphLabel)};'."\n");
+}
 
 
 1; ##-- be happy
@@ -57,7 +72,7 @@ __END__
 
 =head1 NAME
 
-DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via external full-form DB
+DTA::CAB::Analyzer::Morph::Extra::CDB - auxilliary full-form pseudo-morphology via CDB
 
 =cut
 
@@ -67,9 +82,9 @@ DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via ext
 
 =head1 SYNOPSIS
 
- use DTA::CAB::Analyzer::Morph::Latin::CDB;
+ use DTA::CAB::Analyzer::Morph::Extra::CDB;
  
- $latin = DTA::CAB::Analyzer::Morph::Latin::CDB->new(%args);
+ $mextra = DTA::CAB::Analyzer::Morph::Extra::CDB->new(%args);
  
 
 =cut
@@ -80,13 +95,15 @@ DTA::CAB::Analyzer::Morph::Latin::CDB - auxilliary latin word recognizer via ext
 
 =head1 DESCRIPTION
 
-DTA::CAB::Analyzer::Morph::Latin::CDB
+DTA::CAB::Analyzer::Morph::Extra::CDB
 is a just a simplified wrapper for
 L<DTA::CAB::Analyzer::Dict::CDB|DTA::CAB::Analyzer::Dict::CDB>
 which sets the following default options:
 
- label      => 'mlatin',
- analyzeCode => '$_->{$lab}=['._am_tt_fst_list('$dhash->{'._am_xlit.'}').'] if (!defined($_->{$lab}));',
+ label       => 'mextra',     ##-- key for local analyses (append)
+ checkLabel  => 'mextra.bdb'  ##-- key for local boolean (avoid re-analysis)
+ morphLabel  => 'morph',      ##-- key for global anylses (append)
+ analyzeCode => ...
 
 =cut
 
@@ -105,10 +122,10 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Bryan Jurish
+Copyright (C) 2017 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.1 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut

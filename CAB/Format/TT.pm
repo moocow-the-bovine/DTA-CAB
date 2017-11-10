@@ -198,6 +198,7 @@ sub parseTTString {
   my %f2key =
     ('morph/lat'=>'mlatin',
      'morph/la'=>'mlatin',
+     'morph/extra' => 'mextra',
     );
 
   ##-- split by sentence
@@ -260,8 +261,8 @@ sub parseTTString {
 		  } else {
 		    $tok->{xlit} = { isLatin1=>'', isLatinExt=>'', latin1Text=>substr($field,7) };
 		  }
-		} elsif ($field =~ m/^\[(lts|morph|mlatin|morph\/lat?|rw|rw\/lts|rw\/morph|moot\/morph|dmoot\/morph|eq(?:pho(?:x?)|rw|lemma|tagh))\] (.*)$/) {
-		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph|...)
+		} elsif ($field =~ m/^\[(lts|morph|mlatin|morph\/lat?|mextra|morph\/extra|rw|rw\/lts|rw\/morph|moot\/morph|dmoot\/morph|eq(?:pho(?:x?)|rw|lemma|tagh))\] (.*)$/) {
+		  ##-- token fields: fst analysis: (lts|eqpho|eqphox|morph|mlatin|mextra|rw|rw/lts|rw/morph|eqrw|moot/morph|dmoot/morph|...)
 		  ($fkey,$fval) = ($1,$2);
 		  if ($fkey =~ s/^rw\///) {
 		    $tok->{rw} = [ {} ] if (!$tok->{rw});
@@ -501,6 +502,10 @@ sub token2buf {
   ##-- Morph::Latin ('morph/lat')
   $$bufr .= join('', map { "\t[morph/lat] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mlatin}})
     if ($tok->{mlatin});
+
+  ##-- Morph::Extra::* ('morph/extra')
+  $$bufr .= join('', map { "\t[morph/extra] ".(defined($_->{lo}) ? "$_->{lo} : " : '')."$_->{hi} <$_->{w}>" } @{$tok->{mextra}})
+    if ($tok->{mextra});
 
   ##-- MorphSafe ('morph/safe')
   $$bufr .= "\t[morph/safe] ".($tok->{msafe} ? 1 : 0) if (exists($tok->{msafe}));
