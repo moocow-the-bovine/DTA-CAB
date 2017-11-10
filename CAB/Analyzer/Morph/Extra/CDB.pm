@@ -43,7 +43,7 @@ sub new {
 ##  + returns list of type-wise keys to be expanded for this analyzer by expandTypes()
 ##  + override returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label},$anl->{morphLabel})
 sub typeKeys {
-  return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : grep {defined($_)} @$_{qw(label morphLabel)};
+  return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : grep {defined($_)} @{$_[0]}{qw(label morphLabel)};
 }
 
 ##------------------------------------------------------------------------
