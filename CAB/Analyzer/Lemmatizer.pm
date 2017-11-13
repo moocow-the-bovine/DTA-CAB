@@ -109,7 +109,7 @@ sub _analyzeGuts {
   $prep_sub->();
 
   ##-- lemmatize, type-wise by (text+analysis)-pair
-  my ($lemma,$lemmaFromMorph);
+  my ($lemma,$tag,$lemmaFromMorph);
   foreach (values %$key2a) {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
@@ -124,10 +124,18 @@ sub _analyzeGuts {
       $lemma =~ s/\x{ac}//g;
       $lemmaFromMorph = 0;
     }
+    ##-- extract tag if available
+    $tag = $_->{tag} || ($_->{hi} && $_->{hi} =~ m/\[_([^\]]+)\]/ ? $1 : '');
+    ##
     ##-- normalization
     $lemma =~ s/(?:^\s+|\s+\z)//g;
     $lemma =~ s/\s+/_/g;
-    if (!$lemmaFromMorph && ($_->{tag} ? ($_->{tag} ne 'XY') : ($_->{hi} && $_->{hi}!~m/\[_XY\]/))) {
+    if ($lemmaFromMorph && $tag =~ /^(?:NE|XY)$/) {
+      ##-- retain morphology-supplied original case for names and symbols
+      ;
+    }
+    elsif ($_->{tag} ne 'XY') {
+      ##-- lower-case all lemmata here, otherwise Anschlußstelle->AnschlußStelle (mantis #23127)
       $lemma = lc($lemma);
       $lemma =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g
 	if (#$_->{tag} ? ($_->{tag}=~m/^N/) :  ##-- disabled 2016-06-01 for Helsinki-style english morphology; see ucTags key in Analyzer::MootSub
