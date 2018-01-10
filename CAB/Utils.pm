@@ -313,7 +313,7 @@ sub si_str {
   return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);  ##-- tera
   return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);   ##-- giga
   return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);   ##-- mega
-  return sprintf("%.2fk", $x/10**3)  if ($x >= 10**3);   ##-- kilo
+  return sprintf("%.2fK", $x/10**3)  if ($x >= 10**3);   ##-- kilo
   return sprintf("%.2f",  $x)        if ($x >= 0);       ##-- (natural units)
   return sprintf("%.2fm", $x*10**3)  if ($x >= 10**-3);  ##-- milli
   return sprintf("%.2fu", $x*10**6)  if ($x >= 10**-6);  ##-- micro
@@ -494,6 +494,7 @@ sub mstat {
   close($fh);
   my (%mstat);
   @mstat{qw(pid size resident share text lib data dt)} = ($pid, split(' ',$buf));
+  $mstat{pagesize} = POSIX::sysconf( POSIX::_SC_PAGESIZE );
   return \%mstat;
 }
 
@@ -502,7 +503,7 @@ sub mstat {
 sub memsize {
   my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
   my $mstat = $that->mstat(@_);
-  return defined($mstat) ? $mstat->{size} : undef;
+  return defined($mstat) ? $mstat->{size}*(($mstat->{pagesize}||4096)/1024) : undef;
 }
 
 ##==============================================================================
