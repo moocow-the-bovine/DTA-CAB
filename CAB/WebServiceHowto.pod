@@ -294,7 +294,7 @@ L<the multi-sentence query example|/A Multi-Sentence Query>.
 Due to bandwidth limitations, the CAB server currently only accepts input files of size B<E<lt>= 1 MB>.
 If you need analyze a large amount of data, you will first need to split your input files into
 chunks of no more than 1 MB each, sending each chunk to the server individually.  In this case,
-please refrain from "hammering" the CAB server with an uniterrupted stream of requests: wait at least
+please refrain from "hammering" the CAB server with an uninterrupted stream of requests: wait at least
 3-5 seconds between requests to avoid blocking the server for other users.  Alternatively,
 if you need to analyze a large corpus, you can L<contact the I<Deutsches Textarchiv>|http://deutschestextarchiv.de/doku/impressum#kontakt>.
 
