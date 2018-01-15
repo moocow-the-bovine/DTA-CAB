@@ -91,7 +91,7 @@ WriteMakefile
 		    'HTTP::Daemon' =>0,
 		    ##--
 		    'Log::Log4perl' => 1.07,
-		    'Unicode::CharName' => 1.07,
+		    'Unicode::CharName' => 0, #1.07,
 		    'RPC::XML' => 0.59,
 		    ##
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
