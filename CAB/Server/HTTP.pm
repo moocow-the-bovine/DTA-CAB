@@ -87,7 +87,6 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- underlying server
-			   daemon => undef,
 			   daemonArgs => {
 					  LocalAddr=>'0.0.0.0', ##-- all
 					  LocalPort=>8088,
@@ -151,6 +150,45 @@ sub new {
 ##  + called to initialize new objects after new()
 
 ##==============================================================================
+## Methods: HTTP server API (abstractions for HTTP::UNIX)
+
+## $str = $srv->socketLabel()
+##  + returns symbolic label for bound socket address
+sub socketLabel {
+  my $srv = shift;
+  return ($srv->{daemonArgs}{LocalAddr}||'0.0.0.0').':'.($srv->{daemonArgs}{LocalPort});
+}
+
+## $str = $srv->daemonLabel()
+##  + returns symbolic label for running daemon
+sub daemonLabel {
+  my $srv = shift;
+  return ($srv->{daemon}->sockhost.":".$srv->daemon->sockport);
+}
+
+## $bool = $srv->canBindSocket()
+##  + returns true iff socket can be bound; should set $! on error
+sub canBindSocket {
+  my $srv   = shift;
+  my $dargs = $srv->{daemonArgs} || {};
+  my $sock  = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN) or return 0;
+  undef $sock;
+  return 1;
+}
+
+## $class = $srv->daemonClass()
+##  + get HTTP::Daemon class
+sub daemonClass {
+  return 'HTTP::Daemon';
+}
+
+## $class_or_undef = $srv->clientClass()
+##  + get class for client connections
+sub clientClass {
+  return undef;
+}
+
+##==============================================================================
 ## Methods: Generic Server API
 ##==============================================================================
 
@@ -160,8 +198,8 @@ sub prepareLocal {
   my $srv = shift;
 
   ##-- setup HTTP::Daemon object
-  if (!($srv->{daemon}=HTTP::Daemon->new(%{$srv->{daemonArgs}}))) {
-    $srv->logconfess("could not create HTTP::Daemon object: $!");
+  if (!($srv->{daemon}=$srv->daemonClass->new(%{$srv->{daemonArgs}}))) {
+    $srv->logconfess("could not create ", $srv->daemonClass, " daemon object: $!");
   }
   my $daemon = $srv->{daemon};
 
@@ -198,12 +236,13 @@ sub prepareLocal {
 sub run {
   my $srv = shift;
   $srv->prepare() if (!$srv->{daemon}); ##-- sanity check
-  $srv->logcroak("run(): no underlying HTTP::Daemon object!") if (!$srv->{daemon});
+  $srv->logcroak("run(): no underlying daemon object!") if (!$srv->{daemon});
 
   my $daemon = $srv->{daemon};
   my $mode   = $srv->{daemonMode} || 'serial';
+  my $cclass = $srv->clientClass;
   my $bgConnectTimeout = $srv->{bgConnectTimeout} || 0;
-  $srv->info("server starting in $mode mode on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
+  $srv->info("server starting in $mode mode on ", $srv->daemonLabel, "\n");
 
   ##-- setup SIGPIPE handler (avoid heinous death)
   ##  + following suggestion on http://www.perlmonks.org/?node_id=580411
@@ -220,6 +259,9 @@ sub run {
       #sleep(1);
       next;
     }
+
+    ##-- re-bless client socket (for UNIX-domain server)
+    bless($csock,$cclass) if ($cclass);
 
     ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();

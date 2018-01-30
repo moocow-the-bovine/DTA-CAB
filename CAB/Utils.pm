@@ -32,7 +32,7 @@ our %EXPORT_TAGS =
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
-     proc => [qw(mstat memsize)],
+     proc => [qw(mstat memsize pid_cmd)],
      files => [qw(fhbits file_mtime)],
      time => [qw(timestamp_str)]
     );
@@ -504,6 +504,21 @@ sub memsize {
   my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
   my $mstat = $that->mstat(@_);
   return defined($mstat) ? $mstat->{size}*(($mstat->{pagesize}||4096)/1024) : undef;
+}
+
+## $cmd = pid_cmd($pid)
+sub pid_cmd {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $pid = shift;
+  my ($fh,$buf);
+  return
+    ($pid && (readlink("/proc/$pid/exe")
+	      || do {
+		open($fh, "/proc/$pid/cmdline")
+		  && scalar($buf=<$fh>)
+		  && (split(/\0/,$buf,2))[0]
+		})
+    ) || undef;
 }
 
 ##==============================================================================
