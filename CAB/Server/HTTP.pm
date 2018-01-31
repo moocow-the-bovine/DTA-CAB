@@ -150,7 +150,7 @@ sub new {
 ##  + called to initialize new objects after new()
 
 ##==============================================================================
-## Methods: HTTP server API (abstractions for HTTP::UNIX)
+## Methods: subclass API (abstractions for HTTP::UNIX)
 
 ## $str = $srv->socketLabel()
 ##  + returns symbolic label for bound socket address
@@ -586,6 +586,15 @@ DTA::CAB::Server::HTTP - DTA::CAB standalone HTTP server using HTTP::Daemon
  $obj = CLASS_OR_OBJ->new(%args);
  
  ##========================================================================
+ ## Methods: subclass API (abstractions for HTTP::UNIX)
+ 
+ $str = $srv->socketLabel();
+ $str = $srv->daemonLabel();
+ $bool = $srv->canBindSocket();
+ $class = $srv->daemonClass();
+ $class_or_undef = $srv->clientClass();
+ 
+ ##========================================================================
  ## Methods: Generic Server API
  
  $rc = $srv->prepareLocal();
@@ -739,6 +748,55 @@ e.g. $subclass="Query" will instantiate a handler of class C<DTA::CAB::Server::H
 =cut
 
 ##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Server::HTTP: Methods: subclass API
+=pod
+
+=head2 Methods: subclass API
+
+=over 4
+
+=item socketLabel
+
+ $str = $srv->socketLabel();
+
+returns symbolic label for bound socket address;
+default returns string of the form "ADDR:PORT"
+using $srv-E<gt>{daemonArgs}.
+
+=item daemonLabel
+
+ $str = $srv->daemonLabel();
+
+returns symbolic label for running daemon;
+default returns string of the form "ADDR:PORT"
+using $srv-E<gt>{daemon}.
+
+=item canBindSocket
+
+ $bool = $srv->canBindSocket();
+
+returns true iff socket can be bound; should set $! on error;
+default tries to bind INET socket as specified in $srv-E<gt>{daemonArgs}.
+
+=item daemonClass
+
+ $class = $srv->daemonClass();
+
+get underlying L<HTTP::Daemon|HTTP::Daemon> class,
+default returns 'HTTP::Daemon'.
+
+=item clientClass
+
+ $class_or_undef = $srv->clientClass();
+
+get class for client connections, or undef (default)
+if client sockets are not to be re-blessed into a different class.
+
+=back
+
+=cut
+
+##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Server::HTTP: Methods: Generic Server API
 =pod
 
@@ -854,7 +912,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010-2016 by Bryan Jurish
+Copyright (C) 2010-2017 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,
@@ -864,6 +922,7 @@ at your option, any later version of Perl 5 you may have available.
 
 L<DTA::CAB::Server(3pm)|DTA::CAB::Server>,
 L<DTA::CAB::Server::HTTP::Handler(3pm)|DTA::CAB::Server::HTTP::Handler>,
+L<DTA::CAB::Server::HTTP::UNIX(3pm)|DTA::CAB::Server::HTTP::UNIX>,
 L<DTA::CAB::Client::HTTP(3pm)|DTA::CAB::Client::HTTP>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<perl(1)|perl>,

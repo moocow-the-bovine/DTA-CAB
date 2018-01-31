@@ -92,24 +92,6 @@ sub new {
 ## Methods: Generic Client API: Connections
 ##==============================================================================
 
-## $url = $cli->lwpUrl()
-## $url = $cli->lwpUrl($url)
-##  + gets LWP-style URL $url (parses apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs too)
-sub lwpUrl {
-  my ($cli,$url) = @_;
-  return undef if (! ($url ||= $cli->{serverURL}) );
-
-  if ($url =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
-    ##-- detect apache mod_proxy syntax
-    my ($sockpath,$uristr) = ($1,$2);
-    my $uri = URI->new($uristr)->as_string;
-    $uri =~ s{//+}{${sockpath}//};
-    return $uri;
-  }
-
-  return $url;
-}
-
 ## $bool = $cli->connected()
 sub connected {
   my $cli = shift;
@@ -161,6 +143,24 @@ sub analyzers {
 ##==============================================================================
 ## Methods: Utils
 ##==============================================================================
+
+## $url = $cli->lwpUrl()
+## $url = $cli->lwpUrl($url)
+##  + gets LWP-style URL $url (parses apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs too)
+sub lwpUrl {
+  my ($cli,$url) = @_;
+  return undef if (! ($url ||= $cli->{serverURL}) );
+
+  if ($url =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
+    ##-- detect apache mod_proxy syntax
+    my ($sockpath,$uristr) = ($1,$2);
+    my $uri = URI->new($uristr)->as_string;
+    $uri =~ s{//+}{${sockpath}//};
+    return $uri;
+  }
+
+  return $url;
+}
 
 ## $agent = $cli->ua()
 ##  + gets underlying LWP::UserAgent object, caching if required
@@ -530,6 +530,7 @@ DTA::CAB::Client::HTTP - generic HTTP server client for DTA::CAB
  ##========================================================================
  ## Methods: Low-Level Utilities
  
+ $url      = $cli->lwpUrl($url);
  $agent    = $cli->ua();
  $rclient  = $cli->rclient();
  $uriStr   = $cli->urlEncode(\%form);
@@ -662,13 +663,13 @@ Returns true if a test query (HEAD) returns a successful response.
 
 Establish connection to server.  Generates the underlying connection object
 ($cli-E<gt>{ua} or $cli-E<gt>{rclient}).
-Really does nothing but create the LWP::UserAgent object in raw HTTP mode.
+Really does nothing but create the L<LWP::UserAgent|LWP::UserAgent> object in raw HTTP mode.
 
 =item disconnect
 
  $bool = $cli->disconnect();
 
-Deletes underlying LWP::UserAgent object.
+Deletes underlying L<LWP::UserAgent|LWP::UserAgent> object.
 
 
 =item analyzers
@@ -775,15 +776,25 @@ Implements L<DTA::CAB::Client::analyzeToken|DTA::CAB::Client/analyzeToken>.
 
 =over 4
 
+=item lwpUrl
+
+ $lwp_url = $cli->lwpUrl();
+ $lwp_url = $cli->lwpUrl($url);
+
+Returns LWP-style URL C<$lwp_url> for C<$url>, which defaults to C<$cli-E<gt>{serverURL}>.
+Parses both apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs
+into L<LWP::Protocol::http::SocketUnixAlt|LWP::Protocol::http::SocketUnixAlt>-style
+URLs of the form "http:/path/to/unix/socket//uri/path".
+
 =item ua
 
  $agent = $cli->ua();
 
-Gets underlying LWP::UserAgent object, caching if required.
+Gets underlying L<LWP::UserAgent|LWP::UserAgent> object, caching if required.
 
 =item rclient
 
- $rclientent = $cli->rclient();
+ $rclient = $cli->rclient();
 
 For xmlrpc mode, gets underlying DTA::CAB::Client::XmlRpc object, caching if required.
 
@@ -801,6 +812,13 @@ Encodes query form parameters or a raw string for inclusing in a URL.
 
 Gets response for $httpRequest (a HTTP::Request object) using $cli-E<gt>ua-E<gt>request().
 Also traces request to $cli-E<gt>{tracefh} if defined.
+
+=utem urequest_unix
+
+ $response = $cli->urequest_unix($httpRequest);
+
+Guts for L<urequest()|/urequest> over UNIX sockets
+using L<LWP::Protocol::http::SocketUnixAlt|LWP::Protocol::http::SocketUnixAlt>.
 
 =item uhead
 
@@ -874,6 +892,7 @@ L<dta-cab-xmlrpc-server.perl(1)|dta-cab-xmlrpc-server.perl>,
 L<dta-cab-xmlrpc-client.perl(1)|dta-cab-xmlrpc-client.perl>,
 L<DTA::CAB::Client(3pm)|DTA::CAB::Client>,
 L<DTA::CAB::Server::HTTP(3pm)|DTA::CAB::Server::HTTP>,
+L<DTA::CAB::Server::HTTP::UNIX(3pm)|DTA::CAB::Server::HTTP::UNIX>,
 L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<perl(1)|perl>,
