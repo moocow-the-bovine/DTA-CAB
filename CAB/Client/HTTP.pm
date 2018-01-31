@@ -92,6 +92,24 @@ sub new {
 ## Methods: Generic Client API: Connections
 ##==============================================================================
 
+## $url = $cli->lwpUrl()
+## $url = $cli->lwpUrl($url)
+##  + gets LWP-style URL $url (parses apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs too)
+sub lwpUrl {
+  my ($cli,$url) = @_;
+  return undef if (! ($url ||= $cli->{serverURL}) );
+
+  if ($url =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
+    ##-- detect apache mod_proxy syntax
+    my ($sockpath,$uristr) = ($1,$2);
+    my $uri = URI->new($uristr)->as_string;
+    $uri =~ s{//+}{${sockpath}//};
+    return $uri;
+  }
+
+  return $url;
+}
+
 ## $bool = $cli->connected()
 sub connected {
   my $cli = shift;
@@ -100,7 +118,7 @@ sub connected {
   return 1 if (!$cli->{testConnect});
 
   ##-- send a test query (system.identity())
-  my $rsp = $cli->uhead($cli->{serverURL});
+  my $rsp = $cli->uhead($cli->lwpUrl);
   return $rsp && $rsp->is_success ? 1 : 0;
 }
 
@@ -125,15 +143,16 @@ sub disconnect {
 }
 
 ## @analyzers = $cli->analyzers()
-##  + appends '/list' to $cli->{serverURL} and parses returns
+##  + appends '/list' to $cli->lwpUrl() and parses returns
 ##    list of raw text lines returned
 ##  + die()s on error
 sub analyzers {
   my $cli = shift;
   return $cli->rclient->analyzers() if ($cli->{mode} eq 'xmlrpc');
 
-  my $rsp = $cli->uget($cli->{serverURL}.'/list?f=tt');
-  $cli->logdie("analyzers(): GET $cli->{serverURL}/list failed: ", $rsp->status_line)
+  my $url = $cli->lwpUrl.'/list?f=tt';
+  my $rsp = $cli->uget($url);
+  $cli->logdie("analyzers(): GET $url failed: ", $rsp->status_line)
     if (!$rsp || $rsp->is_error);
   my $content = $rsp->content;
   return grep {defined($_) && $_ ne ''} split(/\r?\n/,$content);
@@ -157,7 +176,7 @@ sub rclient {
   ##
   require DTA::CAB::Client::XmlRpc;
   my $cli = shift;
-  my $xuri = URI->new($cli->{serverURL});
+  my $xuri = URI->new($cli->lwpUrl);
   $xuri->path($cli->{rpcpath});
   return $cli->{rclient} = DTA::CAB::Client::XmlRpc->new(%$cli, serverURL=>$xuri->as_string);
 }
@@ -187,8 +206,38 @@ sub urlEncode {
 ##   + also traces request to $cli->{tracefh} if defined
 sub urequest {
   my ($cli,$hreq) = @_;
+
+  ##-- check for unix sockets
+  return $cli->urequest_unix($hreq) if ($hreq->uri->path =~ m{[^/]//});
+
   $cli->{tracefh}->print("\n__BEGIN_REQEST__\n", $hreq->as_string, "__END_REQUEST__\n") if (defined($cli->{tracefh}));
   return $cli->ua->request($hreq);
+}
+
+## $response = $cli->urequest_unix($httpRequest)
+##   + guts for urequest() over UNIX sockets
+sub urequest_unix {
+  my ($cli,$hreq) = @_;
+
+  ##-- setup LWP::Protocol::http::SocketUnixAlt handlers
+  require LWP::Protocol::http::SocketUnixAlt;
+  my $http_impl = LWP::Protocol::implementor("http");
+  LWP::Protocol::implementor('http' => 'LWP::Protocol::http::SocketUnixAlt');
+
+  ##-- suppress irritating warnings from LWP::Protocol::http via LWP::Protocol::http::SocketUnixAlt
+  my $sigwarn  = $SIG{__WARN__};
+  local $SIG{__WARN__} = sub {
+    return if ($_[0] =~ m{Use of uninitialized value \$hhost.*LWP/Protocol/http\.pm});
+    $sigwarn ? $sigwarn->(@_) : warn(@_);
+  };
+
+  $cli->{tracefh}->print("\n__BEGIN_REQEST__\n", $hreq->as_string, "__END_REQUEST__\n") if (defined($cli->{tracefh}));
+  my $rsp = $cli->ua->request($hreq);
+
+  ##-- reset handlers
+  LWP::Protocol::implementor('http' => $http_impl);
+
+  return $rsp;
 }
 
 ## $response = $cli->uhead($url, Header=>Value,...)
@@ -319,7 +368,7 @@ sub analyzeDataRef {
   my ($rsp);
   if ($qmode eq 'get') {
     $form{$qname} = $$dataref;
-    $rsp = $cli->uget_form($cli->{serverURL}, \%form, @$headers);
+    $rsp = $cli->uget_form($cli->lwpUrl, \%form, @$headers);
   }
   else {
     ##-- encode (for HTTP::Request v5.810 e.g. on services)
@@ -333,7 +382,7 @@ sub analyzeDataRef {
     if ($qmode eq 'post') {
       ##-- post most
       $form{$qname} = $$dataref;
-      $rsp = $cli->upost($cli->{serverURL}, \%form,
+      $rsp = $cli->upost($cli->lwpUrl, \%form,
 			 @$headers,
 			 ($cli->{post} && $cli->{post} eq 'multipart' ? ('Content-Type'=>'form-data') : qw()),
 			);
@@ -341,7 +390,7 @@ sub analyzeDataRef {
     elsif ($qmode eq 'xpost') {
       ##-- xpost mode
       $ctype .= "; charset=\"UTF-8\"" if ($ctype !~ /octet-stream/ && $ctype !~ /\bcharset=/);
-      $rsp = $cli->uxpost($cli->{serverURL},
+      $rsp = $cli->uxpost($cli->lwpUrl,
 			  \%form,
 			  $$dataref,
 			  @$headers,

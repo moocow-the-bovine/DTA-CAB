@@ -147,8 +147,8 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 DTA::CAB::Logger->logInit();
 
 ##-- sanity checks
-$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+://|);
-if ($serverURL =~ m|([^:]+://[^/:]*)(/[^:]*)$|) {
+$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+:.*//|);
+if ($serverURL !~ m{^unix:}i && $serverURL =~ m|([^:]+://[^/:]*)(/[^:]*)$|) {
   $serverURL = "$1:${defaultPort}$2";
 }
 
@@ -519,7 +519,16 @@ Set default log level (trace|debug|info|warn|error|fatal).
 
 =item -server URL
 
-Set server URL (default: localhost:8000).
+Set server URL (default: http://localhost:8000).
+To query a UNIX-domain CAB-server (L<DTA::CAB::Server::HTTP::UNIX>)
+on F</path/to/cab.sock>,
+you can specify the URL using either
+the L<LWP::Protocol::http::SocketUnixAlt|LWP::Protocol::http::SocketUnixAlt>
+or apache mod_proxy sytax; the following are equivalent:
+
+ http:/path/to/cab.sock//uri/path
+ unix:/path/to/cab.sock|http:///uri/path
+ unix:///path/to/cab.sock|http:///uri/path
 
 =item -timeout SECONDS
 

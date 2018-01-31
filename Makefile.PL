@@ -72,6 +72,7 @@ WriteMakefile
 		    'Encode'=>0,
 		    'File::Basename'=>0,
 		    'Getopt::Long'=>0,
+		    'LWP::Protocol::http::SocketUnixAlt'=>0, #0.0204
 		    'Pod::Usage'=>0,
 		    'Storable'=>0,
 		    'Time::HiRes'=>0,
@@ -89,6 +90,7 @@ WriteMakefile
 		    'Template' =>0,
 		    'LWP::UserAgent' =>0,
 		    'HTTP::Daemon' =>0,
+		    'HTTP::Daemon::UNIX' =>0, #0.06
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    'Unicode::CharName' => 0, #1.07,

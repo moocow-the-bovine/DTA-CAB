@@ -156,6 +156,7 @@ CAB/Server/HTTP/Handler/QueryList.pm
 CAB/Server/HTTP/Handler/Response.pm
 CAB/Server/HTTP/Handler/Template.pm
 CAB/Server/HTTP/Handler/XmlRpc.pm
+CAB/Server/HTTP/UNIX.pm
 CAB/Server/XmlRpc.pm
 CAB/Socket.pm
 CAB/Socket/UNIX.pm

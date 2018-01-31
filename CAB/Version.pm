@@ -5,5 +5,5 @@
 ##
 package DTA::CAB::Version;
 $DTA::CAB::VERSION = '1.95';
-$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 27568:27581M';
+$DTA::CAB::SVNVERSION = 'svn+ssh://odo.dwds.de/home/svn/dev/DTA-CAB/trunk @ 27637:27641M';
 1;
