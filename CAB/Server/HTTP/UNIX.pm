@@ -111,17 +111,20 @@ sub new {
 sub DESTROY {
   my $srv = shift;
 
-  ##-- terminate tcp-relay subprocess
-  kill('TERM'=>$srv->{relayPid}) if ($srv->{relayPid});
+  ##-- only run this for the "real" parent server process
+  if ($$ == ($srv->{pid}//0)) {
+    ##-- terminate tcp-relay subprocess
+    kill('TERM'=>$srv->{relayPid}) if ($srv->{relayPid});
 
-  ##-- destroy daemon (force-close socket)
-  delete($srv->{daemon}) if ($srv->{daemon});
+    ##-- destroy daemon (force-close socket)
+    delete($srv->{daemon}) if ($srv->{daemon});
 
-  ##-- unlink socket if we got it
-  if ($srv->{_socketPath} && -e $srv->{_socketPath}) {
-    unlink($srv->{_socketPath})
-      or warn("failed to unlink server socket $srv->{_socketPath}: $!");
-    delete $srv->{_socketPath};
+    ##-- unlink socket if we got it
+    if ($srv->{_socketPath} && -e $srv->{_socketPath}) {
+      unlink($srv->{_socketPath})
+	or warn("failed to unlink server socket $srv->{_socketPath}: $!");
+      delete $srv->{_socketPath};
+    }
   }
 
   ##-- superclass destruction if available
@@ -248,9 +251,13 @@ sub prepareRelay {
 		   #qw(env -i), ##-- be paranoid
 		   #qw(sockrelay.perl -syslog), "-label=dta-cab-relay/$port",
 		   qw(socat -d -ly),
+		   ##
 		   #"-lpdta-cab-relay/$port", ##-- doesn't set environment varaibles
 		   "-lpdta_cab_relay",        ##-- environment variable prefix: DTA_CAB_RELAY_PEERADDR, ...
+		   ##
 		   "TCP-LISTEN:${port},bind=${addr},backlog=".IO::Socket->SOMAXCONN.",reuseaddr,fork",
+		   ##
+		   #"UNIX-CLIENT:$sockpath",
 		   qq{EXEC:socat -d -ly - 'UNIX-CLIENT:$sockpath'}, ##-- use EXEC:socat idiom to populate socat environment variables (SOCAT_PEERADDR,SOCAT_PEERPORT)
 		  ]);
 
