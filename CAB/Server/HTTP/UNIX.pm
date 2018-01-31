@@ -31,10 +31,14 @@ our @ISA = qw(DTA::CAB::Server::HTTP);
 ##     socketUser  => $user,         ##-- socket user or uid (root only; default=undef: current user)
 ##     socketGroup => $group,        ##-- socket group or gid (default=undef: current group)
 ##     _socketPath => $path,         ##-- bound socket path (for unlink() on destroy)
+##     relayCmd    => \@cmd,         ##-- TCP relay command-line for exec() (default=[qw(socat ...)], see prepareRelay())
+##     relayAddr   => $addr,         ##-- TCP relay address to bind (default=$daemonArgs{LocalAddr}, see prepareRelay())
+##     relayPort   => $port,         ##-- TCP relay address to bind (default=$daemonArgs{LocalPort}, see prepareRelay())
+##     relayPid    => $pid,          ##-- child PID for TCP relay process (sockrelay.perl / socat; see prepareRelay())
 ##
 ##     ##-- (inherited from DTA::CAB::Server:HTTP): Underlying HTTP::Daemon server
 ##     daemonMode => $daemonMode,    ##-- one of 'serial' or 'fork' [default='serial']
-##     daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new(); default={LocalAddr=>'0.0.0.0',LocalPort=>8088}
+##     #daemonArgs => \%daemonArgs,   ##-- args to HTTP::Daemon->new(); default={LocalAddr=>'0.0.0.0',LocalPort=>8088}
 ##     paths      => \%path2handler, ##-- maps local URL paths to configs
 ##     daemon     => $daemon,        ##-- underlying HTTP::Daemon::UNIX object
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
@@ -107,6 +111,9 @@ sub new {
 sub DESTROY {
   my $srv = shift;
 
+  ##-- terminate tcp-relay subprocess
+  kill('TERM'=>$srv->{relayPid}) if ($srv->{relayPid});
+
   ##-- destroy daemon (force-close socket)
   delete($srv->{daemon}) if ($srv->{daemon});
 
@@ -165,6 +172,7 @@ sub clientClass {
 ## Methods: Generic Server API: mostly inherited
 ##==============================================================================
 
+##--------------------------------------------------------------
 ## $rc = $srv->prepareLocal()
 ##  + subclass-local initialization
 sub prepareLocal {
@@ -176,7 +184,7 @@ sub prepareLocal {
 
   ##-- get socket path
   my $sockpath = $srv->{_socketPath} = $srv->{daemon}->hostpath()
-    or $srv->logdie("prepareLocal(): daemon returned bad socket path");
+    or $srv->logconfess("prepareLocal(): daemon returned bad socket path");
 
   ##-- setup socket ownership
   my $sockuid = (($srv->{socketUser}//'') =~ /^[0-9]+$/
@@ -190,7 +198,7 @@ sub prepareLocal {
     $sockgid //= $);
     $srv->vlog('info', "setting socket ownership (".scalar(getpwuid $sockuid).".".scalar(getgrgid $sockgid).") on $sockpath");
     chown($sockuid, $sockgid, $sockpath)
-      or $srv->logdie("prepareLocal(): failed to set ownership for socket '$sockpath': $!");
+      or $srv->logconfess("prepareLocal(): failed to set ownership for socket '$sockpath': $!");
   }
 
   ##-- setup socket permissions
@@ -198,15 +206,89 @@ sub prepareLocal {
     my $sockperms = oct($srv->{socketPerms});
     $srv->vlog('info', sprintf("setting socket permissions (0%03o) on %s", $sockperms, $sockpath));
     chmod($sockperms, $sockpath)
-      or $srv->logdie("prepareLocal(): failed to set permissions for socket '$sockpath': $!");
+      or $srv->logconfess("prepareLocal(): failed to set permissions for socket '$sockpath': $!");
   }
+
+  ##-- setup TCP relay subprocess
+  $rc &&= $srv->prepareRelay(@_);
 
   ##-- ok
   return $rc;
 }
 
+##--------------------------------------------------------------
+## $bool = $srv->prepareRelay()
+##  + sets up TCP relay subprocess
+sub prepareRelay {
+  my $srv = shift;
+  my $addr = $srv->{relayAddr} || $srv->{daemonArgs}{LocalAddr};
+  my $port = $srv->{relayPort} || $srv->{daemonArgs}{LocalPort};
+  return 1 if (!$addr && !$port); ##-- no relay required
+
+  my $sockpath = $srv->{_socketPath};
+  $addr ||= '0.0.0.0';
+  @$srv{qw(relayAddr relayPort)} = ($addr,$port);
+
+  $srv->vlog('trace',"starting TCP socket relay on ${addr}:${port}");
+  if ( ($srv->{relayPid}=fork()) ) {
+    ##-- parent
+    $srv->vlog('info', "started TCP socket relay process for ${addr}:${port} on pid=$srv->{relayPid}");
+  } else {
+    ##-- child (relay)
+
+    ##-- cleanup: close file desriptors
+    POSIX::close($_) foreach (3..1024);
+
+    ##-- cleanup: environment
+    #delete @ENV{grep {$_ !~ /^(?:PATH|PERL|LANG|L[CD]_)/} keys %ENV};
+
+    ##-- get relay command
+    my $cmd = ($srv->{relayCmd}
+	       || [
+		   #qw(env -i), ##-- be paranoid
+		   #qw(sockrelay.perl -syslog), "-label=dta-cab-relay/$port",
+		   qw(socat -d -ly),
+		   #"-lpdta-cab-relay/$port", ##-- doesn't set environment varaibles
+		   "-lpdta_cab_relay",        ##-- environment variable prefix: DTA_CAB_RELAY_PEERADDR, ...
+		   "TCP-LISTEN:${port},bind=${addr},backlog=".IO::Socket->SOMAXCONN.",reuseaddr,fork",
+		   qq{EXEC:socat -d -ly - 'UNIX-CLIENT:$sockpath'}, ##-- use EXEC:socat idiom to populate socat environment variables (SOCAT_PEERADDR,SOCAT_PEERPORT)
+		  ]);
+
+    $srv->vlog('trace', "RELAY: ", join(' ', @$cmd));
+    exec(@$cmd)
+      or $srv->logconfess("prepareLocal(): failed to start TCP socket relay: $!");
+  }
+
+  return 1; ##-- never reached
+}
+
+
 ##==============================================================================
-## Methods: Local: spawn and reap: inherited
+## Methods: Local: spawn and reap
+
+## \&reaper = $srv->reaper()
+##  + zombie-harvesting code; installed to local %SIG
+sub reaper {
+  my $srv = shift;
+  return sub {
+    my ($child);
+    while (($child = waitpid(-1,WNOHANG)) > 0) {
+
+      ##-- check whether required subprocess bailed on us
+      if ($srv->{relayPid} && $child == $srv->{relayPid}) {
+	delete $srv->{relayPid};
+	$srv->logdie("TCP relay process ($child) exited with status $?");
+      }
+
+      ##-- normal case: handle client-level forks (e.g. for POST)
+      $srv->vlog($srv->{logReap},"reaped subprocess pid=$child, status=$?");
+      delete $srv->{children}{$child};
+    }
+
+    #$SIG{CHLD}=$srv->reaper() if ($srv->{installReaper}); ##-- re-install reaper for SysV
+  };
+}
+
 
 
 ##==============================================================================
@@ -225,15 +307,50 @@ use File::Basename qw(basename);
 use DTA::CAB::Utils qw(:proc);
 our @ISA = qw(HTTP::Daemon::ClientConn);
 
-## $host = peerhost()
-##  + actually gets UNIX credentials on linux, as USER.GROUP[PID]
-sub peerhost {
+## ($pid,$uid,$gid) = $sock->peercred()
+##  + gets peer credentials; returns (-1,-1,-1) on failure
+sub peercred {
   my $sock = shift;
-  my ($pid,$uid,$gid);
   if ($sock->can('SO_PEERCRED')) {
     my $buf = $sock->sockopt($sock->SO_PEERCRED);
-    ($pid,$uid,$gid) = unpack('lll',$buf);
+    return unpack('lll',$buf);
   }
+  return (-1,-1,-1);
+}
+
+## \%env = $sock->peerenv()
+## \%env = $sock->peerenv($pid)
+##  + gets environment variables for peer process, if possible
+##  + uses cached value in ${*sock}{peerenv} if present
+##  + returns undef on failure
+sub peerenv {
+  my ($sock,$pid) = @_;
+  return ${*$sock}{'peerenv'} if (${*$sock}{'peerenv'});
+  ($pid) = $sock->peercred if (!$pid);
+  my ($fh,%env);
+  if (open($fh,"</proc/$pid/environ")) {
+    local $/ = "\0";
+    my ($key,$val);
+    while (defined($_=<$fh>)) {
+      chomp($_);
+      ($key,$val) = split(/=/,$_,2);
+      $env{$key} = $val;
+    }
+    close($fh);
+  }
+
+  ##-- debug
+  #print STDERR "PEERENV($sock): $_=$env{$_}\n" foreach (sort keys %env);
+
+  ${*$sock}{'peerenv'} = \%env;
+}
+
+## $str = $sock->peerstr()
+## $str = $sock->peerstr($uid,$gid,$pid)
+##  + returns stringified unix peer credentials: "${USER}.${GROUP}[${PID}]"
+sub peerstr {
+  my ($sock,$pid,$uid,$gid) = @_;
+  ($pid,$uid,$gid) = $sock->peercred() if (@_ < 4);
   return (
 	  (defined($uid) ? (getpwuid($uid)//'?') : '?')
 	  .'.'
@@ -241,10 +358,35 @@ sub peerhost {
 	  .':'
 	  .(defined($pid) ? (basename(pid_cmd($pid)//'?')."[$pid]") : '?[?]')
 	 );
-  return '???';
-
 }
-sub peerport { return ''; }
+
+## $host = peerhost()
+##  + for relayed connections, gets underlying TCP peer via socat environment
+##  + for unix connections, returns UNIX credentials as as for peerstr()
+sub peerhost {
+  my $sock = shift;
+
+  ##-- get socat environment variable if possible
+  my $env = $sock->peerenv();
+  return $env->{DTA_CAB_RELAY_PEERADDR} if ($env && $env->{DTA_CAB_RELAY_PEERADDR});
+
+  ##-- return UNIX socket credentials
+  return $sock->peerstr();
+}
+
+## $port = peerport()
+##  + for relayed connections, gets underlying TCP port via socat environment
+##  + for unix connections, returns socket path
+sub peerport {
+  my $sock = shift;
+
+  ##-- get socat environment variable if possible
+  my $env = $sock->peerenv();
+  return $env->{DTA_CAB_RELAY_PEERPORT} if ($env && $env->{DTA_CAB_RELAY_PEERPORT});
+
+  ##-- return UNIX socket credentials
+  return $sock->peerpath();
+}
 
 
 

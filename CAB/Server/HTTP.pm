@@ -163,7 +163,7 @@ sub socketLabel {
 ##  + returns symbolic label for running daemon
 sub daemonLabel {
   my $srv = shift;
-  return ($srv->{daemon}->sockhost.":".$srv->daemon->sockport);
+  return ($srv->{daemon}->sockhost.":".$srv->{daemon}->sockport);
 }
 
 ## $bool = $srv->canBindSocket()

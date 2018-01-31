@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Server::HTTP;
+use DTA::CAB::Server::HTTP::UNIX; ##-- debug
 use DTA::CAB::Utils qw(:version);
 use IO::Socket::INET;
 use Encode qw(encode decode);
@@ -33,9 +34,10 @@ no warnings 'utf8';
 
 ##-- Server config
 our $serverConfigFile = undef;
+our $serverClass = 'DTA::CAB::Server::HTTP';
 our $serverHost = undef;
 our $serverPort = undef;
-our $serverPath = undef;
+our $serverSocketPath = undef;
 our $serverSocketUser = undef;
 our $serverSocketGroup = undef;
 our $serverSocketPerms = '0666';
@@ -58,9 +60,11 @@ GetOptions(##-- General
 
 	   ##-- Server configuration
 	   'config|c=s' => \$serverConfigFile,
-	   'addr|a|bind|b=s' => \$serverHost,
-	   'port|p=i'   => \$serverPort,
-	   'unix|u=s' => \$serverPath,
+	   'tcp'  => sub { $serverClass='DTA::CAB::Server::HTTP'; },
+	   'unix' => sub { $serverClass='DTA::CAB::Server::HTTP::UNIX'; },
+	   'tcp-addr|addr|a|bind|b=s' => \$serverHost,
+	   'tcp-port|port|p=i'   => \$serverPort,
+	   'unix-socket-path|unix-path|usp|us=s' => \$serverSocketPath,
 	   'unix-perms|up=s' => \$serverSocketPerms,
 	   'unix-user|uu=s' => \$serverSocketUser,
 	   'unix-group|ug=s' => \$serverSocketGroup,
@@ -119,10 +123,12 @@ sub CHLD_REAPER {
 DTA::CAB::Logger->logInit();
 
 ##-- create / load server object
-my $cls = defined($serverPath) ? 'DTA::CAB::Server::HTTP::UNIX' : 'DTA::CAB::Server::HTTP';
-require 'DTA/CAB/Server/HTTP/UNIX.pm' if ($cls =~ /UNIX/);
+my $module = $serverClass;
+$module =~ s{::}{/}g;
+require "$module.pm"
+  or DTA::CAB->logdie("failed to load server module $module.pm: $@");
 
-our $srv = $cls->new(pidfile=>$pidFile);
+our $srv = $serverClass->new(pidfile=>$pidFile);
 $srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{daemonArgs}{LocalHost} = $serverHost if (defined($serverHost));
 $srv->{daemonArgs}{LocalPort} = $serverPort if (defined($serverPort));
@@ -193,9 +199,10 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
 
  Server Configuration Options:
   -config PLFILE                  ##-- load server config from PLFILE
-  -bind   HOST                    ##-- override TCP host to bind (default=all)
-  -port   PORT                    ##-- override TCP port to bind (default=8088)
-  -unix   PATH                    ##-- override UNIX path to bind (default=none)
+  -tcp , -unix                    ##-- set socket type (default=-tcp)
+  -bind   HOST                    ##-- override TCP host to bind or relay (default=all)
+  -port   PORT                    ##-- override TCP port to bind or relay (default=8088)
+  -unix-path PATH                 ##-- override UNIX path to bind (default=none)
   -unix-user USER                 ##-- override UNIX socket ownershiip (default=current)
   -unix-group GROUP               ##-- override unix socket group (default=current)
   -unix-perms PERMS               ##-- override unix socket permissions (default=0666)
