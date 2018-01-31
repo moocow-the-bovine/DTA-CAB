@@ -36,6 +36,9 @@ our $serverConfigFile = undef;
 our $serverHost = undef;
 our $serverPort = undef;
 our $serverPath = undef;
+our $serverSocketUser = undef;
+our $serverSocketGroup = undef;
+our $serverSocketPerms = '0666';
 
 ##-- Daemon mode options
 our $daemonMode = 0;       ##-- do a fork() ?
@@ -58,6 +61,9 @@ GetOptions(##-- General
 	   'addr|a|bind|b=s' => \$serverHost,
 	   'port|p=i'   => \$serverPort,
 	   'unix|u=s' => \$serverPath,
+	   'unix-perms|up=s' => \$serverSocketPerms,
+	   'unix-user|uu=s' => \$serverSocketUser,
+	   'unix-group|ug=s' => \$serverSocketGroup,
 
 	   ##-- Daemon mode options
 	   'daemon|d|fork!'            => \$daemonMode,
@@ -121,6 +127,9 @@ $srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{daemonArgs}{LocalHost} = $serverHost if (defined($serverHost));
 $srv->{daemonArgs}{LocalPort} = $serverPort if (defined($serverPort));
 $srv->{daemonArgs}{Local}     = $serverPath if (defined($serverPath));
+$srv->{socketUser}            = $serverSocketUser if (($serverSocketUser//'') ne '');
+$srv->{socketGroup}           = $serverSocketGroup if (($serverSocketGroup//'') ne '');
+$srv->{socketPerms}           = $serverSocketPerms if (($serverSocketPerms//'') ne '');
 
 ##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
 sub serverMain {
@@ -187,6 +196,9 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
   -bind   HOST                    ##-- override TCP host to bind (default=all)
   -port   PORT                    ##-- override TCP port to bind (default=8088)
   -unix   PATH                    ##-- override UNIX path to bind (default=none)
+  -unix-user USER                 ##-- override UNIX socket ownershiip (default=current)
+  -unix-group GROUP               ##-- override unix socket group (default=current)
+  -unix-perms PERMS               ##-- override unix socket permissions (default=0666)
 
  Daemon Mode Options:
   -pidfile PIDFILE                ##-- save server PID to PIDFILE

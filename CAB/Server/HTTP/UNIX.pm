@@ -27,6 +27,10 @@ our @ISA = qw(DTA::CAB::Server::HTTP);
 ##    {
 ##     ##-- DTA::CAB::Server::HTTP::UNIX overrides
 ##     daemonArgs => \%daemonArgs,   ##-- overrides for HTTP::Daemon::UNIX->new(); default={LocalPath=>'/tmp/dta-cab.sock'}
+##     socketPerms => $mode,         ##-- socket permissions as an octal string (default='0666')
+##     socketUser  => $user,         ##-- socket user or uid (root only; default=undef: current user)
+##     socketGroup => $group,        ##-- socket group or gid (default=undef: current group)
+##     _socketPath => $path,         ##-- bound socket path (for unlink() on destroy)
 ##
 ##     ##-- (inherited from DTA::CAB::Server:HTTP): Underlying HTTP::Daemon server
 ##     daemonMode => $daemonMode,    ##-- one of 'serial' or 'fork' [default='serial']
@@ -85,6 +89,10 @@ sub new {
 			   daemonArgs => {
 					  Local => "/tmp/dta-cab.sock",
 					 },
+			   socketPerms => '0666',
+			   socketUser  => undef,
+			   socketGroup => undef,
+			   _socketPath => undef,
 
 			   ##-- user args
 			   @_
@@ -93,6 +101,25 @@ sub new {
 
 ## undef = $obj->initialize()
 ##  + called to initialize new objects after new()
+
+## undef = $obj->DESTROY()
+##  + override unlinks any bound UNIX socket
+sub DESTROY {
+  my $srv = shift;
+
+  ##-- destroy daemon (force-close socket)
+  delete($srv->{daemon}) if ($srv->{daemon});
+
+  ##-- unlink socket if we got it
+  if ($srv->{_socketPath} && -e $srv->{_socketPath}) {
+    unlink($srv->{_socketPath})
+      or warn("failed to unlink server socket $srv->{_socketPath}: $!");
+    delete $srv->{_socketPath};
+  }
+
+  ##-- superclass destruction if available
+  $srv->SUPER::DESTROY() if ($srv->can('SUPER::DESTROY'));
+}
 
 ##==============================================================================
 ## Methods: HTTP server API (abstractions for HTTP::UNIX)
@@ -135,8 +162,48 @@ sub clientClass {
 }
 
 ##==============================================================================
-## Methods: Generic Server API: inherited
+## Methods: Generic Server API: mostly inherited
 ##==============================================================================
+
+## $rc = $srv->prepareLocal()
+##  + subclass-local initialization
+sub prepareLocal {
+  my $srv = shift;
+
+  ##-- Server::HTTP initialization
+  my $rc  = $srv->SUPER::prepareLocal(@_);
+  return $rc if (!$rc);
+
+  ##-- get socket path
+  my $sockpath = $srv->{_socketPath} = $srv->{daemon}->hostpath()
+    or $srv->logdie("prepareLocal(): daemon returned bad socket path");
+
+  ##-- setup socket ownership
+  my $sockuid = (($srv->{socketUser}//'') =~ /^[0-9]+$/
+		 ? $srv->{socketUser}
+		 : getpwnam($srv->{socketUser}//''));
+  my $sockgid = (($srv->{socketGroup}//'') =~ /^[0-9]+$/
+		 ? $srv->{socketGroup}
+		 : getgrnam($srv->{socketGroup}//''));
+  if (defined($sockuid) || defined($sockgid)) {
+    $sockuid //= $>;
+    $sockgid //= $);
+    $srv->vlog('info', "setting socket ownership (".scalar(getpwuid $sockuid).".".scalar(getgrgid $sockgid).") on $sockpath");
+    chown($sockuid, $sockgid, $sockpath)
+      or $srv->logdie("prepareLocal(): failed to set ownership for socket '$sockpath': $!");
+  }
+
+  ##-- setup socket permissions
+  if ( ($srv->{socketPerms}//'') ne '' ) {
+    my $sockperms = oct($srv->{socketPerms});
+    $srv->vlog('info', sprintf("setting socket permissions (0%03o) on %s", $sockperms, $sockpath));
+    chmod($sockperms, $sockpath)
+      or $srv->logdie("prepareLocal(): failed to set permissions for socket '$sockpath': $!");
+  }
+
+  ##-- ok
+  return $rc;
+}
 
 ##==============================================================================
 ## Methods: Local: spawn and reap: inherited
