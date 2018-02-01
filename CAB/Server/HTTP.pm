@@ -222,9 +222,9 @@ sub prepareLocal {
 
   ##-- setup mode-specific options
   $srv->{daemonMode} //= 'serial';
+  $srv->{pid}        //= $$;
   if ($srv->{daemonMode} eq 'fork') {
     $srv->{children} //= {};
-    $srv->{pid}      //= $$;
     $SIG{CHLD} = $srv->reaper();
   }
 

@@ -7,6 +7,8 @@
 package DTA::CAB::Server::HTTP::UNIX;
 use DTA::CAB::Server::HTTP;
 use HTTP::Daemon::UNIX;
+use File::Basename qw(basename dirname);
+use File::Path qw(make_path);
 use POSIX ':sys_wait_h';
 use Socket qw(SOMAXCONN);
 use Carp;
@@ -26,11 +28,12 @@ our @ISA = qw(DTA::CAB::Server::HTTP);
 ##  + object structure: HASH ref
 ##    {
 ##     ##-- DTA::CAB::Server::HTTP::UNIX overrides
-##     daemonArgs => \%daemonArgs,   ##-- overrides for HTTP::Daemon::UNIX->new(); default={LocalPath=>'/tmp/dta-cab.sock'}
+##     daemonArgs => \%daemonArgs,   ##-- overrides for HTTP::Daemon::UNIX->new(); default={Local=>'/tmp/dta-cab.sock'}
 ##     socketPerms => $mode,         ##-- socket permissions as an octal string (default='0666')
 ##     socketUser  => $user,         ##-- socket user or uid (root only; default=undef: current user)
 ##     socketGroup => $group,        ##-- socket group or gid (default=undef: current group)
 ##     _socketPath => $path,         ##-- bound socket path (for unlink() on destroy)
+##     _socketDirs => \@dirs,        ##-- auto-created socket directories
 ##     relayCmd    => \@cmd,         ##-- TCP relay command-line for exec() (default=[qw(socat ...)], see prepareRelay())
 ##     relayAddr   => $addr,         ##-- TCP relay address to bind (default=$daemonArgs{LocalAddr}, see prepareRelay())
 ##     relayPort   => $port,         ##-- TCP relay address to bind (default=$daemonArgs{LocalPort}, see prepareRelay())
@@ -125,6 +128,11 @@ sub DESTROY {
 	or warn("failed to unlink server socket $srv->{_socketPath}: $!");
       delete $srv->{_socketPath};
     }
+
+    ##-- remove auto-created directories (only if empty)
+    foreach (reverse @{$srv->{_socketDirs}||[]}) {
+      last if (!rmdir($_));
+    }
   }
 
   ##-- superclass destruction if available
@@ -153,8 +161,12 @@ sub daemonLabel {
 sub canBindSocket {
   my $srv   = shift;
   my $dargs = $srv->{daemonArgs} || {};
+  my $sockpath = $dargs->{Local}
+    or $srv->logconfess("canBindSocket(): no socket path defined");
+  $srv->ensureSocketDir($sockpath)
+    or $srv->logconfess("canBindSocket(): failed to create socket directory for $sockpath: $!");
   my $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN) or return 0;
-  unlink($dargs->{Local}) if ($dargs->{Local});
+  unlink($sockpath);
   undef $sock;
   return 1;
 }
@@ -176,17 +188,46 @@ sub clientClass {
 ##==============================================================================
 
 ##--------------------------------------------------------------
+## $bool = $srv->ensureSocketDir()
+## $bool = $srv->ensureSocketDir($socketPath)
+##  + ensures that directory of $socketPath exists
+##  + sets $srv->{_socketDirs} if any directories are created
+sub ensureSocketDir {
+  my ($srv,$sockpath) = @_;
+  $sockpath ||= ($srv->{_socketPath}
+		 || ($srv->{daemon} ? $srv->{daemon}->hostpath : undef)
+		 || $srv->{daemonArgs}{Local});
+  $srv->logconfess("ensureSocketDir(): no socket path defined")
+    if (!$sockpath);
+
+  my $sockdir = dirname($sockpath);
+  if (!-d $sockdir) {
+    my @created = make_path($sockdir)
+      or $srv->logconfess("ensureSocketDir(): failed to create socket directory '$sockdir': $!");
+    $srv->{_socketDirs} = \@created;
+  }
+
+  return 1;
+}
+
+##--------------------------------------------------------------
 ## $rc = $srv->prepareLocal()
 ##  + subclass-local initialization
 sub prepareLocal {
   my $srv = shift;
+
+  ##-- ensure socket path directory
+  my $sockpath = $srv->{daemonArgs}{Local}
+    or $srv->logconfess("prepareLocal(): no socket path defined in {daemonArgs}{Local}");
+  $srv->ensureSocketDir($sockpath)
+    or $srv->logconfess("prepareLocal(): failed to create directory for socket $sockpath: $!");
 
   ##-- Server::HTTP initialization
   my $rc  = $srv->SUPER::prepareLocal(@_);
   return $rc if (!$rc);
 
   ##-- get socket path
-  my $sockpath = $srv->{_socketPath} = $srv->{daemon}->hostpath()
+  $sockpath = $srv->{_socketPath} = $srv->{daemon}->hostpath()
     or $srv->logconfess("prepareLocal(): daemon returned bad socket path");
 
   ##-- setup socket ownership
@@ -202,6 +243,12 @@ sub prepareLocal {
     $srv->vlog('info', "setting socket ownership (".scalar(getpwuid $sockuid).".".scalar(getgrgid $sockgid).") on $sockpath");
     chown($sockuid, $sockgid, $sockpath)
       or $srv->logconfess("prepareLocal(): failed to set ownership for socket '$sockpath': $!");
+
+    foreach my $dir (reverse @{$srv->{_socketDirs}||[]}) {
+      $srv->vlog('info', "setting directory ownership (".scalar(getpwuid $sockuid).".".scalar(getgrgid $sockgid).") on $dir");
+      chown($sockuid, $sockgid, $dir)
+	or $srv->logconfess("prepareLocal(): failed to set ownership for directory '$dir': $!");
+    }
   }
 
   ##-- setup socket permissions
@@ -210,6 +257,11 @@ sub prepareLocal {
     $srv->vlog('info', sprintf("setting socket permissions (0%03o) on %s", $sockperms, $sockpath));
     chmod($sockperms, $sockpath)
       or $srv->logconfess("prepareLocal(): failed to set permissions for socket '$sockpath': $!");
+    foreach my $dir (reverse @{$srv->{_socketDirs}||[]}) {
+      $srv->vlog('info', sprintf("setting directory permissions (0%03o) on %s", ($sockperms|0111), $dir));
+      chmod(($sockperms|0111), $dir)
+	or $srv->logconfess("prepareLocal(): failed to set permissions for directory '$dir': $!");
+    }
   }
 
   ##-- setup TCP relay subprocess
@@ -549,7 +601,7 @@ Local overrides and extensions:
 
  (
   ##-- DTA::CAB::Server::HTTP overrides
-  daemonArgs => \%daemonArgs,   ##-- overrides for HTTP::Daemon::UNIX->new(); default={LocalPath=>'/tmp/dta-cab.sock'}
+  daemonArgs => \%daemonArgs,   ##-- overrides for HTTP::Daemon::UNIX->new(); default={Local=>'/tmp/dta-cab.sock'}
   ##
   ##-- DTA::CAB::Server::HTTP::UNIX extensions
   socketPerms => $mode,         ##-- socket permissions as an octal string (default='0666')

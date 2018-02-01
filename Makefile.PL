@@ -80,7 +80,7 @@ WriteMakefile
 		    ##--
 		    #File::Queue =>0,
 		    'File::Temp'  =>0,
-		    'File::Path'  =>0, ##-- for rmtree()
+		    'File::Path'  =>0, ##-- for rmtree(), make_path()
 		    'File::Map'   =>0, ##-- for regex-based blockScan()
 		    ##--
 		    'DB_File' =>0,

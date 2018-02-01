@@ -11,6 +11,7 @@ use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
 use Cwd qw(getcwd abs_path);
 use Pod::Usage;
+use strict;
 
 ##==============================================================================
 ## Constants & Globals
@@ -132,7 +133,7 @@ our $srv = $serverClass->new(pidfile=>$pidFile);
 $srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{daemonArgs}{LocalHost} = $serverHost if (defined($serverHost));
 $srv->{daemonArgs}{LocalPort} = $serverPort if (defined($serverPort));
-$srv->{daemonArgs}{Local}     = $serverPath if (defined($serverPath));
+$srv->{daemonArgs}{Local}     = $serverSocketPath if (defined($serverSocketPath));
 $srv->{socketUser}            = $serverSocketUser if (($serverSocketUser//'') ne '');
 $srv->{socketGroup}           = $serverSocketGroup if (($serverSocketGroup//'') ne '');
 $srv->{socketPerms}           = $serverSocketPerms if (($serverSocketPerms//'') ne '');
@@ -167,6 +168,7 @@ if (defined($pidFile) && -e $pidFile) {
 if ($daemonMode) {
   $SIG{CHLD} = \&CHLD_REAPER; ##-- set handler
 
+  my ($pid);
   if ( ($pid=fork()) ) {
     ##-- parent
     DTA::CAB->info("spawned daemon subprocess with PID=$pid\n");
@@ -202,10 +204,10 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
   -tcp , -unix                    ##-- set socket type (default=-tcp)
   -bind   HOST                    ##-- override TCP host to bind or relay (default=all)
   -port   PORT                    ##-- override TCP port to bind or relay (default=8088)
-  -unix-path PATH                 ##-- override UNIX path to bind (default=none)
+  -unix-socket PATH               ##-- override UNIX socket path to bind (default=none)
   -unix-user USER                 ##-- override UNIX socket ownershiip (default=current)
-  -unix-group GROUP               ##-- override unix socket group (default=current)
-  -unix-perms PERMS               ##-- override unix socket permissions (default=0666)
+  -unix-group GROUP               ##-- override UNIX socket group (default=current)
+  -unix-perms PERMS               ##-- override UNIX socket permissions (default=0666)
 
  Daemon Mode Options:
   -pidfile PIDFILE                ##-- save server PID to PIDFILE
