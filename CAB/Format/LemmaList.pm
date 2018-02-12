@@ -2,7 +2,7 @@
 ##
 ## File: DTA::CAB::Format::ExpandList.pm
 ## Author: Bryan Jurish <moocow@cpan.org>
-## Description: Datum parser: verbose human-readable text
+## Description: Datum formatter: lemma-list (closed classes) or best-lemma (open classes) for use with DDC
 
 package DTA::CAB::Format::LemmaList;
 use DTA::CAB::Format;
@@ -21,8 +21,8 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::ExpandList);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
-      foreach (qw(LemmaList llist ll lemmata lemmas lemma));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/)
+      foreach (qw(LemmaList llist ll lemmata lemmas));
 }
 
 ##==============================================================================
@@ -40,7 +40,7 @@ BEGIN {
 ##				      ##   0:TAB-separated (default); 1:sorted,NEWLINE-separated; 2:sorted,NEWLINE+TAB separated
 ##     #outbuf    => $stringBuffer,     ##-- buffered output
 ##     keys      => \@expandKeys,      ##-- IGNORED: keys to include (default: [qw(text xlit eqpho eqrw eqlemma eqtagh gn-syn gn-isa gn-asi ot-syn ot-isa ot-asi)])
-##     ftagre    => $ftagre,          ##-- regex matching function-word tags (default: for STTS)
+##     cctagre   => $cctagre,          ##-- regex matching closed-class tags (default='^(?:[CKP\$]|A[PR]|V[AM])', for STTS)
 ##
 ##
 ##     ##---- Common
@@ -52,7 +52,7 @@ sub new {
   my $that = shift;
   my $obj  = $that->SUPER::new(
 			       keys=>[],
-			       ftagre=>'^(?:[CKP\$]|A[PR]|V[AM])',
+			       cctagre=>'^(?:[CKP\$]|A[PR]|V[AM])',
 			       @_);
 
   return $obj;
@@ -67,7 +67,7 @@ sub new {
 ##  + inherited from DTA::CAB::Format::TT
 sub noSaveKeys {
   my $that = shift;
-  return ($that->SUPER::noSaveKeys(), 'ftagre');
+  return ($that->SUPER::noSaveKeys(), 'cctagre');
 }
 
 ##==============================================================================
@@ -132,14 +132,14 @@ sub putToken {
   my $sep = ($level>=2 ? "\n\t"
 	     : ($level>=1 ? "\n"
 		: "\t"));
-  my $ftagre = $fmt->{ftagre};
-  $ftagre = qr{$ftagre} if (!ref($ftagre));
+  my $cctagre = $fmt->{cctagre} // '';
+  $cctagre = qr{$cctagre} if (!ref($cctagre));
 
   return $fmt if (!$tok->{moot});
   my (@lemmas);
 
-  if ($tok->{moot}{tag} =~ $ftagre) {
-    ##-- function word: return all lemmata
+  if ($tok->{moot}{tag} =~ $cctagre) {
+    ##-- closed-class word: return all lemmata
     @lemmas = (
 	       grep {defined($_) && $_ ne ''}
 	       map { $_->{lemma} }
@@ -218,7 +218,14 @@ are represented by blank lines.  Token lines have the format:
  ORIG_TEXT   LEMMA(s)...
 
 Where C<LEMMA(s)> is a list of TAB-separated lemma form(s) as determined
-by the analysis phase.
+by the analysis phase.  In contrast to the "BestLemmaList" format,
+the LemmaList format returns B<all possible> lemmata for input words
+assigned a closed-class tag, and only the B<best> lemma for all other words.
+"Closed-class" tags in this sense are tags matching the regex given
+as the format object's C<cctagre> option, which is defined by default
+for the STTS tagset as:
+
+ ^(?:[CKP$]|A[PR]|V[AM])
 
 
 =cut
@@ -245,7 +252,7 @@ Recognized %args:
                                  ##   0: TAB-separated (default)
                                  ##   1: sorted, NEWLINE-separated
                                  ##   2: sorted, NEWLINE+TAB-separated
-ftagre    => $ftagre,            ##-- regex matching function-word tags (default: for STTS)
+ cctagre    => $cctagre,         ##-- regex matching closed-class tags (default='^(?:[CKP\$]|A[PR]|V[AM])', for STTS)
  
  ##---- Common
  utf8  => $bool,                 ##-- default: 1
@@ -303,18 +310,19 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 Copyright (C) 2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.10.0 or,
+it under the same terms as Perl itself, either Perl version 5.20.2 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO
 
 L<dta-cab-analyze.perl(1)|dta-cab-analyze.perl>,
 L<dta-cab-convert.perl(1)|dta-cab-convert.perl>,
+L<DTA::CAB::Format::ExpandList(3pm)|DTA::CAB::Format::ExpandList>,
 L<DTA::CAB::Format::TT(3pm)|DTA::CAB::Format::TT>,
 L<DTA::CAB::Format(3pm)|DTA::CAB::Format>,
 L<DTA::CAB(3pm)|DTA::CAB>,
-L<ddc_opt(3pm)|ddc_opt>,
-L<ddc_proto(3pm)|ddc_proto>,
+L<ddc_opt(5)|ddc_opt>,
+L<ddc_proto(5)|ddc_proto>,
 L<perl(1)|perl>,
 ...
 

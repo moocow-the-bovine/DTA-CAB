@@ -16,7 +16,7 @@ use strict;
 our @ISA = qw(DTA::CAB::Analyzer::Dict::BDB);
 
 ## $obj = CLASS_OR_OBJ->new(%args)
-##  + object structure: see DTA::CAB::Analyzer::Automaton::Gfsm
+##  + object structure: see DTA::CAB::Analyzer::Dict::BDB
 sub new {
   my $that = shift;
   my $aut = $that->SUPER::new(

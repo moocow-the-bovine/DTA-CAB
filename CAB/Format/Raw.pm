@@ -23,7 +23,11 @@ BEGIN {
 }
 
 ## $DEFAULT_SUBCLASS : default subclass to use
-our $DEFAULT_SUBCLASS = "DTA::CAB::Format::Raw::HTTP";
+our $DEFAULT_SUBCLASS = (
+			 $ENV{DTA_CAB_FORMAT_RAW_DEFAULT_SUBCLASS}
+			 || "DTA::CAB::Format::Raw::Waste"
+			 || "DTA::CAB::Format::Raw::HTTP"
+			);
 
 ##==============================================================================
 ## Constructors etc.
@@ -122,6 +126,10 @@ default tokenizing class, C<$DTA::CAB::Format::Raw::DEFAULT_SUBCLASS>.
 =item Variable: %DTA::CAB::Format::Raw::DEFAULT_SUBCLASS
 
 Default tokenizing subclass which this class wraps.
+Defaults to the value of the environment variable C<DTA_CAB_FORMAT_RAW_DEFAULT_SUBCLASS> if set,
+or to C<"DTA::CAB::Format::Raw::Waste"> otherwise.
+
+Prior to v1.92, always defaulted to C<"DTA::CAB::Format::Raw::HTTP">.
 
 =back
 

@@ -37,10 +37,13 @@ our @ISA = qw(DTA::CAB::Server);
 ##     cxsrv      => $cxsrv,         ##-- associated DTA::CAB::Server::XmlRpc object for XML-RPC handlers
 ##     xopt       => \%xmlRpcOpts,   ##-- options for RPC::XML::Server sub-object (for XML-RPC handlers; default: {no_http=>1})
 ##     ##
-##     ##-- caching
+##     ##-- caching & status
 ##     cacheSize  => $nelts,         ##-- maximum number of responses to cache (default=1024; undef for no cache)
 ##     cacheLimit => $nbytes,        ##-- max number of content bytes for cached responses (default=undef: no limit)
 ##     cache      => $lruCache,      ##-- response cache: (key = $url, value = $response), a DTA::CAB::Cache::LRU object
+##     nRequests  => $nRequests,     ##-- number of requests (after access control)
+##     nCacheHits => $nCacheHits,    ##-- number of cache hits
+##     nErrors    => $nErrors,       ##-- number of client errors
 ##     ##
 ##     ##-- security
 ##     allowUserOptions => $bool,   ##-- allow user options? (default: true)
@@ -49,6 +52,7 @@ our @ISA = qw(DTA::CAB::Server);
 ##     _allow => $allow_ip_regex,   ##-- single allow regex (compiled by 'prepare()')
 ##     _deny  => $deny_ip_regex,    ##-- single deny regex (compiled by 'prepare()')
 ##     maxRequestSize => $bytes,    ##-- maximum request content-length in bytes (default: undef//-1: no max)
+##     bgConnectTimeout => $secs,   ##-- timeout for detecting chrome-style "background connections": connected sockets with no data on them (0:none; default=1)
 ##     ##
 ##     ##-- forking
 ##     forkOnGet => $bool,	    ##-- fork() handler for HTTP GET requests? (default=0)
@@ -83,7 +87,6 @@ sub new {
   my $that = shift;
   return $that->SUPER::new(
 			   ##-- underlying server
-			   daemon => undef,
 			   daemonArgs => {
 					  LocalAddr=>'0.0.0.0', ##-- all
 					  LocalPort=>8088,
@@ -96,10 +99,13 @@ sub new {
 			   ##-- path config
 			   paths => {},
 
-			   ##-- caching
+			   ##-- caching & status
 			   cacheSize  => 1024,
 			   cacheLimit => undef,
 			   cache      => undef,
+			   nRequests  => 0,
+			   nCacheHits => 0,
+			   nErrors => 0,
 
 			   ##-- security
 			   allowUserOptions => 1,
@@ -108,6 +114,7 @@ sub new {
 			   _allow => undef,
 			   _deny  => undef,
 			   maxRequestSize => undef,
+			   bgConnectTimeout => 1,
 
 			   ##-- forking
 			   children => {},
@@ -143,6 +150,45 @@ sub new {
 ##  + called to initialize new objects after new()
 
 ##==============================================================================
+## Methods: subclass API (abstractions for HTTP::UNIX)
+
+## $str = $srv->socketLabel()
+##  + returns symbolic label for bound socket address
+sub socketLabel {
+  my $srv = shift;
+  return ($srv->{daemonArgs}{LocalAddr}||'0.0.0.0').':'.($srv->{daemonArgs}{LocalPort});
+}
+
+## $str = $srv->daemonLabel()
+##  + returns symbolic label for running daemon
+sub daemonLabel {
+  my $srv = shift;
+  return ($srv->{daemon}->sockhost.":".$srv->{daemon}->sockport);
+}
+
+## $bool = $srv->canBindSocket()
+##  + returns true iff socket can be bound; should set $! on error
+sub canBindSocket {
+  my $srv   = shift;
+  my $dargs = $srv->{daemonArgs} || {};
+  my $sock  = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN) or return 0;
+  undef $sock;
+  return 1;
+}
+
+## $class = $srv->daemonClass()
+##  + get HTTP::Daemon class
+sub daemonClass {
+  return 'HTTP::Daemon';
+}
+
+## $class_or_undef = $srv->clientClass()
+##  + get class for client connections
+sub clientClass {
+  return undef;
+}
+
+##==============================================================================
 ## Methods: Generic Server API
 ##==============================================================================
 
@@ -152,8 +198,8 @@ sub prepareLocal {
   my $srv = shift;
 
   ##-- setup HTTP::Daemon object
-  if (!($srv->{daemon}=HTTP::Daemon->new(%{$srv->{daemonArgs}}))) {
-    $srv->logconfess("could not create HTTP::Daemon object: $!");
+  if (!($srv->{daemon}=$srv->daemonClass->new(%{$srv->{daemonArgs}}))) {
+    $srv->logconfess("could not create ", $srv->daemonClass, " daemon object: $!");
   }
   my $daemon = $srv->{daemon};
 
@@ -176,9 +222,9 @@ sub prepareLocal {
 
   ##-- setup mode-specific options
   $srv->{daemonMode} //= 'serial';
+  $srv->{pid}        //= $$;
   if ($srv->{daemonMode} eq 'fork') {
     $srv->{children} //= {};
-    $srv->{pid}      //= $$;
     $SIG{CHLD} = $srv->reaper();
   }
 
@@ -190,17 +236,23 @@ sub prepareLocal {
 sub run {
   my $srv = shift;
   $srv->prepare() if (!$srv->{daemon}); ##-- sanity check
-  $srv->logcroak("run(): no underlying HTTP::Daemon object!") if (!$srv->{daemon});
+  $srv->logcroak("run(): no underlying daemon object!") if (!$srv->{daemon});
 
   my $daemon = $srv->{daemon};
   my $mode   = $srv->{daemonMode} || 'serial';
-  $srv->info("server starting in $mode mode on host ", $daemon->sockhost, ", port ", $daemon->sockport, "\n");
-  
+  my $cclass = $srv->clientClass;
+  my $bgConnectTimeout = $srv->{bgConnectTimeout} || 0;
+  $srv->info("server starting in $mode mode on ", $srv->daemonLabel, "\n");
+
   ##-- setup SIGPIPE handler (avoid heinous death)
   ##  + following suggestion on http://www.perlmonks.org/?node_id=580411
-  $SIG{PIPE} = sub { $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
+  $SIG{PIPE} = sub { ++$srv->{nErrors}; $srv->vlog('warn',"got SIGPIPE (ignoring)"); };
+
+  ##-- HACK: set HTTP::Daemon protocol to HTTP 1.0 (avoid keepalive)
+  $HTTP::Daemon::PROTO = "HTTP/1.0";
 
   my ($csock,$chost,$hreq,$urikey,$forkable,$cacheable,$handler,$localPath,$pid,$rsp);
+  my ($fdset);
   while (1) {
     ##-- call accept() within the loop to avoid breaking out in fork mode
     if (!defined($csock=$daemon->accept())) {
@@ -208,8 +260,21 @@ sub run {
       next;
     }
 
+    ##-- re-bless client socket (for UNIX-domain server)
+    bless($csock,$cclass) if ($cclass);
+
     ##-- got client $csock (HTTP::Daemon::ClientConn object; see HTTP::Daemon(3pm))
     $chost = $csock->peerhost();
+
+    ##-- avoid blocking on weird EOF sockets sent e.g. by chromium: no joy
+    if ($bgConnectTimeout > 0) {
+      vec(($fdset=""), $csock->fileno, 1) = 1;
+      if (!select($fdset,undef,undef,$bgConnectTimeout)) {
+	$srv->vlog($srv->{logAttempt}, "ignoring background connection from client $chost");
+	#++$srv->{nErrors};
+	next;
+      }
+    }
 
     ##-- access control
     $srv->vlog($srv->{logAttempt}, "attempted connect from client $chost");
@@ -217,6 +282,9 @@ sub run {
       $srv->denyClient($csock);
       next;
     }
+
+    ##-- track number of requests
+    ++$srv->{nRequests};
 
     ##-- serve client: parse HTTP request
     ##
@@ -233,11 +301,13 @@ sub run {
     ##DEBUG
     #$srv->vlog($srv->{logAttempt}, "get_request() for client $chost");
     #$HTTP::Daemon::DEBUG=1;
-    ##/DEBUG
+    ${*$csock}{'io_socket_timeout'} = 5;
     ${*$csock}{'httpd_client_proto'} = HTTP::Daemon::ClientConn::_http_version("HTTP/1.0"); ##-- HACK: force status line on send_error() from $csock->get_request()
+    ##/DEBUG
     $hreq = $csock->get_request();
     if (!$hreq) {
       $srv->clientError($csock, RC_BAD_REQUEST, "could not parse HTTP request: ", xml_escape($csock->reason || 'get_request() failed'));
+      ++$srv->{nErrors};
       next;
     }
 
@@ -249,6 +319,7 @@ sub run {
     ##-- check global content-length limit
     if (($srv->{maxRequestSize}//-1) >= 0 && ($hreq->content_length//0) > $srv->{maxRequestSize}) {
       $srv->clientError($csock, RC_REQUEST_ENTITY_TOO_LARGE, "request exceeds server limit (max=$srv->{maxRequestSize} bytes)");
+      ++$srv->{nErrors};
       next;
     }
 
@@ -256,6 +327,7 @@ sub run {
     ($handler,$localPath) = $srv->getPathHandler($hreq->uri);
     if (!defined($handler)) {
       $srv->clientError($csock, RC_NOT_FOUND, "cannot resolve URI ", xml_escape($hreq->uri));
+      ++$srv->{nErrors};
       next;
     }
 
@@ -266,12 +338,14 @@ sub run {
 
     ##-- check cache (GET requests only)
     $cacheable = ($srv->{cache}
+		  && (!defined($handler->{cacheable}) || $handler->{cacheable})
 		  && $hreq->method eq 'GET'
 		  && ($hreq->header('Pragma')||'') !~ /\bno-cache\b/);
     if ($cacheable
 	&& ($hreq->header('Cache-Control')||'') !~ /\bno-cache\b/
 	&& defined($rsp = $srv->{cache}->get($urikey)))
       {
+	++$srv->{nCacheHits};
 	$srv->vlog($srv->{logCache}, "using cached response");
 	$rsp->header('X-Cached' => 1);
 	$srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
@@ -295,10 +369,12 @@ sub run {
     if ($@) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() died:<br/><pre>", xml_escape($@), "</pre>");
       $srv->reapClient($csock,$handler,$chost);
+      ++$srv->{nErrors};
     }
     elsif (!defined($rsp)) {
       $srv->clientError($csock,RC_INTERNAL_SERVER_ERROR,"handler ", (ref($handler)||$handler), "::run() failed");
       $srv->reapClient($csock,$handler,$chost);
+      ++$srv->{nErrors};
     }
 
     ##-- maybe cache response
@@ -322,9 +398,11 @@ sub run {
     ##-- ... and dump response to client
     if (!$csock->opened) {
       $srv->logwarn("client socket closed unexpectedly");
+      ++$srv->{nErrors};
       next;
     } elsif ($csock->error) {
       $srv->logwarn("client socket has errors");
+      ++$srv->{nErrors};
       next;
     }
     $srv->vlog($srv->{logResponse}, "cached response: ", $rsp->as_string) if ($srv->{logResponse});
@@ -508,6 +586,15 @@ DTA::CAB::Server::HTTP - DTA::CAB standalone HTTP server using HTTP::Daemon
  $obj = CLASS_OR_OBJ->new(%args);
  
  ##========================================================================
+ ## Methods: subclass API (abstractions for HTTP::UNIX)
+ 
+ $str = $srv->socketLabel();
+ $str = $srv->daemonLabel();
+ $bool = $srv->canBindSocket();
+ $class = $srv->daemonClass();
+ $class_or_undef = $srv->clientClass();
+ 
+ ##========================================================================
  ## Methods: Generic Server API
  
  $rc = $srv->prepareLocal();
@@ -661,6 +748,55 @@ e.g. $subclass="Query" will instantiate a handler of class C<DTA::CAB::Server::H
 =cut
 
 ##----------------------------------------------------------------
+## DESCRIPTION: DTA::CAB::Server::HTTP: Methods: subclass API
+=pod
+
+=head2 Methods: subclass API
+
+=over 4
+
+=item socketLabel
+
+ $str = $srv->socketLabel();
+
+returns symbolic label for bound socket address;
+default returns string of the form "ADDR:PORT"
+using $srv-E<gt>{daemonArgs}.
+
+=item daemonLabel
+
+ $str = $srv->daemonLabel();
+
+returns symbolic label for running daemon;
+default returns string of the form "ADDR:PORT"
+using $srv-E<gt>{daemon}.
+
+=item canBindSocket
+
+ $bool = $srv->canBindSocket();
+
+returns true iff socket can be bound; should set $! on error;
+default tries to bind INET socket as specified in $srv-E<gt>{daemonArgs}.
+
+=item daemonClass
+
+ $class = $srv->daemonClass();
+
+get underlying L<HTTP::Daemon|HTTP::Daemon> class,
+default returns 'HTTP::Daemon'.
+
+=item clientClass
+
+ $class_or_undef = $srv->clientClass();
+
+get class for client connections, or undef (default)
+if client sockets are not to be re-blessed into a different class.
+
+=back
+
+=cut
+
+##----------------------------------------------------------------
 ## DESCRIPTION: DTA::CAB::Server::HTTP: Methods: Generic Server API
 =pod
 
@@ -776,7 +912,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010-2016 by Bryan Jurish
+Copyright (C) 2010-2017 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,
@@ -786,6 +922,7 @@ at your option, any later version of Perl 5 you may have available.
 
 L<DTA::CAB::Server(3pm)|DTA::CAB::Server>,
 L<DTA::CAB::Server::HTTP::Handler(3pm)|DTA::CAB::Server::HTTP::Handler>,
+L<DTA::CAB::Server::HTTP::UNIX(3pm)|DTA::CAB::Server::HTTP::UNIX>,
 L<DTA::CAB::Client::HTTP(3pm)|DTA::CAB::Client::HTTP>,
 L<DTA::CAB(3pm)|DTA::CAB>,
 L<perl(1)|perl>,

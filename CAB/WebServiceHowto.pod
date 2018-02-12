@@ -294,7 +294,7 @@ L<the multi-sentence query example|/A Multi-Sentence Query>.
 Due to bandwidth limitations, the CAB server currently only accepts input files of size B<E<lt>= 1 MB>.
 If you need analyze a large amount of data, you will first need to split your input files into
 chunks of no more than 1 MB each, sending each chunk to the server individually.  In this case,
-please refrain from "hammering" the CAB server with an uniterrupted stream of requests: wait at least
+please refrain from "hammering" the CAB server with an uninterrupted stream of requests: wait at least
 3-5 seconds between requests to avoid blocking the server for other users.  Alternatively,
 if you need to analyze a large corpus, you can L<contact the I<Deutsches Textarchiv>|http://deutschestextarchiv.de/doku/impressum#kontakt>.
 
@@ -699,7 +699,7 @@ makes such formats a reasonable candidate for archiving and cross-platform data 
 
 [L<example|http://www.deutschestextarchiv.de/cab?fmt=twxml&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
-Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
+Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~jurish/software/dta-tokwrap/>
 module.  Supports arbitrary token attribute substructure, but fairly slow.
 
 =cut
@@ -712,7 +712,7 @@ module.  Supports arbitrary token attribute substructure, but fairly slow.
 
 [L<example|http://www.deutschestextarchiv.de/cab?fmt=ftwxml&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
-Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/>
+Simple serial XML-based format as used by the L<DTA::TokWrap|http://odo.dwds.de/~jurish/software/dta-tokwrap/>
 module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't support all attributes.
 
 =cut
@@ -727,7 +727,7 @@ module.  Faster than the L<XmlTokWrap|/XmlTokWrap> formatter, but doesn't suppor
 L<example output|http://www.deutschestextarchiv.de/cab/query?fmt=tei&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
 
 Parses raw un-tokenized TEI-like input (with or without //c elements) using
-L<DTA::TokWrap|http://odo.dwds.de/~moocow/software/dta-tokwrap/> to reserialize and tokenize the
+L<DTA::TokWrap|http://odo.dwds.de/~jurish/software/dta-tokwrap/> to reserialize and tokenize the
 source text, and splices analysis results into the resulting XML document
 using the L<XmlTokWrap|/XmlTokWrap> format.
 Any C<E<lt>sE<gt>> or C<E<lt>sE<gt>> elements in the input will be ignored and the input will be (re-)tokenized.
@@ -1028,12 +1028,51 @@ becomes
 =cut
 
 ##========================================================================
+## Advanced Usage: TCF
+=pod
+
+=head3 Post-processing TCF XML
+
+=over 4
+
+=item L<tcf-orthswap.xsl|http://./tcf-orthswap.xsl>
+
+Swaps the text content of 1:1-corresponding C<//tokens/token> and C<//orthography/correction[@operation="replace"]> elements,
+so that e.g.
+
+ <tokens>
+   <token ID="w1">Ein</token>
+   <token ID="w2">Elephant</token>
+ </tokens>
+ ...
+ <orthography>
+   <correction tokenIDs="w2" operation="replace">Elefant</correction>
+ </orthography>
+
+becomes
+
+ <tokens>
+   <token ID="w1">Ein</token>
+   <token ID="w2">Elefant</token>
+ </tokens>
+ ...
+ <orthography>
+   <correction tokenIDs="w2" operation="replace">Elephant</correction>
+ </orthography>
+
+Potentially useful for preparing CAB-annotated TCF data for submission to other text-sensitive TCF processors
+which themselves do not respect the C<//orthography> layer.
+
+=cut
+
+
+##========================================================================
 ## REFERENCES
 =pod
 
 =head1 REFERENCES
 
-The author would appreciate CAB users citing its use in the publications.
+The author would appreciate CAB users citing its use in any related publications.
 As a general CAB-related reference,
 and for analysis and canonicalizaion of historical text to modern forms in particular, you can cite:
 
@@ -1047,8 +1086,8 @@ L<Jurish, B.|name:jurish2012> I<Finite-state Canonicalization Techniques for His
 PhD thesis, Universität Potsdam, 2012 (defended 2011).
 URN urn:nbn:de:kobv:517-opus-55789,
 [L<epub|http://opus.kobv.de/ubp/volltexte/2012/5578/>,
-L<PDF|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2012diss.pdf>,
-L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2012diss.bib>]
+L<PDF|http://kaskade.dwds.de/~jurish/pubs/jurish2012diss.pdf>,
+L<BibTeX|http://kaskade.dwds.de/~jurish/pubs/jurish2012diss.bib>]
 
 =begin html
 
@@ -1067,12 +1106,13 @@ project, you can cite:
 =end html
 
 L<Jurish, B.|name:jurish2013> "Canonicalizing the Deutsches Textarchiv." In
-L<Proceedings of I<Perspektiven einer corpusbasierten historischen Linguistik und Philologie>|http://edoc.bbaw.de/abfrage_collections.php?coll_id=203&la=de>
+L<Proceedings of I<Perspektiven einer corpusbasierten historischen Linguistik und Philologie>|https://edoc.bbaw.de/solrsearch/index/search/searchtype/collection/id/16386>
 (Berlin, Germany, 12th-13th December 2011), volume 4 of
 L<Thesaurus Linguae Aegyptiae|http://aaew.bbaw.de/tla/>,
 Berlin-Brandenburgische Akademie der Wissenschaften, 2013.
-[L<PDF|http://edoc.bbaw.de/volltexte/2013/2443/pdf/Jurish.pdf>,
-L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jurish2013canonicalizing.bib>]
+[L<epub|http://nbn-resolving.de/urn/resolver.pl?urn:nbn:de:kobv:b4-opus-24433>,
+L<PDF|http://edoc.bbaw.de/volltexte/2013/2443/pdf/Jurish.pdf>,
+L<BibTeX|http://kaskade.dwds.de/~jurish/pubs/jurish2013canonicalizing.bib>]
 
 =begin html
 
@@ -1094,7 +1134,7 @@ In U. Kruschwitz, F. Hopfgartner, & C. Gurrin (editors),
 Proceedings of the Workshop I<L<MindTheGap 2014: Beyond Single-Shot Text Queries: Bridging the Gap(s) between Research Communities|http://ceur-ws.org/Vol-1131/>>
 Berlin, Germany, 4th March, 2014, pages 25-30, 2014.
 [L<PDF|http://ceur-ws.org/Vol-1131/mindthegap14_7.pdf>,
-L<BibTeX|http://kaskade.dwds.de/~moocow/mirror/pubs/jtw2014querying.bib>]
+L<BibTeX|http://kaskade.dwds.de/~jurish/pubs/jtw2014querying.bib>]
 
 =begin html
 

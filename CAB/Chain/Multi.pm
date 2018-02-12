@@ -93,6 +93,13 @@ sub chain {
   return [grep {ref($_) && $_->enabled($_[1])} @{$_[0]{chain}}];
 }
 
+## $chainAnalyzer = $ach->getChain()
+## $chainAnalyzer = $ach->getChain($chainSpec)
+##  + returns a new DTA::CAB::Chain for the appropriate spec
+sub getChain {
+  return DTA::CAB::Chain->new( chain=>$_[0]->chain({chain=>$_[1]}) );
+}
+
 ## \@analyzers = $ach->subAnalyzers()
 ## \@analyzers = $ach->subAnalyzers(\%opts)
 ##  + returns a list of all sub-analyzers

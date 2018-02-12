@@ -3,6 +3,7 @@
 use lib qw(.);
 use DTA::CAB;
 use DTA::CAB::Server::HTTP;
+use DTA::CAB::Server::HTTP::UNIX; ##-- debug
 use DTA::CAB::Utils qw(:version);
 use IO::Socket::INET;
 use Encode qw(encode decode);
@@ -10,6 +11,7 @@ use File::Basename qw(basename);
 use Getopt::Long qw(:config no_ignore_case);
 use Cwd qw(getcwd abs_path);
 use Pod::Usage;
+use strict;
 
 ##==============================================================================
 ## Constants & Globals
@@ -33,8 +35,13 @@ no warnings 'utf8';
 
 ##-- Server config
 our $serverConfigFile = undef;
+our $serverClass = 'DTA::CAB::Server::HTTP';
 our $serverHost = undef;
 our $serverPort = undef;
+our $serverSocketPath = undef;
+our $serverSocketUser = undef;
+our $serverSocketGroup = undef;
+our $serverSocketPerms = '0666';
 
 ##-- Daemon mode options
 our $daemonMode = 0;       ##-- do a fork() ?
@@ -54,8 +61,14 @@ GetOptions(##-- General
 
 	   ##-- Server configuration
 	   'config|c=s' => \$serverConfigFile,
-	   'addr|a|bind|b=s'   => \$serverHost,
-	   'port|p=i'   => \$serverPort,
+	   'tcp'  => sub { $serverClass='DTA::CAB::Server::HTTP'; },
+	   'unix' => sub { $serverClass='DTA::CAB::Server::HTTP::UNIX'; },
+	   'tcp-addr|addr|a|bind|b=s' => \$serverHost,
+	   'tcp-port|port|p=i'   => \$serverPort,
+	   'unix-socket-path|unix-path|usp|us=s' => \$serverSocketPath,
+	   'unix-perms|up=s' => \$serverSocketPerms,
+	   'unix-user|uu=s' => \$serverSocketUser,
+	   'unix-group|ug=s' => \$serverSocketGroup,
 
 	   ##-- Daemon mode options
 	   'daemon|d|fork!'            => \$daemonMode,
@@ -97,7 +110,6 @@ sub CHLD_REAPER {
   }
 
   # loathe sysV: it makes us not only reinstate
-
   # the handler, but place it after the wait
   $SIG{CHLD} = \&CHLD_REAPER;
 }
@@ -112,15 +124,24 @@ sub CHLD_REAPER {
 DTA::CAB::Logger->logInit();
 
 ##-- create / load server object
-our $srv = DTA::CAB::Server::HTTP->new(pidfile=>$pidFile);
+my $module = $serverClass;
+$module =~ s{::}{/}g;
+require "$module.pm"
+  or DTA::CAB->logdie("failed to load server module $module.pm: $@");
+
+our $srv = $serverClass->new(pidfile=>$pidFile);
 $srv     = $srv->loadFile($serverConfigFile) if (defined($serverConfigFile));
 $srv->{daemonArgs}{LocalHost} = $serverHost if (defined($serverHost));
 $srv->{daemonArgs}{LocalPort} = $serverPort if (defined($serverPort));
+$srv->{daemonArgs}{Local}     = $serverSocketPath if (defined($serverSocketPath));
+$srv->{socketUser}            = $serverSocketUser if (($serverSocketUser//'') ne '');
+$srv->{socketGroup}           = $serverSocketGroup if (($serverSocketGroup//'') ne '');
+$srv->{socketPerms}           = $serverSocketPerms if (($serverSocketPerms//'') ne '');
 
 ##-- serverMain(): main post-preparation code; run in subprocess if we're in daemon mode
 sub serverMain {
   ##-- prepare & run server
-  $srv->info("serverMain(): initializing server $srv->{daemonArgs}{LocalAddr}:$srv->{daemonArgs}{LocalPort}");
+  $srv->info("serverMain(): initializing ", ref($srv), " on ", $srv->socketLabel);
   $srv->info("serverMain(): using DTA::CAB version $DTA::CAB::VERSION");
   $srv->info("serverMain(): CWD ", abs_path(getcwd));
   $srv->prepare()
@@ -131,10 +152,8 @@ sub serverMain {
 }
 
 ##-- check whether we can really bind the socket
-my $dargs = $srv->{daemonArgs} || {};
-my $sock  = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN)
-  or DTA::CAB->logdie("cannot bind socket $dargs->{LocalAddr} port $dargs->{LocalPort}: $!");
-undef $sock;
+DTA::CAB->logdie("cannot bind socket ", $srv->socketLabel, ": $!")
+  if (!$srv->canBindSocket);
 
 ##-- check for existing PID file (don't overrwrite)
 if (defined($pidFile) && -e $pidFile) {
@@ -149,6 +168,7 @@ if (defined($pidFile) && -e $pidFile) {
 if ($daemonMode) {
   $SIG{CHLD} = \&CHLD_REAPER; ##-- set handler
 
+  my ($pid);
   if ( ($pid=fork()) ) {
     ##-- parent
     DTA::CAB->info("spawned daemon subprocess with PID=$pid\n");
@@ -181,8 +201,13 @@ dta-cab-http-server.perl - standalone HTTP server for DTA::CAB queries
 
  Server Configuration Options:
   -config PLFILE                  ##-- load server config from PLFILE
-  -bind   HOST                    ##-- override host to bind (default=all)
-  -port   PORT                    ##-- override port to bind (default=8088)
+  -tcp , -unix                    ##-- set socket type (default=-tcp)
+  -bind   HOST                    ##-- override TCP host to bind or relay (default=all)
+  -port   PORT                    ##-- override TCP port to bind or relay (default=8088)
+  -unix-socket PATH               ##-- override UNIX socket path to bind (default=none)
+  -unix-user USER                 ##-- override UNIX socket ownershiip (default=current)
+  -unix-group GROUP               ##-- override UNIX socket group (default=current)
+  -unix-perms PERMS               ##-- override UNIX socket permissions (default=0666)
 
  Daemon Mode Options:
   -pidfile PIDFILE                ##-- save server PID to PIDFILE

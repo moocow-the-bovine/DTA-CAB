@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<D-Spin xmlns="http://www.dspin.de/data" version="0.4">
+  <MetaData xmlns="http://www.dspin.de/data/metadata"/>
+  <TextCorpus xmlns="http://www.dspin.de/data/textcorpus" lang="de">
+    <tokens>
+      <token ID="w1">EJn</token>
+      <token ID="w2">zamer</token>
+      <token ID="w3">Elephant</token>
+      <token ID="w4">gillt</token>
+      <token ID="w5">ohngefähr</token>
+      <token ID="w6">zweyhundert</token>
+      <token ID="w7">Thaler</token>
+      <token ID="w8">Ceterum</token>
+      <token ID="w9">censeo</token>
+      <token ID="wa">Carthaginem</token>
+      <token ID="wb">esse</token>
+      <token ID="wc">delendam</token>
+    </tokens>
+    <sentences>
+      <sentence ID="s1" tokenIDs="w1 w2 w3 w4 w5 w6 w7"/>
+      <sentence ID="s2" tokenIDs="w8 w9 wa wb wc"/>
+    </sentences>
+    <orthography>
+      <correction tokenIDs="w1" operation="replace">Ein</correction>
+      <correction tokenIDs="w2" operation="replace">zahmer</correction>
+      <correction tokenIDs="w3" operation="replace">Elefant</correction>
+      <correction tokenIDs="w4" operation="replace">gilt</correction>
+      <correction tokenIDs="w5" operation="replace">ungefähr</correction>
+      <correction tokenIDs="w6" operation="replace">zweihundert</correction>
+      <correction tokenIDs="w7" operation="replace">Taler</correction>
+    </orthography>
+  </TextCorpus>
+</D-Spin>

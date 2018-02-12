@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.80';
+my $VERSION = '1.97';
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
@@ -36,6 +36,17 @@ EOF
   }
 }
 
+##----------------------------------------------------------------------
+## Hacks
+use version;
+if (qv($ExtUtils::MakeMaker::VERSION) >= qv(7.0401)) {
+  ##-- workaround for irritating symlink-related errors on kira (ubuntu 16.04 LTS / EUMM v7.0401)
+  use ExtUtils::Manifest;
+  no warnings 'redefine';
+  *{ExtUtils::Manifest::manicheck}    = sub {};
+  *{ExtUtils::Manifest::_check_files} = sub {};
+}
+
 
 ##----------------------------------------------------------------------
 ## MAIN
@@ -61,6 +72,7 @@ WriteMakefile
 		    'Encode'=>0,
 		    'File::Basename'=>0,
 		    'Getopt::Long'=>0,
+		    'LWP::Protocol::http::SocketUnixAlt'=>0, #0.0204
 		    'Pod::Usage'=>0,
 		    'Storable'=>0,
 		    'Time::HiRes'=>0,
@@ -68,7 +80,7 @@ WriteMakefile
 		    ##--
 		    #File::Queue =>0,
 		    'File::Temp'  =>0,
-		    'File::Path'  =>0, ##-- for rmtree()
+		    'File::Path'  =>0, ##-- for rmtree(), make_path()
 		    'File::Map'   =>0, ##-- for regex-based blockScan()
 		    ##--
 		    'DB_File' =>0,
@@ -78,9 +90,10 @@ WriteMakefile
 		    'Template' =>0,
 		    'LWP::UserAgent' =>0,
 		    'HTTP::Daemon' =>0,
+		    'HTTP::Daemon::UNIX' =>0, #0.06
 		    ##--
 		    'Log::Log4perl' => 1.07,
-		    'Unicode::CharName' => 1.07,
+		    'Unicode::CharName' => 0, #1.07,
 		    'RPC::XML' => 0.59,
 		    ##
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
@@ -214,6 +227,7 @@ HTML_EXTRA ?= \
   doc-extra/dstar-bin/spliced2cleaner.xsl \
   doc-extra/dstar-bin/spliced2clean+cabns.xsl \
   doc-extra/dstar-bin/spliced2cab.xsl \
+  doc-extra/dstar-bin/tcf-orthswap.xsl \
   doc-extra/cab-screenshot-annotated.png
 
 ##-- lifted from MakeMaker blibdir section

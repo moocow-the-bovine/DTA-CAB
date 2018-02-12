@@ -1404,6 +1404,15 @@ may not be available on all systems.
 
 Just a convenience package: load all built-in DTA::CAB::Format subclasses.
 
+=item L<DTA::CAB::Format::ExpandList|DTA::CAB::Format::ExpandList>
+
+Formatter for runtime term expansion, for use e.g. with
+DDC L<Cab Expander|http://odo.dwds.de/~moocow/software/ddc/ddc_opt.html#Cab>,
+registerd as:
+
+ name=>__PACKAGE__, short=>'xl', filenameRegex=>qr/\.(?i:xl|xlist|l|lst)$/
+
+
 =item L<DTA::CAB::Format::JSON|DTA::CAB::Format::JSON>
 
 Abstract datum parser|formatter for JSON I/O.
@@ -1418,6 +1427,15 @@ the fastest I/O of all available human-readable format classes.
 Registered as:
 
  name=>__PACKAGE__, short=>'json', filenameRegex=>qr/\.(?i:json|jsn)$/
+
+
+=item L<DTA::CAB::Format::LemmaList|DTA::CAB::Format::LemmaList>
+
+Formatter for runtime term lemmatization, for use e.g. with
+DDC L<Cab Expander|http://odo.dwds.de/~moocow/software/ddc/ddc_opt.html#Cab>.
+
+ name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/
+
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
 
@@ -1436,7 +1454,7 @@ Registered as:
 =item L<DTA::CAB::Format::Raw|DTA::CAB::Format::Raw>
 
 Abstract input-only format for reading raw untokenized text,
-wraps L<DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP|DTA::CAB::Format::Perl|DTA::CAB::Format::Raw:HTTP> by default.
+wraps L<DTA::CAB::Format::Raw:HTTP|DTA::CAB::Format::Raw:HTTP> by default.
 
 =item L<DTA::CAB::Format::Raw::HTTP|DTA::CAB::Format::Raw:HTTP>
 
@@ -1620,7 +1638,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2015 by Bryan Jurish
+Copyright (C) 2009-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,

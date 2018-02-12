@@ -8,7 +8,8 @@ package DTA::CAB::Analyzer;
 use DTA::CAB::Persistent;
 use DTA::CAB::Logger;
 use DTA::CAB::Datum ':all';
-use DTA::CAB::Utils ':minmax';
+use DTA::CAB::Utils ':minmax', ':files', ':time';
+use File::Basename qw(basename dirname);
 use Exporter;
 use Carp;
 use strict;
@@ -97,6 +98,99 @@ sub analysisClass {
 ##  + default returns @{$anl->{typeKeys}} if defined, otherwise ($anl->{label})
 sub typeKeys {
   return $_[0]{typeKeys} ? @{$_[0]{typeKeys}} : (defined($_[0]{label}) ? ($_[0]{label}) : qw());
+}
+
+##==============================================================================
+## Methods: version
+##==============================================================================
+
+## $timestamp_str_or_undef = $anl->timestamp(%opts)
+##  + gets local ($opts{deep}=0) or recursive timestamp ($opts{deep}=1)
+sub timestamp {
+  my ($anl,%opts) = @_;
+  return $opts{deep} ? $anl->versionInfo(%opts)->{timestamp} : $anl->timestampLocal;
+}
+
+## $timestamp_str_or_undef = $anl->timestampLocal()
+##  + gets local analyzer timestamp
+##  + default implementation returns $anl->{timestampLocal} or newest mtime among all $anl->timestampFiles()
+sub timestampLocal {
+  my $anl = shift;
+  return $anl->{timestampLocal} if (defined($anl->{timestampLocal}));
+  my @tsfiles = grep {defined($_) && -e $_} $anl->timestampFiles;
+  my $mtime = @tsfiles ? (sort {$b<=>$a} map {(stat($_))[9]} @tsfiles)[0] : undef;
+  return $anl->{timestampLocal} = defined($mtime) ? timestamp_str($mtime) : undef;
+}
+
+## @files = $anl->timestampFiles()
+##  + resource files for determining this analyzer's local timestamp
+##  + default checks for analyzer keys matching m/file$/i
+sub timestampFiles {
+  my $anl = shift;
+  return @$anl{grep {m/file$/i} keys %$anl};
+}
+
+## $version_or_undef = $anl->version()
+##  + gets local analyzer version string
+##  + default implementation returns $anl->{version} if defined, otherwise caches from first available file from $anl->versionFiles()
+sub version {
+  my $anl   = shift;
+  return $anl->{version} if (defined($anl->{version}));
+  my $vfile = (grep {defined($_) && -e $_} $anl->versionFiles())[0];
+  return undef if (!defined($vfile));
+  open(my $vfh,"<$vfile")
+    or $anl->logconfess("version(): open failed for version file '$vfile': $!");
+  my ($version);
+  {
+    local $/=undef;
+    $version = <$vfh>;
+  }
+  chomp($version);
+  close($vfh);
+  return $anl->{version} = $version;
+}
+
+## @files = $anl->versionFiles()
+##  + resource files for determining this analyzer's local version
+##  + default searches $_.ver, noext($_).ver for all $anl->timestampFiles(), finally dirname($_)/version.txt
+sub versionFiles {
+  my $anl = shift;
+  my @tsfiles = grep {defined($_)} $anl->timestampFiles();
+  my ($base);
+  return (
+	  (map {$base=$_; $base =~ s/\.[^\.]*$//; ("$_.ver","$base.ver")} @tsfiles),
+	  (map {dirname($_)."/version.txt"} @tsfiles),
+	 );
+}
+
+## \%vinfo_or_undef = $anl->versionInfo(%opts)
+##  + gets analyzer version info, including sub-analyzers
+##  + options %opts as for analyzeDocument()
+##  + returned HASH %vinfo =
+##    (
+##     rcfile => $rcfile, ##-- from $anl->{rcfile} if available
+##     class => $class,
+##     label => $label,
+##     version => $version,
+##     timestampLocal => $timestampLocal,
+##     timestamp => $timestampDeep, ##-- youngest local or sub-analyzer timestamp
+##     subs => \@subAnalyzerVersionInfo,
+##    )
+sub versionInfo {
+  my ($anl,%opts) = @_;
+  return undef if (!$anl->enabled(\%opts)); ##-- no version information for disabled analyzer
+  my $subs = $anl->can('chain') ? $anl->chain(\%opts) : $anl->subAnalyzers(\%opts);
+  my $vinfo = {
+	       class => ref($anl),
+	       label => $anl->{label},
+	       rcfile => $anl->{rcfile},
+	       version => $anl->version(%opts),
+	       timestampLocal => $anl->timestampLocal(%opts),
+	       ($subs && @$subs ? (subs=>[grep {defined($_)} map {$_->versionInfo(%opts)} @$subs]) : qw()),
+	      };
+  $vinfo->{timestamp} = (sort {($b||'') cmp ($a||'')} ($vinfo->{timestampLocal}, map {$_->{timestamp}} @{$vinfo->{subs}||[]}))[0];
+  delete @$vinfo{grep {!defined($vinfo->{$_}) || $vinfo->{$_} eq ''} keys %$vinfo};
+  return $vinfo;
 }
 
 ##==============================================================================

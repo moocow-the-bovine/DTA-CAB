@@ -207,25 +207,18 @@ sub blockScanBody {
   my $elt    = $opts->{xmlelt} || $opts->{eob} || 'w';
   my $eos    = $elt eq 's' ? 1 : 0;
   my $re_s   = '(?s:<'.quotemeta($elt).'\b)';
-  my $re     = qr($re_s);
   my $blocks = [];
+
+  ##-- hack workaround for slow m($re_qr)g on kira (ubuntu 16.04.1 LTS, perl 5.22.1)
+  #my $re     = qr($re_s);
+  my $matchoff = eval qq{sub { \$\$bufr =~ m{$re_s}g ? \$-[0] : \$fsize }};
 
   my ($off0,$off1,$blk);
   for ($off0=$opts->{ihead}[0]+$opts->{ihead}[1]; $off0 < $fsize; $off0=$off1) {
     push(@$blocks, $blk={bsize=>$bsize, eob=>$elt, ioff=>$off0, eos=>$eos});
     pos($$bufr) = ($off0+$bsize < $fsize ? $off0+$bsize : $fsize);
-    if ($$bufr =~ m($re)g) {
-      $off1 = $-[0];
-#      if (!$eos) {
-#	##-- check for eos : SLOW !!!
-#	pos($$bufr) -= length($elt)+1;
-#	$blk->{eos} = $$bufr =~ m((?:</?s\b[^>]*+>)(?:\s*+)\G)s ? 1 : 0;
-#      }
-
-    } else {
-      $off1 = $fsize;
-      $blk->{eos} = 1; ##-- for tt 
-    }
+    $off1 = $matchoff->();
+    $blk->{eos}  = 1 if ($off1 >= $fsize); ##-- for tt
     $blk->{ilen} = $off1-$off0;
   }
 

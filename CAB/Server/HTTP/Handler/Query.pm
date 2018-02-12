@@ -208,6 +208,7 @@ sub run {
     $filename =~ s/\W.*$/_/;
   }
   $filename .= $ofmt->defaultExtension;
+  utf8::encode($filename) if (utf8::is_utf8($filename));
   return $h->dumpResponse(\$rstr,
 			  raw=>$vars->{raw},
 			  type=>$ofmt->mimeType,

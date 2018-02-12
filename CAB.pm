@@ -27,6 +27,40 @@ use strict;
 
 our @ISA = qw(DTA::CAB::Logger); ##-- for compatibility
 
+##==============================================================================
+## Version Information
+
+## \%moduleVersions => DTA::CAB->moduleVersions(%opts)
+##  + checks all loaded modules in %::INC for $VERSION
+##  + known %opts:
+##    (
+##     moduleMatch => $regex,   ##-- only report modules matching $regex
+##     moduleIgnore => $regex,  ##-- ignore modules matching $regex
+##    )
+sub moduleVersions {
+  no strict 'refs';
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my %opts      = @_;
+  my $re_match  = $opts{moduleMatch};
+  my $re_ignore = $opts{moduleIgnore};
+  $re_match     = qr{$re_match} if (defined($re_match) && !ref($re_match));
+  $re_ignore    = qr{$re_ignore} if (defined($re_ignore) && !ref($re_ignore));
+  my ($inc,$pkg,$ver,%versions);
+  foreach $inc (sort keys %::INC) {
+    next if ($inc !~ m/\.pm$/i);
+    $pkg = $inc;
+    $pkg =~ s{/}{::}g;
+    $pkg =~ s{\.pm$}{}i;
+    next if (($re_match && $pkg !~ m{$re_match}) || ($re_ignore && $pkg =~ m{$re_ignore}));
+    next if ( !($ver = ${"${pkg}::VERSION"}) );
+    $versions{$pkg} = "$ver";
+  }
+  return \%versions;
+}
+
+
+
+
 1; ##-- be happy
 
 __END__

@@ -14,6 +14,7 @@ use DTA::CAB::Analyzer::TokPP;
 use DTA::CAB::Analyzer::LTS;
 use DTA::CAB::Analyzer::Morph;
 use DTA::CAB::Analyzer::Morph::Latin;
+use DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen; ##-- auxilliary DB: Siedlungsplaetze_Hessen, from HLGL Marburg (optional)
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Rewrite;
 use DTA::CAB::Analyzer::Moot;
@@ -67,6 +68,7 @@ sub new {
      ##
      morph => DTA::CAB::Analyzer::Morph->new(),
      mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
+     mhessen => DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen->new(),
      msafe => DTA::CAB::Analyzer::MorphSafe->new(),
      rw    => DTA::CAB::Analyzer::Rewrite->new(),
      (map {("rw.$_" => DTA::CAB::Analyzer::Rewrite->new())} @RW_RANGES),
@@ -131,7 +133,7 @@ sub new {
 sub setupChains {
   my $ach = shift;
   $ach->{rwsub}{chain} = [@$ach{qw(lts morph)}];
-  $ach->{dmootsub}{chain} = [@$ach{qw(morph mlatin)}];
+  $ach->{dmootsub}{chain} = [@$ach{qw(morph mlatin)}]; #mhessen
   my @akeys = grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach);
   my $chains = $ach->{chains} =
     {
@@ -152,6 +154,7 @@ sub setupChains {
      'default.eqphox' =>[@$ach{qw(tokpp xlit lts eqphox)}],
      'default.morph'  =>[@$ach{qw(tokpp xlit morph)}],
      'default.mlatin' =>[@$ach{qw(tokpp xlit       mlatin)}],
+     'default.mhessen'=>[@$ach{qw(tokpp xlit       mhessen)}],
      'default.msafe'  =>[@$ach{qw(tokpp xlit morph mlatin msafe)}],
      'default.langid' =>[@$ach{qw(tokpp xlit morph mlatin msafe langid)}],
      'default.rw'     =>[@$ach{qw(tokpp xlit rw)}],
@@ -197,6 +200,11 @@ sub setupChains {
   $chains->{'default1'} = $chains->{lemma1} = $chains->{'norm1'};
   $chains->{'expand'}   = $chains->{'expand.all'};
 
+  ##-- BEGIN TEMPORARY custom chain: "hlgl": place-name recognition Hessen
+  $chains->{"norm.hlgl"}  = [map {($_,$_ eq $ach->{mlatin} ? $ach->{mhessen} : qw())} @{$chains->{norm}}];
+  $chains->{"norm1.hlgl"} = [map {($_,$_ eq $ach->{mlatin} ? $ach->{mhessen} : qw())} @{$chains->{norm1}}];
+  ##-- END TEMPORARY custom chain
+
   ##-- date-dependent chains
   foreach my $rng (@RW_RANGES) {
     if ($ach->{"rw.$rng"} && ($ach->{"rw.$rng"}{enabled}//1)) {
@@ -220,7 +228,7 @@ sub setupChains {
 
   ##-- force default labels
   foreach (grep {UNIVERSAL::isa($ach->{$_},'DTA::CAB::Analyzer')} keys(%$ach)) {
-    next if ($_ =~ /^(?:langid|rw\.[0-9\-]+)$/);    ##-- keep these labels
+    next if ($_ =~ /^(?:langid|rw\.[0-9\-]+|mhessen)$/);    ##-- keep labels for these analyzers
     ($ach->{$_}{label} = $_) =~ s/1$//;   ##-- truncate '1' suffix for label (e.g. dmoot1, moot1)
   }
   return $ach;

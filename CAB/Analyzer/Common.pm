@@ -20,6 +20,9 @@ use DTA::CAB::Analyzer::EqPho;           ##-- default eqpho-expander
 #use DTA::CAB::Analyzer::EqPho::FST;      ##-- via Gfsm::Automaton (default)
 
 use DTA::CAB::Analyzer::Morph;
+#use DTA::CAB::Analyzer::Morph::Extra::BDB;
+#use DTA::CAB::Analyzer::Morph::Extra::CDB;
+#use DTA::CAB::Analyzer::Morph::Extra::OrtLexHessen;
 #use DTA::CAB::Analyzer::Morph::Helsinki;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;

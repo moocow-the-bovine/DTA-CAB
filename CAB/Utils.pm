@@ -10,6 +10,7 @@ use Carp;
 use Encode qw(encode decode);
 use File::Basename qw(basename);
 use File::Temp;
+use POSIX qw(strftime); ##-- for strftime
 use strict;
 
 ##==============================================================================
@@ -31,7 +32,9 @@ our %EXPORT_TAGS =
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
-     files => [qw(fhbits)],
+     proc => [qw(mstat memsize pid_cmd)],
+     files => [qw(fhbits file_mtime)],
+     time => [qw(timestamp_str)]
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -310,7 +313,7 @@ sub si_str {
   return sprintf("%.2fT", $x/10**12) if ($x >= 10**12);  ##-- tera
   return sprintf("%.2fG", $x/10**9)  if ($x >= 10**9);   ##-- giga
   return sprintf("%.2fM", $x/10**6)  if ($x >= 10**6);   ##-- mega
-  return sprintf("%.2fk", $x/10**3)  if ($x >= 10**3);   ##-- kilo
+  return sprintf("%.2fK", $x/10**3)  if ($x >= 10**3);   ##-- kilo
   return sprintf("%.2f",  $x)        if ($x >= 0);       ##-- (natural units)
   return sprintf("%.2fm", $x*10**3)  if ($x >= 10**-3);  ##-- milli
   return sprintf("%.2fu", $x*10**6)  if ($x >= 10**-6);  ##-- micro
@@ -474,6 +477,74 @@ sub fhbits {
   vec($bits,$_,1)=1 foreach (map {ref($_) ? fileno($_) : $_} @_);
   return $bits;
 }
+
+##==============================================================================
+## Functions: proc filestsystem
+
+## \%mstat_or_undef = mstat()
+## \%mstat_or_undef = mstat($pid=$$)
+##   + class or instance method
+sub mstat {
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $pid  = shift || $$;
+  open(my $fh, "/proc/$pid/statm") or return {pid=>$pid};
+  local $/ = undef;
+  my $buf = <$fh>;
+  chomp($buf);
+  close($fh);
+  my (%mstat);
+  @mstat{qw(pid size resident share text lib data dt)} = ($pid, split(' ',$buf));
+  $mstat{pagesize} = POSIX::sysconf( POSIX::_SC_PAGESIZE );
+  return \%mstat;
+}
+
+## $memsize_kb_or_undef = memsize()
+## $memsize_kb_or_undef = memsize($pid)
+sub memsize {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $mstat = $that->mstat(@_);
+  return defined($mstat) ? $mstat->{size}*(($mstat->{pagesize}||4096)/1024) : undef;
+}
+
+## $cmd = pid_cmd($pid)
+sub pid_cmd {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $pid = shift;
+  my ($fh,$buf);
+  return
+    ($pid && (readlink("/proc/$pid/exe")
+	      || do {
+		open($fh, "/proc/$pid/cmdline")
+		  && scalar($buf=<$fh>)
+		  && (split(/\0/,$buf,2))[0]
+		})
+    ) || undef;
+}
+
+##==============================================================================
+## Functions: files
+
+## $mtime_in_floating_seconds = file_mtime($filename_or_fh)
+##  + de-references symlinks
+sub file_mtime {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $file = shift;
+  my @stat = (UNIVERSAL::can('Time::HiRes','stat') ? Time::HiRes::stat($file) : stat($file));
+  return $stat[9];
+}
+
+##==============================================================================
+## Functions: time
+
+## $timestamp_str = PACAKGE::timestamp_str()
+## $timestamp_str = PACAKGE::timestamp_str($time)
+sub timestamp_str {
+  my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $time = @_ ? shift : time();
+  return POSIX::strftime("%FT%T%z", localtime($time));
+}
+
+
 
 1; ##-- be happy
 
@@ -660,7 +731,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Bryan Jurish
+Copyright (C) 2009-2016 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

@@ -47,7 +47,7 @@ our @ISA = qw(DTA::CAB::Analyzer::Dict);
 ##     dba => \%dba,             ##-- args for Lingua::TT::DBFile->new()
 ##     #={
 ##     #  mode  => $mode,        ##-- default: 0644
-##     #  dbflags => $flags,     ##-- default: O_RDONLY
+##     #  flags => $flags,       ##-- default: O_RDONLY
 ##     #  type    => $type,      ##-- one of 'HASH', 'BTREE', 'RECNO', 'GUESS' (default: 'GUESS')
 ##     #  dbinfo  => \%dbinfo,   ##-- default: "DB_File::${type}INFO"->new();
 ##     #  dbopts  => \%opts,     ##-- db options (e.g. cachesize,bval,...) -- defaults to none (uses DB_File defaults)
@@ -64,7 +64,7 @@ sub new {
 			      dba=>{
 				    type    => 'GUESS',
 				    mode    => 0644,
-				    dbflags => O_RDONLY,
+				    flags   => O_RDONLY,
 				   },
 
 			      ##-- options
@@ -318,8 +318,8 @@ finite dictionary stored in a Berkeley DB file.
  dbf => $dbf,              ##-- underlying Lingua::TT::DBFile object (default=undef)
  dba => \%dba,             ##-- args for Lingua::TT::DBFile->new()
  #={
- #  mode  => $mode,        ##-- default: 0644
- #  dbflags => $flags,     ##-- default: O_RDONLY
+ #  mode    => $mode,      ##-- default: 0644
+ #  flags   => $flags,     ##-- default: O_RDONLY
  #  type    => $type,      ##-- one of 'HASH', 'BTREE', 'RECNO', 'GUESS' (default: 'GUESS')
  #  dbinfo  => \%dbinfo,   ##-- default: "DB_File::${type}INFO"->new();
  #  dbopts  => \%opts,     ##-- db options (e.g. cachesize,bval,...) -- defaults to none (uses DB_File defaults)

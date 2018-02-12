@@ -108,7 +108,14 @@ sub savePerlRef {
 ##  + default implementation just clobbers $CLASS_OR_OBJ with $ref and blesses
 sub loadPerlRef {
   my ($that,$ref) = @_;
-  $that = ref($ref) if (UNIVERSAL::isa($ref,$that)); ##-- "virtual load": return subclass for superclass method
+  if (UNIVERSAL::isa($ref,ref($that)||$that)) {
+    ##-- "virtual load": return subclass for superclass method
+    if (ref($that)) {
+      bless($that, ref($ref));
+    } else {
+      $that = ref($ref);
+    }
+  }
   my $obj = ref($that) ? $that : $that->new();
   $obj = bless(unifyClobber($obj,$ref,undef),ref($obj));
   if (UNIVERSAL::isa($that,'HASH') && UNIVERSAL::isa($obj,'HASH')) {
@@ -142,7 +149,7 @@ sub savePerlFile {
 }
 
 ## $obj = $CLASS_OR_OBJ->loadPerlFile($filename_or_fh, %args)
-##  + calls $CLASS_OR_OBJ->loadPerlString(var=>undef,src=>$filename_or_fh, %args)
+##  + calls $CLASS_OR_OBJ->loadPerlString(var=>undef,src=>$filename_or_fh, cabSrcFile=>$file, %args)
 sub loadPerlFile {
   my ($that,$file,%args) = @_;
   my $fh = ref($file) ? $file : IO::File->new("<$file");

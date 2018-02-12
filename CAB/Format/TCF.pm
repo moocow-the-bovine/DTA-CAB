@@ -35,6 +35,8 @@ BEGIN {
       foreach (qw(tcf-pos tcf+pos)); ##-- for weblicht/d*
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas'})
       foreach (qw(tcf tcf-xml tcfxml full-tcf xtcf));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tokens sentences orthography postags lemmas names'})
+      foreach (qw(tcf+ner tcf+names)); ##-- for including named entities parsed from teiws
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{tcflayers=>'tei text'})
       foreach (qw(tcf-tei-text tcf-tei+text tcf+tei+text));
@@ -78,7 +80,7 @@ sub new {
 			      ##-- local
 			      #tcfbufr => undef,
 			      tcflog   => 'off', ##-- debugging log-level
-			      #tcflayers => 'tei text tokens sentences orthography postags lemmas',
+			      #tcflayers => 'tei text tokens sentences orthography postags lemmas names',
 			      tcflayers => 'tokens sentences orthography',
 			      tcftagset => 'stts',
 			      spliceback => 1,
@@ -340,7 +342,7 @@ sub putDocument {
   }
 
   ##-- document structure: corpus structure
-  my ($tokens,$sents,$lemmas,$postags,$orths);
+  my ($tokens,$sents,$lemmas,$postags,$orths,$names);
   if ($layers =~ /\btokens\b/ && !$xcorpus->getChildrenByLocalName('tokens')) {
     $tokens = $xcorpus->addNewChild(undef,'tokens');
   }
@@ -360,12 +362,18 @@ sub putDocument {
     $orths = $xcorpus->addNewChild(undef,'orthography');
     #$orths->setAttribute('type'=>'CAB');
   }
+  if ($layers =~ /\bnames\b/ && !$xcorpus->getChildrenByLocalName('namedEntities')) {
+    $names = $xcorpus->addNewChild(undef,'namedEntities');
+    $names->setAttribute('type'=>'CoNLL2002');
+  }
 
   ##-- ensure ids
   my $wi = 0;
   my $si = 0;
-  my ($s,$w,$wid,@wids,$snod,$wnod);
-  my ($pos,$lemma,$orth);
+  my $ni = 0;
+  my (%nid2nod); ##-- ($nerEntityId => $tcfNamedEntityNode), for 'names' layer
+  my ($s,$w,$wid,@wids,$snod,$wnod,$nnod);
+  my ($pos,$lemma,$orth,$nea,$neid,$necls);
   foreach $s (@{$doc->{body}}) {
     ++$si;
     @wids = qw();
@@ -411,6 +419,31 @@ sub putDocument {
 	$wnod->setAttribute(tokenIDs=>$wid);
 	$wnod->setAttribute(operation=>'replace'); ##-- "norm" would be better, but isn't allowed
 	$wnod->appendText($orth);
+      }
+      if ($names && defined($w->{ner})) {
+	##-- names: populate %nid2nod
+	foreach $nea (@{$w->{ner}}) {
+	  $neid = $nea->{nid} || "n$wid";
+	  if (defined($nnod=$nid2nod{$neid})) {
+	    ##-- append token to existing tcf namedEntities/entity node
+	    $nnod->setAttribute('tokenIDs',$nnod->getAttribute('tokenIDs').' '.$wid);
+	  } else {
+	    ##-- create new tcf namedEntities/entity node
+	    ++$ni;
+	    $nnod = $nid2nod{$neid} = $names->addNewChild(undef,'entity');
+
+	    ##-- CoNLL2002 ner categories: PER, LOC, ORG, MISC
+	    $necls = $nea->{func} || 'MISC';
+	    $necls = ($necls =~ /^(?:per|\@(?:First|Last|Title))/i ? 'PER'
+		      : ($necls =~ /^place|loc|geo/i ? 'LOC'
+			 : ($necls =~ /^org/i ? 'ORG'
+			    : 'MISC')));
+
+	    $nnod->setAttribute('ID' => $neid);
+	    $nnod->setAttribute('class' => $necls);
+	    $nnod->setAttribute('tokenIDs' => $wid);
+	  }
+	}
       }
     }
 

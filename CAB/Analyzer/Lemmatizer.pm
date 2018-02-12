@@ -109,22 +109,33 @@ sub _analyzeGuts {
   $prep_sub->();
 
   ##-- lemmatize, type-wise by (text+analysis)-pair
-  my ($lemma);
+  my ($lemma,$tag,$lemmaFromMorph);
   foreach (values %$key2a) {
     $lemma = defined($_->{hi}) ? $_->{hi} : $_->{details};
     if (defined($lemma) && $lemma ne '' && $lemma =~ /^[^\]]+\[/) { ##-- tagh analysis (vs. tokenizer-supplied analysis)
-      #$lemma =~ s/\~e?t(?=\W)/\~en/g;	##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
-      $lemma =~ s/\[.*$//;	        ##-- trim everything after first non-character symbol
+      #$lemma =~ s/\~e?t(?=\W)/\~en/g;	   ##-- rename verb inflection morphs [BUG: l("Christ/N\en~tum[_NN]") = Christenenum]
+      $lemma =~ s/\[<([^\>\]]*)>\]/<$1>/g; ##-- unquote taghm-2.5 "diamond-tags", e.g "kurz<A>\@Stiel<N>~ig[_ADJD]<none>"
+      $lemma =~ s/\[.*$//;	           ##-- trim everything after first non-character symbol
       #$lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\bge\\\|)|(?:[\\\~\|\=\+\#\x{ac}])//g;  ##-- hack: remove "ge\|" prefixes too (but not e.g. "ver\|", "be\|", etc.)
-      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:[\\\~\|\=\+\#\x{ac}])//g;  		  ##-- unhack: don't remove "ge\|" prefixes (for consistency e.g. with dwds-kc20)
+      $lemma =~ s/(?:\/[A-Za-z]{1,2})|(?:\[?<[^>]+>\]?)|(?:[\@\\\~\|\=\+\#\x{ac}])//g;   ##-- unhack: don't remove "ge\|" prefixes (for consistency e.g. with dwds-kc20)
+      $lemmaFromMorph = 1;
     } else {
       $lemma = $_->{$lab_txt};
       $lemma =~ s/\x{ac}//g;
+      $lemmaFromMorph = 0;
     }
+    ##-- extract tag if available
+    $tag = $_->{tag} || ($_->{hi} && $_->{hi} =~ m/\[_([^\]]+)\]/ ? $1 : '');
+    ##
     ##-- normalization
     $lemma =~ s/(?:^\s+|\s+\z)//g;
     $lemma =~ s/\s+/_/g;
-    if ($_->{tag} ? ($_->{tag} ne 'XY') : ($_->{hi} && $_->{hi}!~m/\[_XY\]/)) {
+    if ($lemmaFromMorph && $tag =~ /^(?:NE|XY)$/) {
+      ##-- retain morphology-supplied original case for names and symbols
+      ;
+    }
+    elsif ($_->{tag} ne 'XY') {
+      ##-- lower-case all lemmata here, otherwise Anschlußstelle->AnschlußStelle (mantis #23127)
       $lemma = lc($lemma);
       $lemma =~ s/(?:^|(?<=[\-\_]))(.)/\U$1\E/g
 	if (#$_->{tag} ? ($_->{tag}=~m/^N/) :  ##-- disabled 2016-06-01 for Helsinki-style english morphology; see ucTags key in Analyzer::MootSub

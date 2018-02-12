@@ -44,7 +44,7 @@ sub new {
      ##
      morph => DTA::CAB::Analyzer::Morph::Helsinki->new(),
      mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
-     msafe => DTA::CAB::Analyzer::MorphSafe->new(),
+     msafe => DTA::CAB::Analyzer::MorphSafe->new(), ##-- remove this for en-chain?
      ##
      moot  => DTA::CAB::Analyzer::Moot->new(lang=>'en'), ##-- moot tagger (on dmoot output; (n>1)-grams)
      moot1 => DTA::CAB::Analyzer::Moot->new(lang=>'en'), ##-- moot tagger (on dmoot output; 1-grams only)
@@ -94,6 +94,7 @@ sub setupChains {
      'default.mlatin' =>[@$ach{qw(tokpp xlit       mlatin)}],
      'default.msafe'  =>[@$ach{qw(tokpp xlit morph mlatin msafe)}],
      'default.langid' =>[@$ach{qw(tokpp xlit morph mlatin msafe langid)}],
+     'default.langid' =>[@$ach{qw(tokpp xlit morph mlatin langid)}],
      'default.moot'     =>[@$ach{qw(tokpp xlit              morph mlatin msafe langid moot)}],
      'default.moot1'    =>[@$ach{qw(tokpp xlit              morph mlatin msafe langid moot1)}],
      'default.lemma'    =>[@$ach{qw(tokpp xlit morph mlatin msafe langid moot  mootsub)}],
