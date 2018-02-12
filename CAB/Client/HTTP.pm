@@ -146,13 +146,22 @@ sub analyzers {
 
 ## $url = $cli->lwpUrl()
 ## $url = $cli->lwpUrl($url)
-##  + gets LWP-style URL $url (parses apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs too)
+##  + gets LWP-style URL $url
+##  + support for HTTP over UNIX sockets:
+##    - "unix:/path/to/unix/socket|http:///uri/path" (apache mod_proxy style)
+##    - "http:/path/to/unix/socket//uri/path" (LWP::Protocol::http::SocketUnixAlt)
+##    - "http+unix:/path/to/unix/socket//uri/path" (native http+unix support)
 sub lwpUrl {
   my ($cli,$url) = @_;
   return undef if (! ($url ||= $cli->{serverURL}) );
 
-  if ($url =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
-    ##-- detect apache mod_proxy syntax
+  if ($url =~ m{^(.+?)\+unix:(?://)?(.+?)[/\|]/(.*)$}i) {
+    ##-- http+unix syntax
+    my ($scheme,$sockpath,$uripath) = ($1,$2,$3);
+    return "${scheme}:${sockpath}//${uripath}";
+  }
+  elsif ($url =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
+    ##-- apache mod_proxy syntax
     my ($sockpath,$uristr) = ($1,$2);
     my $uri = URI->new($uristr)->as_string;
     $uri =~ s{//+}{${sockpath}//};
@@ -782,9 +791,24 @@ Implements L<DTA::CAB::Client::analyzeToken|DTA::CAB::Client/analyzeToken>.
  $lwp_url = $cli->lwpUrl($url);
 
 Returns LWP-style URL C<$lwp_url> for C<$url>, which defaults to C<$cli-E<gt>{serverURL}>.
-Parses both apache mod_proxy style "unix:/path/to/unix/socket|http:///uri/path" URLs
-into L<LWP::Protocol::http::SocketUnixAlt|LWP::Protocol::http::SocketUnixAlt>-style
-URLs of the form "http:/path/to/unix/socket//uri/path".
+Supports HTTP over UNIX sockets using various URL conventions:
+
+=over 4
+
+=item *
+
+apache mod_proxy style: C<unix:/path/to/unix/socket|http:///uri/path>
+
+=item *
+
+L<LWP::Protocol::http::SocketUnixAlt|LWP::Protocol::http::SocketUnixAlt> style:
+C<http:/path/to/unix/socket//uri/path>
+
+=item *
+
+native "http+unix" scheme: C<http+unix:/path/to/unix/socket//uri/path>.
+
+=back
 
 =item ua
 

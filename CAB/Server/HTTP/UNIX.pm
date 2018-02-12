@@ -425,12 +425,16 @@ sub peerstr {
 sub peerhost {
   my $sock = shift;
 
-  ##-- get socat environment variable if possible
-  my $env = $sock->peerenv();
-  return $env->{DTA_CAB_RELAY_PEERADDR} if ($env && $env->{DTA_CAB_RELAY_PEERADDR});
+  ##-- get UNIX socket credentials
+  my ($pid,$uid,$gid) = $sock->peercred();
+  if (defined($pid) && basename(pid_cmd($pid)) eq 'socat') {
+    ##-- get socat environment variable if applicable
+    my $env = $sock->peerenv();
+    return $env->{DTA_CAB_RELAY_PEERADDR} if ($env && $env->{DTA_CAB_RELAY_PEERADDR});
+  }
 
   ##-- return UNIX socket credentials
-  return $sock->peerstr();
+  return $sock->peerstr($pid,$uid,$gid);
 }
 
 ## $port = peerport()
@@ -439,11 +443,15 @@ sub peerhost {
 sub peerport {
   my $sock = shift;
 
-  ##-- get socat environment variable if possible
-  my $env = $sock->peerenv();
-  return $env->{DTA_CAB_RELAY_PEERPORT} if ($env && $env->{DTA_CAB_RELAY_PEERPORT});
+  ##-- get UNIX socket credentials
+  my ($pid,$uid,$gid) = $sock->peercred();
+  if (defined($pid) && basename(pid_cmd($pid)) eq 'socat') {
+    ##-- get socat environment variable if applicable
+    my $env = $sock->peerenv();
+    return $env->{DTA_CAB_RELAY_PEERPORT} if ($env && $env->{DTA_CAB_RELAY_PEERPORT});
+  }
 
-  ##-- return UNIX socket credentials
+  ##-- return UNIX socket path
   return $sock->peerpath();
 }
 

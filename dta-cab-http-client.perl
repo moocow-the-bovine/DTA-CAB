@@ -147,8 +147,9 @@ pod2usage({-exitval=>0, -verbose=>0}) if ($help);
 DTA::CAB::Logger->logInit();
 
 ##-- sanity checks
-$serverURL = "http://$serverURL" if ($serverURL !~ m|[^:]+:.*//|);
-if ($serverURL !~ m{^unix:}i && $serverURL =~ m|([^:]+://[^/:]*)(/[^:]*)$|) {
+$serverURL = "http://$serverURL" if ($serverURL !~ m{[^:]+:.*//});
+if (DTA::CAB::Client::HTTP->lwpUrl($serverURL) =~ m{([^:]+://[^/:]*)(/[^:]*)$}) {
+  ##-- default port (tcp URLs only)
   $serverURL = "$1:${defaultPort}$2";
 }
 
@@ -529,6 +530,8 @@ or apache mod_proxy sytax; the following are equivalent:
  http:/path/to/cab.sock//uri/path
  unix:/path/to/cab.sock|http:///uri/path
  unix:///path/to/cab.sock|http:///uri/path
+ http+unix:/path/to/cab.sock//uri/path
+ http+unix:/path/to/cab.sock|/uri/path
 
 =item -timeout SECONDS
 
