@@ -427,7 +427,7 @@ sub peerhost {
 
   ##-- get UNIX socket credentials
   my ($pid,$uid,$gid) = $sock->peercred();
-  if (defined($pid) && basename(pid_cmd($pid)) eq 'socat') {
+  if (defined($pid) && basename(pid_cmd($pid)//'?') eq 'socat') {
     ##-- get socat environment variable if applicable
     my $env = $sock->peerenv();
     return $env->{DTA_CAB_RELAY_PEERADDR} if ($env && $env->{DTA_CAB_RELAY_PEERADDR});
@@ -445,7 +445,7 @@ sub peerport {
 
   ##-- get UNIX socket credentials
   my ($pid,$uid,$gid) = $sock->peercred();
-  if (defined($pid) && basename(pid_cmd($pid)) eq 'socat') {
+  if (defined($pid) && basename(pid_cmd($pid)//'?') eq 'socat') {
     ##-- get socat environment variable if applicable
     my $env = $sock->peerenv();
     return $env->{DTA_CAB_RELAY_PEERPORT} if ($env && $env->{DTA_CAB_RELAY_PEERPORT});
