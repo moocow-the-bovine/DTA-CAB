@@ -427,7 +427,7 @@ sub analysisCodeDEBUG {
 
     ##-- language-guesser hack
     if ($moot_lang && ($lang=$s->{lang}) && $lang ne $moot_lang) {
-      $_->{tag} = "$fmtag.$lang" foreach (grep {$_->{tag} !~ /^\$/} @$msent);
+      $_->{tag} = "$fmtag.$lang" foreach (grep {$_->{tag} !~ /^(?:\$|CARD$)/} @$msent);
     }
 
     foreach (@$msent) {
