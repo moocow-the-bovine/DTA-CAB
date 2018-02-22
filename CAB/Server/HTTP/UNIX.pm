@@ -338,7 +338,11 @@ sub prepareRelay {
 
   $srv->vlog('trace',"starting TCP socket relay on ${addr}:${port}");
   $SIG{CHLD} ||= $srv->reaper();
-  my $pgrp = POSIX::getpgrp(); ##-- get process group-id of main server process
+
+  ##-- set main server process as group leader (kill whole process group with `pkill -g $SERVER_PID`)
+  POSIX::setpgid(0,0);
+  my $pgid = POSIX::getpgrp();
+
   if ( ($srv->{relayPid}=fork()) ) {
     ##-- parent
     $srv->vlog('info', "started TCP socket relay process for ${addr}:${port} on pid=$srv->{relayPid}");
@@ -348,8 +352,8 @@ sub prepareRelay {
     ##-- cleanup: close file desriptors
     POSIX::close($_) foreach (3..1024);
 
-    ##-- set main server process as group leader (send signal to all subprocesses with e.g. `kill -TERM -- -$SERVER_PID`
-    POSIX::setpgid($$, $pgrp);
+    ##-- join main server's process group
+    POSIX::setpgid($$, $pgid);
 
     ##-- cleanup: environment
     #delete @ENV{grep {$_ !~ /^(?:PATH|PERL|LANG|L[CD]_)/} keys %ENV};
