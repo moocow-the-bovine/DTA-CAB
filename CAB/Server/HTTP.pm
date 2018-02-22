@@ -167,11 +167,13 @@ sub daemonLabel {
 }
 
 ## $bool = $srv->canBindSocket()
+## $bool = $srv->canBindSocket(\%daemonArgs)
 ##  + returns true iff socket can be bound; should set $! on error
 sub canBindSocket {
-  my $srv   = shift;
-  my $dargs = $srv->{daemonArgs} || {};
-  my $sock  = IO::Socket::INET->new(%$dargs, Listen=>SOMAXCONN) or return 0;
+  my $srv = shift;
+  my $dargs = (@_ ? shift : $srv->{daemonArgs}) || {};
+  $dargs->{LocalAddr} ||= '0.0.0.0';
+  my $sock  = IO::Socket::INET->new(%$dargs, Listen=>1) or return 0;
   undef $sock;
   return 1;
 }

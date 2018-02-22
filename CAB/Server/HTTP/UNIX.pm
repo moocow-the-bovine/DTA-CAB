@@ -142,13 +142,15 @@ sub DESTROY {
 ##==============================================================================
 ## Methods: HTTP server API (abstractions for HTTP::UNIX)
 
+##--------------------------------------------------------------
 ## $str = $srv->socketLabel()
 ##  + returns symbolic label for bound socket address
 sub socketLabel {
   my $srv = shift;
-  return "$srv->{daemonArgs}{Local}";
+  return $srv->{daemonArgs}{Local};
 }
 
+##--------------------------------------------------------------
 ## $str = $srv->daemonLabel()
 ##  + returns symbolic label for running daemon
 sub daemonLabel {
@@ -156,6 +158,7 @@ sub daemonLabel {
   return $srv->{daemon}->hostpath;
 }
 
+##--------------------------------------------------------------
 ## $bool = $srv->canBindSocket()
 ##  + returns true iff socket can be bound; should set $! on error
 sub canBindSocket {
@@ -165,22 +168,64 @@ sub canBindSocket {
     or $srv->logconfess("canBindSocket(): no socket path defined");
   $srv->ensureSocketDir($sockpath)
     or $srv->logconfess("canBindSocket(): failed to create socket directory for $sockpath: $!");
-  my $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN) or return 0;
-  unlink($sockpath);
+  my $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN);
+
+  if (!$sock) {
+    ##-- first bind attempt failed: check whether there's a process behind it by trying to connect
+    $srv->logwarn("WARNING: socket path $sockpath already exists; trying to recover");
+    if (-w $sockpath && !IO::Socket::UNIX->new(Peer=>$sockpath)) {
+      $srv->logwarn("WARNING: client connection to $sockpath failed; force-removing");
+      if (!unlink($sockpath)) {
+	$srv->logwarn("WARNING: failed to unlink existing socket path $sockpath");
+	return 0;
+      }
+      $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN);
+    }
+    if (!$sock) {
+      ##-- recovery failed
+      $srv->logwarn("WARNING: cannot recycle socket path $sockpath (is another process listening on it?)");
+      return 0;
+    }
+  }
+
+  ##-- cleanup
   undef $sock;
+  unlink($sockpath);
+
   return 1;
 }
 
+##--------------------------------------------------------------
 ## $class = $srv->daemonClass()
 ##  + get HTTP::Daemon class
 sub daemonClass {
   return 'HTTP::Daemon::UNIX';
 }
 
+##--------------------------------------------------------------
 ## $class_or_undef = $srv->clientClass()
 ##  + get class for client connections
 sub clientClass {
   return 'DTA::CAB::Server::HTTP::UNIX::ClientConn';
+}
+
+##--------------------------------------------------------------
+## $addr_or_false = $srv->relayAddr()
+##  + new in Server::HTTP::UNIX
+sub relayAddr { return $_[0]{relayAddr} || $_[0]{daemonArgs}{LocalAddr}; }
+
+##--------------------------------------------------------------
+## $port_or_false = $srv->relayPort()
+##  + new in Server::HTTP::UNIX
+sub relayPort { return $_[0]{relayPort} || $_[0]{daemonArgs}{LocalPort}; }
+
+##--------------------------------------------------------------
+## $label_or_false = $srv->relayLabel()
+##  + new in Server::HTTP::UNIX
+sub relayLabel {
+  my ($addr,$port) = ($_[0]->relayAddr,$_[0]->relayPort);
+  return undef if (!$addr && !$port); ##-- no relay required
+  return ($addr||'0.0.0.0').":".$port;
 }
 
 ##==============================================================================
@@ -274,17 +319,26 @@ sub prepareLocal {
 ##--------------------------------------------------------------
 ## $bool = $srv->prepareRelay()
 ##  + sets up TCP relay subprocess
+##  + returns -1 if relay process couldn't be started
 sub prepareRelay {
   my $srv = shift;
-  my $addr = $srv->{relayAddr} || $srv->{daemonArgs}{LocalAddr};
-  my $port = $srv->{relayPort} || $srv->{daemonArgs}{LocalPort};
+  my $addr = $srv->relayAddr;
+  my $port = $srv->relayPort;
   return 1 if (!$addr && !$port); ##-- no relay required
 
   my $sockpath = $srv->{_socketPath};
   $addr ||= '0.0.0.0';
   @$srv{qw(relayAddr relayPort)} = ($addr,$port);
 
+  ##-- check whether relay address is already bound
+  if (!$srv->SUPER::canBindSocket({LocalAddr=>($srv->relayAddr||'0.0.0.0'), LocalPort=>$srv->relayPort})) {
+    $srv->logwarn("WARNING: cannot bind TCP socket relay on ${addr}:${port} (is there a stale relay still running?): $!");
+    return -1;
+  }
+
   $srv->vlog('trace',"starting TCP socket relay on ${addr}:${port}");
+  $SIG{CHLD} ||= $srv->reaper();
+  my $pgrp = POSIX::getpgrp(); ##-- get process group-id of main server process
   if ( ($srv->{relayPid}=fork()) ) {
     ##-- parent
     $srv->vlog('info', "started TCP socket relay process for ${addr}:${port} on pid=$srv->{relayPid}");
@@ -293,6 +347,9 @@ sub prepareRelay {
 
     ##-- cleanup: close file desriptors
     POSIX::close($_) foreach (3..1024);
+
+    ##-- set main server process as group leader (send signal to all subprocesses with e.g. `kill -TERM -- -$SERVER_PID`
+    POSIX::setpgid($$, $pgrp);
 
     ##-- cleanup: environment
     #delete @ENV{grep {$_ !~ /^(?:PATH|PERL|LANG|L[CD]_)/} keys %ENV};
