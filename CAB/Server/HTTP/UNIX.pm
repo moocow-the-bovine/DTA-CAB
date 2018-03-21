@@ -33,7 +33,7 @@ our @ISA = qw(DTA::CAB::Server::HTTP);
 ##     socketUser  => $user,         ##-- socket user or uid (root only; default=undef: current user)
 ##     socketGroup => $group,        ##-- socket group or gid (default=undef: current group)
 ##     _socketPath => $path,         ##-- bound socket path (for unlink() on destroy)
-##     _socketDirs => \@dirs,        ##-- auto-created socket directories
+##     #_socketDirs => \@dirs,        ##-- auto-created socket directories (DISABLED)
 ##     relayCmd    => \@cmd,         ##-- TCP relay command-line for exec() (default=[qw(socat ...)], see prepareRelay())
 ##     relayAddr   => $addr,         ##-- TCP relay address to bind (default=$daemonArgs{LocalAddr}, see prepareRelay())
 ##     relayPort   => $port,         ##-- TCP relay address to bind (default=$daemonArgs{LocalPort}, see prepareRelay())
@@ -100,6 +100,7 @@ sub new {
 			   socketUser  => undef,
 			   socketGroup => undef,
 			   _socketPath => undef,
+			   #_socketDirs => undef,
 
 			   ##-- user args
 			   @_
@@ -130,9 +131,9 @@ sub DESTROY {
     }
 
     ##-- remove auto-created directories (only if empty)
-    foreach (reverse @{$srv->{_socketDirs}||[]}) {
-      last if (!rmdir($_));
-    }
+    #foreach (reverse @{$srv->{_socketDirs}||[]}) {
+    #  last if (!rmdir($_));
+    #}
   }
 
   ##-- superclass destruction if available
@@ -397,11 +398,11 @@ sub reaper {
       ##-- check whether required subprocess bailed on us
       if ($srv->{relayPid} && $child == $srv->{relayPid}) {
 	delete $srv->{relayPid};
-	$srv->logdie("TCP relay process ($child) exited with status $?");
+	$srv->logdie("TCP relay process ($child) exited with status ".($?>>8));
       }
 
       ##-- normal case: handle client-level forks (e.g. for POST)
-      $srv->vlog($srv->{logReap},"reaped subprocess pid=$child, status=$?");
+      $srv->vlog($srv->{logReap},"reaped subprocess pid=$child, status=".($?>>8));
       delete $srv->{children}{$child};
     }
 
