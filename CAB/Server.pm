@@ -144,9 +144,19 @@ sub finish {
   return 1;
 }
 
+## \%mstat_or_undef = $srv->mstat()
+sub mstat {
+  return DTA::CAB::Utils::mstat();
+}
+
 ## $memsize_kb_or_undef = $srv->memsize()
 sub memsize {
   return DTA::CAB::Utils::memsize();
+}
+
+## $memrss_kb_or_undef = $srv->memsize()
+sub memrss {
+  return DTA::CAB::Utils::memrss();
 }
 
 1; ##-- be happy

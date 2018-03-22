@@ -13,6 +13,7 @@ use HTTP::Daemon;
 use HTTP::Status;
 use POSIX ':sys_wait_h';
 use Socket qw(SOMAXCONN);
+use Time::HiRes qw(gettimeofday tv_interval);
 use Carp;
 use strict;
 
@@ -44,6 +45,8 @@ our @ISA = qw(DTA::CAB::Server);
 ##     nRequests  => $nRequests,     ##-- number of requests (after access control)
 ##     nCacheHits => $nCacheHits,    ##-- number of cache hits
 ##     nErrors    => $nErrors,       ##-- number of client errors
+##     qtAvg      => $qtAvg,         ##-- query time load average (exponential moving average for 1m,5m,15m, a la linux cpuload), sample values in seconds
+##     qt0        => \@time,         ##-- time we started processing most recent query (Time::HiRes::gettimeofday)
 ##     ##
 ##     ##-- security
 ##     allowUserOptions => $bool,   ##-- allow user options? (default: true)
@@ -106,6 +109,8 @@ sub new {
 			   nRequests  => 0,
 			   nCacheHits => 0,
 			   nErrors => 0,
+			   qtAvg   => DTA::CAB::Utils::EMA->new(decay=>[60,(5*60),(15*60)]),
+			   qt0     => undef,
 
 			   ##-- security
 			   allowUserOptions => 1,
@@ -256,11 +261,17 @@ sub run {
   my ($csock,$chost,$hreq,$urikey,$forkable,$cacheable,$handler,$localPath,$pid,$rsp);
   my ($fdset);
   while (1) {
+    ##-- track total processing time for *last* query
+    $srv->qtfinish();
+
     ##-- call accept() within the loop to avoid breaking out in fork mode
     if (!defined($csock=$daemon->accept())) {
       #sleep(1);
       next;
     }
+
+    ##-- query processing starts
+    $srv->{qt0} = [gettimeofday];
 
     ##-- re-bless client socket (for UNIX-domain server)
     bless($csock,$cclass) if ($cclass);
@@ -361,6 +372,7 @@ sub run {
       ##-- parent code
       $srv->{children}{$pid} = undef;
       $srv->vlog($srv->{logSpawn}, "spawned subprocess $pid");
+      $srv->{qt0} = undef;
       next;
     }
 
@@ -552,6 +564,17 @@ sub clientError {
   $csock->close() if (UNIVERSAL::can($csock,'close'));
   $@ = undef;     ##-- unset eval error
   return undef;
+}
+
+## $qtavg = $srv->qtfinish()
+##   + called at end of query-processing to update the query-time average
+sub qtfinish {
+  my $srv = shift;
+  return $srv->{qtAvg} if (!$srv->{qt0});
+  my $t0 = $srv->{qt0};
+  my $t1 = [gettimeofday];
+  $srv->{qt0} = undef;
+  return $srv->{qtAvg}->append(tv_interval($t0,$t1),$t1);
 }
 
 1; ##-- be happy

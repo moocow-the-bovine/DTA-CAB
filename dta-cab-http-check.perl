@@ -17,7 +17,7 @@ use strict;
 
 ##======================================================================
 ## Version
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 our $SVNID   = q(
   $HeadURL$
   $Id$
@@ -156,6 +156,7 @@ if ($rsp->is_success) {
 
     ##-- get status perfdata
     my $memMB = sprintf("%.2f", ($status->{memSize}//0) / 1024);
+    my $rssMB = sprintf("%.2f", ($status->{memRSS}//0) / 1024);
     $mp->add_perfdata(label=>'mem', value=>$memMB, uom=>'MB');
     $mp->add_perfdata(label=>'nreq', value=>($status->{nRequests}//0), uom=>'c');
     $mp->add_perfdata(label=>'nerr', value=>($status->{nErrors}//0), uom=>'c');
@@ -163,6 +164,12 @@ if ($rsp->is_success) {
       no warnings 'numeric';
       $mp->add_perfdata(label=>'ncached', value=>($status->{nCacheHits}+0), uom=>'c');
     };
+
+    ##-- new perfdata for DTA::CAB v1.101 (2018-03-22 14:10:24+0100)
+    $mp->add_perfdata(label=>'rss', value=>$rssMB, uom=>'MB');
+    $mp->add_perfdata(label=>'qtavg1', value=>($status->{qtAvg1}//0), uom=>'s');
+    $mp->add_perfdata(label=>'qtavg5', value=>($status->{qtAvg5}//0), uom=>'s');
+    $mp->add_perfdata(label=>'qtavg15', value=>($status->{qtAvg15}//0), uom=>'s');
 
     ##-- get return message
     $msg = "$url - ${time}s ${memMB}MB";

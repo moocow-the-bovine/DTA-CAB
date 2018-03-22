@@ -32,9 +32,9 @@ our %EXPORT_TAGS =
      threads => [qw(threads_enabled downup)],
      temp => [qw(tmpfsdir tmpfsfile mktmpfsdir)],
      getopt => [qw(GetArrayOptions GetStringOptions)],
-     proc => [qw(mstat memsize pid_cmd)],
+     proc => [qw(mstat memsize memrss pid_cmd)],
      files => [qw(fhbits file_mtime)],
-     time => [qw(timestamp_str)]
+     time => [qw(timestamp_str emavg)]
     );
 our @EXPORT_OK = map {@$_} values(%EXPORT_TAGS);
 $EXPORT_TAGS{all} = [@EXPORT_OK];
@@ -483,9 +483,11 @@ sub fhbits {
 
 ## \%mstat_or_undef = mstat()
 ## \%mstat_or_undef = mstat($pid=$$)
+## \%mstat_or_undef = mstat(\%mstat)
 ##   + class or instance method
 sub mstat {
   my $that = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  return $_[0] if (UNIVERSAL::isa($_[0],'HASH')); ##-- redundant call mstat(\%mstat)
   my $pid  = shift || $$;
   open(my $fh, "/proc/$pid/statm") or return {pid=>$pid};
   local $/ = undef;
@@ -500,10 +502,22 @@ sub mstat {
 
 ## $memsize_kb_or_undef = memsize()
 ## $memsize_kb_or_undef = memsize($pid)
+## $memsize_kb_or_undef = memsize(\%mstat)
+##  + virtual memory size (address space)
 sub memsize {
   my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
   my $mstat = $that->mstat(@_);
   return defined($mstat) ? $mstat->{size}*(($mstat->{pagesize}||4096)/1024) : undef;
+}
+
+## $resident_kb_or_undef = memrss()
+## $resident_kb_or_undef = memrss($pid)
+## $resident_kb_or_undef = memrss(\%mstat)
+##  + resident set size (physical memory used)
+sub memrss {
+  my $that  = UNIVERSAL::isa($_[0],__PACKAGE__) ? shift : __PACKAGE__;
+  my $mstat = $that->mstat(@_);
+  return defined($mstat) ? $mstat->{resident}*(($mstat->{pagesize}||4096)/1024) : undef;
 }
 
 ## $cmd = pid_cmd($pid)
@@ -544,6 +558,57 @@ sub timestamp_str {
   return POSIX::strftime("%FT%T%z", localtime($time));
 }
 
+## DTA::CAB::Utils::EMA : exponential moving average
+package DTA::CAB::Utils::EMA;
+use strict;
+
+## $ema = PACKAGE->new(%args)
+##  + %args, object structure:
+##    {
+##     decay  => \@seconds, ##-- number(s) of seconds until the contribution of a sample falls below 1/e (default=[60 300 900] ~ 1,5,15 minutes)
+##     vals   => \@vals,    ##-- current moving average values (default=0)
+##     t      => $time,     ##-- timestamp of the current sample as returned by Time::HiRes::gettimeofday (default=current timestamp)
+##    }
+sub new {
+  require Time::HiRes;
+  my $that = shift;
+  my $ema  = {
+	      decay =>[60, (5*60), (15*60)],
+	      vals  =>[],
+	      t     =>[Time::HiRes::gettimeofday()],
+	      @_,
+	     };
+  $ema->{vals}[$_] //= 0 foreach (0..$#{$ema->{decay}});
+  return bless($ema,ref($that)||$that);
+}
+
+## $ema = $ema->append($newValue)
+## $ema = $ema->append($newValue,$newTime)
+##  + append a new sample value with timestamp $newTime
+sub append {
+  require Time::HiRes;
+  my ($ema,$newVal,$newTime) = @_;
+  $newVal  //= 0;
+  $newTime   = [Time::HiRes::gettimeofday()] if (!$newTime);
+  my $tdiff  = Time::HiRes::tv_interval($ema->{t},$newTime);
+  my ($alpha);
+  foreach (0..$#{$ema->{decay}}) {
+    $alpha = exp(-$tdiff/$ema->{decay}[$_]);
+    $ema->{vals}[$_] = (1-$alpha)*$newVal + $alpha*$ema->{vals}[$_];
+  }
+  $ema->{t} = $newTime;
+  return $ema;
+}
+
+##  @vals = $ema->vals($newVal,$newTime)
+## \@vals = $ema->vals($newVal,$newTime)
+##  + wrapper for $ema->append($newVal,$newTime)->{vals}
+##  + optionally append a sample and return current (decayed) value(s)
+##  + default $newVal=0, default $newTime=[Time::HiRes::gettimeofday] --> current decayed sample values
+sub vals {
+  $_[0]->append(@_[1..$#_]);
+  return wantarray ? @{$_[0]{vals}} : $_[0]{vals};
+}
 
 
 1; ##-- be happy
@@ -731,7 +796,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2016 by Bryan Jurish
+Copyright (C) 2009-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,
