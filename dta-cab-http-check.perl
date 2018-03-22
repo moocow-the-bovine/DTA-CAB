@@ -168,7 +168,7 @@ if ($rsp->is_success) {
     ##-- new perfdata for DTA::CAB v1.101 (2018-03-22 14:10:24+0100)
     $mp->add_perfdata(label=>'rss', value=>$rssMB, uom=>'MB');
     foreach (1,5,15) {
-      $mp->add_perfdata(label=>"qtavg$_", value=>sprintf("%.3g",$status->{"qtAvg$_"}//0), uom=>'s');
+      $mp->add_perfdata(label=>"qtavg$_", value=>sprintf("%.4f",1000*($status->{"qtAvg$_"}//0)), uom=>'ms');
     }
 
     ##-- get return message
