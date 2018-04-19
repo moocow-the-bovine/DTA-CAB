@@ -95,6 +95,7 @@ sub new {
 			   ##-- underlying server
 			   daemonArgs => {
 					  Local => "/tmp/dta-cab.sock",
+					  #Listen => SOMAXCONN,
 					 },
 			   socketPerms => '0666',
 			   socketUser  => undef,
@@ -169,7 +170,7 @@ sub canBindSocket {
     or $srv->logconfess("canBindSocket(): no socket path defined");
   $srv->ensureSocketDir($sockpath)
     or $srv->logconfess("canBindSocket(): failed to create socket directory for $sockpath: $!");
-  my $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN);
+  my $sock  = IO::Socket::UNIX->new(%$dargs,Listen=>1);
 
   if (!$sock) {
     ##-- first bind attempt failed: check whether there's a process behind it by trying to connect
@@ -180,7 +181,7 @@ sub canBindSocket {
 	$srv->logwarn("WARNING: failed to unlink existing socket path $sockpath");
 	return 0;
       }
-      $sock  = IO::Socket::UNIX->new(%$dargs, Listen=>SOMAXCONN);
+      $sock  = IO::Socket::UNIX->new(%$dargs,Listen=>1);
     }
     if (!$sock) {
       ##-- recovery failed
@@ -271,6 +272,7 @@ sub prepareLocal {
   ##-- Server::HTTP initialization
   my $rc  = $srv->SUPER::prepareLocal(@_);
   return $rc if (!$rc);
+  $srv->{daemon}->listen( $srv->{daemonArgs}{Listen}||SOMAXCONN ); ##-- workaround for missing option pass-through HTTP::Daemon::UNIX v0.06
 
   ##-- get socket path
   $sockpath = $srv->{_socketPath} = $srv->{daemon}->hostpath()

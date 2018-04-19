@@ -205,6 +205,7 @@ sub prepareLocal {
   my $srv = shift;
 
   ##-- setup HTTP::Daemon object
+  $srv->{daemonArgs}{Listen} ||= SOMAXCONN;
   if (!($srv->{daemon}=$srv->daemonClass->new(%{$srv->{daemonArgs}}))) {
     $srv->logconfess("could not create ", $srv->daemonClass, " daemon object: $!");
   }
