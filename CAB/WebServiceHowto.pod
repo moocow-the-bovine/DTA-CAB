@@ -972,8 +972,8 @@ L<"spliced" TEI-like output format|/TEI>.
 
 Removes native CAB-markup from TEI-like XML files, encoding the remaining token analysis information using
 the TEI L<C<att.linguistic>|http://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.linguistic.html>
-feature-set.  All token elements remain encoded as C<E<lt>wE<gt>> elements (and not e.g. C<E<lt>pcE<gt>> elements),
-and only the C<att.linguistic> features C<@lemma>, C<@pos>, and C<@join> are inserted, so that e.g.
+inventory.  All tokens remain encoded as C<E<lt>wE<gt>> elements (rather than C<E<lt>pcE<gt>> elements),
+and only the C<att.linguistic> attributes C<@lemma>, C<@pos>, and C<@join> are inserted, so that e.g.
 
  <w id="w2" t="EJn"><moot word="Ein" lemma="ein" tag="ART"/>EJn</w>
  <w id="w3" t="Elephant"><moot word="Elefant" lemma="Elefant" tag="NN"/>Elephant</w><w>!</w>
@@ -984,8 +984,8 @@ becomes:
  <w id="w3" join="right" lemma="Elefant" pos="NN" norm="Elefant">Elephant</w>
  <w join="left">!</w>
 
-Note that the C<@join> attribute will only be correctly generated if the relevant C<w> elements are truly immediately adjacent
-in the input file: any intervening newline or whitespace will prohibit insertion of a C<@join> attribute.
+Note that the C<@join> attribute will be correctly generated only if the relevant C<w> elements are truly immediately adjacent
+in the input file: any intervening newlines or other whitespace will prohibit insertion of a C<@join> attribute.
 
 =item L<spliced2norm.xsl|http://./spliced2norm.xsl>
 
