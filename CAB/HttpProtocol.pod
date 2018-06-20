@@ -91,10 +91,11 @@ either `GET'-like in the 'query' portion of the requested URL (the portion after
 or `POST'-like in the request content (if the request Content-Type is either
 'application/x-www-form-urlencoded' or 'multipart/form-data'),
 or a combination of both (in which case GET-like parameters take precedence over POST parameters).
-Additionally, POST requests with a 'Content-Type' header
-other than 'application/x-www-form-urlencoded' or 'multipart/form-data'
-are assumed to contain all `option-like' query parameters in the URL, and
-the POST content is interpreted as the value of the 'qd' (query document) parameter.
+Additionally, the L<DTA::CAB::Server::HTTP|DTA::CAB::Server::HTTP> class supports
+so-called "xpost" requests, which are nothing more than POST requests with a 'Content-Type' header
+other than 'application/x-www-form-urlencoded' or 'multipart/form-data', in which
+all `option-like' query parameters are assumed to be encoded in the URL (as for typical GET requests),
+and the POST content itself is interpreted as the value of the 'qd' (query document) parameter.
 
 =head3 Query Parameters
 
