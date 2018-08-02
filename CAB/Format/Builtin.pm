@@ -29,6 +29,7 @@ use DTA::CAB::Format::XmlCommon;
 use DTA::CAB::Format::XmlNative; ##-- load first to avoid clobbering '.xml' extension
 use DTA::CAB::Format::XmlTokWrap;
 use DTA::CAB::Format::XmlTokWrapFast; ##-- quick & dirty tokwrap-style xml output for feeding to dtatw-xml2ddc.perl
+use DTA::CAB::Format::XmlLing;        ##-- quick & dirty "flat" TEI-like formatter using TEI att.linguistic features
 use DTA::CAB::Format::XmlPerl;
 use DTA::CAB::Format::XmlRpc;
 use DTA::CAB::Format::SQLite;
@@ -96,7 +97,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2011 by Bryan Jurish
+Copyright (C) 2009-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.4 or,

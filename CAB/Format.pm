@@ -1570,6 +1570,17 @@ Registered as:
 
 Datum parser|formatter: XML: abstract base class.
 
+=item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlLing>
+
+Datum parser|formatter: minimalistic flat TokWrap-like XML using only TEI att.linguistic attributes.
+Based on L<DTA::CAB::Format::XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>,
+the L<XmlLing|DTA::CAB::Format::XmlLing> parser reads and writes only IDs and the TEI att.linguistic attributes,
+(L<http://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.linguistic.html>)).
+Registered as:
+
+ (name=>__PACKAGE__, filenameRegex=>qr/(?:\.(?i:(?:ling|l[tuws])(?:\.?)xml))$/)
+ (name=>__PACKAGE__, short=>$_) foreach (qw(ltxml lxml ling-xml lt-xml ltwxml ltw-xml))
+
 
 =item L<DTA::CAB::Format::XmlNative|DTA::CAB::Format::XmlNative>
 
@@ -1638,7 +1649,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009-2016 by Bryan Jurish
+Copyright (C) 2009-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,
