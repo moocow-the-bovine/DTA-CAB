@@ -45,6 +45,9 @@ BEGIN {
 ##     ##-- output: inherited from DTA::CAB::Format
 ##     utf8  => $bool,                         ##-- always true
 ##     level => $level,                        ##-- output formatting level (default=0)
+##
+##     ##-- input/output: new
+##     twcompat => $bool,                      ##-- read/write DTA::TokWrap-style attributes? (for use as CAB::Format::TEI txmlfmt sub-formatter; default=0)
 ##    }
 sub new {
   my $that = shift;
@@ -52,6 +55,7 @@ sub new {
     (
      xprs => undef,
      doc => undef,
+     twcompat => 0,
      @_
     );
   return $fmt;
@@ -66,7 +70,9 @@ sub xmlparser {
 
   ##--------------------------------------
   ## closure variables
-  my ($doc,$body, $s,$stoks, $w,$txt,@stack,%attrs);
+  my ($doc,$body, $s,$stoks, $w,$wprev,@stack,%attrs);
+  my ($wpos,$xpos) = (-2,0);
+  my $twcompat = $_[0]{twcompat};
 
   ##--------------------------------------
   ## parser
@@ -92,7 +98,8 @@ sub xmlparser {
 
 		    if ($_[1] eq 'w') {
 		      ##-- w
-		      $attrs{'id'}        = $attrs{'xml:id'} if (defined($attrs{'xml:id'}) && !defined($attrs{'id'}));
+		      $attrs{id}          = $attrs{'xml:id'} if (defined($attrs{'xml:id'}) && !defined($attrs{'id'}));
+		      $attrs{text}        = $attrs{t}     if ($twcompat && !defined($attrs{text}) && defined($attrs{t}));
 		      $attrs{moot}{tag}   = $attrs{pos}   if (defined($attrs{pos}));
 		      $attrs{moot}{lemma} = $attrs{lemma} if (defined($attrs{lemma}));
 		      $attrs{moot}{word}  = $attrs{norm}  if (defined($attrs{norm}));
@@ -287,6 +294,14 @@ sub putDocument {
     return $xmlstart->($_[0], @{$_[1]||$nil}) . join('',@_[2..$#_]) . "</$_[0]>";
   };
 
+  ##-- ($beg,$end) = twloc($w)
+  my (@loc);
+  my $twloc = sub {
+    return undef if (!$_[0] || !defined($_[0]{b}));
+    @loc = split(' ',$_[0]{b},2);
+    return [$loc[0],$loc[0]+$loc[1]];
+  };
+
   ##--------------------
   ## output handle
   my $fh = $fmt->{fh};
@@ -294,25 +309,60 @@ sub putDocument {
   $fh->print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
 
   ##--------------------
+  ## compatibility
+  my $twcompat = $fmt->{twcompat};
+  my @twattrs = ($twcompat ? qw(b xb) : qw());
+
+  ##--------------------
   ## guts
-  my ($s,$w);
+  my ($s,$wi,$w, $wjoin,$loc,$loc_prev,$loc_next);
   $fh->print("\n", $xmlstart->('text'));
   foreach $s (@{$doc->{body}}) {
     $fh->print("\n ", $xmlstart->('s','xml:id'=>($s->{id}||$s->{'xml:id'})));
-    foreach $w (@{$s->{tokens}}) {
+
+    $loc_prev = undef;
+    $loc      = $twloc->($s->{tokens}[0]);
+
+    for ($wi=0; $wi <= $#{$s->{tokens}}; ++$wi) {
+      $w = $s->{tokens}[$wi];
+
+      ##-- compute att.linguistic 'join' attribute from TokWrap 'b' attribute
+      if (!defined($wjoin=$w->{join}) && $loc) {
+	$loc_next  = $twloc->($s->{tokens}[$wi+1]);
+	$wjoin     = ($loc_prev    && $loc->[0] == $loc_prev->[1]
+		      ? ($loc_next && $loc->[1] == $loc_next->[0]
+			 ? 'both'
+			 : 'left')
+		      : ($loc_next && $loc->[1] == $loc_next->[0]
+			 ? 'right'
+			 : undef));
+	$loc_prev = $loc;
+	$loc      = $loc_next;
+      } else {
+	undef $wjoin;
+      }
+
       $fh->print("\n\t",
 		 $xmlelt->('w',
 			   [
-			    ##-- word attributes: literals
+			    ##-- word attributes: tokwrap (for use as CAB::Format::TEI txmlfmt sub-formatter)
+			    (map {($_=>$w->{$_})} @twattrs),
+			    ##
+			    ##-- word attributes: id
 			    ('xml:id'=>($w->{id}||$w->{'xml:id'})),
+			    ##
+			    ##-- word attributes: att.linguistic
 			    ($w->{moot}
 			     ? ('lemma'=>$w->{moot}{lemma},
 				'pos'=>$w->{moot}{tag},
 				'norm'=>$w->{moot}{word})
-			     : qw()),
-			    ('join'=>$w->{join}),
+			     : ($w->{xlit}
+				? ('norm'=>$w->{xlit}{latin1Text})
+				: qw())),
+			    ('join'=>(defined($w->{join}) ? $w->{join} : $wjoin)),
 			   ],
-			   (defined($w->{textRaw}) ? $w->{textRaw} : $w->{text}),
+			   ##
+			   ($twcompat ? qw() : (defined($w->{textRaw}) ? $w->{textRaw} : $w->{text})),
 			  ));
     }
     $fh->print("\n </s>");

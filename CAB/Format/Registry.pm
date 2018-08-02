@@ -196,6 +196,16 @@ sub writerClass {
   return $creg ? $creg->{writerClass} : undef;
 }
 
+## $class_or_undef = $reg->formatClass($class_or_short_or_suffix,%opts)
+##  + get registered common reader/writer class for $class_or_short_or_suffix; accepts $opts{file}
+##  + returns undef if reader and writer classes for $class_or_short_or_suffix are distinct; accepts $opts{file}
+sub formatClass {
+  my ($reg,$class,%opts) = @_;
+  my $creg = $reg->lookup(class=>$class,%opts);
+  return $creg->{readerClass} if ($creg && ($creg->{readerClass}//'') eq ($creg->{writerClass}//''));
+  return undef;
+}
+
 ## $fmt = $reg->newReader(%opts)
 ##  + %opts may contain any %lookup options (class,file), and are
 ##    otherwise passed to CLASS->new()
@@ -506,7 +516,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Bryan Jurish
+Copyright (C) 2011-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.0 or,

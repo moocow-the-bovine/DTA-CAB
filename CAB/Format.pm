@@ -1520,6 +1520,21 @@ Registered as:
   (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei(?:[\.\-_]?p[45])?)[\.\-_]xml|xml)$/)
   (name=>__PACKAGE__, short=>$_) foreach (qw(chr-xml c-xml cxml tei-xml teixml tei xml))
 
+By default, this module uses L<DTA::CAB::Format::XmlTokWrap|DTA::CAB::Format::XmlTokWrap> to format the low-level
+document data, and splices the result back into the original TEI document.
+The following additional aliases are provided for using the L<DTA::CAB::Format::XmlTokWrapFast|DTA::CAB::Format::XmlTokWrapFast>
+module to format the low-level flat token data (faster but not as flexible as the default):
+
+ (name=>__PACKAGE__, short=>$_, opts=>{txmlfmt=>'DTA::CAB::Format::XmlTokWrapFast'})
+     foreach (qw(fast-tei-xml ftei-xml fteixml ftei))
+
+Additionally, the following aliases are provided for using the L<DTA::CAB::Format::XmlLing|DTA::CAB::Format::XmlLing>
+to format the low-level flat token data using TEI att.linguistic conventions:
+
+  (name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
+    foreach (qw(ling-tei-xml ltei-xml lteixml ltei tei-ling tei+ling teiling))
+
+
 =item L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>
 
 Datum parser|formatter: for TEI XML pre-tokenized into (possibly fragmented) //w and //s elements, as output by DTA::TokWrap.
@@ -1527,6 +1542,16 @@ Registered as:
 
  (name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:spliced|tei[\.\-\+]?ws?|wst?)[\.\-]xml)$/)
  (name=>__PACKAGE__, short=>$_) foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml teiws-xml));
+
+By default, this module uses L<DTA::CAB::Format::XmlTokWrap|DTA::CAB::Format::XmlTokWrap> to format the low-level
+document data, and splices the result back into the original TEI document.
+The following aliases are provided for using the L<DTA::CAB::Format::XmlLing|DTA::CAB::Format::XmlLing>
+to format the low-level flat token data using TEI att.linguistic conventions:
+
+  (name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
+    foreach (qw(lteiws teilws teiwsl ltei-ws ltei+ws tei+w ltei-w lteiw lwst-xml lwstxml lteiws-xml),
+             qw(ling-tei-ws tei+ling+ws tei+ws+ling teiws-ling-xml teiws+ling-xml))
+
 
 =item L<DTA::CAB::Format::Text|DTA::CAB::Format::Text>
 

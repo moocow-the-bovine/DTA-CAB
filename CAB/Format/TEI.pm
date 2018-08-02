@@ -28,6 +28,11 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:c|chr|txt|tei(?:[\.\-_]?p[45])?)[\.\-_]xml|xml)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
       foreach (qw(chr-xml c-xml cxml tei-xml teixml tei xml));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{txmlfmt=>'DTA::CAB::Format::XmlTokWrapFast'})
+      foreach (qw(fast-tei-xml ftei-xml fteixml ftei));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
+      foreach (qw(ling-tei-xml ltei-xml lteixml ltei tei-ling tei+ling teiling));
 }
 
 BEGIN {
@@ -63,6 +68,8 @@ our $TXML_CLASS_DEFAULT = 'DTA::CAB::Format::XmlTokWrap';
 ##     textbufr => \$buf,                      ##-- raw text buffer, for keeptext mode
 ##
 ##     txmlfmt   => $fmt,                      ##-- classname or object for parsing tokwrap *.t.xml files (default: DTA::CAB::Format::TokWrap)
+##     txmlopts  => \%opts,                    ##-- options for *.t.xml sub-formatter (clobbers %$fmt options)
+##     att.linguistic => $bool,                ##-- use att.linguistic features (forces txmlfmt, txmlopts, twopts)
 ##
 ##     ##-- input: inherited from XmlNative
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document
@@ -99,6 +106,8 @@ sub new {
 			      keeptext => 1,
 			      ##
 			      txmlfmt => $TXML_CLASS_DEFAULT,
+			      #txmlopts => {},
+			      'att.linguistic' => 0, ##-- use att.linguistic features (alters txmlfmt, txmlopts, twopts)
 
 			      ##-- tokwrap
 			      tw => undef, ##-- see tw() method
@@ -134,6 +143,15 @@ sub new {
     ##-- DEBUG: also consider setting $DTA::CAB::Logger::defaultLogOpts{twLevel}='TRACE', e.g. with '-lo twLevel=TRACE' on the command-line
     $fmt->{tmpdir} = "cab_tei_tmp";
     $fmt->{keeptmp} = 1;
+  }
+
+  if ($fmt->{'att.linguistic'}) {
+    $fmt->{txmlfmt} = 'DTA::CAB::Format::XmlLing';
+    $fmt->{txmlopts}{twcompat} = 1;
+    $fmt->{twopts}{procOpts}{wIdAttr}   = 'xml:id';
+    $fmt->{twopts}{procOpts}{sIdAttr}   = 'xml:id';
+    $fmt->{twopts}{procOpts}{wExtAttrs} = '^(?:lemma|pos|norm|join)=';
+    $fmt->{twopts}{procOpts}{sExtAttrs} = '^$';
   }
 
   ##-- tmpdir: see tmpdir() method
@@ -189,7 +207,7 @@ sub rmtmpdir {
 ##  + gets cached $fmt->{txmlfmt} or creates it
 sub txmlfmt {
   return $_[0]{txmlfmt} if (ref $_[0]{txmlfmt});
-  my %txmlopts = %{$_[0]};
+  my %txmlopts = (%{$_[0]}, %{$_[0]{txmlopts}||{}});
   delete @txmlopts{qw(xdoc xprs txmlfmt fh tmpfh)};
   return $_[0]{txmlfmt} = $_[0]->txmlclass->new(%txmlopts);
 }
@@ -198,7 +216,7 @@ sub txmlfmt {
 sub txmlclass {
   return ref($_[0]{txmlfmt}) if (ref($_[0]{txmlfmt}));
   return "DTA::CAB::Format::$_[0]{txmlfmt}" if (UNIVERSAL::isa("DTA::CAB::Format::$_[0]{txmlfmt}",'DTA::CAB::Format'));
-  return $_[0]{txmlfmt} || $TXML_CLASS_DEFAULT;
+  return $DTA::CAB::Format::REG->formatClass($_[0]{txmlfmt}) || $_[0]{txmlfmt} || $TXML_CLASS_DEFAULT;
 }
 
 ## $tw = $fmt->tw()
@@ -445,7 +463,8 @@ sub putDocument {
   $fmt->vlog($fmt->{teilog}, "putDocument(): re-slurp from $cwsfile");
   DTA::TokWrap::Utils::slurp_file("$cwsfile",\$fmt->{outbuf})
       or $fmt->logdie("slurp_file() failed for '$cwsfile': $!");
-  $fmt->{outbuf} =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g; ##-- decode default namespaces (hack)
+  utf8::decode($fmt->{outbuf}) if (!utf8::is_utf8($fmt->{outbuf})); ##-- decode UTF-8 (hack)
+  $fmt->{outbuf} =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g;                 ##-- decode default namespaces (hack)
 
   ##-- cleanup
   $twdoc->close();
@@ -595,11 +614,16 @@ object structure: HASH ref
      teibufr => \$buf,                       ##-- raw tei+c buffer, for spliceback mode
      textbufr => \$buf,                      ##-- raw text buffer, for keeptext mode
      txmlfmt   => $fmt,                      ##-- classname or object for parsing tokwrap *.t.xml files (default: DTA::CAB::Format::TokWrap)
+     txmlopts  => \%opts,                    ##-- options for *.t.xml sub-formatter (clobbers %$fmt options)
+     'att.linguistic' => $bool,              ##-- use TEI att.linguistic features? (forces txmlfmt, txmlopts, twopts)
+     ##
      ##-- input: inherited from XmlNative
      xdoc => $xdoc,                          ##-- XML::LibXML::Document
      xprs => $xprs,                          ##-- XML::LibXML parser
+     ##
      ##-- output: new
-     #outfile => $filename,			##-- final output file (flushed with File::Copy::copy)
+     #outfile => $filename,                   ##-- final output file (flushed with File::Copy::copy)
+     ##
      ##-- output: inherited from XmlTokWrap
      arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
      arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
@@ -609,6 +633,7 @@ object structure: HASH ref
      ##-- output: inherited from XmlNative
      #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
      level => $level,                        ##-- output formatting level (default=0)
+     ##
      ##-- common: safety
      safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
     }
@@ -849,6 +874,24 @@ An example B<output> file in the format returned by this module is:
 Any //s or //w elements in the input will be B<IGNORED> and input will be (re-)tokenized.
 Outputs files are themselves parseable by L<DTA::CAB::Format::TEIws|DTA::CAB::Format::TEIws>.
 
+=head2 att.linguistic Example
+
+An example B<output> file in the format returned by this module with the C<att.linguistic> option
+set to a true value is:
+
+ <?xml version="1.0" encoding="UTF-8"?>
+ <TEI>
+   <text>
+     <fw>Running headers are ignored</fw>
+     <s xml:id="s1">
+       <w xml:id="w1" lemma="wie" pos="PWAV" norm="Wie">Wie</w>
+       <w xml:id="w2" lemma="öde" pos="ADJD" norm="öde" join="right">oede</w>
+       <w xml:id="w3" lemma="!" pos="$." norm="!" join="left">!</w>
+     </s>
+     <lb/>
+   </text>
+ </TEI>
+
 =cut
 
 ##======================================================================
@@ -862,7 +905,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011-2015 by Bryan Jurish
+Copyright (C) 2011-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,

@@ -28,6 +28,10 @@ BEGIN {
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, filenameRegex=>qr/\.(?i:(?:spliced|tei[\.\-\+]?ws?|wst?)[\.\-]xml)$/);
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_)
       foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml teiws-xml));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
+      foreach (qw(lteiws teilws teiwsl ltei-ws ltei+ws tei+w ltei-w lteiw lwst-xml lwstxml lteiws-xml),
+	       qw(ling-tei-ws tei+ling+ws tei+ws+ling teiws-ling-xml teiws+ling-xml));
 }
 
 BEGIN {
@@ -49,6 +53,7 @@ BEGIN {
 ##     teibufr => \$buf,                       ##-- tei+ws buffer, for spliceback mode
 ##     teidoc => $doc,			       ##-- tei+ws XML::LibXML::Document
 ##     spliceopts => \%opts,		       ##-- options for DTA::ToKWrap::Processor::idsplice::new()
+##     att.linguistic => $bool,                ##-- read/write TEI att.linguistic features?
 ##
 ##     ##-- input: inherited from Format::XmlNative
 ##     xdoc => $xdoc,                          ##-- XML::LibXML::Document (tokwrap syntax)
@@ -75,6 +80,7 @@ sub new {
 			      spliceback => 1,
 			      spliceopts => {soIgnoreAttrs=>[qw(xb c teitext teixp)]},
 			      teinames => undef,
+			      'att.linguistic' => 0,
 
 			      ##-- user args
 			      @_
@@ -152,6 +158,7 @@ sub parseDocument {
   my $teidoc = $fmt->{teidoc} or return undef;
   my $teiroot = $teidoc->documentElement or die("parseDocument(): no root element!");
   my $teinames = $fmt->{teinames};
+  my $att_linguistic = $fmt->{'att.linguistic'};
 
   ##-- setup xpath context
   my $xc = libxml_xpcontext($teiroot);
@@ -181,6 +188,13 @@ sub parseDocument {
     foreach $wnod (@{$xc->findnodes('.//*[local-name()="w"]',$snod)}) {
       $wid = $wnod->getAttribute('id') || $wnod->getAttribute('xml:id') || ("teiws_w_".++$wi);
       $w   = $id2w{$wid} = $fmt->parseNode($wnod);
+      if ($att_linguistic) {
+	##-- hack: parse TEI att.linguistic features
+	$w->{moot}{word}  //= $w->{norm};
+	$w->{moot}{tag}   //= $w->{tag};
+	$w->{moot}{lemma} //= $w->{lemma};
+	delete @$w{qw(norm tag lemma)};
+      }
       @$w{qw(id teixp teitext)} = ($wid,$wnod->nodePath,join('', map {$_->nodeValue} grep {UNIVERSAL::isa($_,'XML::LibXML::Text')} $wnod->childNodes));
       $id2prev{$wid} = $wnod->getAttribute('prev') if ($wnod->hasAttribute('prev'));
       $id2next{$wid} = $wnod->getAttribute('next') if ($wnod->hasAttribute('next'));
@@ -306,25 +320,34 @@ sub toFh {
 sub putDocument {
   my ($fmt,$doc) = @_;
 
-  ##-- call superclass (XmlTokWrap) method
-  my $rc = $fmt->DTA::CAB::Format::XmlTokWrap::putDocument($doc);
-  if (!$fmt->{spliceback}) {
-    $fmt->{xdoc}->toFH($fmt->{fh},($fmt->{level}||0));
-    return $rc;
+  ##-- generate flat XML document in $fmt->{xdoc} and/or $sobuf
+  my ($rc,$sobuf);
+  if ($fmt->{'att.linguistic'}) {
+    ##-- att.linguistic hack: generate $sobuf
+    my $lfmt = DTA::CAB::Format::XmlLing->new(twcompat=>1);
+    $lfmt->toString(\$sobuf);
+    $rc = $lfmt->putDocument($doc) && $lfmt->flush();
+  } else {
+    ##-- usual case: call superclass (XmlTokWrap) method: populate $fmt->{xdoc}
+    $rc = $fmt->DTA::CAB::Format::XmlTokWrap::putDocument($doc);
   }
 
   ##-- get original TEI-XML buffer
   my $teibufr = $doc->{teibufr} || $fmt->{teibufr};
-  if (!defined($teibufr) || !$$teibufr) {
-    $fmt->logwarn("spliceback mode requested but no 'teibufr' document property - using XmlTokWrap format");
-    $fmt->{xdoc}->toFH($fmt->{fh},($fmt->{level}||0));
+  if (!$fmt->{spliceback} || !defined($teibufr) || !$$teibufr) {
+    $fmt->logwarn("spliceback mode requested but no 'teibufr' document property - using XmlTokWrap format") if ($fmt->{spliceback});
+    if (defined($sobuf)) {
+      $fmt->buf2fh(\$sobuf,$fmt->{fh});
+    } else {
+      $fmt->{xdoc}->toFH($fmt->{fh},($fmt->{level}||0));
+    }
     return $rc;
   }
   $$teibufr =~ s|(<[^>]*)\sXMLNS=|$1 xmlns=|g; ##-- decode default namespaces (hack)
 
   ##-- splice in analysis data
   my $splicer = DTA::TokWrap::Processor::idsplice->new(%{$fmt->{spliceopts}||{}});
-  my $sobuf   = $fmt->{xdoc}->toString(0);
+  $sobuf      = $fmt->{xdoc}->toString(0) if (!defined($sobuf) && $fmt->{xdoc});
   $splicer->splice_so(base=>$teibufr,so=>\$sobuf,out=>$fmt->{fh});
 
   return $fmt;
@@ -442,12 +465,15 @@ object structure: HASH ref
      ##-- new in Format::TEIws
      spliceback => $bool,                    ##-- (output) if true (default), return .cws.cab.xml ; otherwise just .cab.t.xml [requires doc 'teibufr' attribute]
      teibufr => \$buf,                       ##-- tei+ws buffer, for spliceback mode
-     teidoc => $doc,			       ##-- tei+ws XML::LibXML::Document
-     spliceopts => \%opts,		       ##-- options for DTA::ToKWrap::Processor::idsplice::new()
+     teidoc => $doc,                         ##-- tei+ws XML::LibXML::Document
+     spliceopts => \%opts,                   ##-- options for DTA::ToKWrap::Processor::idsplice::new()
+     'att.linguistic' => $bool,              ##-- read/write TEI att.linguistic features?
+     ##
      ##-- input: inherited from Format::XmlNative
      xdoc => $xdoc,                          ##-- XML::LibXML::Document (tokwrap syntax)
      xprs => $xprs,                          ##-- XML::LibXML parser
-     parseXmlData => $bool,		       ##-- if true, _xmldata key will be parsed (default OVERRIDE=false)
+     parseXmlData => $bool,                  ##-- if true, _xmldata key will be parsed (default OVERRIDE=false)
+     ##
      ##-- output: inherited from Format::XmlTokWrap
      arrayEltKeys => \%akey2ekey,            ##-- maps array keys to element keys for output
      arrayImplicitKeys => \%akey2undef,      ##-- pseudo-hash of array keys NOT mapped to explicit elements
@@ -457,6 +483,7 @@ object structure: HASH ref
      ##-- output: inherited from Format::XmlNative
      #encoding => $inputEncoding,             ##-- default: UTF-8; applies to output only!
      level => $level,                        ##-- output formatting level (default=0)
+     ##
      ##-- common: safety
      safe => $bool,                          ##-- if true (default), no "unsafe" token data will be generated (_xmlnod,etc.)
     }
@@ -626,6 +653,24 @@ An example file in the format accepted/generated by this module is:
    </text>
  </TEI>
 
+=head2 att.linguistic Example
+
+An example file in the format accepted/generated by this module with the C<att.linguistic> option set
+to a true value is:
+
+ <?xml version="1.0" encoding="UTF-8"?>
+ <TEI>
+   <text>
+     <fw>Running headers are ignored</fw>
+     <s xml:id="s1">
+       <w xml:id="w1" lemma="wie" pos="PWAV" norm="Wie">Wie</w>
+       <w xml:id="w2" lemma="öde" pos="ADJD" norm="öde" join="right">oede</w>
+       <w xml:id="w3" lemma="!" pos="$." norm="!" join="left">!</w>
+     </s>
+     <lb/>
+   </text>
+ </TEI>
+
 =cut
 
 ##======================================================================
@@ -639,7 +684,7 @@ Bryan Jurish E<lt>jurish@bbaw.deE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2015 by Bryan Jurish
+Copyright (C) 2015-2018 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.20.2 or,
