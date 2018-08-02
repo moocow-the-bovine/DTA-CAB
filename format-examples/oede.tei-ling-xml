@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI>
+   <text>
+     <fw>Running headers are ignored</fw>
+     <s xml:id="s1"><w xml:id="w1" lemma="wie" pos="PWAV" norm="Wie">Wie</w> <w xml:id="w2" lemma="Öde" pos="NN" norm="Öde" join="right">oede</w><w xml:id="w3" lemma="!" pos="$." norm="!" join="left">!</w></s><lb/>
+   </text>
+</TEI>
