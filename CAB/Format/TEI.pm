@@ -30,9 +30,9 @@ BEGIN {
       foreach (qw(chr-xml c-xml cxml tei-xml teixml tei xml));
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{txmlfmt=>'DTA::CAB::Format::XmlTokWrapFast'})
-      foreach (qw(fast-tei-xml ftei-xml fteixml ftei));
+      foreach (qw(tei-fast tei+fast fast-tei-xml ftei-xml fteixml ftei));
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
-      foreach (qw(ling-tei-xml ltei-xml lteixml ltei tei-ling tei+ling teiling));
+      foreach (qw(tei-ling tei+ling ling-tei-xml ltei-xml lteixml ltei teiling));
 }
 
 BEGIN {

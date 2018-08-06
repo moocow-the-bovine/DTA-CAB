@@ -30,8 +30,9 @@ BEGIN {
       foreach (qw(tei-ws tei+ws tei+w tei-w teiw wst-xml wstxml teiws-xml));
 
   DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{'att.linguistic'=>1})
-      foreach (qw(lteiws teilws teiwsl ltei-ws ltei+ws tei+w ltei-w lteiw lwst-xml lwstxml lteiws-xml),
-	       qw(ling-tei-ws tei+ling+ws tei+ws+ling teiws-ling-xml teiws+ling-xml));
+      foreach (qw(teiws-ling teiws-ling-xml),
+	       qw(tei-ling-ws tei+ling+ws lteiws teilws teiwsl ltei-ws ltei+ws ltei+w ltei-w lteiw lwst-xml lwstxml lteiws-xml),
+	       qw(tei-ws-ling tei+ws+ling teiws-ling-xml ling-tei-ws));
 }
 
 BEGIN {
