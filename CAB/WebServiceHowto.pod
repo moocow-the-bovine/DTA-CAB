@@ -770,6 +770,20 @@ structural information encoded in the source XML itself.
 =cut
 
 ##========================================================================
+## Formats: XML-based: TEI-fast
+=pod
+
+=item L<TEI-fast|DTA::CAB::Format::TEI>
+
+[L<example input|http://./elephant.tei-xml>,
+L<example output|http://www.deutschestextarchiv.de/cab/query?fmt=tei-fast&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%2C%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%2E%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
+
+Wrapper for the L</TEI> parser/formatter class using L</XmlTokWrapFast> to format the low-level token data
+See L</TEI> and L</XmlTokWrapFast> for caveats.
+
+=cut
+
+##========================================================================
 ## Formats: XML-based: TEI+ling
 =pod
 
@@ -810,8 +824,7 @@ such as L<CSV|/CSV>.
 
 =item L<TEIws-ling|DTA::CAB::Format::TEIws>
 
-[L<example input|http://./elephant.tei-xml>,
-L<example output|http://www.deutschestextarchiv.de/cab/query?fmt=tei-ling&raw=1&qd=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%0A%3CTEI%3E%0A+%3Ctext%3E%0A+++%3C%21--+running+headers+are+ignored+by+the+tokenizer+--%3E%0A+++%3Cfw%3ERunning+header%3C%2Ffw%3E%0A+++%3Cp%3EEJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler%2C%3C%2Fp%3E%0A+++%3C%21--+paragraph+boundaries+imply+sentence+boundaries%2C+even+without+punctuation+--%3E%0A+++%3Cp%3ECeterum+censeo+Carthaginem+esse+delendam%2E%3C%2Fp%3E%0A+%3C%2Ftext%3E%0A%3C%2FTEI%3E%0A>]
+[L<example|http://./elephant.teiws-ling-xml>]
 
 Wrapper for the L</TEIws> parser/formatter class using L</XmlLing> to format the low-level token data
 using only TEI L<att.linguistic|http://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.linguistic.html>

@@ -217,6 +217,7 @@ HTML_EXTRA ?= \
   doc-extra/elephant.raw \
   doc-extra/elephant.tei-xml \
   doc-extra/elephant.teiws-xml \
+  doc-extra/elephant.teiws-ling-xml \
   doc-extra/elephant.raw.tcf \
   doc-extra/elephant.tok.tcf \
   cab-curl-post.sh \
