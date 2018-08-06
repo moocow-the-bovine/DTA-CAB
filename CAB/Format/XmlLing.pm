@@ -384,9 +384,11 @@ __END__
 ## NAME
 =pod
 
+=encoding utf8
+
 =head1 NAME
 
-DTA::CAB::Format::XmlLing - Datum parser|formatter: XML (flat att.linguistic), fast quick & dirty "flat" XML formatter using TEI att.linguistic features
+DTA::CAB::Format::XmlLing - Datum parser|formatter: XML: fast quick-and-dirty "flat" XML formatter using TEI att.linguistic features
 
 =cut
 
@@ -519,7 +521,8 @@ returns default filename extension for this format (default='.lt.xml')
 
  $fmt = $fmt->putDocument($doc);
 
-quick and dirty output using TEI att.linguistic attributes only.
+quick and dirty output using TEI att.linguistic attributes only;
+see L<http://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.linguistic.html>.
 
 =back
 

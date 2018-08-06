@@ -129,6 +129,7 @@ CAB/Format/TEI.pm
 CAB/Format/TEIws.pm
 CAB/Format/Text.pm
 CAB/Format/XmlCommon.pm
+CAB/Format/XmlLing.pm
 CAB/Format/XmlNative.pm
 CAB/Format/XmlPerl.pm
 CAB/Format/XmlRpc.pm
