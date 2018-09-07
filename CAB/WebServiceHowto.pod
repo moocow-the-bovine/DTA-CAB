@@ -312,7 +312,7 @@ different sorts of input data and/or different user tasks.  The various analysis
 modes are implemented in terms of different analysis chains (a.k.a. "analyzers" or just "chains")
 supported by the underlying analysis dispatcher class, L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA>.
 The analysis mode to be used for a particular CAB request is specified by the
-"analyzer" or "a" paramter, which is initially set to use the "default" analysis chain
+"analyzer" or "a" parameter, which is initially set to use the "default" analysis chain
 (which is itself just an alias for the "norm" chain).
 
 This section briefly describes some alternative analysis chains and situations in which
@@ -993,7 +993,7 @@ The CAB web-service is a request-oriented service:
 it accepts a user request as a set of I<parameter>=I<value> pairs
 and returns the analyzed data as a L<DTA::CAB::Document|DTA::CAB::Document> object
 encoded according to the L<output format|/I-O Formats> specified by the C<ofmt> parameter.
-Paramters are passed to the DiaCollo web-service
+Parameters are passed to the DiaCollo web-service
 L<RESTfully|https://en.wikipedia.org/wiki/Representational_state_transfer>
 via the L<URL query string|http://en.wikipedia.org/wiki/Query_string>
 or L<HTTP POST request|http://en.wikipedia.org/wiki/POST_(HTTP)#Use_for_submitting_web_forms>
