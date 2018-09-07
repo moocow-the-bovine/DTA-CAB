@@ -344,45 +344,81 @@ than help it.  For such cases, the "norm1" analysis chain can be employed instea
 of the default "norm" chain.  The "norm1" chain uses only unigram-based probabilities
 during normalization, so is less likely to be "confused" by non-sentence-like inputs.
 
-Consider for example the input list:
+Consider for example the input:
 
- Fliegen fliegen nach
+ Fliegende Fliegen Fliegen Fliegenden Fliegen Nach.
 
 passing this list to the "norm1" chain inhibits context-dependent processing
-and results in L<the following|http://www.deutschestextarchiv.de/cab?a=norm1&q=Fliegen+fliegen+nach>
+and results in L<the following|http://www.deutschestextarchiv.de/cab?a=norm1&q=Fliegende+Fliegen+Fliegen+Fliegenden+Fliegen+nach.>
 
+ Fliegende
+	+[moot/word] Fliegende
+	+[moot/tag] ADJA
+	+[moot/lemma] fliegend
  Fliegen
- 	+[moot/word] Fliegen
- 	+[moot/tag] NN
- 	+[moot/lemma] Fliege
- fliegen
- 	+[moot/word] fliegen
- 	+[moot/tag] VVINF
- 	+[moot/lemma] fliegen
- nach
- 	+[moot/word] nach
- 	+[moot/tag] APPR
- 	+[moot/lemma] nach
-
-contrast this to L<the output of the default "norm" chain|http://www.deutschestextarchiv.de/cab?a=norm&q=Fliegen+fliegen+nach.>:
-
+	+[moot/word] Fliegen
+	+[moot/tag] NN
+	+[moot/lemma] Fliege
  Fliegen
- 	+[moot/word] Fliegen
- 	+[moot/tag] NN
- 	+[moot/lemma] Fliege
- fliegen
- 	+[moot/word] fliegen
- 	+[moot/tag] VVFIN
- 	+[moot/lemma] fliegen
+	+[moot/word] Fliegen
+	+[moot/tag] NN
+	+[moot/lemma] Fliege
+ Fliegenden
+	+[moot/word] Fliegenden
+	+[moot/tag] NN
+	+[moot/lemma] Fliegende
+ Fliegen
+	+[moot/word] Fliegen
+	+[moot/tag] NN
+	+[moot/lemma] Fliege
  nach
- 	+[moot/word] nach
- 	+[moot/tag] PTKVZ
- 	+[moot/lemma] nach
+	+[moot/word] nach
+	+[moot/tag] APPR
+	+[moot/lemma] nach
+ .
+	+[moot/word] .
+	+[moot/tag] $.
+	+[moot/lemma] .
 
-In the above example, the second item "fliegen" is analyzed as an infinite verb (VVINF) for the unigram-based analyzer "norm1",
-but as a finite verb (VVFIN) for the default analyzer.  Similarly, the final item "nach" is analyzed as a preposition (APPR) by
-the unigram-based analyzer but as a verb particle (PTKVZ) by the default analyzer.  Although use of the "norm1" analyzer does
-not alter either the canonical modern form or canonical lemma in this case, such cases are theoretically possible.
+contrast this to L<the output of the default "norm" chain|http://www.deutschestextarchiv.de/cab?a=norm&q=Fliegende+Fliegen+Fliegen+Fliegenden+Fliegen+nach.>
+
+ Fliegende
+	+[moot/word] Fliegende
+	+[moot/tag] ADJA
+	+[moot/lemma] fliegend
+ Fliegen
+	+[moot/word] Fliegen
+	+[moot/tag] NN
+	+[moot/lemma] Fliege
+ Fliegen
+	+[moot/word] Fliegen
+	+[moot/tag] VVFIN
+	+[moot/lemma] fliegen
+ Fliegenden
+ 	+[moot/word] Fliegenden
+	+[moot/tag] ADJA
+	+[moot/lemma] fliegend
+ Fliegen
+	+[moot/word] Fliegen
+	+[moot/tag] NN
+	+[moot/lemma] Fliege
+ nach
+	+[moot/word] Nach
+	+[moot/tag] PTKVZ
+	+[moot/lemma] nach
+ .
+	+[moot/word] .
+	+[moot/tag] $.
+	+[moot/lemma] .
+
+In the above example, all instances of the surface form "Fliegen" are analyzed as common nouns (NN) with lemma "Fliege"
+by the unigram-based analyzer "norm1".  If sentential context is considered, the second instance of "Fliegen" is correctly
+analyzed as a finite verb form (VVFIN) of the lemma "fliegen".  Similarly, the unigram-based analyzer mis-tags "Fliegenden"
+as a noun rather than an attributive adjective (NN vs. ADJA) and assigns a corresponding (incorrect) lemma "Fliegende".
+The final particle "nach" is mis-tagged as a preposition (APPR vs. PTKVZ) by the unigram-based model, but this has
+no effect on the lemma assigned.
+Although use of the "norm1" analyzer does not alter any canonical modern forms in this example,
+such cases are possible.
 
 =cut
 
