@@ -71,7 +71,7 @@ sub defaultLogConf {
 log4perl.oneMessagePerAppender = 1     ##-- suppress duplicate messages to the same appender
 ";
 
-  if ($opts{rootLevel}) {
+  if ($opts{rootLevel} && $opts{rootLevel} ne 'OFF') {
     ##-- root logger
     $cfg .= "log4perl.rootLogger = $opts{rootLevel}, AppStderr\n";
   }
@@ -160,6 +160,7 @@ log4perl.appender.AppFile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} [%P
 ";
   }
 
+  #print STDERR "$cfg\n"; ##--debug
   return $cfg;
 }
 
