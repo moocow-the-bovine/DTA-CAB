@@ -362,7 +362,7 @@ sub putDocument {
 			    ('join'=>(defined($w->{join}) ? $w->{join} : $wjoin)),
 			   ],
 			   ##
-			   ($twcompat ? qw() : (defined($w->{textRaw}) ? $w->{textRaw} : $w->{text})),
+			   ($twcompat ? qw() : (defined($w->{textRaw}) ? $w->{textRaw} : $xmlescape->($w->{text}))),
 			  ));
     }
     $fh->print("\n </s>");
