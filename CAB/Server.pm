@@ -29,6 +29,9 @@ our @ISA = qw(DTA::CAB::Persistent DTA::CAB::Logger);
 ##     aos => \%anlOptions,  ##-- ($name=>\%analyzeOptions, ...) : %opts passed to $anl->analyzeXYZ($xyz,%opts)
 ##     pidfile => $pidfile,  ##-- if defined, process PID will be written to $pidfile on prepare()
 ##     pid => $pid,          ##-- server PID (default=$$) to write to $pidfile
+##     ##
+##     ##-- logging
+##     logInitAnalyzer => $level,  ##-- log analyzer initialization at $level (default='info')
 ##     #...
 ##    }
 sub new {
@@ -39,6 +42,9 @@ sub new {
 		   aos => {},
 		   #pidfile=>undef,
 		   #pid=>$pid,
+		   ##
+		   ##-- logging
+		   logInitAnalyzer => 'info',
 		   ##
 		   ##-- user args
 		   @_
@@ -74,8 +80,9 @@ sub prepare {
   }
 
   ##-- prepare: analyzers
+  $srv->info("initializing analyzer(s)...");
   foreach (sort(keys(%{$srv->{as}}))) {
-    $srv->info("initializing analyzer '$_'");
+    $srv->vlog($srv->{logInitAnalyzer},"initializing analyzer '$_'");
     if (!$srv->{as}{$_}->prepare) {
       $srv->error("initialization failed for analyzer '$_'; skipping");
       $rc = 0;
