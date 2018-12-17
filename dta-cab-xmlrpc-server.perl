@@ -177,7 +177,8 @@ dta-cab-xmlrpc-server.perl - XML-RPC server for DTA::CAB queries
   -log-rotate , -no-rotate        ##-- do/don't auto-rotate logs (default: if available)
   -log-syslog , -no-syslog        ##-- do/don't log to syslog (default: don't)
   -log-config L4PFILE             ##-- override log4perl config file
-  -log-watch , -nowatch           ##-- override: do/don't watch L4PFILE
+  -log-watch SECONDS_OR_SIGNAL    ##-- watch log4perl config file (delay SECONDS or on SIGNAL)
+  -nolog-nowatch                  ##-- override: don't watch L4PFILE
 
 =cut
 
@@ -322,7 +323,11 @@ User log4perl config file L4PFILE.
 Default behavior uses the log configuration
 string returned by L<DTA::CAB::Logger-E<gt>defaultLogConf()|DTA::CAB::Logger/item_defaultLogConf>.
 
-=item -log-watch , -nowatch
+=item -log-watch SECONDS
+
+=item -log-watch SIGNAL
+
+=item -nolog-watch
 
 Do/don't watch log4perl config file (default=don't).
 Only sensible if you also specify L</-log-config>.

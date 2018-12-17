@@ -279,7 +279,7 @@ sub logconfess { $_[0]->logger->logconfess(@_[1..$#_]); } # die w/ full stack tr
 ##  + adds support for logging options:
 ##    'log-level|loglevel|ll|L=s' => \$defaultLogOpts{level},
 ##    'log-config|logconfig|log4perl-config|l4p-config|l4p=s' => \$defaultLogOpts{l4pfile},
-##    'log-watch|logwatch|watch|lw=i' => \$defaultLogOpts{watch},
+##    'log-watch|logwatch|watch|lw=s' => \$defaultLogOpts{watch},
 ##    'nolog-watch|nologwatch|nowatch|nolw' => sub { $defaultLogOpts{watch}=undef; },
 ##    'log-stderr|stderr|lse!' => \$defaultLogOpts{stderr},
 ##    'log-file|lf=s' => \$defaultLogOpts{file},
@@ -294,7 +294,7 @@ sub cabLogOptions {
      ($opts{verbose} ? ('verbose|v=s' => sub { $defaultLogOpts{level}=uc($_[1]); }) : qw()),
      'log-level|loglevel|ll|L=s'  => sub { $defaultLogOpts{level}=uc($_[1]); },
      'log-config|logconfig|log4perl-config|l4p-config|l4p=s' => \$defaultLogOpts{l4pfile},
-     'log-watch|logwatch|watch|lw=i' => \$defaultLogOpts{watch},
+     'log-watch|logwatch|watch|lw=s' => \$defaultLogOpts{watch},
      'nolog-watch|nologwatch|nowatch|nolw' => sub { $defaultLogOpts{watch}=undef; },
      'log-stderr|stderr|lse!' => \$defaultLogOpts{stderr},
      'log-file|lf=s' => \$defaultLogOpts{file},
@@ -433,7 +433,7 @@ Initialize the logging facility.
 %opts:
 
  l4pfile   => undef,            ##-- alternate Log4perl config file
- watch     => undef,            ##-- watch l4pfile? (default=false)
+ watch     => undef,            ##-- watch l4pfile (SECONDS delay or SIGNAL)? (default=undef: false)
  rootLevel => $LEVEL_OR_UNDEF,  ##-- min root log level (default='WARN' or 'FATAL', depending on $^W)
  level     => $LEVEL_OR_UNDEF,  ##-- min log level (default=$MIN_LEVEL or 'INFO', depending on $^W)
  stderr    => $bool,            ##-- whether to log to stderr (default=1)
