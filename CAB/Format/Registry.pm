@@ -136,8 +136,9 @@ sub lookup {
   if (defined($opts{class})) {
     ##-- lookup: by class name
     my $class = $opts{class};
+    return $reg->{short2reg}{$class}     if ($reg->{short2reg}{$class});
     return $reg->{short2reg}{lc($class)} if ($reg->{short2reg}{lc($class)});
-    return $reg->{base2reg}{$class} if ($reg->{base2reg}{$class});
+    return $reg->{base2reg}{$class}      if ($reg->{base2reg}{$class});
     ##
     $class = "DTA::CAB::Format::${class}" if (!isa($class,'DTA::CAB::Format'));
     #$that->logconfess("lookup(): unknown format class '$class'") if (!isa($class,'DTA::CAB::Format'));

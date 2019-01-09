@@ -21,8 +21,11 @@ use strict;
 our @ISA = qw(DTA::CAB::Format::ExpandList);
 
 BEGIN {
-  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/)
-      foreach (qw(LemmaList llist ll lemmata lemmas));
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemma)/)
+      foreach (qw(LemmaList llist ll lemma));
+
+  DTA::CAB::Format->registerFormat(name=>__PACKAGE__, short=>$_, opts=>{cctagre=>''})
+      foreach (qw(LemmaListAll LemmasAll llist-all ll-all lla lemmas lemmata));
 }
 
 ##==============================================================================
@@ -140,7 +143,10 @@ sub putToken {
 
   if ($tok->{moot}{tag} =~ $cctagre) {
     ##-- closed-class word: return all lemmata
+    my $tmp='';
     @lemmas = (
+	       map {$tmp eq $_ ? qw() : ($tmp=$_)}
+	       sort
 	       grep {defined($_) && $_ ne ''}
 	       map { $_->{lemma} }
 	       $tok->{moot},

@@ -1433,9 +1433,17 @@ Registered as:
 
 Formatter for runtime term lemmatization, for use e.g. with
 DDC L<Cab Expander|http://odo.dwds.de/~moocow/software/ddc/ddc_opt.html#Cab>.
+By default, returns all lemmata for function word input tokens (whose tag matches
+the regex C</^(?:[CKP\$]|A[PR]|V[AM])/>), otherwise only the "best" lemma.
+Regisered as:
 
- name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/
+ (name=>__PACKAGE__, short=>$_, filenameRegex=>qr/\.(?i:ll|llist|lemmas|lemmata)/)
+  foreach (qw(LemmaList llist ll lemma))
 
+A variant which returns all known lemmata for each input token is registered as:
+
+ (name=>__PACKAGE__, short=>$_, opts=>{cctagre=>''})
+  foreach (qw(LemmaListAll LemmasAll llist-all ll-all lla lemmas lemmata))
 
 =item L<DTA::CAB::Format::Null|DTA::CAB::Format::Null>
 
