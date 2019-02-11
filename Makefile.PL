@@ -7,17 +7,14 @@ my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
   no warnings;
-  my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info .`)[0];
-  my $svnversion = `svnversion .`;
-  chomp($svnroot);
-  chomp($svnversion);
+  #my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info . 2>/dev/null`)[0];
+  my $SVNVERSION = `svnversion .`;
+  chomp($SVNVERSION);
+  $SVNVERSION = "unknown version" if (!$SVNVERSION);
 
-  if ($svnroot && $svnversion) {
-    $SVNVERSION = "$svnroot @ $svnversion";
-
-    open(VERSION_PM,">CAB/Version.pm")
-      or die("$0: could not open CAB/Version.pm for write: $!");
-    print VERSION_PM <<EOF;
+  open(VERSION_PM,">CAB/Version.pm")
+    or die("$0: could not open CAB/Version.pm for write: $!");
+  print VERSION_PM <<EOF;
 ##--- automatically generated file: DO NOT EDIT! ---
 ##
 ## File: DTA/CAB/Version.pm
@@ -28,24 +25,13 @@ package DTA::CAB::Version;
 \$DTA::CAB::SVNVERSION = '$SVNVERSION';
 1;
 EOF
-  }
-  elsif (0) {
-    $SVNVERSION =
-      ('$HeadURL$'
-       .' $Id$');
-  }
 }
 
 ##----------------------------------------------------------------------
 ## Hacks
-use version;
-if (qv($ExtUtils::MakeMaker::VERSION) >= qv(7.0401)) {
-  ##-- workaround for irritating symlink-related errors on kira (ubuntu 16.04 LTS / EUMM v7.0401)
-  use ExtUtils::Manifest;
-  no warnings 'redefine';
-  *{ExtUtils::Manifest::manicheck}    = sub {};
-  *{ExtUtils::Manifest::_check_files} = sub {};
-}
+
+##-- workaround for irritating symlink-related errors on kira (ubuntu 16.04 LTS / EUMM v7.0401)
+do "./nofollow.rpl" if (-e "./nofollow.rpl");
 
 
 ##----------------------------------------------------------------------
@@ -109,11 +95,19 @@ WriteMakefile
 
    EXE_FILES   => [glob('dta-cab-*.perl')],
   );
-
+#print STDERR "we got here\n";
 
 ##-----------------------------------------------------------------------
 ## Extensions
 ##-----------------------------------------------------------------------
+
+##---------------------------------------------------------------
+sub MY::dist_basics {
+  package MY;
+  my $inherited = shift->SUPER::dist_basics(@_);
+  $inherited =~ s{-e (\S+)}{-e 'do "./nofollow.rpl" if (-e "./nofollow.rpl"); $1'}g;
+  return $inherited;
+}
 
 ##---------------------------------------------------------------
 sub MY::constants {
@@ -343,6 +337,7 @@ DISTDIR_AM ?= $(DISTNAME).am
 distdir_am:
 	$(RM_RF) $(DISTDIR_AM)
 	$(PERLRUN) "-MExtUtils::Manifest=manicopy,maniread" \\
+	  -e \'do "./nofollow.rpl" if (-e "./nofollow.rpl");\' \\
 	  -e "manicopy(maniread(),\'$(DISTDIR_AM)\', \'$(DIST_CP)\');"
 
 PMLIST_AM ?= ../doc/pm_list

@@ -9,6 +9,7 @@
 ^rs\.
 ^t\.
 ^gn-
+^nofollow\.rpl$
 
 \bpod2htm[di]\.
 
@@ -25,6 +26,7 @@ CVS
 \.tfst$
 \.lab$
 \.gfst$
+\.xcf$
 
 \.old$
 \.cvsignore$
