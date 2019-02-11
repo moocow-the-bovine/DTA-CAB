@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.105';
+my $VERSION = '1.106';
 my ($SVNVERSION);
 {
   ##-- write CAB/Version.pm
@@ -31,7 +31,7 @@ EOF
 ## Hacks
 
 ##-- workaround for irritating symlink-related errors on kira (ubuntu 16.04 LTS / EUMM v7.0401)
-do "./nofollow.rpl" if (-e "./nofollow.rpl");
+do "./find.hack" if (-e "./find.hack");
 
 
 ##----------------------------------------------------------------------
@@ -105,7 +105,7 @@ WriteMakefile
 sub MY::dist_basics {
   package MY;
   my $inherited = shift->SUPER::dist_basics(@_);
-  $inherited =~ s{-e (\S+)}{-e 'do "./nofollow.rpl" if (-e "./nofollow.rpl"); $1'}g;
+  $inherited =~ s{-e (\S+)}{-e 'do "./find.hack" if (-e "./find.hack"); $1'}g;
   return $inherited;
 }
 
@@ -216,14 +216,14 @@ HTML_EXTRA ?= \
   doc-extra/elephant.tok.tcf \
   cab-curl-post.sh \
   cab-curl-xpost.sh \
-  doc-extra/dstar-bin/spliced2norm.xsl \
-  doc-extra/dstar-bin/spliced2orig+reg.xsl \
-  doc-extra/dstar-bin/spliced2clean.xsl \
-  doc-extra/dstar-bin/spliced2cleaner.xsl \
-  doc-extra/dstar-bin/spliced2clean+cabns.xsl \
-  doc-extra/dstar-bin/spliced2cab.xsl \
-  doc-extra/dstar-bin/spliced2ling.xsl \
-  doc-extra/dstar-bin/tcf-orthswap.xsl \
+  doc-extra/spliced2norm.xsl \
+  doc-extra/spliced2orig+reg.xsl \
+  doc-extra/spliced2clean.xsl \
+  doc-extra/spliced2cleaner.xsl \
+  doc-extra/spliced2clean+cabns.xsl \
+  doc-extra/spliced2cab.xsl \
+  doc-extra/spliced2ling.xsl \
+  doc-extra/tcf-orthswap.xsl \
   doc-extra/cab-screenshot-annotated.png
 
 ##-- lifted from MakeMaker blibdir section
@@ -337,7 +337,7 @@ DISTDIR_AM ?= $(DISTNAME).am
 distdir_am:
 	$(RM_RF) $(DISTDIR_AM)
 	$(PERLRUN) "-MExtUtils::Manifest=manicopy,maniread" \\
-	  -e \'do "./nofollow.rpl" if (-e "./nofollow.rpl");\' \\
+	  -e \'do "./find.hack" if (-e "./find.hack");\' \\
 	  -e "manicopy(maniread(),\'$(DISTDIR_AM)\', \'$(DIST_CP)\');"
 
 PMLIST_AM ?= ../doc/pm_list

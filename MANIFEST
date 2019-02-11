@@ -172,10 +172,27 @@ CAB/Version.pod
 CAB/XmlRpcProtocol.pod
 CAB/WebServiceHowto.pod
 
+doc-extra/elephant.raw
+doc-extra/elephant.tei-xml
+doc-extra/elephant.teiws-xml
+doc-extra/elephant.teiws-ling-xml
+doc-extra/elephant.raw.tcf
+doc-extra/elephant.tok.tcf
+doc-extra/spliced2norm.xsl
+doc-extra/spliced2orig+reg.xsl
+doc-extra/spliced2clean.xsl
+doc-extra/spliced2cleaner.xsl
+doc-extra/spliced2clean+cabns.xsl
+doc-extra/spliced2cab.xsl
+doc-extra/spliced2ling.xsl
+doc-extra/tcf-orthswap.xsl
+doc-extra/cab-screenshot-annotated.png
+
 dta-cab-analyze.perl
 dta-cab-blockscan.perl
 dta-cab-convert.perl
 dta-cab-eval.perl
+dta-cab-http-check.perl
 dta-cab-http-client.perl
 dta-cab-http-server.perl
 dta-cab-splice-syncope.perl
@@ -185,6 +202,7 @@ dta-cab-tw2cab.perl
 dta-cab-txt2tt.perl
 dta-cab-tj2tt.perl
 dta-cab-tt2tj.perl
+dta-cab-version.perl
 dta-cab-xmlrpc-client.perl
 dta-cab-xmlrpc-server.perl
 
