@@ -3,29 +3,6 @@ use ExtUtils::MakeMaker;
 ##----------------------------------------------------------------------
 ## Constants
 my $VERSION = '1.106';
-my ($SVNVERSION);
-{
-  ##-- write CAB/Version.pm
-  no warnings;
-  #my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info . 2>/dev/null`)[0];
-  my $SVNVERSION = `svnversion .`;
-  chomp($SVNVERSION);
-  $SVNVERSION = "unknown version" if (!$SVNVERSION);
-
-  open(VERSION_PM,">CAB/Version.pm")
-    or die("$0: could not open CAB/Version.pm for write: $!");
-  print VERSION_PM <<EOF;
-##--- automatically generated file: DO NOT EDIT! ---
-##
-## File: DTA/CAB/Version.pm
-## Description: DTA::CAB version constants (auto-generated)
-##
-package DTA::CAB::Version;
-\$DTA::CAB::VERSION = '$VERSION';
-\$DTA::CAB::SVNVERSION = '$SVNVERSION';
-1;
-EOF
-}
 
 ##----------------------------------------------------------------------
 ## Hacks
@@ -80,7 +57,6 @@ WriteMakefile
 		    'HTTP::Daemon::UNIX' =>0, #0.06
 		    ##--
 		    'Log::Log4perl' => 1.07,
-		    #'Unicode::CharName' => 0, #1.07,
 		    'Unicode::String' => 2.09,
 		    'RPC::XML' => 0.59,
 		    ##
@@ -99,11 +75,39 @@ WriteMakefile
 
    EXE_FILES   => [glob('dta-cab-*.perl')],
   );
-#print STDERR "we got here\n";
 
 ##-----------------------------------------------------------------------
 ## Extensions
 ##-----------------------------------------------------------------------
+
+##---------------------------------------------------------------
+## maintainer-only: Version.pm
+if (-d ".svn") {
+  ##-- write CAB/Version.pm
+  no warnings;
+  print STDERR "Updating CAB/Version.pm\n";
+
+  #my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info . 2>/dev/null`)[0];
+  my $SVNVERSION = `svnversion .`;
+  chomp($SVNVERSION);
+  $SVNVERSION = "unknown version" if (!$SVNVERSION);
+
+  open(VERSION_PM,">CAB/Version.pm")
+    or die("$0: could not open CAB/Version.pm for write: $!");
+  print VERSION_PM <<EOF;
+##--- automatically generated file: DO NOT EDIT! ---
+##
+## File: DTA/CAB/Version.pm
+## Description: DTA::CAB version constants (auto-generated)
+##
+package DTA::CAB::Version;
+\$DTA::CAB::VERSION = '$VERSION';
+\$DTA::CAB::SVNVERSION = '$SVNVERSION';
+1;
+EOF
+} else {
+  warn("This does not appear to be an SVN checkout -- NOT updating CAB/Version.pm\n");
+}
 
 ##---------------------------------------------------------------
 sub MY::dist_basics {
