@@ -3,6 +3,8 @@
 ## Change log for perl distribution DTA::CAB
 
 v1.106 2019-02-11  moocow
+	* added Changes (this file: extracted from SVN logs & reformatted)
+	* cleanup for CPAN release
 	* SVNVERSION tweaks (revision only, no root URL)
 	* find.hack: File::Find hacks for ExtUtils::Manifest
 	* removed some (but not all) doubled and/or recursuive symlinks
