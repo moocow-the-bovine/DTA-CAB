@@ -73,13 +73,15 @@ WriteMakefile
 		    'CDB_File' =>0,
 		    'JSON::XS' =>0,
 		    #'YAML::XS' =>0,  ##-- debian package libyaml-libyaml-perl; optional
+		    'XML::LibXML' => 2.0128,
 		    'Template' =>0,
 		    'LWP::UserAgent' =>0,
 		    'HTTP::Daemon' =>0,
 		    'HTTP::Daemon::UNIX' =>0, #0.06
 		    ##--
 		    'Log::Log4perl' => 1.07,
-		    'Unicode::CharName' => 0, #1.07,
+		    #'Unicode::CharName' => 0, #1.07,
+		    'Unicode::String' => 2.10,
 		    'RPC::XML' => 0.59,
 		    ##
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
@@ -91,6 +93,8 @@ WriteMakefile
 		    #'Tie::Cache'=>0,
 		    #'Unicode::UCD' =>0,
 		    #'Unicode::CharName' =>0,
+		    ##--
+		    'Test::More' => 0,
 		   },
 
    EXE_FILES   => [glob('dta-cab-*.perl')],

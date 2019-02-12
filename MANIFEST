@@ -212,4 +212,3 @@ cab-curl-post.sh
 cab-curl-xpost.sh
 
 t/00_basic.t
-t/common.plt

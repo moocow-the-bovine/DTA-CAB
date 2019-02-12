@@ -7,7 +7,7 @@ v1.106 2019-02-12  moocow
 	* cleanup for CPAN release
 	* SVNVERSION tweaks (revision only, no root URL)
 	* find.hack: File::Find hacks for ExtUtils::Manifest
-	* removed some (but not all) doubled and/or recursuive symlinks
+	* removed some (but not all) doubled and/or recursuive symlinks from SVN
 	  - they don't play nicely with ExtUtils::Manifest / MakeMaker / File::Find
 
 v1.105 2019-01-09  moocow
