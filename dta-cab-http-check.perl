@@ -254,7 +254,7 @@ dta-cab-http-check.perl - DTA::CAB http-server monitoring plugin for nagios/icin
 
 =head1 COPYRIGHT
 
-Copyright (c) 2016, Bryan Jurish.  All rights reserved.
+Copyright (c) 2016-2019, Bryan Jurish.  All rights reserved.
 
 This package is free software.  You may redistribute it
 and/or modify it under the same terms as Perl itself,

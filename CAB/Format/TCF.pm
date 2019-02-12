@@ -718,14 +718,14 @@ the 'text' layer will be tokenized using the L<DTA::CAB::Format::Raw|DTA::CAB::F
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2015 by Bryan Jurish
+Copyright (C) 2015-2019 by Bryan Jurish
 
 This package is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.20.2 or,
+it under the same terms as Perl itself, either Perl version 5.24.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =head1 SEE ALSO

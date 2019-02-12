@@ -40,7 +40,7 @@ do "./find.hack" if (-e "./find.hack");
 WriteMakefile
   (
    NAME		=> 'DTA::CAB',
-   AUTHOR       => 'Bryan Jurish <jurish@bbaw.de>',
+   AUTHOR       => 'Bryan Jurish <moocow@cpan.org>',
    ABSTRACT	=> '"Cascaded Analysis Broker" for robust linguistic analysis',
    VERSION	=> $VERSION,
 

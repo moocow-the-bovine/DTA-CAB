@@ -42,5 +42,5 @@ SEE ALSO
         URL: http://www.ling.uni-potsdam.de/~moocow/projects/gfsm#gfsmxl
 
 AUTHOR
-    Bryan Jurish <jurish@bbaw.de>
+    Bryan Jurish <moocow@cpan.org>
 

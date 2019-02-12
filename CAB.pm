@@ -1,6 +1,6 @@
 ## -*- Mode: CPerl -*-
 ## File: DTA::CAB.pm
-## Author: Bryan Jurish <moocow@ling.uni-potsdam.de>
+## Author: Bryan Jurish <moocow@cpan.org>
 ## Description: robust morphological analysis: top-level
 
 package DTA::CAB;
@@ -302,14 +302,14 @@ in this fashion; see L<http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> for d
 
 =head1 AUTHOR
 
-Bryan Jurish E<lt>jurish@bbaw.deE<gt>
+Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2008-2015 by Bryan Jurish
+Copyright (C) 2008-2019 by Bryan Jurish
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.20.2 or,
+it under the same terms as Perl itself, either Perl version 5.24.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
