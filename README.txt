@@ -23,7 +23,7 @@ REQUIREMENTS
         "DTA::CAB" web-service, you'll need only the URL for that service
         and an active internet connection. See the DTA::CAB Web-Service
         HOWTO
-        <http://odo.dwds.de/~moocow/software/DTA-CAB/doc/html/DTA.CAB.WebSer
+        <http://odo.dwds.de/~jurish/software/DTA-CAB/doc/html/DTA.CAB.WebSer
         viceHowto.html> for an introduction.
 
     Language Resources
