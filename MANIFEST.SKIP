@@ -25,10 +25,17 @@
 
 CVS
 .svn
+^attic/
+^www/
+^ma-dwds-hacks/
+^dta-xml
+^cab-en
+
 
 ^\.\#
 \/\.\#
 
+\.pod\.list$
 \.save$
 \.o$
 \.gz$
@@ -47,9 +54,10 @@ CVS
 \.log$
 
 ^testme\.perl$
-
 ^footer\.POD$
-^test.*
+^test[0-9]?\.
+^(?:ka?|wg)(?:test)?[0-9]?\.
+^kant_
 
 \.graveyard$
 ^argh
