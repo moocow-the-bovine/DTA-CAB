@@ -163,6 +163,7 @@ dta-cab-version.perl - report analyzer and resource version information
   -version                        ##-- show version & exit
   -verbose LEVEL                  ##-- set default log level
   -log-level LEVEL                ##-- set minimum log level (default=INFO)
+  -config RCFILE                  ##-- configuration file to load
 
  I/O Options:
   -text                           ##-- text output (default)
