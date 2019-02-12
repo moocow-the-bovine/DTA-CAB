@@ -7,11 +7,11 @@ ABSTRACT
 REQUIREMENTS
     Gfsm
         Both C library and perl wrappers required. See
-        http://www.ling.uni-potsdam.de/~moocow/projects/gfsm
+        <http://kaskade.dwds.de/~jurish/projects/gfsm>
 
     Gfsm::XL
         Both C library and perl wrappers required. See
-        http://www.ling.uni-potsdam.de/~moocow/projects/gfsm#gfsmxl
+        <http://kaskade.dwds.de/~jurish/projects/gfsm#gfsmxl>
 
     Encode
     Storable
@@ -34,12 +34,23 @@ INSTALLATION
      bash$ make test         # (optional): test module before installing
      bash$ make install      # install the module on your system
 
+REFERENCES
+    The author would appreciate CAB users citing its use in any related
+    publications. As a general CAB-related reference, please cite:
+
+    Jurish, Bryan. *Finite-state Canonicalization Techniques for Historical
+    German.* PhD thesis, Universität Potsdam, 2012 (defended 2011). URN
+    urn:nbn:de:kobv:517-opus-55789, [epub
+    <http://opus.kobv.de/ubp/volltexte/2012/5578/>, PDF
+    <http://kaskade.dwds.de/~jurish/pubs/jurish2012diss.pdf>, BibTeX
+    <http://kaskade.dwds.de/~jurish/pubs/jurish2012diss.bib>]
+
 SEE ALSO
     Gfsm(3perl)
-        URL: http://www.ling.uni-potsdam.de/~moocow/projects/gfsm
+        URL: <http://kaskade.dwds.de/~jurish/projects/gfsm>
 
     Gfsm::XL(3perl)
-        URL: http://www.ling.uni-potsdam.de/~moocow/projects/gfsm#gfsmxl
+        URL: <http://kaskade.dwds.de/~jurish/projects/gfsm#gfsmxl>
 
 AUTHOR
     Bryan Jurish <moocow@cpan.org>

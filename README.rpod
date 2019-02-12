@@ -1,7 +1,5 @@
 =encoding utf8
 
-=pod
-
 README for DTA::CAB
 
 =head1 ABSTRACT
@@ -97,7 +95,7 @@ URL: L<http://kaskade.dwds.de/~jurish/projects/gfsm>
 
 =item Gfsm::XL(3perl)
 
-URL: L<http://kaskaded.dwds.de/~jurish/projects/gfsm#gfsmxl>
+URL: L<http://kaskade.dwds.de/~jurish/projects/gfsm#gfsmxl>
 
 =back
 
