@@ -5,7 +5,7 @@
 v1.106 2019-02-11  moocow
 	* SVNVERSION tweaks (revision only, no root URL)
 	* find.hack: File::Find hacks for ExtUtils::Manifest
-	* removed some (but not all) bogus symlinks
+	* removed some (but not all) doubled and/or recursuive symlinks
 	  - they don't play nicely with ExtUtils::Manifest / MakeMaker / File::Find
 
 v1.105 2019-01-09  moocow
@@ -1078,766 +1078,367 @@ v1.15 2011-06-28  moocow
 	* started moving Dict::* out of analyzer modules
 	  + added more better access closure utils to CAB::Analyzer
 
-##--- CONTINUE HERE ---
-
 v1.14 2011-03-23  moocow
 	* updated MorphSafe
-	* replaced old XML-RPC only
-	  server on services:8088 with new flexible HTTP server
-	* renamed server stuff
-	  using port number suffixes (-8088, -9099)
-	* v1.14 2011-03-14  moocow
-	* added 'id' to clean-safe
-	  attributes in Analyzer::DTAClean
-	* more format niceties for http
-	  client
-	* [r4902] + fixed missing 'use
-	  DTA::CAB::Chain::DTA' in cab-server.plm
-	* http-client: format-mismatch
-	  beautification
-	* http-client: format-mismatch
-	  beautification
-	* http-client: just warn and
-	  set sensible defaults (ifc->qfc->ofc) on data-mode format
-	  mismatch
-	* more
-	  Format::XmlTokWrap fixes
+	* replaced old XML-RPC only server on services:8088 with new flexible HTTP server
+	* renamed server stuff using port number suffixes (-8088, -9099)
+	* added 'id' to clean-safe attributes in Analyzer::DTAClean
+	* more format niceties for http client
+	* fixed missing 'use DTA::CAB::Chain::DTA' in cab-server.plm
+	* http-client: format-mismatch beautification
+	* http-client: just warn and set sensible defaults (ifc->qfc->ofc) on data-mode format mismatch
 	* Format::XmlTokWrap fixes
-	* v1.14: added Format::XmlTokWrap (.t.xml)
+	* added Format::XmlTokWrap (.t.xml)
 
 v1.13 2011-02-15  moocow
-	* fixed HTTP client bug which
-	  required \%opts hash (should be optional)
+	* fixed HTTP client bug which required \%opts hash (should be optional)
 	* encoding stuff for services
-	* encoding stuff for
-	  services
-	* made -version flag reports
-	  consistent
+	* made -version flag reports consistent
 	* updated watchdogs
-	* re-added
-	  cab-server-local.l4p as a symlink (since relative paths are now
-	  used also by cab-server.l4p)
-	* changed
-	  server l4p files to relative paths
-	  - assumes server is run from cwd DTA-CAB/system/ (as it is by
-	  init/dta-cab-server.sh)
-	* [r4809] + fixed missing $status arg in
-	  Server::HTTP::clientError() call: fixes mantis bug #426
-	* [r4805] + v1.13 : added some more handlers (alias,
-	  template), tweaked demo server a bit
-	* [r4803]
-	* updated
-	  cab-http.plm
+	* re-added cab-server-local.l4p as a symlink
+	  - since relative paths are now used also by cab-server.l4p
+	*  server l4p files to relative paths
+	  - assumes server is run from cwd DTA-CAB/system/ (as it is by init/dta-cab-server.sh)
+	* fixed missing $status arg in Server::HTTP::clientError() calls
+	  - fixes mantis bug #426
+	* added some more handlers (alias, template), tweaked demo server a bit
+	* updated cab-http.plm
 
 v1.12 2011-01-27  moocow
-	* [r4800] + logo play; minor handler fixes
-	* [r4795] + new basic
-	  http demo
-	* oops oops
-	* oops
-	* minor log-level fixes in http server
-	  configs
-	* [r4790] + oops: re-added ReuseAddr to
-	  xlit-http.plm
-	* extended log-level configuration in
-	  xlit-http.plm, cab-http.plm
+	* logo play; minor handler fixes
+	* new basic http demo
+	* minor log-level fixes in http server configs
+	* oops: re-added ReuseAddr to xlit-http.plm
+	* extended log-level configuration in xlit-http.plm, cab-http.plm
 	* fixed double-bind() bug in XML-RPC wrapper code for Server::HTTP
-	* [r4785] + set up cab-http system, init
-	  files
-	* http server fixes; added dta http server config (9099)
-	  system/cab-http.plm
+	* set up cab-http system, init files
+	* http server fixes; added dta http server config (9099) system/cab-http.plm
 	* format and HTTP server/client tweaks
-	* HTTP query handler futzelei
-	  + added DTA::CAB::Format::Registry
-	* removed obsolete 'Text1.pm' from MANIFEST
-	  (fixes mantis bug 419)
-	* [r4771] + more documentation
+	* HTTP query handler futzelei: added DTA::CAB::Format::Registry
+	* removed obsolete 'Text1.pm' from MANIFEST (fixes mantis bug #419)
 	* more documentation
 	* updated examples
-	* more documentation
 	* documented CAB/Server/HTTP and below
-	* [r4763]
-	* updated CAB/Version.pm
-	  (re-)generation
-	* [r4760] #
-	* [r4758] + updated CAB/Version.pm generation in
-	  Makefile.PL
-	* updated CAB/Version.pm generation in Makefile.PL
-	* [r4755] + some documentation and re-factoring
+	* updated CAB/Version.pm (re-)generation in Makefile.PL
+	* some documentation and re-factoring
 	* added Lingua::TT dep to Makefile.PL
-
-	* v1.12 2011-01-17 21:59  moocow
-	* added
-	  dta-cab-http-client.perl (currently supports only analyzeData)
-	* v1.12 2011-01-17 13:11  moocow
+	* added dta-cab-http-client.perl (currently supports only analyzeData)
 	* added CAB/Server/HTTP/Handler/XmlRpc.pm
-	  - xml-rpc wrapper for generic HTTP server, just wraps old
-	  Server::XmlRpc
-	* v1.12 2010-12-10 08:37  moocow
+	  - xml-rpc wrapper for generic HTTP server, just wraps old Server::XmlRpc
 	* aded cab-server-local.*
-	* v1.12 2010-12-03 15:24  moocow
-	* v1.12 2010-12-03 14:38  moocow
-	* v1.12 2010-12-02 15:36  moocow
-	* [r4490]
-	* [r4490]
-	* v1.12 2010-12-01 10:38  moocow
-	* added Raw format
-	  (rudimentary handling of untokenized input)
-	* added basic standalone HTTP server
-	  code
-	* v1.12 2010-11-29 13:45  moocow
-	* v1.12 2010-11-29 13:36  moocow
-	* logging
-	  improvements
-	* v1.12 2010-11-24 15:11  moocow
+	* added Raw format (rudimentary handling of untokenized input)
+	* added basic standalone HTTP server code
+	* logging improvements
 	* more CGI stuff
 	* re-factored XmlNative class
-	  -- should actually base this on expat rather than libxml, but it
-	  works (sort of) for now
-	* v1.12 2010-11-22 15:42  moocow
-	* many small
-	  server- and wrapper-related bugfixes
-	* v1.12 2010-11-19 15:47  moocow
-	* v1.12 2010-11-19 15:31  moocow
-	* v1.12 2010-11-19 15:06  moocow
-	* got public web service
-	  basically working
-	* updated Server::XmlRpc:
-	  finer-grained logging options
-	  + fixed a bug in Analyzer::analyzeData()
-	  + tested Analyzer::analyzeData() json and yaml modes: working now
-	* v1.12:
-	  EqLemma integrated into cab.plm
-	* got EqLemma class basically
-	  working; updated to v1.12
+	  - should actually base this on expat rather than libxml, but it works (sort of) for now
+	* many small server- and wrapper-related bugfixes
+	* got public web service basically working
+	* updated Server::XmlRpc: finer-grained logging options
+	  - fixed a bug in Analyzer::analyzeData()
+	  - tested Analyzer::analyzeData() json and yaml modes: working now
+	* EqLemma integrated into cab.plm
+	* got EqLemma class basically working (cleaner)
 
 v1.11 2010-11-18 14:07  moocow
-	* EqLemma::DB basically working
-	  (but very very baroque)
-	* v1.11 2010-11-16 15:22  moocow
-	* v1.11 2010-11-16 13:52  moocow
+	* EqLemma::DB basically working (but very very baroque)
 	* added TokPP
-	* v1.11 2010-11-15 08:50  moocow
-	* added jptest.pl,
-	  pathtest.pl
-	* v1.11 2010-11-10 12:30  moocow
-	* v1.11 2010-11-08 15:47  moocow
-	* v1.11 2010-11-08 14:48  moocow
-	* v1.11 2010-11-04 15:14  moocow
+	* added jptest.pl, pathtest.pl
 	* bashWS re-fix
-	* v1.11 2010-11-04 11:12  moocow
-	* v1.11 2010-11-03 15:48  moocow
-	* added dta-cab-tw2cab.perl (tokwrap to
-	  cab-tt format converter)
-	* v1.11 2010-11-03 13:40  moocow
-	* v1.11 2010-11-03 13:31  moocow
-	* v1.11 2010-11-03 13:29  moocow
+	* added dta-cab-tw2cab.perl (tokwrap to cab-tt format converter)
 	* moved format examples to format-examples/ dir
-	* v1.11 2010-11-03 10:29  moocow
-	* moved old
-	  Automaton::analyzeWord closure into analyzeTypes
-	* v1.11 2010-11-02 15:44  moocow
+	* moved old Automaton::analyzeWord closure into analyzeTypes
 	* tried dynamic code generation:
-	  1.12K -> 1.17K tok/sec on kant-types: 4% improvement (bah)
-	* v1.11: basic
-	  integration of tokenizer analyses from [toka] for msafe, dmoot,
-	  moot
+	  - 1.12K -> 1.17K tok/sec on kant-types: 4% improvement (bah)
+	* basic integration of tokenizer analyses from [toka] for msafe, dmoot, moot
 
 v1.10 2010-11-02 10:34  moocow
 	* updated resources dir
-	* v1.10 2010-11-02 09:06  moocow
-	* v1.10 2010-11-02 08:55  moocow
-	* v1.10 2010-11-01 12:43  moocow
-	* v1.10 2010-11-01 10:08  moocow
-	* updated
-	  Automaton/Gfsm/XL.pm : set default max_ops=16384
-	* [r4286]
-	* [r4286]
+	* updated Automaton/Gfsm/XL.pm : set default max_ops=16384
 	* added eqrw/, dmoot/, moot/ links
-	* added eqrw/, dmoot/, moot/ links
-	* added eqrw/, dmoot/, moot/ links
-	* added eqrw/, dmoot/, moot/ links
-	* moved dmoot/ dir from
-	  cab/system/resources/ to automata/
-	* moved moot/ dir from
-	  cab/system/resources/ to automata/
-	* v1.10 2010-10-29 11:42  moocow
+	* moved dmoot/ dir from cab/system/resources/ to automata/
+	* moved moot/ dir from cab/system/resources/ to automata/
 	* oops
-	* v1.10 2010-10-29 08:44  moocow
-	* added local link words ->
-	  automata/words
-	* resource build system
-	  update: moved dta-cab/system/resources/words to automata/words
-	* added local link words ->
-	  automata/words
-	* resource build system
-	  update: moved dta-cab/system/resources/words to automata/words
-	* changed
-	  automata/ links in system/resouces
-	* v1.10 2010-10-28 15:02  moocow
+	* added local link words -> automata/words
+	* resource build system update:
+	  - moved dta-cab/system/resources/words to automata/words
+	* changed automata/ links in system/resouces
 	* Dict updates
-	  - still todo: move eqrw to dict mode (move build out of
-	  system/resouces into ../automata/eqrw)
+	  - still todo: move eqrw to dict mode (move build out of system/resouces into ../automata/eqrw)
 	  - eqlemma
 	* removed stale EqClass.pm
-	* v1.10: started
-	  work on EqLemma
+	* started work on EqLemma
 	  - re-implemented DTA::CAB::Analyzer::Dict to use Lingua::TT::Dict
-	  - added Analyzer::Dict::DB using Lingua::TT::DB::File (Berkeley
-	  DB) -- tolerably fast and quite handy
-	  - TODO: use new dict class(es) as exception lexica in
-	  Analyzer::Automaton (and elsewhere?) -- chuck out legacy code
-	  - TODO: update Analyzer::EqPho::Dict, Analyzer::EqRW::Dict to
-	  work from 'inverted' dict formats (tt-dict-invert.perl,
-	  tt-db-invert.perl)
-	  + tiny tweak for compatibility: add word being analyzed to
-	  eqclass if it's not already there
+	  - added Analyzer::Dict::DB using Lingua::TT::DB::File (Berkeley DB): tolerably fast and quite handy
+	  - TODO: use new dict class(es) as exception lexica in Analyzer::Automaton (and elsewhere?) -- chuck out legacy code
+	  - TODO: update Analyzer::EqPho::Dict, Analyzer::EqRW::Dict  work from 'inverted' dict formats (tt-dict-invert.perl, tt-db-invert.perl)
+	  - tiny tweak for compatibility: add word being analyzed to eqclass if it's not already there
 
 v1.09 2010-10-27 13:05  moocow
-	* v1.09 2010-10-26 13:14  moocow
-	* added
-	  dta-cab-tt2csv.perl, dta-cab-tt2txt.perl, dta-cab-txt2tt.perl
-	* added CAB/Analyzer/MootSub.pm : post-processing
-	  hacks for moot (bash NE to original form)
-	* added tiger-local STTS
-	  hacks
-	* v1.09 2010-10-26 12:26  moocow
-	* v1.09 2010-10-26 11:33  moocow
-	* added lemma parsing to
-	  Analyzer::Automaton if {wantAnalysisLemma} is true (not by
-	  default)
+	* added dta-cab-tt2csv.perl, dta-cab-tt2txt.perl, dta-cab-txt2tt.perl
+	* added CAB/Analyzer/MootSub.pm : post-processing hacks for moot (bash NE to original form)
+	* added tiger-local STTS hacks
+	* added lemma parsing to Analyzer::Automaton if {wantAnalysisLemma} is true (not by default)
 	  + set wantAnalysisLemma=true in Analyzer::Morph
 	  + updated Format::TT to use generalized FST-analysis parsing code
-	  for (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|...)
-	* re-defined
-	  Format::Text as simple wrapper around Format::TT
-	* v1.09 2010-10-25 14:43  moocow
+	    - for (lts|eqpho|eqphox|morph|mlatin|rw|rw/lts|rw/morph|eqrw|...)
+	* re-defined Format::Text as simple wrapper around Format::TT
 	* added tagh/stts incompatibility hack table %Analyzer::Moot::TAGX
 	* added moot model
-	* v1.09 2010-10-25 10:01  moocow
-	* v1.09: load logic updates, new
-	  Analyzer::DmootSub, prepared for moot integration on dmoot output
-	* v1.09 2010-10-22 13:18  moocow
-	* v1.09:
-	  added Analyzer::EqPhoX
+	* load logic updates, new Analyzer::DmootSub, prepared for moot integration on dmoot output
+	* added Analyzer::EqPhoX
 
 v1.08 2010-10-21 14:04  moocow
-	* added dmoot/tiger to
-	  system/resouces
-	* v1.08 2010-10-21 10:40  moocow
-	* added 'dist' rule to
-	  makefile
-	* v1.08 2010-10-21 08:53  moocow
-	* v1.08: resource re-build
-	  update (649 texts) on kaskade for services
+	* added dmoot/tiger to system/resouces
+	* added 'dist' rule to makefile
+	* resource re-build update (649 texts) on kaskade for services
 
 v1.07 2010-10-20 11:43  moocow
-	* updated
-	  lexfilter: allow hyphens
-	* v1.07 2010-10-20 11:43  moocow
-	* updated
-	  lexfilter: allow hyphens
-	* v1.07 2010-10-20 11:41  moocow
-	* v1.07 2010-10-20 10:12  moocow
-	* re-linked
-	  dta-words.de.lex.latin1.tf to new words/current/ dir
-	* added
-	  from-tokwrap-xml/ for new build system
-	* re-linked
-	  dta-words.de.lex.latin1.tf to new words/current/ dir
-	* added
-	  from-tokwrap-xml/ for new build system
-	* moved ddc-based
-	  build system to from-ddc-xml
-	* added Text::Phonetic
-	  analyzers Soundex,Koeln,Metaphone
-	* v1.07 2010-10-04 14:39  moocow
-	* v1.07 2010-10-01 13:37  moocow
-	* added (untested)
-	  CAB/Analyzer/Alias.pm
-	* v1.07: added analyzer-local 'enabled'
-	  flag, per-call 'LABEL_enabled' flag
+	* updated lexfilter: allow hyphens
+	* re-linked dta-words.de.lex.latin1.tf to new words/current/ dir
+	* added from-tokwrap-xml/ for new build system
+	* moved ddc-based build system to from-ddc-xml
+	* added Text::Phonetic analyzers Soundex,Koeln,Metaphone
+	* added (untested) CAB/Analyzer/Alias.pm
+	* added analyzer-local 'enabled' flag, per-call 'LABEL_enabled' flag
 
 v1.06 2010-10-01 10:08  moocow
-	* v1.06 2010-09-30 15:07  moocow
-	* rc: symlink morphÂ§
+	* rc: symlink morph
 	* more safe updates
-	* more safe updates
-	* more safe updates
-	* more safe updates
-	* [r4175] + improved comment
-	  pass-through for TT,Text formats using $(tok,sent)->{_cmts}
-	* [r4175] + improved comment
-	  pass-through for TT,Text formats using $(tok,sent)->{_cmts}
-	* added Analyzer::typeKeys() method for controlled
-	  type/token distinction
+	* improved comment pass-through for TT,Text formats using $(tok,sent)->{_cmts}
+	* added Analyzer::typeKeys() method for controlled type/token distinction
 
 v1.05 2010-09-28 13:15  moocow
-	* more dmoot fixes
-	* dmoot fixes
-	* added -block-sents option to
-	  dta-cab-analyze.perl
-	* v1.05
-	  - block-wise tt analysis with dta-cab-analyze.perl
-	  - all type keys are inherited by default
-	  - new dta-cab-analysis -analyzer-class=CLASS option
-	  - new Chain::Multi analyzer option 'chain=C1,C2,...' parses
-	  user-defined sub-chains
+	* various dmoot fixes
+	* added -block-sents option to dta-cab-analyze.perl
+	* block-wise tt analysis with dta-cab-analyze.perl
+	* all type keys are inherited by default
+	* new dta-cab-analysis -analyzer-class=CLASS option
+	* new Chain::Multi analyzer option 'chain=C1,C2,...' parses user-defined sub-chains
 
 v1.04 2010-09-22 09:38  moocow
-	* v1.04 2010-09-21 13:48  moocow
-	* added -block-size=NLINES option
-	  to dta-cab-analyze.perl for pseudo-streaming TT analysis
-	* v1.04:
-	  updated MorphSafe: first- and geonames are now 'safe'
+	* added -block-size=NLINES option to dta-cab-analyze.perl for pseudo-streaming TT analysis
+	* updated MorphSafe: first- and geonames are now 'safe'
 
 v1.03 2010-05-19 10:36  moocow
 	* require Unicode::CharName
-	* updated system/resources using CAB v1.x on uhura (no complete
-	  re-build yet)
-	* small Analyzer::RewriteSub
-	  fix (canAnalyze() -> ANY (vs. ALL))
-	* v1.03: fixed system/resources plm
-	  file generation, brought dta-cab-cachegen.perl up to v1.x api
+	* updated system/resources using CAB v1.x on uhura (no complete re-build yet)
+	* small Analyzer::RewriteSub fix (canAnalyze() -> ANY (vs. ALL))
+	* fixed system/resources plm file generation, brought dta-cab-cachegen.perl up to v1.x api
 
 v1.02 2010-03-10 14:17  moocow
 	* format work (wip) form uhura
-	* (last change): added __DIE__ to caught
-	  server signals
-	* v1.02 2010-02-20 21:57  moocow
-	* (last change): added __DIE__ to caught
-	  server signals
-	* v1.02 2010-02-11 16:06  moocow
-	* v1.02 2010-02-08 14:52  moocow
-	* updated to v1.02
-	* tweet config
-	  system/cab-tweet.plm updated for new Chain::Tweet
-	* updated to v1.02
-	* tweet config
-	  system/cab-tweet.plm updated for new Chain::Tweet
+	* added __DIE__ to caught server signals
+	* tweet config system/cab-tweet.plm updated for new Chain::Tweet
 
 v1.01 2010-02-08 14:49  moocow
-	* fixes for
-	  tweet server, adapted CAB::Analyzer::Chain::Tweet
+	* fixes for tweet server, adapted CAB::Analyzer::Chain::Tweet
 	* tiny buglet fixes
-	* report Unicruft XS, C
-	  versions in analyzer
-	* v1.01 2010-01-23 19:40  moocow
-	* v1.01 2010-01-23 13:35  moocow
+	* report Unicruft XS, C versions in analyzer
 	* updated status commands
-	* v1.01 2010-01-23 12:14  moocow
-	* use NFC vs NFKC normalization
-	  in Unicruft (fixes mantis bug #140)
-	* [r3505] v1.x server-config updates
-	* [r3505] v1.x server-config updates
+	* use NFC vs NFKC normalization in Unicruft (fixes mantis bug #140)
+	* v1.x server-config updates
 
 v1.001 2010-01-22 15:42  moocow
 	* moved old cab.plm, cab-server.plm, cab-server-nodict.plm to v0.x
-	* removed externals link to de-tiger
-	  (breaks checkout for taxi user)
-	* re-factored (Chain->Chain::DTA) to
-	  (Chain->Chain::Multi->Chain::DTA)
-	  + got Server::XmlRpc working dta-xmlrpc-client.perl and
-	  Chain::DTA
-	  + server config is now MUCH prettier, since ugly chain-dependent
-	  analyzer goop is
-	  now relegated to a single method xmlRpcAnalyzers() in
-	  Chain::Multi
-	* added, tested class DTA::CAB::Chain::DTA
-	  to replace old DTA::CAB
-	* v1.001 2010-01-22 10:08  moocow
-	* added rules for
-	  human-readable .csv, .csv.ps, .csv.ps2
-	* v1.001 2010-01-21 15:56  moocow
-	* v1.001 2010-01-21 15:53  moocow
-	* v1.001 2010-01-21 14:29  moocow
-	* updated to use ddc .con
-	  file
-	* updated to use ddc .con
-	  file
-	* [r3487]
-	* [r3487]
+	* removed externals link to de-tiger (breaks checkout for taxi user)
+	* re-factored (Chain->Chain::DTA) to (Chain->Chain::Multi->Chain::DTA)
+	  + got Server::XmlRpc working dta-xmlrpc-client.perl and Chain::DTA
+	  + server config is now MUCH prettier
+	  + ugly chain-dependent analyzer goop is now relegated to a single method xmlRpcAnalyzers() in Chain::Multi
+	* added, tested class DTA::CAB::Chain::DTA to replace old DTA::CAB
+	* added rules for human-readable .csv, .csv.ps, .csv.ps2
+	* updated to use ddc .con file
 	* removed CAB::Analysis and sub-classes
 	* smoothed/fixed Analysis classes
-	  + it seems though that we can't rely on these, since they don't
-	  survive e.g. XML-RPC coding
-	  + also we need some hook besides analysis class, for parsers
-	  (data doesn't yet have a class)
-	  + we also appear to have solved the 'generic access' problems
-	  with closures, so we don't need
-	  analysis classes there
-	  + upshot: lose analysis classes
-	  - in next checkin
-	  §
-	* more
-	  fixes for CAB::Chain
-	  + dta-cab-analyze output for new chain now identical to old
-	  version (services) for test-kant-8k
+	  + it seems though that we can't rely on these, since they don't survive e.g. XML-RPC coding
+	  + also we need some hook besides analysis class, for parsers (data doesn't yet have a class)
+	  + we also appear to have solved the 'generic access' problems with closures, so we don't need analysis classes there
+	  + upshot: lose analysis classes in next checkin
+	* more fixes for CAB::Chain
+	  + dta-cab-analyze output for new chain now identical to old version (services) for test-kant-8k
 	  + TODO: format updates, documentation updates, ...
-	* v1.001 2010-01-12 15:55  moocow
-	* started re-factorization for abstract Chain
-	  analyzers
-	  - current conundrum: how to handle flexible {src}, {dst} as
-	  previously passed in in %opts e.g. for Automaton ?
+	* started re-factorization for abstract Chain analyzers
+	  - current conundrum: how to handle flexible {src}, {dst} as previously passed in in %opts e.g. for Automaton ?
 	  - idea: abstract Analysis class, API
 	* fixed buglet (no "return $tok" in MorphSafe analysis sub) --
-	  maybe re-think that API (e.g. analyze() is always destructive?)
-	  + next steps: re-factor CAB hacks into analyzers, get old CAB
-	  working as Analyzer::Chain
-	  : benchmark old closure-style analyzeToken() vs. new
-	  force-document analyzeTypes() [via XML-RPC? in-memory?]
-	  : add default control options to chain (e.g.
-	  doAnalyzeWhatever=>BOOL), add {name} convention for all analyzers
-	  : re-work I/O Formats -- better flexibility & handling of new
-	  fields
-	  "
-	* v0.18 2010-01-06 11:30  moocow
-	* fixed bug 'no start
-	  without stop on dta-cab.sh restart'
+	  - maybe re-think that API (e.g. analyze() is always destructive?)
+	  - next steps: re-factor CAB hacks into analyzers, get old CAB working as Analyzer::Chain
+	  - benchmark old closure-style analyzeToken() vs. new force-document analyzeTypes() [via XML-RPC? in-memory?]
+	  - add default control options to chain (e.g. doAnalyzeWhatever=>BOOL), add {name} convention for all analyzers
+	  - re-work I/O Formats -- better flexibility & handling of new fields
+	* fixed bug 'no start without stop on dta-cab.sh restart'
 
 v0.18 2009-12-01 14:46  moocow
-	* Format/XmlNative.pm
-	  safety fixes
+	* Format/XmlNative.pm safety fixes
 
 v0.17 2009-11-12 10:30  moocow
-	* v0.17 2009-11-12 10:25  moocow
-	* v0.16 2009-11-12 10:20  moocow
-	* v0.16 2009-11-12 10:18  moocow
-	* [r3313]
+	* DocClassify dummy document fixes
 
 v0.16 2009-11-12 10:18  moocow
-	* [r3313]
-	* v0.16 2009-11-12 10:01  moocow
-	* v0.16 2009-11-12 09:44  moocow
-	* v0.16 2009-11-12 09:31  moocow
-	* v0.16 2009-11-12 09:06  moocow
-	* v0.16 2009-11-11 14:36  moocow
-	* v0.16 2009-11-11 14:33  moocow
-	* v0.16 2009-10-19 15:17  moocow
-	* v0.16 2009-10-19 15:13  moocow
-	* v0.15 2009-10-19 14:47  moocow
-	* v0.15 2009-10-19 14:30  moocow
-	* v0.15 2009-10-16 09:52  moocow
-	* v0.15 2009-10-16 09:47  moocow
 	* updated pid files
 
 v0.15 2009-10-16 09:45  moocow
-	* added configs
-	  tweet-server-[1234].(rc|plm) for round-robin
-	* v0.15 2009-09-24 19:19  moocow
-	* use 'funconly-nofeatures'
-	  morph variant by default
-	* v0.15 2009-09-24 15:22  moocow
-	* v0.15 2009-09-24 15:16  moocow
-	* v0.15 2009-09-24 13:40  moocow
-	* v0.15 2009-09-24 11:17  moocow
-	* v0.15 2009-09-24 11:13  moocow
-	* v0.15 2009-09-24 10:58  moocow
-	* v0.15 2009-09-24 10:25  moocow
+	* added configs tweet-server-[1234].(rc|plm) for round-robin
+	* use 'funconly-nofeatures' morph variant by default
 	* add @NEW tag to DHMM
-	* v0.15 2009-09-24 09:52  moocow
-	* added tag @NEW to
-	  negra-yy.123
-	* v0.15 2009-09-23 15:21  moocow
-	* v0.15 2009-09-23 15:02  moocow
-	* [r3222]
-	* [r3222]
-	* v0.15 2009-09-23 14:00  moocow
-	* v0.15 2009-09-23 13:59  moocow
-	* v0.15 2009-09-23 13:44  moocow
-	* v0.15 2009-09-23 13:43  moocow
-	* v0.15 2009-09-23 13:33  moocow
-	* use corpus as target language
-	  for tweet rewrite (also re-build ../automata/tweeted)
-	* v0.15 2009-09-23 12:44  moocow
-	* v0.15 2009-09-23 12:43  moocow
-	* v0.15 2009-09-23 12:39  moocow
-	* added tweet-server.rc to
-	  dta-cab.sh
-	* v0.15 2009-09-23 12:27  moocow
-	* v0.14 2009-09-23 12:25  moocow
-	* v0.14 2009-09-23 12:15  moocow
-	* [r3206]
+	* added tag @NEW to negra-yy.123
+	* use corpus as target language for tweet rewrite (also re-build ../automata/tweeted)
+	* added tweet-server.rc to dta-cab.sh
 
 v0.14 2009-09-23 12:15  moocow
-	* [r3206]
 	* tweet stuff
 	* added negra-yy.123
-	* v0.14 2009-09-23 10:24  moocow
-	* v0.14 2009-09-23 09:15  moocow
-	* v0.14 2009-09-16 12:56  moocow
-	* v0.14 2009-09-16 11:35  moocow
-	* added
-	  dta-words.tf
-	* v0.14 2009-09-08 15:03  moocow
+	* added dta-words.tf
 	* added basic PoS-tagger CAB::Analyzer::Moot
 	* added dta-words.de.lex.latin1.tf.t
 	* re-routed word-list
-	* removed word-list
-	  dta-words.lex.tf: now build by 'make -C words/'
-	* words/: build from
-	  /home/dta/dta_tokenized_xml
-	* added words/
-	  make build-system for word-lists
-	* v0.14 2009-08-28 13:38  moocow
-	* updated CAB: use FSTs for eqpho, eqrw: only get
-	  latin-1 forms (xlit/unicruft) on output side, but this is exactly
-	  what we need for DDC
+	* removed word-list dta-words.lex.tf: now build by 'make -C words/'
+	* words/: build from /home/dta/dta_tokenized_xml
+	* added words/ make build-system for word-lists
+	* updated CAB: use FSTs for eqpho, eqrw
+	  - only get latin-1 forms (xlit/unicruft) on output side, but this is exactly what we need for DDC
 
 v0.13 2009-08-28 13:36  moocow
-	* updated eqrw rules (use FST
-	  instead of dict)
+	* updated eqrw rules (use FST instead of dict)
 	* added EqRW.pm, EqRW/Dict.pm
 	* moved Dict::EqRW -> EqRW::Dict
-	* updated version to 0.13
-	* fixed latin-1/utf-8 bug in
-	  CAB::Analyzer::Automaton
-	* updated version to 0.13
-	* fixed latin-1/utf-8 bug in
-	  CAB::Analyzer::Automaton
+	* fixed latin-1/utf-8 bug in CAB::Analyzer::Automaton
 
 v0.12 2009-08-06 11:29  moocow
-	* v0.12 2009-08-06 10:32  moocow
-	* v0.12 2009-08-03 15:24  moocow
-	* equiv-expander work;
-	  TODO: get eqrw working via FST
+	* equiv-expander work
+	  - TODO: get eqrw working via FST
 
 v0.11 2009-08-03 14:26  moocow
 	* removed eqpho-dict
-	  + TODO: get eqrw working with 1-sided FST (explicit cascade
-	  direct from token-stored rw output)
+	  - TODO: get eqrw working with 1-sided FST (explicit cascade direct from token-stored rw output)
 	* added EqPho/FST.pm
-	  + updated Analyzer::Automaton for non-deterministic analysis
-	  (e.g. split Text->Pho and Pho->EqText into 2 FST analyzers=)
-	* updated dta-eqrw.dict
-	  (after additional punishments for 'hülfe' in target lg)
-	* v0.11 2009-07-27 13:22  moocow
-	* more rewrite-equivalence
-	  class testing
+	  - updated Analyzer::Automaton for non-deterministic analysis
+	  - e.g. split Text->Pho and Pho->EqText into 2 FST analyzers
+	* updated dta-eqrw.dict (after additional punishments for 'hülfe' in target lg)
+	* more rewrite-equivalence class testing
 	  + got integrated in DTA::CAB class, server config, etc.
 	  + got dictionary building
 	  + found some more data-type bugs (tagh, rewrite, msafe, ...):
-	  hÃ¼lfe -> helf~en ... [subjII] : see misc/notes/*
-	  + found more tokenizer problems/bugs: see
-	  misc/notes/tokenizer.txt
-	  + added XmlRpc server config arg 'aos=>\%name2options' to allow
-	  server to set default options on a per-analyzer basis
-	  - useful for e.g. always requiring 'xlit' to run without
-	  shamelessly wasting memory by duplicationg $cab
-	  + new version = 0.11
+	    - hülfe -> helf~en ... [subjII] : see misc/notes/*
+	  + found more tokenizer problems/bugs: see misc/notes/tokenizer.txt
+	  + added XmlRpc server config arg 'aos=>\%name2options' to allow server to set default options on a per-analyzer basis
+	    - useful for e.g. always requiring 'xlit' to run without shamelessly wasting memory by duplicationg $cab
 
 v0.10 2009-07-24 14:37  moocow
 	* added dta-cab-compile.perl: compile analyzer configs to binary
-	  + added binary I/O routines for analyzers in DTA::CAB::Persistent
-	  + re-worked Dict::EqClass to use non-deterministic kernel (so now
-	  any relation can be used to induce the equivalence class)
-	  + added system/resources/Makefile rules to generate
-	  rewrite-equivalence dictionary for use with Dict::EqClass
-	  - initial tests seem to work well
+	* added binary I/O routines for analyzers in DTA::CAB::Persistent
+	* re-worked Dict::EqClass to use non-deterministic kernel (so now any relation can be used to induce the equivalence class)
+	* added system/resources/Makefile rules to generate rewrite-equivalence dictionary for use with Dict::EqClass
+	* initial tests seem to work well
 
 v0.09 2009-07-24 14:34  moocow
-	* v0.09 2009-07-23 14:38  moocow
-	* dictionary/cache
-	  updates
+	* dictionary/cache updates
 
 v0.08 2009-07-23 14:34  moocow
-	* removed stale
-	  old-format cache files
-	* added cache-generation to
-	  resources Makefile
-	* moved EqClass, LatinDict to
-	  Dict:: namespace
-	* v0.08: added EqPho analyzer via Gfsm::XL
-	  cascade: loads quicker, runs slower, still maybe some buglets
-	* v0.07 2009-07-06 09:41  moocow
-	* updated rewrite dict with
-	  better upper/lower case heuristics
+	* removed stale old-format cache files
+	* added cache-generation to resources Makefile
+	* moved EqClass, LatinDict to Dict:: namespace
+	* added EqPho analyzer via Gfsm::XL cascade
+	  - loads quicker, runs slower, still maybe some buglets
+	* updated rewrite dict with better upper/lower case heuristics
 
 v0.07 2009-07-03 13:42  moocow
-	* added linear-function max_weight computation
-	  for Gfsm::XL (rewrite) cascades
+	* added linear-function max_weight computation for Gfsm::XL (rewrite) cascades
 
 v0.0602 2009-07-03 13:39  moocow
-	* updated system/cab.plm
-	  to use new rewrite FST, dict
+	* updated system/cab.plm to use new rewrite FST, dict
 	* updated dta-rw.dict
-	* v0.0602 2009-06-30 08:38  moocow
-	* v0.0602 2009-06-30 08:33  moocow
-	* added -log-config option to
-	  dta-cab-analyze.perl
-	* added
-	  cab-server-nodict.plm: useful for testing e.g. rewrite cascade
-	  w/o exception lexicon
-	* v0.0602 2009-06-26 14:35  moocow
-	* MorphSafe back-changes: ITJ
-	  is unsafe
-	* v0.0602: minor
-	  MorphSafe changes, new rw dict
+	* added -log-config option to dta-cab-analyze.perl
+	* added cab-server-nodict.plm: useful for testing e.g. rewrite cascade w/o exception lexicon
+	* MorphSafe back-changes: ITJ is unsafe
+	* minor MorphSafe changes, new rw dict
 
 v0.0601 2009-06-26 14:28  moocow
-	* v0.0601 2009-06-26 14:21  moocow
-	* added
-	  dta-rw.dict, updated MorphSafe
-	* added dta-rw.dict: extracted
-	  from grimm/wm-eval data
+	* added dta-rw.dict, updated MorphSafe
+	* added dta-rw.dict: extracted from grimm/wm-eval data
 	* updated resource makefile
-	* added symlink
-	  taxi-resources
-	* v0.0601: Morph/Latin uses tolower=>1
+	* added symlink taxi-resources
+	* Morph/Latin uses tolower=>1
 
 v0.06 2009-06-25 18:48  moocow
-	* Morph/Latin: set
-	  tolower=>1 by default
-	* v0.06 2009-06-24 09:38  moocow
-	* minor server log format
-	  and config updates
-	* v0.06 2009-06-24 09:20  moocow
-	* v0.06 2009-06-22 13:08  moocow
+	* Morph/Latin: set tolower=>1 by default
+	* minor server log format and config updates
 	* added magic bless() to cab.plm
 	* added latin resource to cab.plm
-	* got latin recognizer working via
-	  Gfsm subclass Analyzer::Morph::Latin
+	* got latin recognizer working via Gfsm subclass Analyzer::Morph::Latin
 
 v0.05 2009-06-17 14:49  moocow
-	* v0.05 2009-06-11 15:10  moocow
 	* more dta-cab link-up stuff
-	* more attribute
-	  pass-through for dta-tokwrap sentence & document attributes
-	* v0.05: added dta-tokwrap pass-through token attributes
-	  {other}{xmlid}, {other}{chars}
+	* more attribute pass-through for dta-tokwrap sentence & document attributes
+	* added dta-tokwrap pass-through token attributes {other}{xmlid}, {other}{chars}
 
 v0.04 2009-06-11 12:21  moocow
-	* v0.04 2009-06-10 14:19  moocow
-	* v0.04 2009-06-09 14:32  moocow
 	* added Unicruft to Makefile.PL PREREQ_PM
-	* (oops, I meant v0.04: replaced Transliterator
-	  with Unicruft)
-	* v0.03: replaced
-	  Transliterator analyzer with Unicruft (using libunicruft)
+	* replaced Transliterator with Unicruft (using libunicruft)
 
 v0.03 2009-06-09 14:26  moocow
-	* more encoding hell, replaced
-	  Transliterator with Unicruft-based version
-	* added parsing and
-	  pass-through of '$tok->{other}' attributes for Format::XmlNative
+	* more encoding hell, started replace Transliterator with Unicruft-based version
+	* added parsing and pass-through of '$tok->{other}' attributes for Format::XmlNative
 	* updated Text, TT Formats
-	* updated log4perl config to use
-	  24-hour time
+	* updated log4perl config to use 24-hour time
 	* updated init script
 	* minor doc fix
-	* added
-	  -verbose options to perl scripts
+	* added -verbose options to perl scripts
 	* more doc updates
 	* doc update
-	* updated docs,
-	  incremented version to v0.03
+	* updated docs, incremented version to v0.03
 
 v0.02 2009-06-05 12:58  moocow
-	* v0.02 2009-06-02 12:55  moocow
-	* v0.02 2009-06-02 12:44  moocow
-	* added Format/XmlTW.pm
-	  : dta-tokwrap interface format (1st stab)
+	* added Format/XmlTW.pm: dta-tokwrap interface format (1st stab)
 	* doc fix
-	* [r2548]
-	* [r2548]
-	* added test-word
-	  'oede' to dta-lts.china.dict
-	* added analyzer
-	  aliases to cab-server.plm, system/cab-server.plm
-	* moved dta-cab-multi.sh to
-	  dta-cab.sh
-	* changed
-	  default xml-rpc port to 8088
-	* v0.01 2009-05-11 08:39  moocow
-	* v0.01 2009-05-11 07:46  moocow
-	* moved Protocol.pod to
-	  XmlRpcProtocol.pod
+	* added test-word 'oede' to dta-lts.china.dict
+	* added analyzer aliases to cab-server.plm, system/cab-server.plm
+	* moved dta-cab-multi.sh to dta-cab.sh
+	* changed default xml-rpc port to 8088
+	* moved Protocol.pod to XmlRpcProtocol.pod
 
 v0.01 2009-05-08 20:51  moocow
-	* v0.01 2009-05-08 14:13  moocow
-	* v0.01 2009-05-08 14:05  moocow
-	* v0.01 2009-05-08 14:04  moocow
 	* updated cab.plm
-	* v0.01 2009-05-08 13:20  moocow
-	* v0.01 2009-05-08 13:15  moocow
-	* [r2531]
-	* [r2531]
-	* added system/
-	  directory: system-wide installation stuff
-	* added client-request-level logging
-	  to Server::XmlRpc (used RPC::XML::Procedure subclass)
+	* added system/ directory: system-wide installation stuff
+	* added client-request-level logging to Server::XmlRpc (used RPC::XML::Procedure subclass)
 	* added server options: -daemon , -pidfile=FILE
-	* v0.01 2009-05-08 08:08  moocow
-	* MorphSafe fixes
-	  (for changed analysis structure
-	* v0.01 2009-05-08 07:42  moocow
-	* updated program --version behavior:
-	  report some SVN keywords
-	* v0.01 2009-05-08 07:37  moocow
+	* MorphSafe fixes (for changed analysis structure)
+	* updated program --version behavior: report some SVN keywords
 	* added svn:keywords
-	* v0.01 2009-05-07 13:31  moocow
-	* moire documentation
-	* v0.01 2009-05-07 12:10  moocow
 	* more documentation
-	* documented some more
 	* documented (Client|Server)/XmlRpc.pm
 	* documented Analyzers
-	  + TODO: more docs
-	  + TODO: DTA::CAB::Client
-	  + TODO: DTA::CAB::Analyzer::EqClass
 	* documented, documented, documented
-	* moved *.POD to *.rpod (avoid
-	  auto-installation)
-	* v0.01 2009-02-18 16:17  moocow
-	* started work on equivalence-class-expander
-	  CAB::Analyzer::EqClass
-	* changed default suffix of perl loadable files to '.plm': avoid
-	  interfering with MakeMaker default rules
-	* changed morph analysis structure to HASH ref: better
-	  maintainability
-	* updated cachegen, formats for
-	  ltsText
-	  + TODO: always include analyzed text with automaton analyses:
-	  major structural changes
-	* got basic format guessing from
-	  filenames working
-	* chased down encode/decode goof
-	  causing Format::Storable to puke with XmlRpc server/client raw
-	  data queries
-	* format checks: found
-	  another bug in Storable (storables output via xmlrpc -raw are no
-	  longer decodable)
-	* removed old Formatter/ and
-	  Parser/ namespaces
+	* moved *.POD to *.rpod (avoid auto-installation)
+	* started work on equivalence-class-expander CAB::Analyzer::EqClass
+	* changed default suffix of perl loadable files to '.plm'
+	  + avoid interfering with MakeMaker default rules
+	* changed morph analysis structure to HASH ref: better maintainability
+	* updated cachegen, formats for ltsText
+	  + TODO: always include analyzed text with automaton analyses: major structural changes
+	* got basic format guessing from filenames working
+	* chased down encode/decode goof causing Format::Storable to puke with XmlRpc server/client raw data queries
+	* format checks: found another bug in Storable
+	  + storables output via xmlrpc -raw are no longer decodable
+	* removed old Formatter/ and Parser/ namespaces
 	* added Analyzer/LTS.pm : lts analysis
-	  + moved I/O parser-formatter pairs to single modules under
-	  namespace DTA::CAB::Format
-	* removed old Formatter/ and
-	  Parser/ namespaces
+	  + moved I/O parser-formatter pairs to single modules under namespace DTA::CAB::Format
+	* removed old Formatter/ and Parser/ namespaces
 	* added Analyzer/LTS.pm : lts analysis
-	  + moved I/O parser-formatter pairs to single modules under
-	  namespace DTA::CAB::Format
+	  + moved I/O parser-formatter pairs to single modules under namespace DTA::CAB::Format
 	* enforced unified formatter API
 	  + added command-line analyzer dta-cab-analyze.perl
 	* moved Parser::Freeze to Parser::Storable
-	* renamed Formatter::Freeze to
-	  Formatter::Storable
-	* v0.01 2009-02-11 10:24  moocow
-	* renamed Formatter::Freeze to
-	  Formatter::Storable
-	* v0.01 2009-02-10 14:19  moocow
-	* added
-	  dta-cab-cachegen.perl: generate static morph, rewrite caches
-	* got raw data comms basically
-	  working; XML-RPC is more a hindrance than a help here
-	* server I/O basically
-	  working; still goofiness: test1.t 'ist' not getting morph
-	  parsed... wtf?
-	* added
-	  basic parsers; tested parser/formatter pairs
+	* renamed Formatter::Freeze to Formatter::Storable
+	* renamed Formatter::Freeze to Formatter::Storable
+	* added dta-cab-cachegen.perl: generate static morph, rewrite caches
+	* got raw data comms basically working; XML-RPC is more a hindrance than a help here
+	* server I/O basically working; still goofiness:
+	  - test1.t 'ist' not getting morph parsed... wtf?
+	* added basic parsers; tested parser/formatter pairs
 	* added XML-RPC client program (TODO: document parsing)
 	  + added simple XML-RPC formatter (really just a debugging toy)
-	* v0.01 2009-02-06 12:00  moocow
 	* got 'real' xmlrpc server script written & running
 	* added DTA::CAB::Formatter class, example subclasses
 	  + added DTA::CAB::Parser class (needs work)
@@ -1851,3 +1452,6 @@ v0.01 2009-05-08 20:51  moocow
 	* got things basically set up and working
 	* moved analysis modules to DTA::CAB::Analyzer:: namespace
 	* added basic automaton classes; mostly just ganked from Lingua::LTS
+
+v0.00 2008-12-10 11:24  moocow
+	* added DTA-CAB
