@@ -73,7 +73,7 @@ WriteMakefile
 		    'CDB_File' =>0,
 		    'JSON::XS' =>0,
 		    #'YAML::XS' =>0,  ##-- debian package libyaml-libyaml-perl; optional
-		    'XML::LibXML' => 2.0128,
+		    'XML::LibXML' => 2.0001,
 		    'Template' =>0,
 		    'LWP::UserAgent' =>0,
 		    'HTTP::Daemon' =>0,
@@ -81,7 +81,7 @@ WriteMakefile
 		    ##--
 		    'Log::Log4perl' => 1.07,
 		    #'Unicode::CharName' => 0, #1.07,
-		    'Unicode::String' => 2.10,
+		    'Unicode::String' => 2.09,
 		    'RPC::XML' => 0.59,
 		    ##
 		    #'Log::Dispatch' => 2.22, ##-- for cab servers, FileRotate
