@@ -2,7 +2,7 @@
 ##
 ## Change log for perl distribution DTA::CAB
 
-v1.106 2019-02-11  moocow
+v1.106 2019-02-12  moocow
 	* added Changes (this file: extracted from SVN logs & reformatted)
 	* cleanup for CPAN release
 	* SVNVERSION tweaks (revision only, no root URL)

@@ -5,5 +5,5 @@
 ##
 package DTA::CAB::Version;
 $DTA::CAB::VERSION = '1.106';
-$DTA::CAB::SVNVERSION = '29503:29510M';
+$DTA::CAB::SVNVERSION = '29511';
 1;
