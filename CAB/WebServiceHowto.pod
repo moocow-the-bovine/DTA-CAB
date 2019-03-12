@@ -1136,20 +1136,35 @@ becomes
 
  <w xml:id="w3" cab:t="Elephant" cab:word="Elefant" cab:tag="NN" cab:lemma="Elefant">Elephant</w>
 
+=back
+
+=cut
+
+##========================================================================
+## Advanced Usage: TEI+ling
+=pod
+
+=head3 Post-processing TEI+ling XML
+
+The following L<XSL|https://en.wikipedia.org/wiki/XSL> scripts are provided for post-processing the
+L<TEI+ling output format|/TEI-ling>.
+
+=over 4
 
 =item L<ling2norm.xsl|http://./ling2norm.xsl>
 
-Variant of L<spliced2norm.xsl|/spliced2norm.xsl> for use with L<TEI-ling> input.
+Variant of L<spliced2norm.xsl|/spliced2norm.xsl> for use with L</TEI-ling> input.
 
 =item L<ling2plain.xsl|http://./ling2plain.xsl>
 
-Variant of L<ling2norm.xsl|/spliced2norm.xsl> which outputs plain (normalized) text
-rather than XML.  Note that serial order of the output text is B<ALWAYS> in strict TEI-document
-order, since this script does not respect any
+Variant of L<ling2norm.xsl|/ling2norm.xsl> which outputs plain (normalized) text
+rather than XML.  Note that the output text is B<ALWAYS> in strict TEI-document
+serial order, since this script does not respect any
 serialization hints encoded by TEI "linking" attributes or
-provided by L<DTA::TokWrap|http://odo.dwds.de/~jurish/software/dta-tokwrap/> --
-prefer a "flat" serial document format such as L</XmlTokWrapFast> or L</XmlLing>
-if you want to ensure a linguistically plausible serial order.
+provided by L<DTA::TokWrap|http://odo.dwds.de/~jurish/software/dta-tokwrap/>.
+If you want to ensure a linguistically plausible serial order,
+you should prefer a "flat" serial document format such as L</XmlTokWrapFast>
+or L</XmlLing>.
 
 
 =back
