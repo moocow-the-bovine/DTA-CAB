@@ -232,6 +232,8 @@ HTML_EXTRA ?= \
   doc-extra/spliced2cab.xsl \
   doc-extra/spliced2ling.xsl \
   doc-extra/tcf-orthswap.xsl \
+  doc-extra/ling2norm.xsl \
+  doc-extra/ling2plain.xsl \
   doc-extra/cab-screenshot-annotated.png
 
 ##-- lifted from MakeMaker blibdir section
