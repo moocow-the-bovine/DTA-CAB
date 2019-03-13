@@ -545,7 +545,7 @@ L<1800-1900|http://www.deutschestextarchiv.de/demo/cab/?a=default1.1800-1900&q=a
 =head3 Format Conversion
 
 The CAB server can be used to convert between various
-supported L<IO Formats|/I-O Formats>.  In this mode,
+supported L<IE<sol>O Formats|/I-O Formats>.  In this mode,
 no analysis is performed on the input data
 (with the exception of tokenization for raw untokenized input),
 but the input document is parsed and re-formatted according to
@@ -560,11 +560,351 @@ L<file upload queries|/A File Query> to convert analyzed files.
 If you only need to tokenize raw text files, consider using
 the more efficient L<WASTE tokenizer web-service|http://www.dwds.de/waste/>
 directly,
-or the L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer,
+or the CLARIN-D L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer,
 which offers a number of different tokenizer components.
 
 =cut
 
+##========================================================================
+## Analyzers and Attributes
+=pod
+
+=head2 Analyzers and Attributes
+
+Each L<analysis chain|/Analysis Chains> is (as the name suggests) implemented as a
+finite list of atomic L<DTA::CAB::Analyzer|DTA::CAB::Analyzer> objects, the
+"component analyzers".  The component analyzers in a chain are run in strict serial order
+(one after the other), and later-running components can and do refer to the results of
+analysis performed by components which have already been run.
+Each L<component analyzer|/Analysis Components>
+populates zero or more
+L<token-|DTA::CAB::Token>,
+L<sentence-|DTA::CAB::Sentence>, and/or
+L<document-|DTA::CAB::Document>-level attributes; typically, the component C<X>
+will write the results of its analysis to the token-attribute C<X>
+(e.g. the C<morph> component populates the attribute C<$w.morph>).
+
+In the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> configuration,
+each individual L<component analyzer|/Analysis Components> C<X> can be addressed explicitly by means of the analysis chain C<sub.X>,
+and the default chain of components up to and including C<X> can be invoked by the analysis chain C<default.X>,
+e.g. the morphological analysis component L<C<morph>|/morph> can be invoked directly by selecting the chain
+C<sub.morph>, and together with its prerequisites by selecting the chain C<default.morph>.
+
+
+=cut
+
+##------------------------------------------------------
+## Analysis Components
+=pod
+
+=head3 Analysis Components
+
+This section describes the atomic analysis components
+provided by the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> configuration.
+
+=over 4
+
+=item L<static|DTA::CAB::Analyzer::Cache::Static>
+
+Static type-wise analysis cache for
+the L<attributes|/Analysis Attributes>
+C<eqphox>, C<errid>, C<exlex>, C<f>, C<lts>, C<mlatin>, C<morph>, C<msafe>, C<rw>, C<xlit>, C<lang>, and C<pnd>
+based on the most recent release of the L<I<Deutsches Textarchiv>|http://www.deutschestextarchiv.de> corpus,
+typically less than one week old.
+
+=item L<exlex|DTA::CAB::Analyzer::ExLex>
+
+Type-wise exception lexicon extracted from the
+L<DTA EvalCorpus|http://odo.dwds.de/~jurish/software/dtaec/>
+and the DTA::CAB error database (demo L<here|http://kaskade.dwds.de/demo/caberr/>),
+typically updated weekly.
+
+=item L<tokpp|DTA::CAB::Analyzer::TokPP>
+
+Type-wise heuristic token preprocessor used to identify punctuation, numbers, quotes, etc.
+
+=item L<xlit|DTA::CAB::Analyzer::Unicruft>
+
+Deterministic type-wise character transliterator based on L<libunicruft|http://odo.dwds.de/~moocow/software/unicruft/>,
+mostly useful for handling extinct characters and diacritics.
+
+=item L<lts|DTA::CAB::Analyzer::LTS>
+
+Deterministic type-wise phonetization ("letter-to-sound" mapping)
+via L<Gfsm|http://kaskade.dwds.de/~moocow/mirror/projects/gfsm/> transducer
+as described in L<Jurish (2012), Ch. 1|http://./#jurish2012>.
+
+
+=item L<morph|DTA::CAB::Analyzer::Morph>
+
+Type-wise morphological analysis of the (transliterated) surface form
+via L<Gfsm|http://kaskade.dwds.de/~moocow/mirror/projects/gfsm/> transducer.
+The default DTA analysis chanin uses a modified version of the
+L<TAGH|https://www.dwds.de/static/publications/text/Geyken_Hanneforth_fsmnlp.pdf>
+morphology FST.
+
+=item L<mlatin|DTA::CAB::Analyzer::Morph::Latin>
+
+Type-wise Latin pseudo-morphology for (transliterated) surface forms
+based on the finite word-list distributed with
+the
+"L<William Whitaker's Words|https://sourceforge.net/projects/wwwords/>"
+Latin dictionary.
+
+=item L<msafe|DTA::CAB::Analyzer::MorphSafe>
+
+Heuristics for detecting "suspicious" analyses supplied
+by the L</morph> component (L<TAGH|https://www.dwds.de/static/publications/text/Geyken_Hanneforth_fsmnlp.pdf>),
+as described in L<Jurish (2012), App. A.4|http://./#jurish2012>.
+
+=item L<langid|DTA::CAB::Analyzer::LangId::Simple>
+
+Simple sentence-wise language guesser based on stopword lists
+extracted from the python L<NLTK project|http://www.nltk.org/>.
+Also supports the pseudo-language C<XY>, which is typically assigned
+for mathematical notation, abbreviations, or other extra-lexical material.
+
+=item L<rw|DTA::CAB::Analyzer::Rewrite>
+
+Type-wise I<k>-best weighted finite-state rewrite cascade conflator ("nearest neighbors")
+via L<GfsmXL|http://kaskade.dwds.de/~moocow/mirror/projects/gfsm/#gfsmxl> transducer cascade.
+as described in L<Jurish (2012), Ch. 2|http://./#jurish2012>
+
+=item L<eqphox|DTA::CAB::Analyzer::EqPhoX>
+
+Type-wise pohonetic equivalence conflator using a
+L<GfsmXL|http://kaskade.dwds.de/~moocow/mirror/projects/gfsm/#gfsmxl> transducer cascade;
+requires prior L</lts> analysis.
+Unlike the presentation in L<Jurish (2012), Ch. 3|http://./#jurish2012>,
+the current implementation uses a I<k>-best search strategy
+over an infinite target language derived from the
+L<TAGH|https://www.dwds.de/static/publications/text/Geyken_Hanneforth_fsmnlp.pdf>
+morphology for improved recall.
+
+=item L<dmoot|DTA::CAB::Analyzer::Moot::Boltzmann>
+
+Sentence-wise conflation candidate disambiguator as described in
+L<Jurish (2012), Ch. 4|http://./#jurish2012>.  Attempts to determine
+the "best" modern form from the canidate conflations provided by
+the L</exlex>, L</xlit>, L</eqphox>, and L</rw> components,
+after consideration of the properties provided by the
+L</morph>, L</msafe>, L</mlatin>, and L</langid> components
+(e.g. sentences already identified as consisting primarily of
+foreign-language material will B<not> be "forced" onto contemporary
+German).
+
+=item L<dmootsub|DTA::CAB::Analyzer::MootSub>
+
+Sentence-wise post-processing for the L</dmoot> HMM.
+Mostly useful for performing L<morphological analysis|/morph> on
+non-trivial canonicalizations supplied by L</dmoot>.
+
+=item L<moot|DTA::CAB::Analyzer::Moot>
+
+Sentence-wise part-of-speech (PoS) tagging using
+the L<moot|http://kaskade.dwds.de/~moocow/mirror/projects/moot/> tagger
+on the observations (word forms) provided by L</dmoot> or the raw
+input token text and the morphological ambiguity classes supplied
+by C</dmootsub> or C</morph>.
+
+=item L<mootsub|DTA::CAB::Analyzer::MootSub>
+
+Sentence-wise post-processing for the L</moot> tagger.
+Mostly useful for determining the "best" lemma for the canonical
+word form (L</dmoot> or token text) and PoS-tag selected by
+by L</moot> from the set of canonical morphological analyses
+(L</dmootsub> or L</morph>).
+
+=back
+
+=cut
+
+##------------------------------------------------------
+## Analysis Attributes
+=pod
+
+=head3 Analysis Attributes
+
+This section describes the most common analysis attributes
+used by the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> configuration.
+Each attribute is described by a template such as:
+
+ data: $OBJ->{LABEL} = CODE
+ text: +[LABEL] TEXT
+ hidden: HIDDEN
+
+where:
+
+=over 4
+
+=item *
+
+C<$OBJ-E<gt>{ATTR} = CODE> is Perl notation for the underlying data-structure of the attribute.
+C<$OBJ> is one of C<$w>, C<$s>, or C<$doc> to indicate
+a
+L<token-|DTA::CAB::Token>,
+L<sentence-|DTA::CAB::Sentence>,
+or L<document-|DTA::CAB::Document>-level attribute, respectively.
+If unspecified, C<ATTR> is identical to the attribute name itself,
+and C<CODE> is a simple string containing the atomic attribute value.
+
+=item *
+
+C<+[LABEL] TEXT> is the L</Text>-Format notation for the corresponding attribute.
+If unspecified, C<LABEL> is identical to the attribute name itself,
+and C<TEXT> is a simple string containing the atomic attribute value.
+
+=item *
+
+C<HIDDEN> is either "yes" or "no", and indicates whether the attribute's value is suppressed in the
+output of the publicly accessible web-service.
+If unspecified, the attribute is not hidden.
+
+=back
+
+The following attributes are used by the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> chain:
+
+=over 4
+
+=item dmoot
+
+ perl: $w->{dmoot} = { tag=>$CANON, analyses=>[ { tag=>$CANDIDATE, prob=>$COST }, ... ] }
+ text: +[dmoot/tag] CANON
+       +[dmoot/analysis] CANDIDATE <COST>
+       +[dmoot/analysis] ...
+
+HMM conflation candidate disambugiation supplied by the L</dmoot> component.
+C<$CANON> represents the "best" modern form for the input token L</text>, and the candidate
+conflations are represented by elements of the C<analyses> array.
+
+=item eqphox
+
+ perl: $w->{eqphox} = [ { w=>$COST, hi=>$CANDIDATE }, ... ]
+ text: +[eqphox] CANDIDATE <COST>
+       +[eqphox] ...
+
+Phonetic conflation candidate(s) supplied by the L</eqphox> component.
+
+=item exlex
+
+L<Exception lexicon|/exlex> entry (preferred modern form) for the input type (L</text>), if any.
+
+=item errid
+
+Error-ID from the DTA::CAB error database giving rise to the
+L<exception lexicon|/exlex> entry for the input type (L</text>), if any.
+The C<errid> attribute value may also be the designated string "C<ec>", indicating that the exception lexicon entry
+was automatically generated from the L<DTA EvalCorpus|http://odo.dwds.de/~jurish/software/dtaec/>.
+
+=item f
+
+Frequency of the surface type in the DTA corpus, if available.
+
+=item lang
+
+ perl: $w->{lang} = [ $LANG, ... ]
+ text: +[lang] LANG
+       +[lang] ...
+
+Language(s) in which the current token is known to occur, as determined by the
+L</morph>, L</mlatin>, and/or L</lang> components.
+
+ perl: $s->{lang} = $LANG
+ text: %% $s:lang=LANG
+
+As a sentence-attribute, C<lang> indicates the single best guess source language for the sentence.
+The "best guess" is determined for each sentence by counting the total number of token L</text> characters
+for each C<lang> attribute value associated with any token in that sentence,
+and choosing the C<lang> attribute value
+with the largest character count; the default fallback value for the
+DTA chain is "de" (i.e. German).
+
+=item lts
+
+ perl: $w->{lts} = { w=>$COST, hi=>$PHO }
+ text: +[lts] PHO <COST>
+
+Approximated phonetic form for the input type (L</text>), as determined by the L</lts> component.
+
+=item mlatin
+
+ perl: $w->{mlatin} = [ { w=>0, hi=>"[_FM][lat]" } ]
+ text: +[morph/lat] [_FM][lat] <0>
+
+Pseudo-morphological analysis returned by the L</mlatin> component.
+
+=item moot
+
+ perl: $w->{moot} = { word=>$WORD, tag=>$TAG, lemma=>$LEMMA, details=>\%DETAILS, analyses=>\@ANALYSES }
+ text: +[moot/word] WORD
+       +[moot/tag] TAG
+       +[moot/lemma] LEMMA
+       +[moot/details] ...
+       +[moot/analysis] ...
+
+Represents the part-of-speech tag (C<TAG>) supplied by the L</moot> component and
+post-tagging lemmatization (C<LEMMA>) provided by the L</mootsub> component.
+For convenience, the sub-attribute C<WORD> indicates the final "canonical" surface form
+which was ultimately used as input to the part-of-speech tagger, and thus CAB's bottom line
+best-guess regarding the "proper" extant equivalent word form for the input token L</text>.
+C<DETAILS> and C<ANALYSES> are suppressed in the output of the publicly accessible web-service.
+
+=item morph
+
+ perl: $w->{morph} = [ { w=>$COST, hi=>"$DEEP\[_$TAG]$FEATURES"}, ... ]
+ text: +[morph] DEEP [_TAG]FEATURES
+       +[morph] ...
+ hidden: yes
+
+Morphological analysis returned by the L</morph> component.
+C<$DEEP> is the "deep-form" of the corresponding lexical item, C<$TAG> is a part-of-speech tag
+supplied by the morphological component, and C<$FEATURES> are additional morphosyntactic features (if any).
+
+=item msafe
+
+ perl: $w->{msafe} = $SAFE
+ text: +[morph/safe] SAFE
+
+Morphological security heuristics returned by the L</msafe> component.
+C<$SAFE> is a Boolean integer, where 0 (zero) indicates a "suspicious" type
+and 1 (one) indicates a "trustworthy" type.
+
+=item pnd
+
+If present, indicates that the surface form occurs in at least one
+L<Integrated Authority File|https://www.dnb.de/EN/Standardisierung/GND/gnd_node.html>
+record for an author whose work is included in the I<Deutsches Textarchiv> core corpus.
+Probably not very useful.
+
+=item rw
+
+ perl: $w->{rw} = [ { w=>$COST, hi=>$CANDIDATE }, ... ]
+ text: +[rw] CANDIDATE <COST>
+       +[rw] ...
+
+Rewrite conflation candidate(s) supplied by the L</rw> component.
+
+=item text
+
+Raw UTF-8 surface token text as appearing in the input stream.
+If the input was untokenized and the source token was split over multiple input lines,
+then the C<text> attribute will B<not> contain the hyphen or line-break.
+
+=item xlit
+
+ perl: $w->{xlit} = { isLatin1=>$IS_LATIN_1, isLatinExt=>$IS_LATIN_EXT, latin1Text=>$LATIN1_TEXT }
+ text: +[xlit] l1=IS_LATIN_1 lx=IS_LATIN_EXT l1s=LATIN1_TEXT
+
+Deterministic transliteration of input token L</text> and associated properties provided by the L</xlit> component.
+C<$IS_LATIN_1> is 1 (one) iff the input token L</text> consists entirely of characters from the latin-1 subset, and otherwise 0 (zero).
+Similarly,
+C<$IS_LATIN_EXT> is 1 (one) iff the input token L</text> consists entirely of characters from the latin-1 subset and/or latin extensions,
+and otherwise 0 (zero).
+C<$LATIN1_TEXT> is a Latin-1 transliteration of the token's L</text> attribute.
+
+=back
+
+=cut
 
 ##========================================================================
 ## Formats
@@ -603,10 +943,26 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 
 
 ##========================================================================
-## Formats: Text-based: Text
+## Formats: Text-based: Raw
 =pod
 
 =over 4
+
+=item L<Raw|DTA::CAB::Format::Raw>
+
+[L<example|http://./elephant.raw> (input only)]
+
+Input-only format for untokenized raw UTF-8 text, implicitly used for query strings
+passed in via the L<C<q> parameter|DTA::CAB::HttpProtocol/Query Parameters>.
+Input will be tokenized with a language-specific L<WASTE|http://kaskade.dwds.de/waste/about.perl>
+model characteristic for underlying the C<DTA::CAB> server (typically L<C<de-dta-tiger>|http://kaskade.dwds.de/waste/downloads.perl>).
+
+=cut
+
+
+##========================================================================
+## Formats: Text-based: Text
+=pod
 
 =item L<Text|DTA::CAB::Format::Text>
 
@@ -820,7 +1176,7 @@ See L</TEI> and L</XmlTokWrapFast> for caveats.
 =cut
 
 ##========================================================================
-## Formats: XML-based: TEI+ling
+## Formats: XML-based: TEI-ling
 =pod
 
 =item L<TEI-ling|DTA::CAB::Format::TEI>
@@ -880,7 +1236,7 @@ L<example input (pre-tokenized)|http://./elephant.tok.tcf>,
 L<example output|http://www.deutschestextarchiv.de/cab?fmt=tcf&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
 Monolithic stand-off XML format used by CLARIN-D, in particlar by the
-L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer.
+CLARIN-D L<WebLicht|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/> tool-chainer.
 See L<the TCF format documentation|http://weblicht.sfs.uni-tuebingen.de/weblichtwiki/index.php/The_TCF_Format>
 for details on the TCF format.
 CAB currently handles only the C<text>, C<tokens>, C<sentences>, C<POStags>, C<lemmas>, and C<orthography>
@@ -1141,13 +1497,13 @@ becomes
 =cut
 
 ##========================================================================
-## Advanced Usage: TEI+ling
+## Advanced Usage: TEI-ling
 =pod
 
-=head3 Post-processing TEI+ling XML
+=head3 Post-processing TEI-ling XML
 
 The following L<XSL|https://en.wikipedia.org/wiki/XSL> scripts are provided for post-processing the
-L<TEI+ling output format|/TEI-ling>.
+L<TEI-ling output format|/TEI-ling>.
 
 =over 4
 
@@ -1206,6 +1562,24 @@ becomes
 
 Potentially useful for preparing CAB-annotated TCF data for submission to other text-sensitive TCF processors
 which themselves do not respect the C<//orthography> layer.
+
+=back
+
+=cut
+
+##========================================================================
+## REFERENCES
+=pod
+
+=head1 SOURCE CODE
+
+The C<DTA::CAB> source code distribution on L<CPAN|https://metacpan.org/release/DTA-CAB>.
+Note however that the source code distribution alone is B<not> sufficient to set up and run
+a complete C<DTA::CAB> analysis pipeline on your local machine.  In order to do that, you would
+also need various assorted language models and additional resources which are not themselves part
+of C<DTA::CAB>, and therefore not part of the source code distribution.  See the
+L<Jurish (2012)|http://./#jurish2012> and the source code L<documentation|https://metacpan.org/release/DTA-CAB> for
+more details.
 
 =cut
 
