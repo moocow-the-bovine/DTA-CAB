@@ -590,6 +590,17 @@ and the default chain of components up to and including C<X> can be invoked by t
 e.g. the morphological analysis component L<C<morph>|/morph> can be invoked directly by selecting the chain
 C<sub.morph>, and together with its prerequisites by selecting the chain C<default.morph>.
 
+=head3 System Architecture
+
+The following diagram is a simplified sketch of the dataflow relationships between the major L</Analysis Components>
+for the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> analysis chain operating on
+a "raw" L<TEI-XML|/TEI> input document.
+
+=begin html
+
+<a href="sysarch.png"><img id="sysarch" style="display:block;margin-left:auto;margin-right:auto;max-width:50%;" src="sysarch.png"/></a>
+
+=end html
 
 =cut
 

@@ -234,7 +234,8 @@ HTML_EXTRA ?= \
   doc-extra/tcf-orthswap.xsl \
   doc-extra/ling2norm.xsl \
   doc-extra/ling2plain.xsl \
-  doc-extra/cab-screenshot-annotated.png
+  doc-extra/cab-screenshot-annotated.png \
+  doc-extra/sysarch.png
 
 ##-- lifted from MakeMaker blibdir section
 $(INST_HTMLDIR)$(DFSEP).exists :: Makefile.PL
