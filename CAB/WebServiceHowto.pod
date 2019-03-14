@@ -1087,7 +1087,7 @@ than L<text-based|/Text-based Formats> or L<data-oriented|/Data-oriented Formats
 but they do retain some degree of human-readability and the easy availability
 of XML processing software packages such as L<libxml|http://www.xmlsoft.org/>
 or L<XMLStarlet|http://xmlstar.sourceforge.net/>
-makes such formats a reasonable candidate for archiving and cross-platform data sharing.
+makes such formats reasonable candidates for archiving and cross-platform data sharing.
 
 =cut
 
@@ -1583,12 +1583,15 @@ which themselves do not respect the C<//orthography> layer.
 
 =head1 SOURCE CODE
 
-The C<DTA::CAB> source code distribution on L<CPAN|https://metacpan.org/release/DTA-CAB>.
-Note however that the source code distribution alone is B<not> sufficient to set up and run
-a complete C<DTA::CAB> analysis pipeline on your local machine.  In order to do that, you would
-also need various assorted language models and additional resources which are not themselves part
-of C<DTA::CAB>, and therefore not part of the source code distribution.  See the
-L<Jurish (2012)|http://./#jurish2012> and the source code L<documentation|https://metacpan.org/release/DTA-CAB> for
+The C<DTA::CAB> source code distribution is available on L<CPAN|https://metacpan.org/release/DTA-CAB>.
+
+=head2 Batteries Not Included
+
+You should be aware that the L<source code distribution|https://metacpan.org/release/DTA-CAB> alone is B<not>
+sufficient to set up and run a complete C<DTA::CAB> analysis pipeline on your local site.  In order to do that,
+you would also need various assorted language models and additional resources which are not themselves part
+of C<DTA::CAB> (which aspires to be language-agnostic), and therefore not part of the source code distribution.
+See L<Jurish (2012)|http://./#jurish2012> and the source code L<documentation|https://metacpan.org/release/DTA-CAB> for
 more details.
 
 =cut
@@ -1684,6 +1687,10 @@ L<BibTeX|http://kaskade.dwds.de/~jurish/pubs/jtw2014querying.bib>]
 
 The L<CAB software page|http://odo.dwds.de/~jurish/software/dta-cab/>
 is the top-level repository for CAB documentation, news, etc.
+
+=item *
+
+The C<DTA::CAB> source code distribution lives on L<CPAN|https://metacpan.org/release/DTA-CAB>.
 
 =item *
 
