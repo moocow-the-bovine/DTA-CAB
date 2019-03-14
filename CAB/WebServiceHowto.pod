@@ -346,9 +346,9 @@ during normalization, so is less likely to be "confused" by non-sentence-like in
 
 Consider for example the input:
 
- Fliegende Fliegen Fliegen Fliegenden Fliegen Nach.
+ Fliegende Fliegen Fliegen Fliegenden Fliegen nach.
 
-passing this list to the "norm1" chain inhibits context-dependent processing
+Passing this list to the "norm1" chain inhibits context-dependent processing
 and results in L<the following|http://www.deutschestextarchiv.de/cab?a=norm1&q=Fliegende+Fliegen+Fliegen+Fliegenden+Fliegen+nach.>
 
  Fliegende
@@ -800,6 +800,15 @@ was automatically generated from the L<DTA EvalCorpus|http://odo.dwds.de/~jurish
 
 Frequency of the surface type in the DTA corpus, if available.
 
+=item hasmorph
+
+Boolean integer indicating whether or not at least one L</morph>
+analysis was present for the current token.
+Unlike the L<morph|/morph1> attribute, the C<hasmorph> attribute
+is B<not> suppressed in the output from the publicly accessible
+web-service.
+
+
 =item lang
 
  perl: $w->{lang} = [ $LANG, ... ]
@@ -955,7 +964,8 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 Input-only format for untokenized raw UTF-8 text, implicitly used for query strings
 passed in via the L<C<q> parameter|DTA::CAB::HttpProtocol/Query Parameters>.
 Input will be tokenized with a language-specific L<WASTE|http://kaskade.dwds.de/waste/about.perl>
-model characteristic for underlying the C<DTA::CAB> server (typically L<C<de-dta-tiger>|http://kaskade.dwds.de/waste/downloads.perl>).
+model characteristic for the underlying C<DTA::CAB> server
+(typically L<C<de-dta-tiger>|http://kaskade.dwds.de/waste/downloads.perl>).
 
 =cut
 
