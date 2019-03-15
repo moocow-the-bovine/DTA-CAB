@@ -984,7 +984,7 @@ The CAB web-service currently does not offer anything like a "raw" output format
 although something like this may be implemented in the future.  If you are only
 interested in an unstructured list of "canonical" modern wordforms (or lemmata),
 consider using the TAB-separated L</CSV> format and projecting the relevant output
-column, or try the L</XmlLing> format together with the L</ling2norm.xsl> stylesheet.
+column, or try the L</XmlLing> format and post-process with the L</ling2plain.xsl> stylesheet.
 
 =cut
 
