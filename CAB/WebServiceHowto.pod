@@ -121,7 +121,7 @@ The results are displayed by default in CAB's native "L<Text|/Text>" format,
 in which the first line contains the input surface form (C<Elephanten>), and the remaining lines are the CAB
 attributes for the query word,
 where each attribute line is indicated by an initial TAB character, a plus ("+") sign,
-and the attribute label enclosed in square brackets ("[...]"), followed by the attribute value.
+and the L<attribute label|/Analyzers and Attributes> enclosed in square brackets ("[...]"), followed by the attribute value.
 Useful attributes include "moot/word" (canonical modern form), "moot/tag" (part-of-speech tag), and
 "moot/lemma" (modern lemma).
 
@@ -740,7 +740,7 @@ This section describes the most common analysis attributes
 used by the default L<DTA::CAB::Chain::DTA|DTA::CAB::Chain::DTA> configuration.
 Each attribute is described by a template such as:
 
- data: $OBJ->{LABEL} = CODE
+ data: $OBJ->{ATTR} = CODE
  text: +[LABEL] TEXT
  hidden: HIDDEN
 
@@ -764,10 +764,12 @@ and C<CODE> is a simple string containing the atomic attribute value.
 C<+[LABEL] TEXT> is the L</Text>-Format notation for the corresponding attribute.
 If unspecified, C<LABEL> is identical to the attribute name itself,
 and C<TEXT> is a simple string containing the atomic attribute value.
+C<+[LABEL] ...> indicates that the label C<LABEL> can occur more than once per
+object -- this typically means that the corresponding attribute is list-valued.
 
 =item *
 
-C<HIDDEN> is either "yes" or "no", and indicates whether the attribute's value is suppressed in the
+C<HIDDEN> indicates whether the attribute's value is suppressed in the
 output of the publicly accessible web-service.
 If unspecified, the attribute is not hidden.
 
