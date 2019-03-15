@@ -974,11 +974,17 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 
 [L<example|http://./elephant.raw> (input only)]
 
-Input-only format for untokenized raw UTF-8 text, implicitly used for query strings
+Input-only format for untokenized "raw" unstructured UTF-8 text, implicitly used for query strings
 passed in via the L<C<q> parameter|DTA::CAB::HttpProtocol/Query Parameters>.
 Input will be tokenized with a language-specific L<WASTE|http://kaskade.dwds.de/waste/about.perl>
 model characteristic for the underlying C<DTA::CAB> server
 (typically L<C<de-dta-tiger>|http://kaskade.dwds.de/waste/downloads.perl>).
+
+The CAB web-service currently does not offer anything like a "raw" output format,
+although something like this may be implemented in the future.  If you are only
+interested in an unstructured list of "canonical" modern wordforms (or lemmata),
+consider using the TAB-separated L</CSV> format and projecting the relevant output
+column, or try the L</XmlLing> format together with the L</ling2norm.xsl> stylesheet.
 
 =cut
 
@@ -998,6 +1004,10 @@ a line with no leading whitespace contains the surface text of a new token (word
 and subsequent token-lines are attribute values beginning with a TAB character
 and a plus sign ("+"), followed by the attribute label enclosed in square brackets
 "[...]" and the attribute value as a text-string.
+
+B<Caveat>: CAB's "Text" format is B<not> "plain text" in the usual sense of an unstructured serial
+stream of character content: use the L</Raw> format if you need to tokenize and analyze (UTF-8 encoded)
+plain text.
 
 Primarily useful for direct inspection and debugging.
 
@@ -1046,11 +1056,12 @@ but lacks flexibility.
 Simple machine-readable "vertical" text format similar to that used by
 L<Corpus WorkBench|http://cwb.sourceforge.net/>.  Each line is either a
 comment introduced by "%%", an empty line indicating a sentence boundary,
-or a TAB-separated token line.  Token lines' initial column is the token
+or a TAB-separated token line.  Each token line's initial column is the token
 surface text, and subsequent columns are
 are the token's attribute values, where each attribute value column
 begins with the attribute label enclosed in square brackets
-"[...]" and is followed by the attribute value as a text string.
+"[...]" and is followed by the attribute value as a text string,
+as for the L</Text> format without the leading "+".
 
 Useful for further quick and dirty script-based processing.
 
