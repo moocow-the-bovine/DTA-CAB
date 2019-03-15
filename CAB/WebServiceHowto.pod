@@ -113,7 +113,7 @@ Most CAB parameters in the query form are initialized with sensible default valu
 of the "Query" parameter itself, which should contain the text string to be analyzed.
 Say we wish to analyze the text string "C<Elephanten>":
 simply entering this string (or copy & paste it) into the text input box associated with the "Query" parameter,
-and then pressing the <i>Enter</i> key or clicking the "submit" button will cause the query to be
+and then pressing the I<Enter> key or clicking the "submit" button will cause the query to be
 submitted to the underlying CAB server and the response data to be displayed in the L<data area|/Response Data>:
 L<http://www.deutschestextarchiv.de/cab/?q=Elephanten>
 
@@ -716,7 +716,7 @@ Sentence-wise part-of-speech (PoS) tagging using
 the L<moot|http://kaskade.dwds.de/~moocow/mirror/projects/moot/> tagger
 on the observations (word forms) provided by L</dmoot> or the raw
 input token text and the morphological ambiguity classes supplied
-by C</dmootsub> or C</morph>.
+by L</dmootsub> or L</morph>.
 
 =item L<mootsub|DTA::CAB::Analyzer::MootSub>
 
@@ -891,10 +891,10 @@ and 1 (one) indicates a "trustworthy" type.
 
 =item pnd
 
-If present, indicates that the surface form occurs in at least one
-L<Integrated Authority File|https://www.dnb.de/EN/Standardisierung/GND/gnd_node.html>
-record for an author whose work is included in the I<Deutsches Textarchiv> core corpus.
-Probably not very useful.
+If present, indicates that the surface form occurs in an
+L<Integrated Authority File (GND)|https://www.dnb.de/EN/Standardisierung/GND/gnd_node.html>
+record for at least one author whose work is included in the I<Deutsches Textarchiv> core corpus.
+Probably not really very useful in general.
 
 =item rw
 
