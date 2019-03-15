@@ -1361,6 +1361,30 @@ mainly useful for further automated processing with Perl.
 =cut
 
 ##========================================================================
+## Formats: Unsupported Formats
+=pod
+
+=head3 Unsupported Formats
+
+If you have a source document you wish to pass to the CAB web-service which is not already
+encoded in a format supported directly by the web-service, you will first have to convert
+it to such a format before you can analyze it.
+The L<OxGarage|https://oxgarage-paderborn.tei-c.org/> conversion suite is particularly
+useful for such tasks, and is capable of producing
+L<TEI-XML|/TEI> or L<plain text|/Raw> from a number of popular document formats.
+
+Similarly, if you find that none of the
+supported output formats suit your needs, you may need to perform additional conversion
+to the analysis data returned by the web-service: the L<CSV|/CSV> format can for example
+be imported into most spreadsheet programs, or you can use some third-party conversion
+software such as
+L<OxGarage|https://oxgarage-paderborn.tei-c.org/>
+or L<LibreOffice|https://ask.libreoffice.org/en/question/2641/convert-to-command-line-parameter/>.
+
+
+=cut
+
+##========================================================================
 ## Advanced Usage
 =pod
 
