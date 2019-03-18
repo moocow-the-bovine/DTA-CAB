@@ -1098,6 +1098,24 @@ Useful for further script-based processing.
 
 =cut
 
+##========================================================================
+## Formats: Text-based: CSV
+=pod
+
+=item L<XList|DTA::CAB::Format::ExpandList>
+
+[L<example|http://www.deutschestextarchiv.de/cab?fmt=xlist&a=expand.eqlemma&q=Elephant>]
+
+Format used for online term expansion by
+DDC L<Expand CAB|http://odo.dwds.de/~moocow/software/ddc/ddc_opt.html#Cab>.
+Parses pre-tokenized input using the L</TT> format, and formats output as a flat list
+of expanded types separated by TABs, newlines, and/or carriage returns.
+
+Primarily useful for online L</Term Expansion> in conjunction with
+L</Analysis Chains> such as C<expand>, C<expand.eqlemma>, C<expand.eqpho>, or C<expand.eqrw>.
+
+=cut
+
 
 ##========================================================================
 ## Formats: XML-based
