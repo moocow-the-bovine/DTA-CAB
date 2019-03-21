@@ -2,9 +2,9 @@
 ##
 ## Change log for perl distribution DTA::CAB
 
-work in progress
-	Tue, 12 Mar 2019 15:43:19 +0100
+v1.108 Thu, 21 Mar 2019 12:59:49 +0100 moocow
 	* added ling2norm.xsl, ling2plain.xsl
+	* added format aliases teiws-names, teiws-ling-names (input option {teinames=>1})
 
 v1.107 Fri, 22 Feb 2019 09:40:00 +0100 moocow
 	* added DTA::TokWrap and GermaNet::Flat dependencies (used by built-in analyzer classes)
