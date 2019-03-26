@@ -972,19 +972,26 @@ B<without> a L<Byte-order mark|https://en.wikipedia.org/wiki/Byte_order_mark>.
 
 =item L<Raw|DTA::CAB::Format::Raw>
 
-[L<example|http://./elephant.raw> (input only)]
+[L<example input|http://./elephant.raw>,
+L<example output|http://www.deutschestextarchiv.de/cab?fmt=raw&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
 
-Input-only format for untokenized "raw" unstructured UTF-8 text, implicitly used for query strings
+Format for "raw" unstructured, untokenized UTF-8 text, implicitly used for query strings
 passed in via the L<C<q> parameter|DTA::CAB::HttpProtocol/Query Parameters>.
 Input will be tokenized with a language-specific L<WASTE|http://kaskade.dwds.de/waste/about.perl>
 model characteristic for the underlying C<DTA::CAB> server
 (typically L<C<de-dta-tiger>|http://kaskade.dwds.de/waste/downloads.perl>).
 
-The CAB web-service currently does not offer anything like a "raw" output format,
-although something like this may be implemented in the future.  If you are only
-interested in an unstructured list of "canonical" modern wordforms (or lemmata),
-consider using the TAB-separated L</CSV> format and projecting the relevant output
-column, or try the L</XmlLing> format and post-process with the L</ling2plain.xsl> stylesheet.
+As an output format,
+L<DTA::CAB::Format::Raw> writes all and only the canonical ("modern", "normalized") surface form
+of each token to the output stream.  Individual output tokens are separated by a single space
+character (ASCII 0x20, C<" ">) and individual output sentences are separated by a single newline
+character (ASCII 0x0A, C<"\n">).
+If you are interested only in modern lemmata (rather than surface forms),
+consider using the TAB-separated L</CSV> format and projecting the 5th output
+column (LEMMA).
+If you are working from XML input such as L</TEI> or L</TEI-ling>, consider
+using the default (information-rich) output format and post-processing it
+with the L</ling2plain.xsl> stylesheet.
 
 =cut
 
