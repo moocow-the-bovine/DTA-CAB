@@ -20,8 +20,8 @@
 ^doc-extra/format-examples
 ^doc-extra/cab-screenshot\.png$
 ^doc-extra/elephant\.(?:raw\.cab-txt|tok\+.*\.tcf)$
-^doc-extra/syssarch\.svg$
-^doc-extra/syssarch2png\.sh$
+^doc-extra/sysarch\.svg$
+^doc-extra/sysarch2png\.sh$
 
 \bpod2htm[di]\.
 
@@ -60,6 +60,7 @@ CVS
 ^test[0-9]?\.
 ^(?:ka?|wg)(?:test)?[0-9]?\.
 ^kant_
+^elephant\.
 
 \.graveyard$
 ^argh
