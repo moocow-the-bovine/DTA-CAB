@@ -8,6 +8,7 @@
 use File::Basename qw(basename dirname);
 use Monitoring::Plugin;
 use LWP::UserAgent;
+use URI;
 use URI::Escape qw(uri_escape_utf8);
 use JSON;
 use Time::HiRes qw(gettimeofday tv_interval);
@@ -17,7 +18,7 @@ use strict;
 
 ##======================================================================
 ## Version
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 our $SVNID   = q(
   $HeadURL$
   $Id$
@@ -104,17 +105,32 @@ sub vmsg {
 
 $mp->plugin_die("no server URL specified") if (!@ARGV);
 my $url    = shift(@ARGV);
-my ($geturl);
+my $geturl = $url;
 if ($qmode eq 'status' && $url !~ /\bstatus\b/) {
-  $geturl = "$url/status?f=json";
+  $geturl .= ($url =~ m{/$} ? '' : '/') . "status?f=json";
 }
 elsif ($qmode eq 'query') {
-  $geturl  = "$url/query" if ($url !~ /\bquery\b/);
+  $geturl .= ($url =~ m{/$} ? '' : '/') . "query" if ($url !~ /\bquery\b/);
   $geturl .= ($url =~ /\?/ ? '&' : '?');
   my $qstr = $query;
   utf8::decode($qstr) if (!utf8::is_utf8($qstr));
   $geturl .= "qd=".uri_escape_utf8("$qstr\n");
 }
+
+##-- check for http-over-unix
+if ($geturl =~ m{^(.+?)\+unix:(?://)?(.+?)[/\|]/(.*)$}i) {
+  ##-- http+unix syntax
+  my ($scheme,$sockpath,$uripath) = ($1,$2,$3);
+  $geturl = "${scheme}:${sockpath}//${uripath}";
+}
+elsif ($geturl =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
+  ##-- apache mod_proxy syntax
+  my ($sockpath,$uristr) = ($1,$2);
+  my $uri = URI->new($uristr)->as_string;
+  $uri =~ s{//+}{${sockpath}//};
+  $geturl = "$uri";
+}
+my $geturi = URI->new($geturl);
 
 ##-- sanitize thresholds
 $time_crit = $timeout    if ($timeout   < $time_crit);
@@ -136,8 +152,33 @@ my $ua = LWP::UserAgent->new(
 $ua->timeout($timeout);
 
 my $t0  = [gettimeofday];
-my $rsp = $ua->get($geturl)
-  or die("failed to retrieve URL $geturl");
+my ($rsp);
+if ($geturi->path =~ m{[^/]//}) {
+  ##-- http-over-unix; adapated from CAB::Client::HTTP::urequest_unix()
+
+  ##-- setup LWP::Protocol::http::SocketUnixAlt handlers
+  require LWP::Protocol::http::SocketUnixAlt;
+  my $http_impl = LWP::Protocol::implementor("http");
+  LWP::Protocol::implementor('http' => 'LWP::Protocol::http::SocketUnixAlt');
+
+  ##-- suppress irritating warnings from LWP::Protocol::http via LWP::Protocol::http::SocketUnixAlt
+  my $sigwarn  = $SIG{__WARN__};
+  local $SIG{__WARN__} = sub {
+    return if ($_[0] =~ m{Use of uninitialized value \$hhost.*LWP/Protocol/http\.pm});
+    $sigwarn ? $sigwarn->(@_) : warn(@_);
+  };
+
+  $rsp = $ua->get($geturl)
+    or die("failed to retrieve http-over-UNIX URL $geturl");
+
+  ##-- reset handlers
+  LWP::Protocol::implementor('http' => $http_impl);
+
+} else {
+  $rsp = $ua->get($geturl)
+    or die("failed to retrieve URL $geturl");
+}
+
 my $time  = sprintf("%.3f", tv_interval($t0));
 
 ##-- parse response & add perforamance data
@@ -222,6 +263,14 @@ dta-cab-http-check.perl - DTA::CAB http-server monitoring plugin for nagios/icin
   -s, -status             # perform a 'status' query SERVER_URL/status?f=json (default)
   -q, -query QSTR         # perform a default query on SERVER_URL/query?qd=QSTR
   -v, -verbose            # increase verbosity level
+
+ Arguments:
+  SERVER_URL              # url to check
+
+ Examples:
+   dta-cab-http-check.perl http://kaskade.dwds.de:9099
+   dta-cab-http-check.perl http+unix:/tmp/cab/dstar-http-9096.sock//
+
 
 =cut
 
