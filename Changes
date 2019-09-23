@@ -3,6 +3,8 @@
 ## Change log for perl distribution DTA::CAB
 
 unreleased
+	Mon, 23 Sep 2019 15:57:09 +0200
+	* added http+unix support to dta-cab-check.perl
 	Wed, 03 Apr 2019 14:59:28 +0200
 	* added CAB::Server::HTTP::Handler::sanitizeCharset() : tweak UTF-8 charset args to browser-friendly "utf-8"
 
