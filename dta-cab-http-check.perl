@@ -18,7 +18,7 @@ use strict;
 
 ##======================================================================
 ## Version
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 our $SVNID   = q(
   $HeadURL$
   $Id$
@@ -213,7 +213,9 @@ if ($rsp->is_success) {
     }
 
     ##-- get return message
-    $msg = "$url - ${time}s ${memMB}MB";
+    my $st_ver = $status->{version}//'?';
+    $st_ver   =~ s/\|.*$//;
+    $msg = "$url - ${time}s ${memMB}MB $st_ver";
   }
   elsif ($qmode eq 'query') {
     ##-- query check
