@@ -18,7 +18,7 @@ use strict;
 
 ##======================================================================
 ## Version
-our $VERSION = 0.04;
+our $VERSION = 0.05;
 our $SVNID   = q(
   $HeadURL$
   $Id$
@@ -133,8 +133,8 @@ elsif ($geturl =~ m{^unix:(?://)?(.+?)(?:\||\%7C)(.*)$}i) {
 my $geturi = URI->new($geturl);
 
 ##-- sanitize thresholds
-$time_crit = $timeout    if ($timeout   < $time_crit);
-$time_warn = $time_crit  if ($time_crit < $time_warn);
+$time_crit = $timeout    if ($time_crit>0 && $timeout   < $time_crit);
+$time_warn = $time_crit  if ($time_crit>0 && $time_crit < $time_warn);
 
 ##-- debug output
 vmsg($vl_debug, "set url = $url");
@@ -232,14 +232,21 @@ if ($rsp->is_success) {
     $msg = "$url - ${time}s";
   }
 }
+elsif ($time_crit<=0 && $rsp->message =~ /\b(?:timeout|resource temporarily unavailable)\b/i) {
+  ##-- treat timeouts as warnings
+  $rc = WARNING;
+  $msg = "$url - TIMEOUT - ".$rsp->status_line." - ${time}s";
+}
 else {
+  ##-- anything else is CRITICAL
   $rc = CRITICAL;
-  $msg = "$url - ERROR - ".$rsp->status_line;
+  $msg = "$url - ERROR - ".$rsp->status_line." - ${time}s";
 }
 
 ##-- check threshholds
-my $time_rc = $mp->check_threshold(check=>$time, warning=>$time_warn, critical=>$time_crit);
-$rc         = $time_rc if ($time_rc > $rc);
+my $thresh_crit = $time_crit > 0 ? $time_crit : undef;
+my $time_rc     = $mp->check_threshold(check=>$time, warning=>$time_warn, critical=>$thresh_crit);
+$rc             = $time_rc if ($time_rc > $rc);
 
 ##-- final exit
 $mp->plugin_exit($rc, "$msg");
@@ -262,6 +269,7 @@ dta-cab-http-check.perl - DTA::CAB http-server monitoring plugin for nagios/icin
   -t, -timeout SECS       # set probe query timeout (default=60)
   -w, -time-warn SECS     # set response time threshold for 'warning' state (default=10)
   -c, -time-crit SECS     # set response time threshold for 'critical' state (default=60)
+                          #     (-c=0: treat timeouts as WARNING states)
   -s, -status             # perform a 'status' query SERVER_URL/status?f=json (default)
   -q, -query QSTR         # perform a default query on SERVER_URL/query?qd=QSTR
   -v, -verbose            # increase verbosity level
