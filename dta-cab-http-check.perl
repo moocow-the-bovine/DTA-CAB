@@ -144,13 +144,13 @@ vmsg($vl_debug, "set time_warn = ", $time_warn);
 vmsg($vl_debug, "set time_crit = ", $time_crit);
 
 
-##-- query server
+##-- setup user agent
 my $ua = LWP::UserAgent->new(
 			     ssl_opts => {SSL_verify_mode=>'SSL_VERIFY_NONE'}, ##-- avoid "certificate verify failed" errors
 			    )
   or die("$prog: failed to create user agent for URL $url: $!");
-$ua->timeout($timeout);
 
+$ua->timeout($timeout);
 my $t0  = [gettimeofday];
 my ($rsp);
 if ($geturi->path =~ m{[^/]//}) {
@@ -168,12 +168,27 @@ if ($geturi->path =~ m{[^/]//}) {
     $sigwarn ? $sigwarn->(@_) : warn(@_);
   };
 
-  $rsp = $ua->get($geturl)
-    or die("failed to retrieve http-over-UNIX URL $geturl");
+  ##-- UNIX-sockets don't like 'timeout' parameter: use alarm()
+  $SIG{ALRM} = sub {
+    die("timeout exceeded");
+  };
+  alarm($timeout);
+
+  ##-- guts
+  eval {
+    $rsp = $ua->get($geturl)
+      or die("failed to retrieve http-over-UNIX URL $geturl");
+  };
+
+  ##-- check for timeouts
+  my $err = $@ // '';
+  alarm(0);
+  if (!$rsp && $err =~ /\btimeout exceeded\b/) {
+    $rsp = HTTP::Response->new(500, "UNIX socket timeout");
+  }
 
   ##-- reset handlers
   LWP::Protocol::implementor('http' => $http_impl);
-
 } else {
   $rsp = $ua->get($geturl)
     or die("failed to retrieve URL $geturl");
