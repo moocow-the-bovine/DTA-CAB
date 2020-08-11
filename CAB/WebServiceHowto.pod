@@ -1021,6 +1021,37 @@ Primarily useful for direct inspection and debugging.
 =cut
 
 ##========================================================================
+## Formats: Text-based: CONLLU
+=pod
+
+=item L<CONLLU|DTA::CAB::Format::CONLLU>
+
+[L<example|http://www.deutschestextarchiv.de/cab?fmt=conllu&q=EJn+zamer+Elephant+gillt+ohngef%C3%A4hr+zweyhundert+Thaler.+Ceterum+censeo+Carthaginem+esse+delendam.>]
+
+Simple fixed-width "vertical" text format containing only selected
+attribute values.
+Each line is either a
+comment introduced by "%%", an empty line indicating a sentence boundary,
+or a TAB-separated token line.  Token lines are of the form
+
+ SURFACE_TEXT   XLIT_TEXT   CANON_TEXT    POS_TAG    LEMMA	?DETAILS
+
+where I<SURFACE_TEXT> is the surface form of the token,
+I<XLIT_TEXT> is the result of a simple deterministic transliteration
+using L<unicruft|http://odo.dwds.de/~jurish/software/unicruft/>,
+I<CANON_TEXT> is the automatically determined canonical modern form
+for the token, I<POS_TAG> is the part-of-speech tag assigned
+by the L<moot|http://kaskade.dwds.de/~jurish/projects/moot/> tagger,
+I<LEMMA> is the modern lemma form determined for I<CANON_TEXT> and I<POS_TAG>
+by the L<TAGH morphological analyzer|http://www.tagh.de/>,
+and I<DETAILS> if present are additional details.
+
+This is the most compact of the text-based formats supported by CAB,
+but lacks flexibility.
+
+=cut
+
+##========================================================================
 ## Formats: Text-based: CSV
 =pod
 

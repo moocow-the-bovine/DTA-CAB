@@ -593,6 +593,39 @@ DTA::CAB::Format::CONLLU - Datum parser: CONLL-U format
 
 =head1 DESCRIPTION
 
+DTA::CAB::Format::CONLLU is a CAB datum parser+formatter conforming to the
+CONLL-U format conventions; see L<https://universaldependencies.org/format.html> for details.
+
+=head2 Format fields
+
+ ID: Word index, integer starting at 1 for each new sentence;
+ FORM: Word form or punctuation symbol.
+ LEMMA: Lemma or stem of word form.
+ UPOS: Universal part-of-speech tag.
+ XPOS: Language-specific part-of-speech tag; underscore if not available.
+ FEATS: List of morphological features from the universal feature inventory or underscore if not available.
+ HEAD: Head of the current word, which is either a value of ID or zero (0).
+ DEPREL: Universal dependency relation to the HEAD (root iff HEAD = 0) or a defined language-specific subtype of one.
+ DEPS: Enhanced dependency graph in the form of a list of head-deprel pairs.
+ MISC: Any other annotation, split by '|'
+
+=head2 Local format conventions for C<MISC> field
+
+By the CONLL-U conventions, the final token field C<MISC> is separated
+by vertical bars (C<MISC ::= "MISC1|...|MISCn">).  This module treats
+C<MISC$i> elements of the form C<ATTR=VALUE> specially for the following
+C<ATTR>s:
+
+ id=TOKID           # sets $tok->{id}
+ loc=OFFSET LENGTH  # sets $tok->{loc}
+ xlit=XTEXT         # sets $tok->{xlit}{latin1Text}; also honors CONLL-U "Translit=XTEXT"
+ norm=NORM          # sets $tok->{moot}{word}
+ details=DETAILS    # sets $tok->{moot}{details}{details}
+ json=JSON          # clobbers %$tok with JSON a la Format::TJ
+
+C<VALUE>s of specially handled attributes containing literal C<%> or C<|>
+should have these 2 characters (and only these 2 characters) URI-escaped (to C<%25>, and C<%7C> respectively).
+
 =cut
 
 ##----------------------------------------------------------------
