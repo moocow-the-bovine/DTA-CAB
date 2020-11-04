@@ -15,7 +15,8 @@ DTA::CAB::WebServiceHowto - User documentation for DTA::CAB web-service
 =head1 DESCRIPTION
 
 This document describes the use of the L<DTA::CAB|http://odo.dwds.de/~jurish/software/dta-cab/> web-service accessible
-at L<http://www.deutschestextarchiv.de/cab/>.
+at L<http://www.deutschestextarchiv.de/public/cab/> and its aliases
+L<http://www.deutschestextarchiv.de/demo/cab/> and L<http://www.deutschestextarchiv.de/cab/>.
 The CAB web-service provides
 error-tolerant linguistic analysis for historical German text,
 including normalization of historical orthographic variants
@@ -1484,7 +1485,7 @@ To analyze a L<TEI-like|/TEI> XML file F<FILE.tei.xml> using L<curl|http://curl.
 and save the analysis results to a "spliced" TEI file F<FILE.teiws.xml>,
 the following command-line ought to suffice:
 
- curl -X POST -sSF "qd=@FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/cab/query?fmt=tei"
+ curl -X POST -sSLF "qd=@FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/public/cab/query?fmt=tei"
 
 Alternative L<IO formats|/I-O Formats> and L<request parameters|DTA::CAB::HttpProtocol/query-Requests>
 can be accommodated by inserting them into the L<URL query string|http://en.wikipedia.org/wiki/Query_string>
@@ -1494,7 +1495,7 @@ inline POSTDATA mechanism (a.k.a. "xpost") described in L<the DTA::CAB::HttpProt
 in order to save yourself and the CAB server the effort of encoding/decoding the document data.
 In this case, you need to specify an appropriate "C<Content-Type>" header, e.g:
 
- curl -X POST -sSH "Content-Type: text/tei+xml; charset=utf8" --data-binary "@FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/cab/query?fmt=tei"
+ curl -X POST -sSLH "Content-Type: text/tei+xml; charset=utf8" --data-binary "@FILE.tei.xml" -o "FILE.teiws.xml" "http://www.deutschestextarchiv.de/public/cab/query?fmt=tei"
 
 You might be interested in the L<cab-curl-post.sh|http://./cab-curl-post.sh> and/or L<cab-curl-xpost.sh|http://./cab-curl-xpost.sh>
 wrapper scripts, which encapsulate some of the common curl command-line options.
