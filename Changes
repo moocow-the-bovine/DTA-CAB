@@ -2,6 +2,11 @@
 ##
 ## Change log for perl distribution DTA::CAB
 
+v1.114 URELEASED
+Fri, 26 Feb 2021 13:58:35 +0100 moocow
+	* added DTA::CAB::Chain::DE_free
+	  - for use with (modified) Helsinki hfst-german FST from https://sourceforge.net/projects/hfst/files/resources/morphological-transducers
+
 v1.113 Thu, 16 Jul 2020 15:42:53 +0200 moocow
 	* added first-stab at DTA::CAB::Format:CONLLU conforming to https://universaldependencies.org/format.html
 	  - optional special handling for some 'MISC' fields, including "json=JSON" for embedded TJ-format

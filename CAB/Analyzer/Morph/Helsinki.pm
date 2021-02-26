@@ -58,6 +58,12 @@ sub analyzeTypes {
 	$lemma = substr($hi, 0, length($hi)-length($tag));
 	$tag   = join('.', ($tag =~ /\[\+?([^\<\>\[\]\/\\]+)\\?\]/g));
       }
+      elsif ($hi =~ /(\[\+[^<>\[\]\/\\]+\](?:\[[^\]]*\]|\\.)*)$/) {
+	##-- de_free: "Haus[<NN>]Mann[<NN>]Kost[+NN][<Fem>][<Akk>][<Sg>]", "laufen[+V][<3>][<Sg>][<Pres>][<Ind>]"
+	$tag = $1;
+	$lemma = substr($hi, 0, length($hi)-length($tag));
+	$tag   = join('.', ($tag =~ /\[\+?<?([^<>\[\]\/\\]+)\\?>?\]/g));
+      }
       elsif ($hi =~ /((?:\\?\[\<?[^\<\>\[\]\/\\]+\>?\\?\]))$/) {
 	$tag   = $1;
 	$lemma = substr($hi, 0, length($hi)-length($tag));
