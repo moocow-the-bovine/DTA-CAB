@@ -9,7 +9,7 @@ use DTA::CAB::Chain::Multi;
 
 ##-- sub-analyzers
 use DTA::CAB::Analyzer::TokPP;
-use DTA::CAB::Analyzer::Morph::Helsinki;
+use DTA::CAB::Analyzer::Morph::Helsinki::DE;
 use DTA::CAB::Analyzer::Morph::Latin;
 use DTA::CAB::Analyzer::MorphSafe;
 use DTA::CAB::Analyzer::Moot;
@@ -42,7 +42,7 @@ sub new {
      tokpp => DTA::CAB::Analyzer::TokPP->new(),
      xlit  => DTA::CAB::Analyzer::Unicruft->new(),
      ##
-     morph => DTA::CAB::Analyzer::Morph::Helsinki->new(),
+     morph => DTA::CAB::Analyzer::Morph::Helsinki::DE->new(),
      mlatin=> DTA::CAB::Analyzer::Morph::Latin->new(),
      msafe => DTA::CAB::Analyzer::MorphSafe->new(), ##-- remove this for en-chain?
      ##
@@ -341,7 +341,7 @@ a L<DTA::CAB::Analyzer::Unicruft|DTA::CAB::Analyzer::Unicruft> object.
 =item morph
 
 Morphological analyzer (Helsinki-style with TAGH emulation hacks),
-a L<DTA::CAB::Analyzer::Morph::Helsinki|DTA::CAB::Analyzer::Morph::Helsinki> object.
+a L<DTA::CAB::Analyzer::Morph::Helsinki::DE|DTA::CAB::Analyzer::Morph::Helsinki::DE> object.
 
 =item mlatin
 
