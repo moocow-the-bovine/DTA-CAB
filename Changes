@@ -2,11 +2,9 @@
 ##
 ## Change log for perl distribution DTA::CAB
 
-v1.114 URELEASED
-Fri, 26 Feb 2021 13:58:35 +0100 moocow
+v1.114 Mon, 01 Mar 2021 15:45:44 +0100 moocow
 	* added DTA::CAB::Chain::DE_free
-	- for use with (modified) Helsinki hfst-german FST from https://sourceforge.net/projects/hfst/files/resources/morphological-transducers
-Mon, 01 Mar 2021 09:57:53 +0100 moocow
+	  - for use with (modified) Helsinki hfst-german FST from https://sourceforge.net/projects/hfst/files/resources/morphological-transducers
 	* refactored DTA::CAB::Morph::Helsinki -> DTA::CAB::Morph::Helsinki::EN + DTA::CAB::Morph::Helsinki::DE
 
 v1.113 Thu, 16 Jul 2020 15:42:53 +0200 moocow

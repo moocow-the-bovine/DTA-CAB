@@ -39,6 +39,50 @@ sub new {
   return $aut;
 }
 
+##==============================================================================
+## Methods: Analysis: v1.x
+##==============================================================================
+
+## $doc = $anl->analyzeTypes($doc,\%types,\%opts)
+##  + perform type-wise analysis of all (text) types in %types (= %{$doc->{types}})
+sub analyzeTypes {
+  my ($aut,$doc,$types,$opts) = @_;
+  return if (!$aut->DTA::CAB::Analyzer::Automaton::Gfsm::analyzeTypes($doc,$types,$opts));
+
+  ##-- post-process: simulate TAGH-notation
+  my $label = $aut->{label};
+  my $null  = [];
+  my ($w,$a,$hi,$tag,$lemma);
+  foreach $w (values %$types) {
+    foreach $a (@{$w->{$label}//$null}) {
+      $hi = $a->{hi};
+#      if ($hi =~ /(\[\+[^<>\[\]\/\\]+\](?:\[[^\]]*\]|\\.)*)$/) {
+#	##-- de_free (tags+features): "Haus[<NN>]Mann[<NN>]Kost[+NN][<Fem>][<Akk>][<Sg>]", "laufen[+V][<3>][<Sg>][<Pres>][<Ind>]"
+#	$tag = $1;
+#	$lemma = substr($hi, 0, length($hi)-length($tag));
+#	$tag   = join('.', ($tag =~ /\[\+?<?([^<>\[\]\/\\]+)\\?>?\]/g));
+      #     }
+      if ($hi =~ /(\[\+[^<>\[\]\/\\]+\])(?:\[[^\]]*\]|\\.)*$/) {
+	##-- de_free (tags+features): "Haus[<NN>]Mann[<NN>]Kost[+NN][<Fem>][<Akk>][<Sg>]", "laufen[+V][<3>][<Sg>][<Pres>][<Ind>]"
+	$tag = $1;
+	$lemma = substr($hi, 0, $-[0]);
+	$tag  =~ s{(?:^\[?_?\+?<?)|(?:\>?\]?)$}{}g;
+      }
+      elsif ($hi =~ /((?:\\?\[\<?[^\<\>\[\]\/\\]+\>?\\?\]))$/) {
+	$tag   = $1;
+	$lemma = substr($hi, 0, length($hi)-length($tag));
+	$tag   =~ s/[\\\<\>\[\]\+]//g;
+      }
+      $lemma =~ s/(?:\[[^\+\]]*\]|\\)//g;
+      $lemma =~ s/\[([A-Z]+)\+\]/lc($1)."+"/eg;
+      $lemma =~ s/\[\+([A-Z]+)\]/"~".lc($1)/eg;
+      $a->{hi} = "$lemma\[_$tag]=$hi" if ($lemma || $tag);
+    }
+  }
+
+  return $doc;
+}
+
 
 1; ##-- be happy
 

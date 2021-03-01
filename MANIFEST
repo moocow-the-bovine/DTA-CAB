@@ -68,6 +68,8 @@ CAB/Analyzer/Moot/Boltzmann.pm
 CAB/Analyzer/MootSub.pm
 CAB/Analyzer/Morph.pm
 CAB/Analyzer/Morph/Helsinki.pm
+CAB/Analyzer/Morph/Helsinki/DE.pm
+CAB/Analyzer/Morph/Helsinki/EN.pm
 CAB/Analyzer/Morph/Extra/BDB.pm
 CAB/Analyzer/Morph/Extra/CDB.pm
 CAB/Analyzer/Morph/Extra/OrtLexHessen.pm
@@ -93,6 +95,7 @@ CAB/Analyzer/Unicruft.pm
 CAB/Analyzer/Unidecode.pm
 CAB/Cache/LRU.pm
 CAB/Chain.pm
+CAB/Chain/DE_free.pm
 CAB/Chain/DTA.pm
 CAB/Chain/EN.pm
 CAB/Chain/Multi.pm
