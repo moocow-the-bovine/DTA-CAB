@@ -56,17 +56,10 @@ sub analyzeTypes {
   foreach $w (values %$types) {
     foreach $a (@{$w->{$label}//$null}) {
       $hi = $a->{hi};
-#      if ($hi =~ /(\[\+[^<>\[\]\/\\]+\](?:\[[^\]]*\]|\\.)*)$/) {
-#	##-- de_free (tags+features): "Haus[<NN>]Mann[<NN>]Kost[+NN][<Fem>][<Akk>][<Sg>]", "laufen[+V][<3>][<Sg>][<Pres>][<Ind>]"
-#	$tag = $1;
-#	$lemma = substr($hi, 0, length($hi)-length($tag));
-#	$tag   = join('.', ($tag =~ /\[\+?<?([^<>\[\]\/\\]+)\\?>?\]/g));
-      #     }
-      if ($hi =~ /(\[\+[^<>\[\]\/\\]+\])(?:\[[^\]]*\]|\\.)*$/) {
-	##-- de_free (tags+features): "Haus[<NN>]Mann[<NN>]Kost[+NN][<Fem>][<Akk>][<Sg>]", "laufen[+V][<3>][<Sg>][<Pres>][<Ind>]"
+      if ($hi =~ /\[<\+([^>\]]+)>\]/) {
+	##-- de_free (+tags,-features): "Haus[<NN>]Mann[<NN>]Kost[<+NN>][<Fem>][<Akk>][<Sg>]", "laufen[<+V>][<3>][<Sg>][<Pres>][<Ind>]"
 	$tag = $1;
 	$lemma = substr($hi, 0, $-[0]);
-	$tag  =~ s{(?:^\[?_?\+?<?)|(?:\>?\]?)$}{}g;
       }
       elsif ($hi =~ /((?:\\?\[\<?[^\<\>\[\]\/\\]+\>?\\?\]))$/) {
 	$tag   = $1;
