@@ -26,6 +26,7 @@ sub new {
 			      wantAnalysisLo => 0,
 			      wantAnalysisLemma => 0, ##-- default=0
 			      tolower => 0,
+			      capsFallback => 1,
 
 			      ##-- verbosity
 			      check_symbols => 0,
