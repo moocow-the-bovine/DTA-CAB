@@ -90,15 +90,32 @@ do something like the following (in debian at least):
  sudo apt-get install sfst unzip wget sed gawk
  wget https://pub.cl.uzh.ch/users/sennrich/zmorge/transducers/zmorge-20150315-smor_newlemma.a.zip
  unzip zmorge-20150315-smor_newlemma.a.zip
- fst-print zmorge-20150315-smor_newlemma.a > zmorge.tfst
+ fst-print zmorge-20150315-smor_newlemma.a | sed 's/ /_/g;' > zmorge.tfst
  cat zmorge.tfst \
    | awk -F$'\t' '{ if (NF >= 4) { print $3 "\n" $4 } }' \
-   | sed 's/^<>$//' \
+   | sed 's/^<>$//;' \
    | sort -u \
-   | sed 's/^$/<>/' \
-   | awk '{print $1 "\t" NR}' \
+   | sed 's/^$/<>/;' \
+   | awk '{print $1 "\t" NR-1}' \
    > zmorge.lab
-  gfsmcompile -l zmorge.lab -F zmorge.gfst zmorge.tfst
+  gfsmcompile -z0 -l zmorge.lab zmorge.tfst | gfsminvert -z0 | gfsmarcsort -l -F zmorge.gfst
+
+You can then test the compiled transducer with this module by calling e.g.:
+
+ dta-cab-analyze.perl -ac=Morph::SMOR -ao=fstFile=zmorge.gfst -ao=labFile=zmorge.lab -fc=text -w Vermittlungsgespräche
+
+which should produce something like the following output:
+
+ Vermittlungsgespräche
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittl[<~>]ungs[<#>]gespräch[<+NN>][<Neut>][<Acc>][<Pl>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittl[<~>]ungs[<#>]gespräch[<+NN>][<Neut>][<Dat>][<Sg>][<Old>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittl[<~>]ungs[<#>]gespräch[<+NN>][<Neut>][<Gen>][<Pl>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittl[<~>]ungs[<#>]gespräch[<+NN>][<Neut>][<Nom>][<Pl>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittlung[<->]s[<#>]gespräch[<+NN>][<Neut>][<Acc>][<Pl>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittlung[<->]s[<#>]gespräch[<+NN>][<Neut>][<Dat>][<Sg>][<Old>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittlung[<->]s[<#>]gespräch[<+NN>][<Neut>][<Gen>][<Pl>] <0>
+ 	+[morph] Vermittlungsgespräch[_NN]=Vermittlung[<->]s[<#>]gespräch[<+NN>][<Neut>][<Nom>][<Pl>] <0>
+
 
 =cut
 
