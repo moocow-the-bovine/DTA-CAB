@@ -5,6 +5,7 @@
 UNRELEASED
 Wed, 03 Mar 2021 14:09:32 +0100 moocow
 	* Morph::Helsinki::DE updated tag-extraction heuristics (use original FST label conventions <+NN>, <+V> etc.)
+	* added Morph::SMOR (just an alias for Morph::Helsinki::DE), Morph::TAGH (just an alias for Morph)
 
 v1.114 Mon, 01 Mar 2021 15:45:44 +0100 moocow
 	* added DTA::CAB::Chain::DE_free
