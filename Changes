@@ -2,8 +2,7 @@
 ##
 ## Change log for perl distribution DTA::CAB
 
-UNRELEASED
-Wed, 03 Mar 2021 14:09:32 +0100 moocow
+v1.115 Thu, 04 Mar 2021 14:06:40 +0100 moocow
 	* Morph::Helsinki::DE updated tag-extraction heuristics (use original FST label conventions <+NN>, <+V> etc.)
 	* added Morph::SMOR (just an alias for Morph::Helsinki::DE), Morph::TAGH (just an alias for Morph)
 
