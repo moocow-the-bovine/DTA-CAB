@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 ##----------------------------------------------------------------------
 ## Constants
-my $VERSION = '1.115';
+my $VERSION = '1.116';
 
 ##----------------------------------------------------------------------
 ## Hacks
@@ -84,19 +84,38 @@ WriteMakefile
 
 ##---------------------------------------------------------------
 ## maintainer-only: Version.pm
-if (-d ".svn") {
-  ##-- write CAB/Version.pm
+if (1) {
   no warnings;
-  print STDERR "Updating CAB/Version.pm\n";
+  my ($SVNVERSION);
 
-  #my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info . 2>/dev/null`)[0];
-  my $SVNVERSION = `svnversion .`;
-  chomp($SVNVERSION);
-  $SVNVERSION = "unknown version" if (!$SVNVERSION);
+  if (-d ".svn") {
+    ##-- CAB/Version.pm : from svn
+    print STDERR "Attempting to determine SVN revision\n";
 
-  open(VERSION_PM,">CAB/Version.pm")
-    or die("$0: could not open CAB/Version.pm for write: $!");
-  print VERSION_PM <<EOF;
+    #my $svnroot = (map {/^URL\: (.*)$/ ? $1 : qw()} `svn info . 2>/dev/null`)[0];
+    $SVNVERSION = `svnversion .`;
+    chomp($SVNVERSION);
+    $SVNVERSION = "unknown version" if (!$SVNVERSION);
+  }
+  elsif (-d ".git") {
+    ##-- CAB/Version.pm : from git
+    print STDERR "Attempting to determine git revision\n";
+
+    my $GITROOT = `git config --get remote.origin.url`;
+    my $GITREV = `git rev-parse HEAD`;
+    chomp($GITROOT);
+    chomp($GITREV);
+    $GITROOT = "unknown-git-origin" if (!$GITROOT);
+    $GITREV = "unknown-git-revision" if (!$GITREV);
+    $SVNVERSION = "${GITROOT}#${GITREV}";
+  }
+  if ($SVNVERSION) {
+    no warnings;
+    print STDERR "Updating CAB/Version.pm\n";
+
+    open(VERSION_PM,">CAB/Version.pm")
+      or die("$0: could not open CAB/Version.pm for write: $!");
+    print VERSION_PM <<EOF;
 ##--- automatically generated file: DO NOT EDIT! ---
 ##
 ## File: DTA/CAB/Version.pm
@@ -107,8 +126,10 @@ package DTA::CAB::Version;
 \$DTA::CAB::SVNVERSION = '$SVNVERSION';
 1;
 EOF
-} else {
-  warn("This does not appear to be an SVN checkout -- NOT updating CAB/Version.pm\n");
+}
+  else {
+    warn("This does not appear to be an SVN or git checkout -- NOT updating CAB/Version.pm\n");
+  }
 }
 
 ##---------------------------------------------------------------
