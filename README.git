@@ -1,0 +1,27 @@
+This project began its existence as an SVN repository at:
+
+  svn+ssh://svn.dwds.de/home/svn/dev/DTA-CAB/
+
+As of 2021-07-20, the SVN repository has been migrated to a pair
+of github projects:
+
+  https://github.com/moocow-the-bovine/DTA-CAB
+  https://github.com/moocow-the-bovine/DTA-CAB-private
+
+The "DTA-CAB" github repository contains the full DTA-CAB code base,
+but no langugage-specific resources or otherwise sensitive project-specific
+data.
+
+The DTA-CAB-private project contains "internal" data which is probably
+only useful for primary development or debugging of CAB itself, as
+well as potentially sensitive data and configurations as used by the
+DWDS and ZDL projects at the Berlin-Brandenburgische Akademie der
+Wissenschaften.
+
+For best simulation of the original SVN project, you should clone
+the "DTA-CAB-private" project into the "private" subdirectory of your
+"DTA-CAB" working copy:
+
+ $ git clone git@github.com:moocow-the-bovine/DTA-CAB.git DTA-CAB
+ $ cd DTA-CAB
+ $ git clone git@github.com:moocow-the-bovine/DTA-CAB-private.git private
